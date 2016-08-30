@@ -7,11 +7,7 @@
  */
 //spies on the CAN interface, printing out everything that it sees
 
-#include <SPI.h>
-#include "mcp_can.h"
 #include <FlexCAN.h>
-#include <kinetis_flexcan.h>
-
 
 /*
   Sets the pin Arduino uses for the CAN controller.
@@ -34,8 +30,6 @@ void setup() {
 
 void loop() {
   unsigned char len = 0; //Length of received message
-  unsigned char buf[8];  //Where the received message will be stored
-  unsigned char msg[8] = {0,0,0,0,0,0,0,0}; //Message to be sent
 
 
   if(millis() > msTimer) {
@@ -68,5 +62,4 @@ void loop() {
 //      Serial.println(buf[0]);
 //      sent = 0;
 //    }
-  }
 }
