@@ -29,21 +29,13 @@ void setup() {
 }
 
 void loop() {
-  unsigned char len = 0; //Length of received message
-
-
-  if(millis() > msTimer) {
-    Serial.print(millis());
-    Serial.println(" ms passed");
-    msTimer += 100;
-  }
   /*
     This section checks if a message is currently circulating on the bus.
   */
   while (CAN.read(msg)) {
     Serial.print(msg.id);
     Serial.print(": ");
-    for (int i = 0; i < msg.len; i++) {
+    for (unsigned int i = 0; i < msg.len; i++) {
       Serial.print(msg.buf[i]);
       Serial.print(" ");
     }
