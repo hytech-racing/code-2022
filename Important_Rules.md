@@ -26,3 +26,29 @@
 
 ### EV9.2 Ready-to-Drive Sound
 * The car must make a characteristic sound, for a minimum of 1 second and a maximum of 3 seconds, when it is ready to drive.
+
+# Formula SAE Electric
+### EV2.3 Accelerator Pedal Position Sensor
+* At least two entirely separate sensors have to be used as APPSs. The sensors must have different transfer functions, each having a positive slope sense with either different gradients and/or offsets to the other(s).
+* If an implausibility occurs between the values of the APPSs and persists for more than 100msec, the power to the motor(s) must be immediately shut down completely. It is not necessary to completely deactivate the tractive system, the motor controller(s) shutting down the power to the motor(s) is sufficient.
+* Any failure of the APPS or APPS wiring must be detectable by the controller and must be treated like an implausibility, see EV2.3.5.
+* When any kind of digital data transmission is used to transmit the APPS signal, the FMEA study must contain a detailed description of all the potential failure modes that can occur, the strategy that is used to detect these failures and the tests that have been conducted to prove that the detection strategy works. The failures to be considered must include but are not limited to the failure of the APPS, APPS signals being out of range, corruption of the message and loss of messages and the associated time outs.
+* Any algorithm or electronic control unit that can manipulate the APPS signal, for example for vehicle dynamic functions such as traction control, may only lower the total driver requested torque and must never increase it. Thus the drive torque which is requested by the driver may never be exceeded.
+
+### EV2.4 Brake System Encoder
+* Any failure of the BSE or BSE wiring that persists more than 100 msec must be detectable by the controller and treated like an implausibility such that power to the motor(s) is immediately and completely shut down.
+* Same failure mode requirement as acceleration pedal
+
+### EV2.5 APPS/Brake Pedal Plausibility Check
+* The power to the motors must be immediately shut down completely, if the mechanical brakes are actuated and the APPS signals more than 25% pedal travel at the same time. This must be demonstrated when the motor controllers are under load.
+* The motor power shut down must remain active until the APPS signals less than 5% pedal travel, no matter whether the brakes are still actuated or not.
+
+### EV3.6 Accumulator Management System (BMS for our purposes)
+* The AMS must shutdown the tractive system by opening the AIRs, if critical voltage or temperature values according to the cell manufacturer’s datasheet and taking into account the accuracy of the measurement system are detected. If the AMS does perform a shutdown, then a red LED marked AMS must light up in the cockpit to confirm this.
+
+### EV4.10 Activating the Tractive System
+* The driver must be able to (re-)activate or reset the tractive system from within the cockpit without the assistance of any other person except for situations in which the AMS, IMD or BSPD have shut down the tractive system, see EV5.1.4 and EV5.1.5.
+* Additional actions are required by the driver to set the car to ready-to-drive-mode e.g. pressing a dedicated start button, after the tractive system has been activated. One of these actions must include the brake pedal being pressed as ready-to-drive-mode is entered.
+
+### EV5.1 Shutdown Circuit
+* If the shutdown circuit is opened by the AMS, the IMD or the BSPD the tractive system must remain disabled until being manually reset by a person directly at the car which is not the driver. Remote reset, for example via WLAN or use of the three shutdown buttons or the TS master switch to reset the AMS, IMD or BSPD is not permitted.
