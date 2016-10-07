@@ -17,6 +17,7 @@
 * In the event of an AMS, IMD or Brake over-travel fault, it must not be possible for the driver to re- activate the tractive system from within the cockpit. This includes “cycling power” through the use of the cockpit shutdown button.
 * After enabling the shutdown circuit, at least one action, such as pressing a “start” button must be performed by the driver before the vehicle will respond to any accelerator input.
 * The “start” action must be configured such that it cannot inadvertently be left in the “on” position after system shutdown.
+* The cockpit shutdown button must be driver resettable. I.e. if the driver disables the system by pressing the cockpit-mounted shutdown button, the driver must then be able to restore system operation by pulling the button back out. Note: There must still be one additional action by the driver after pulling the button back out to reactivate the motor controller per EV7.7.2. (start action)
 
 ### EV7.8 Shutdown System Sequencing
 * Look at Figure 38, FH rules pg 114. Very useful diagram of vehicle states
