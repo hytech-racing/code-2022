@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include "Linduino.h"
 #include "LT_SPI.h"
-#include "LTC68041.h"
+#include "LTC68042.h"
 #include <SPI.h>
 
 /********GLOBAL ARRAYS/VARIABLES CONTAINING DATA FROM CHIP**********/
@@ -34,11 +34,65 @@ uint8_t rx_cfg[TOTAL_IC][8];
 
 
 void setup() {
-  // put your setup code here, to run once:
-
+    // put your setup code here, to run once:
+    Serial.begin(115200);
+    LTC6804_initialize();
+    init_cfg();
 }
 
+/*
+ * Continuously poll voltages and print them to the Serial Monitor.
+ */
 void loop() {
   // put your main code here, to run repeatedly:
-
+    
 }
+
+/*!***********************************
+ \brief Initializes the configuration array
+ **************************************/
+void init_cfg()
+{
+    for(int i = 0; i<TOTAL_IC;i++)
+    {
+        tx_cfg[i][0] = 0xFE;
+        tx_cfg[i][1] = 0x00 ; 
+        tx_cfg[i][2] = 0x00 ;
+        tx_cfg[i][3] = 0x00 ; 
+        tx_cfg[i][4] = 0x00 ;
+        tx_cfg[i][5] = 0x00 ;
+    }
+}
+
+void pollVoltage() {
+    Serial.println("Polling Voltages...");
+    /*
+     * Difference between wakeup_sleep and wakeup_idle
+     * 
+     */
+    wakeup_sleep();
+    LTC6804_wrcfg(TOTAL_IC, tx_cfg);
+    wakeup_idle();
+    LTC6804_adcv();
+    delay(10);
+    wakeup_idle();
+    uint8_t error = LTC6804_rdcv(0, TOTAL_IC, cell_voltages); // calls the chip to read and store voltage values in the array.
+    if (error == -1) {
+        Serial.println("A PEC error was detected in voltage data");
+    }
+    print_cells(); // prints the cell voltages to Serial.
+    delay(500);
+}
+
+void print_cells() {
+    for (int current_ic = 0; current_ic < TOTAL_IC; current_ic++) {
+        Serial.print("IC: ");
+        Serial.println(current_ic+1);
+        for (int i = 0; i < 12; i++) {
+            Serial.print("C"); Serial.print(i+1); Serial.print(": ");
+            Serial.println(cell_voltages[current_ic][i] * 0.0001, 4);
+        }
+        Serial.println();
+    }
+}
+

@@ -1,9 +1,8 @@
 /*!
-DC1894B
-LTC6804-1: Battery stack monitor
+DC1942B
+LTC6804-2: Battery stack monitor
 
 @verbatim
-
 NOTES
  Setup:
    Set the terminal baud rate to 115200 and select the newline terminator.
@@ -12,8 +11,7 @@ NOTES
  
 
  Menu Entry 1: Write Configuration
-   Writes the configuration register of the LTC6804s on the stack. This command can be used to turn on
-   the reference and shorten ADC conversion Times. 
+   Writes the configuration register of the LTC6804. This command can be used to turn on the reference. 
    
  Menu Entry 2: Read Configuration
    Reads the configuration register of the LTC6804, the read configuration can differ from the written configuration.
@@ -41,6 +39,7 @@ USER INPUT DATA FORMAT:
  octal   : 02000  (leading 0)
  binary  : B10000000000
  float   : 1024.0
+ 
 @endverbatim
 
 REVISION HISTORY
@@ -83,20 +82,20 @@ ongoing work.
 Copyright 2013 Linear Technology Corp. (LTC)
  */
 
-
+ 
 /*! @file 
-    @ingroup LTC68041 
-*/ 
+    @ingroup LTC68042 
+*/  
 
 #include <Arduino.h>
 #include <stdint.h>
 #include "Linduino.h"
 #include "LT_SPI.h"
 #include "UserInterface.h"
-#include "LTC68041.h"
+#include "LTC68042.h"
 #include <SPI.h>
 
-const uint8_t TOTAL_IC = 1;//!<number of ICs in the daisy chain
+const uint8_t TOTAL_IC = 1;//!<number of ICs in the isoSPI network LTC6804-2 ICs must be addressed in ascending order starting at 0.
 
 /******************************************************
  *** Global Battery Variables received from 6804 commands
@@ -192,7 +191,7 @@ void loop()
  Menu Entry 5: Start Auxiliary voltage conversion
     Starts a LTC6804 GPIO channel adc conversion.
 
- Menu Entry 6: Read Auxiliary voltages6118
+ Menu Entry 6: Read Auxiliary voltages
     Reads the LTC6804 axiliary registers and prints the GPIO voltages to the serial port.
  
  Menu Entry 7: Start cell voltage measurement loop
@@ -200,7 +199,7 @@ void loop()
     The loop can be exited by sending the MCU a 'm' character over the serial link.
  
 *******************************************/
-void run_command(uint32_t cmd)
+void run_command(uint16_t cmd)
 {
   int8_t error = 0;
   
@@ -305,7 +304,6 @@ void init_cfg()
     tx_cfg[i][4] = 0x00 ;
     tx_cfg[i][5] = 0x00 ;
   }
- 
 }
 
 /*!*********************************
@@ -328,7 +326,7 @@ void print_menu()
 
 
 /*!************************************************************
-  \brief Prints cell coltage codes to the serial port
+  \brief Prints Cell Voltage Codes to the serial port
  *************************************************************/
 void print_cells()
 {
@@ -352,7 +350,7 @@ void print_cells()
 }
 
 /*!****************************************************************************
-  \brief Prints GPIO voltage codes and Vref2 voltage code onto the serial port
+  \brief Prints GPIO Voltage Codes and Vref2 Voltage Code onto the serial port
  *****************************************************************************/
 void print_aux()
 {
@@ -377,7 +375,7 @@ void print_aux()
   Serial.println(); 
 }
 /*!******************************************************************************
- \brief Prints the configuration data that is going to be written to the LTC6804
+ \brief Prints the Configuration data that is going to be written to the LTC6804
  to the serial port.
  ********************************************************************************/
 void print_config()
@@ -413,7 +411,7 @@ void print_config()
 }
 
 /*!*****************************************************************
- \brief Prints the configuration data that was read back from the 
+ \brief Prints the Configuration data that was read back from the 
  LTC6804 to the serial port.
  *******************************************************************/
 void print_rxconfig()
