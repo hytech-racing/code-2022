@@ -30,6 +30,14 @@ void loop() {
             case GLVinit:
             case waitIMD:
             case waitBMS:
+                if (DISCHARGE_OK >= 50) { // if BMS is high
+                    if (OKHS >= 50) { // if IMD is also high
+                        curState = waitStartButton; // both BMD and IMD are high, wait for start button press
+                    } else { // if IMD is low
+                        curState = waitIMD; // BMS is high but IMDis low, wait for IMD high
+                    }
+                }
+                break;
             case waitStartButton:
             case closeLatch:
             case openLatch:
