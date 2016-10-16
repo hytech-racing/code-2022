@@ -4,7 +4,12 @@ FlexCAN CAN(500000);
 static CAN_message_t msg;
 int OKHS = 0; // voltage after calculation
 int DISCHARGE_OK = 0; // voltage after calculation
-boolean startPressed = false; //
+int GLVbattery = 0; // voltage after calculation
+int shutdownCircuit = 0; // voltage after calculation
+boolean OKHSfault = false; // fault status of OKHS, fault if true
+boolean DISCHARGE_OKfault = false; // fault status of DISCHARGE_OK, fault if true
+boolean startPressed = false; // true if start button is pressed
+int thermTemp = 0; // temperature of onboard thermistor (after calculation)
 int timer = 0; // needed to check timer
 boolean startupDone = false; // true when reached drive state
 
