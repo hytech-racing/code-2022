@@ -45,7 +45,8 @@ void setup() {
  */
 void loop() {
   // put your main code here, to run repeatedly:
-    
+  pollVoltage();
+  printCells();
 }
 
 /*!***********************************
@@ -68,7 +69,8 @@ void pollVoltage() {
     Serial.println("Polling Voltages...");
     /*
      * Difference between wakeup_sleep and wakeup_idle
-     * 
+     * wakeup_sleep wakes up the LTC6804 from sleep state
+     * wakeup_idle wakes up the isoSPI port.
      */
     wakeup_sleep();
     LTC6804_wrcfg(TOTAL_IC, tx_cfg);
@@ -84,7 +86,7 @@ void pollVoltage() {
     delay(500);
 }
 
-void print_cells() {
+void printCells() {
     for (int current_ic = 0; current_ic < TOTAL_IC; current_ic++) {
         Serial.print("IC: ");
         Serial.println(current_ic+1);
