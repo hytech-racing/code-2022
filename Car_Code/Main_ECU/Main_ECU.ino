@@ -13,6 +13,9 @@ int thermTemp = 0; // temperature of onboard thermistor (after calculation)
 int timer = 0; // needed to check timer
 boolean startupDone = false; // true when reached drive state
 
+const int OKHS_PIN = 0;
+const int BMS_OK_PIN = 1;
+
 enum State { GLVinit=0, waitIMD, waitBMS, waitStartButton, closeLatch, openLatch, AIROpen, AIRClose, waitInverter, readySoundOn, drive };
 State curState = GLVinit; // curState is current state
 // setup code
@@ -28,6 +31,7 @@ void loop() {
     if (!startupDone) {
         switch (state) {
             case GLVinit:
+                curState = waitIMD; //going straight to waitIMD unti further notice
             case waitIMD:
             case waitBMS:
                 if (DISCHARGE_OK >= 50) { // if BMS is high
@@ -39,12 +43,17 @@ void loop() {
                 }
                 break;
             case waitStartButton:
+                /*can message for start button press received*/ 
+                curState = closeLatch;
             case closeLatch:
             case openLatch:
             case AIROpen:
+                /*CAN message for faults fixed*/
+                curState = AIRClose;
             case AIRClose:
             case waitInverter:
             case readySoundOn:
+                
             case drive:
 
         }
