@@ -2,14 +2,14 @@
 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
-int OKHS = 0;
-int DISCHARGE_OK = 0;
-boolean startPressed = false;
-int timer = 0;
-boolean startupDone = false;
+int OKHS = 0; // voltage after calculation
+int DISCHARGE_OK = 0; // voltage after calculation
+boolean startPressed = false; //
+int timer = 0; // needed to check timer
+boolean startupDone = false; // true when reached drive state
 
-enum state { GLVinit=0, waitIMD, waitBMS, waitStartButton, closeLatch, openLatch, AIROpen, AIRClose, waitInverter, readySoundOn, drive };
-state = GLVinit;
+enum State { GLVinit=0, waitIMD, waitBMS, waitStartButton, closeLatch, openLatch, AIROpen, AIRClose, waitInverter, readySoundOn, drive };
+State curState = GLVinit; // curState is current state
 // setup code
 void setup() {
     Serial.begin(115200); // init serial for PC communication
@@ -22,7 +22,7 @@ void setup() {
 void loop() {
     if (!startupDone) {
         switch (state) {
-            case GLVinit: 
+            case GLVinit:
             case waitIMD:
             case waitBMS:
             case waitStartButton:
@@ -33,9 +33,9 @@ void loop() {
             case waitInverter:
             case readySoundOn:
             case drive:
-            
+
         }
     } else {
-        
+
     }
 }
