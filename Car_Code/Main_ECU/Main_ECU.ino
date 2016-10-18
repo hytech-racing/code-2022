@@ -32,11 +32,16 @@ void setup() {
 
 // loop code
 void loop() {
+    //check CAN for a message for software shutdown
     if (!startupDone) {
         switch (state) {
             case GLVinit:
                 curState = waitIMD; //going straight to waitIMD unti further notice
             case waitIMDBMS:
+                DISCHARGE_OK = analogRead(BMS_OK_PIN);
+                OKHS = analogRead(OKHS_PIN);
+                DISCHARGE_OK = DISCHARGE_OK / 67.7;
+                OKHS = OKHS / 67.7
                 if (softwareFault) {
                     curState = fatalFault;
                 }
