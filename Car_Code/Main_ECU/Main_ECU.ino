@@ -13,6 +13,9 @@ int thermTemp = 0; // temperature of onboard thermistor (after calculation)
 int timer = 0; // needed to check timer
 boolean startupDone = false; // true when reached drive state
 
+// timer
+unsigned long timer; // use timer = millis() to get time, and compare in ms
+
 const int OKHS_PIN = 0;
 const int BMS_OK_PIN = 1;
 
@@ -43,17 +46,22 @@ void loop() {
                 }
                 break;
             case waitStartButton:
-                /*can message for start button press received*/ 
+                /*can message for start button press received*/
                 curState = closeLatch;
             case closeLatch:
             case openLatch:
+                // Open latch (?)
+                // go to AIROpen if shutdown ciruit or precharge fault
+                // go to AIRClosed if shutdown circuit closed and no precharge fault
             case AIROpen:
                 /*CAN message for faults fixed*/
                 curState = AIRClose;
             case AIRClose:
             case waitInverter:
+                // Wait for motor controller inverter
+                // go to readySoundOn if inverter enabled
+                // go to AIROpen if Cockpit BRB open
             case readySoundOn:
-                
             case drive:
 
         }
