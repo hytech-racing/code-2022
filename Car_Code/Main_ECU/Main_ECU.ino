@@ -6,12 +6,13 @@ int OKHS = 0; // voltage after calculation
 int DISCHARGE_OK = 0; // voltage after calculation
 int GLVbattery = 0; // voltage after calculation
 int shutdownCircuit = 0; // voltage after calculation
-boolean OKHSfault = false; // fault status of OKHS, fault if true
-boolean DISCHARGE_OKfault = false; // fault status of DISCHARGE_OK, fault if true
-boolean startPressed = false; // true if start button is pressed
+bool OKHSfault = false; // fault status of OKHS, fault if true
+bool DISCHARGE_OKfault = false; // fault status of DISCHARGE_OK, fault if true
+bool startPressed = false; // true if start button is pressed
 int thermTemp = 0; // temperature of onboard thermistor (after calculation)
 int timer = 0; // needed to check timer
-boolean startupDone = false; // true when reached drive state
+bool startupDone = false; // true when reached drive state
+bool softwareFault = false; // true when software fault found
 
 // timer
 unsigned long timer; // use timer = millis() to get time, and compare in ms
@@ -19,7 +20,7 @@ unsigned long timer; // use timer = millis() to get time, and compare in ms
 const int OKHS_PIN = 0;
 const int BMS_OK_PIN = 1;
 
-enum State { GLVinit=0, waitIMD, waitBMS, waitStartButton, closeLatch, openLatch, AIROpen, AIRClose, waitInverter, readySoundOn, drive };
+enum State { GLVinit=0, waitIMDBMS, waitDriver, closeLatch, openLatch, AIROpen, AIRClose, waitInverter, readySoundOn, fatalFault, drive }; // NOTE: change and update
 State curState = GLVinit; // curState is current state
 // setup code
 void setup() {
@@ -35,19 +36,20 @@ void loop() {
         switch (state) {
             case GLVinit:
                 curState = waitIMD; //going straight to waitIMD unti further notice
-            case waitIMD:
-            case waitBMS:
-                if (DISCHARGE_OK >= 50) { // if BMS is high
-                    if (OKHS >= 50) { // if IMD is also high
+            case waitIMDBMS:
+                if (softwareFault) {
+                    curState = fatalFault;
+                }
+                if (DISCHARGE_OK >= 50) { // if BMS is high NOTE: change value
+                    if (OKHS >= 50) { // if IMD is also high NOTE: change value
                         curState = waitStartButton; // both BMD and IMD are high, wait for start button press
-                    } else { // if IMD is low
-                        curState = waitIMD; // BMS is high but IMDis low, wait for IMD high
                     }
                 }
                 break;
-            case waitStartButton:
+            case waitDriver:
                 /*can message for start button press received*/
                 curState = closeLatch;
+                break;
             case closeLatch:
             case openLatch:
                 // Open latch (?)
@@ -61,6 +63,7 @@ void loop() {
                 // Wait for motor controller inverter
                 // go to readySoundOn if inverter enabled
                 // go to AIROpen if Cockpit BRB open
+            case fatalFault:
             case readySoundOn:
             case drive:
 
