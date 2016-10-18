@@ -24,7 +24,8 @@ enum State { GLVinit=0, waitIMDBMS, waitDriver, AIRClose, fatalFault, drive }; /
 State curState = GLVinit; // curState is current state
 
 //FUNCTION PROTOTYPES
-boolean checkIMDBMS();
+bool checkIMDBMS();
+bool checkFatalFault();
 
 // setup code
 void setup() {
@@ -42,7 +43,7 @@ void loop() {
             case GLVinit:
                 curState = waitIMDBMS; //going straight to waitIMD unti further notice
             case waitIMDBMS:
-                
+
                 if (softwareFault) {
                     curState = fatalFault;
                 }
@@ -71,6 +72,8 @@ boolean checkIMDBMS() {
    OKHS = analogRead(OKHS_PIN);
    DISCHARGE_OK = DISCHARGE_OK / 67.7;
    OKHS = OKHS / 67.7;
-
 }
 
+bool checkFatalFault() { // returns true if fatal fault found ()
+    if (DISCHARGE_OK >= )
+}
