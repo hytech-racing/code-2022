@@ -19,12 +19,13 @@ unsigned long timer; // use timer = millis() to get time, and compare in ms
 
 const int OKHS_PIN = 0;
 const int BMS_OK_PIN = 1;
+const int THERMISTOR_PIN = 4;
 
 enum State { GLVinit=0, waitIMDBMS, waitDriver, AIRClose, fatalFault, drive }; // NOTE: change and update
 State curState = GLVinit; // curState is current state
 
 //FUNCTION PROTOTYPES
-bool checkIMDBMS();
+bool readValues();
 bool checkFatalFault();
 
 // setup code
@@ -67,11 +68,11 @@ void loop() {
     }
 }
 
-boolean checkIMDBMS() {
-   DISCHARGE_OK = analogRead(BMS_OK_PIN);
-   OKHS = analogRead(OKHS_PIN);
-   DISCHARGE_OK = DISCHARGE_OK / 67.7;
-   OKHS = OKHS / 67.7;
+boolean readValues() {
+   DISCHARGE_OK = analogRead(BMS_OK_PIN)/ 67.7;
+   OKHS = analogRead(OKHS_PIN) / 67.7;
+   thermTemp = analogRead(THERMISTOR_PIN);
+   //compute actual temperature with math
 }
 
 bool checkFatalFault() { // returns true if fatal fault found ()
