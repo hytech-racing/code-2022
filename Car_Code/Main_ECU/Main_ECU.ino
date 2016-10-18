@@ -20,7 +20,7 @@ unsigned long timer; // use timer = millis() to get time, and compare in ms
 const int OKHS_PIN = 0;
 const int BMS_OK_PIN = 1;
 
-enum State { GLVinit=0, waitIMDBMS, waitDriver, closeLatch, openLatch, AIROpen, AIRClose, waitInverter, readySoundOn, fatalFault, drive }; // NOTE: change and update
+enum State { GLVinit=0, waitIMDBMS, waitDriver, AIRClose, fatalFault, drive }; // NOTE: change and update
 State curState = GLVinit; // curState is current state
 
 //FUNCTION PROTOTYPES
@@ -38,9 +38,9 @@ void setup() {
 void loop() {
     //check CAN for a message for software shutdown
     if (!startupDone) {
-        switch (state) {
+        switch (curState) {
             case GLVinit:
-                curState = waitIMD; //going straight to waitIMD unti further notice
+                curState = waitIMDBMS; //going straight to waitIMD unti further notice
             case waitIMDBMS:
                 
                 if (softwareFault) {
@@ -56,21 +56,8 @@ void loop() {
                 /*can message for start button press received*/
                 curState = closeLatch;
                 break;
-            case closeLatch:
-            case openLatch:
-                // Open latch (?)
-                // go to AIROpen if shutdown ciruit or precharge fault
-                // go to AIRClosed if shutdown circuit closed and no precharge fault
-            case AIROpen:
-                /*CAN message for faults fixed*/
-                curState = AIRClose;
             case AIRClose:
-            case waitInverter:
-                // Wait for motor controller inverter
-                // go to readySoundOn if inverter enabled
-                // go to AIROpen if Cockpit BRB open
             case fatalFault:
-            case readySoundOn:
             case drive:
 
         }
