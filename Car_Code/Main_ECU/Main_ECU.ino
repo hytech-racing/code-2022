@@ -22,6 +22,10 @@ const int BMS_OK_PIN = 1;
 
 enum State { GLVinit=0, waitIMDBMS, waitDriver, closeLatch, openLatch, AIROpen, AIRClose, waitInverter, readySoundOn, fatalFault, drive }; // NOTE: change and update
 State curState = GLVinit; // curState is current state
+
+//FUNCTION PROTOTYPES
+boolean checkIMDBMS();
+
 // setup code
 void setup() {
     Serial.begin(115200); // init serial for PC communication
@@ -38,10 +42,7 @@ void loop() {
             case GLVinit:
                 curState = waitIMD; //going straight to waitIMD unti further notice
             case waitIMDBMS:
-                DISCHARGE_OK = analogRead(BMS_OK_PIN);
-                OKHS = analogRead(OKHS_PIN);
-                DISCHARGE_OK = DISCHARGE_OK / 67.7;
-                OKHS = OKHS / 67.7
+                
                 if (softwareFault) {
                     curState = fatalFault;
                 }
@@ -77,3 +78,12 @@ void loop() {
 
     }
 }
+
+boolean checkIMDBMS() {
+   DISCHARGE_OK = analogRead(BMS_OK_PIN);
+   OKHS = analogRead(OKHS_PIN);
+   DISCHARGE_OK = DISCHARGE_OK / 67.7;
+   OKHS = OKHS / 67.7;
+
+}
+
