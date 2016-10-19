@@ -52,7 +52,7 @@ void loop() {
                     curState = fatalFault;
                 } else {
                     if (DISCHARGE_OK >= BMS_High) { // if BMS is high
-                        if (OKHS >= IMD_High) { // if IMD is also high 
+                        if (OKHS >= IMD_High) { // if IMD is also high
                             curState = waitStartButton; // both BMD and IMD are high, wait for start button press
                         }
                     }
@@ -70,32 +70,29 @@ void loop() {
                 initialTime = millis();
                 unsigned long curTime = millis();
                 while(curTime <= initialTime + 500){
-                  if (checkFatalFault()) {
-                      curState = fatalFault;
-                      break;
-                  }
-                  curTime = millis();
+                    if (checkFatalFault()) {
+                        curState = fatalFault;
+                        break;
+                    }
+                    curTime = millis();
                 }
                 if (!(curState == State.fatalFault)) {
-                  curState = drive;
+                    curState = drive;
                 }
                 break;
             case fatalFault:
-                
             case drive:
-                //send can message to throttle control
-
+            //send can message to throttle control
         }
     } else {
-
     }
 }
 
-boolean readValues() {
-   DISCHARGE_OK = analogRead(BMS_OK_PIN)/ 67.7;
-   OKHS = analogRead(OKHS_PIN) / 67.7;
-   thermTemp = analogRead(THERMISTOR_PIN);
-   //compute actual temperature with math
+bool readValues() {
+    DISCHARGE_OK = analogRead(BMS_OK_PIN)/ 67.7;
+    OKHS = analogRead(OKHS_PIN) / 67.7;
+    thermTemp = analogRead(THERMISTOR_PIN);
+    //compute actual temperature with math
 }
 
 bool checkFatalFault() { // returns true if fatal fault found ()
