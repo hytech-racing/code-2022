@@ -35,6 +35,15 @@ void setup() {
     //open circuit will show a high signal outside of the working range of the sensor. 
         
     
+}
+
+
+// loop code
+void loop() {
+    //FSAE requires that torque be shut off if an implausibility persists for over 100 msec (EV2.3.5).
+    //A deviation of more than 10% pedal travel between the two throttle sensors
+    //A failure of position sensor wiring which can cause an open circuit, short to ground, or short to sensor power.
+
     //To detect a position sensor wiring failure
     //find the ranges of values coming from each sensor during normal operation of the foot pedals
     //Any values outside of these ranges could be caused by an open circuit, short to ground, or short to sensor power.
@@ -45,11 +54,6 @@ void setup() {
     //If the implausibility ceases, a corresponding message should be sent on CAN Bus. 
     //If an implausibility ceases to be detected, normal throttle controls should be reinstated
     //i.e. the vehicle does not need to be restarted to reset an implausibility fault.
-}
-
-
-// loop code
-void loop() {
   
 }
 
