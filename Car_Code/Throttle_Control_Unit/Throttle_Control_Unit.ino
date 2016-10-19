@@ -7,9 +7,17 @@
 FlexCAN CAN(500000);
 static CAN_message_t msg;
 int voltageBrakePedal = 0;//voltage of brakepedal
+<<<<<<< HEAD
 int voltageThrottlePedal1 = 0;//voltage of 1st throttle
 int voltageThrottlePedal2 = 0;//voltage of 2nd throttle
 unsigned long timer; // use timer = millis() to get time, and compare in ms
+=======
+int voltageThrottlePedal1 = 0; //voltage of 1st throttle
+int voltageThrottlePedal2 = 0; //voltage of 2nd throttle
+const int BRAKE_ANALOG_PORT = 3; //analog port of brake sensor
+const int THROTTLE_PORT_1 = 6; //first throttle sensor port
+const int THROTTLE_PORT_2 = 9; //second throttle sensor port
+>>>>>>> 886028a93d36aba02db847e89ee42d9eb762a1a5
 
 //FSAE requires that torque be shut off if an implausibility persists for over 100 msec (EV2.3.5).
 //A deviation of more than 10% pedal travel between the two throttle sensors
