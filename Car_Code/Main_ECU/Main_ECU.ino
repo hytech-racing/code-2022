@@ -10,9 +10,12 @@ bool OKHSfault = false; // fault status of OKHS, fault if true
 bool DISCHARGE_OKfault = false; // fault status of DISCHARGE_OK, fault if true
 bool startPressed = false; // true if start button is pressed
 int thermTemp = 0; // temperature of onboard thermistor (after calculation)
-int timer = 0; // needed to check timer
 bool startupDone = false; // true when reached drive state
 bool softwareFault = false; // true when software fault found
+
+// Values to check if IMD, BMS high
+const int IMD_High = 50;
+const int BMS_High = 50;
 
 // timer
 unsigned long timer; // use timer = millis() to get time, and compare in ms
@@ -43,22 +46,31 @@ void loop() {
         switch (curState) {
             case GLVinit:
                 curState = waitIMDBMS; //going straight to waitIMD unti further notice
+                break;
             case waitIMDBMS:
-
                 if (softwareFault) {
                     curState = fatalFault;
-                }
-                if (DISCHARGE_OK >= 50) { // if BMS is high NOTE: change value
-                    if (OKHS >= 50) { // if IMD is also high NOTE: change value
-                        curState = waitStartButton; // both BMD and IMD are high, wait for start button press
+                } else {
+                    if (DISCHARGE_OK >= BMS_High) { // if BMS is high
+                        if (OKHS >= IMD_High) { // if IMD is also high 
+                            curState = waitStartButton; // both BMD and IMD are high, wait for start button press
+                        }
                     }
                 }
                 break;
             case waitDriver:
-                /*can message for start button press received*/
-                curState = closeLatch;
+                if (checkFatalFault()) {
+                    curState = fatalFault;
+                } else {
+                    /*can message for start button press received*/
+                    curState = closeLatch;
+                }
                 break;
-            case AIRClose:
+            case AIRClose: // equivalent to VCCAIR in Google Doc state diagram
+                if (checkFatalFault()) {
+                    curState = fatalFault;
+                }
+                break;
             case fatalFault:
             case drive:
 
@@ -76,5 +88,9 @@ boolean readValues() {
 }
 
 bool checkFatalFault() { // returns true if fatal fault found ()
-    if (DISCHARGE_OK >= )
+    if (OKHS >= IMD_High && DISCHARGE_OK >= BMS_High && !softwareFault) {
+        return false;
+    } else {
+        return true;
+    }
 }
