@@ -18,7 +18,7 @@ const int IMD_High = 50;
 const int BMS_High = 50;
 
 // timer
-unsigned long timer; // use timer = millis() to get time, and compare in ms
+unsigned long initialTime; // use timer = millis() to get time, and compare in ms
 
 const int OKHS_PIN = 0;
 const int BMS_OK_PIN = 1;
@@ -67,12 +67,23 @@ void loop() {
                 }
                 break;
             case AIRClose: // equivalent to VCCAIR in Google Doc state diagram
-                if (checkFatalFault()) {
-                    curState = fatalFault;
+                initialTime = millis();
+                unsigned long curTime = millis();
+                while(curTime <= initialTime + 500){
+                  if (checkFatalFault()) {
+                      curState = fatalFault;
+                      break;
+                  }
+                  curTime = millis();
+                }
+                if (!(curState == State.fatalFault)) {
+                  curState = drive;
                 }
                 break;
             case fatalFault:
+                
             case drive:
+                //send can message to throttle control
 
         }
     } else {
