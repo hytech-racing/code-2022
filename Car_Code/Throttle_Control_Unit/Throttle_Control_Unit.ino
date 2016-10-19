@@ -6,12 +6,10 @@
 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
-int voltageBrakePedal = 0;//voltage of brakepedal
-int voltageThrottlePedal1 = 0;//voltage of 1st throttle
-int voltageThrottlePedal2 = 0;//voltage of 2nd throttle
 unsigned long timer; // use timer = millis() to get time, and compare in ms
 int voltageThrottlePedal1 = 0; //voltage of 1st throttle
 int voltageThrottlePedal2 = 0; //voltage of 2nd throttle
+int voltageBrakePedal = 0;//voltage of brakepedal
 const int BRAKE_ANALOG_PORT = 3; //analog port of brake sensor
 const int THROTTLE_PORT_1 = 6; //first throttle sensor port
 const int THROTTLE_PORT_2 = 9; //second throttle sensor port
@@ -53,5 +51,13 @@ void setup() {
 
 // loop code
 void loop() {
+  
+}
+
+void readInputValues() {
+    voltageThrottlePedal1 = analogRead(THROTTLE_PORT_1);
+    voltageThrottlePedal2 = analogRead(THROTTLE_PORT_2);
+    voltageBrakePedal = analogRead(BRAKE_ANALOG_PORT);
+    //TODO: decide/set torque values for input values
 }
 
