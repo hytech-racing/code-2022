@@ -13,8 +13,12 @@ int voltageBrakePedal = 0;//voltage of brakepedal
 const int BRAKE_ANALOG_PORT = 3; //analog port of brake sensor
 const int THROTTLE_PORT_1 = 6; //first throttle sensor port
 const int THROTTLE_PORT_2 = 9; //second throttle sensor port
-const int minPedal = 0;//compare pedal travel
-const int maxPedal = 0;//compare pedal travel
+const int minPedalThrottle1 = 0;//compare pedal travel
+const int maxPedalThrottle1 = 0;//compare pedal travel
+const int minPedalThrottle2 = 0;
+const int maxPedalThrottle2 = 0;
+const int minPedalBrake = 0;
+const int maxPedalBrake = 0;
 
 //FSAE requires that torque be shut off if an implausibility persists for over 100 msec (EV2.3.5).
 //A deviation of more than 10% pedal travel between the two throttle sensors
