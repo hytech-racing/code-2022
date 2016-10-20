@@ -36,16 +36,11 @@ void setup() {
     pinMode(BRAKE_ANALOG_PORT, INPUT_PULLUP);
     pinMode(THROTTLE_PORT_1, INPUT_PULLUP);
     pinMode(THROTTLE_PORT_2, INPUT_PULLUP);
-    //open circuit will show a high signal outside of the working range of the sensor. 
-        
-    
+    //open circuit will show a high signal outside of the working range of the sensor.
 }
 
 
-// loop code
-void loop() {
-    readInputValue();
-    //FSAE requires that torque be shut off if an implausibility persists for over 100 msec (EV2.3.5).
+//FSAE requires that torque be shut off if an implausibility persists for over 100 msec (EV2.3.5).
     //A deviation of more than 10% pedal travel between the two throttle sensors
     //A failure of position sensor wiring which can cause an open circuit, short to ground, or short to sensor power.
 
@@ -59,7 +54,21 @@ void loop() {
     //If the implausibility ceases, a corresponding message should be sent on CAN Bus. 
     //If an implausibility ceases to be detected, normal throttle controls should be reinstated
     //i.e. the vehicle does not need to be restarted to reset an implausibility fault.
-  
+void loop() {
+    readInputValues();
+    //Check for errors
+    if(voltageThrottlePedal1 / voltageThrottlePedal2 > 1.1 || voltageThrottlePedal1 / voltageThrottlePedal2 < 0.9) {
+        //TODO: SHUTDOWN TORQUE - PEDALS NOT AGREEING
+    }
+    if (voltageThrottlePedal1 > MAX_THROTTLE_1) || (voltageThrottlePedal1 < MIN_THROTTLE_1) {
+        //TODO: SHUTDOWN TORQUE - PEDAL 1 CRAZY
+    }
+    if (voltageThrottlePedal2 > MAX_THROTTLE_2) || (voltageThrottlePedal2 < MIN_THROTTLE_2) {
+        //TODO: SHUTDOWN TORQUE - PEDAL 2 CRAZY
+    }
+    if (voltageBrakePedal > MAX_BRAKE) || (voltageBrakePedal < MIN_BRAKE) {
+        //TODO: SHUTDOWN TORQUE - BRAKE CRAZY
+    }
 }
 
 void readInputValues() {
