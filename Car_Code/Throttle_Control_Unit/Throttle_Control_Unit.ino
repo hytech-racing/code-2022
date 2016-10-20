@@ -40,6 +40,7 @@ void setup() {
 
 // loop code
 void loop() {
+    readInputValue();
     //FSAE requires that torque be shut off if an implausibility persists for over 100 msec (EV2.3.5).
     //A deviation of more than 10% pedal travel between the two throttle sensors
     //A failure of position sensor wiring which can cause an open circuit, short to ground, or short to sensor power.
