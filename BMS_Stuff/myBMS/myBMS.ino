@@ -4,6 +4,21 @@
 #include "LT_SPI.h"
 #include "LTC68042.h"
 #include <SPI.h>
+#include <FlexCAN.h>
+#include <kinetis_flexcan.h>
+
+/************BATTERY CONSTRAINTS AND CONSTANTS**********************/
+#define VOLTAGE_LOW_CUTOFF 3.0
+#define VOLTAGE_HIGH_CUTOFF 4.2
+#define DISCHARGE_CURRENT_CONSTANT_HIGH 220
+#define DISCHARGE_CURRENT_PEAK_HIGH 440
+#define CHARGE_CURRENT_CONSTANT_HIGH 220
+#define CHARGE_CURRENT_PEAK_HIGH 330
+#define CHARGE_CURRENT_LOW_CUTOFF 1.1
+#define CHARGE_TEMP_CRITICAL_HIGH 44
+#define CHARGE_TEMP_CRITICAL_LOW 0
+#define DISCHARGE_TEMP_CRITICAL_HIGH 60
+#define DISCHARGE_TEMP_CRITICAL_LOW 15
 
 /********GLOBAL ARRAYS/VARIABLES CONTAINING DATA FROM CHIP**********/
 const uint8_t TOTAL_IC = 1;
@@ -45,8 +60,8 @@ void setup() {
  */
 void loop() {
   // put your main code here, to run repeatedly:
-  pollVoltage();
-  printCells();
+    pollVoltage();
+    printCells();
 }
 
 /*!***********************************
@@ -83,7 +98,7 @@ void pollVoltage() {
         Serial.println("A PEC error was detected in voltage data");
     }
     print_cells(); // prints the cell voltages to Serial.
-    delay(500);
+    delay(100);
 }
 
 void printCells() {
