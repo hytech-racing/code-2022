@@ -60,13 +60,13 @@ void loop() {
     if(voltageThrottlePedal1 / voltageThrottlePedal2 > 1.1 || voltageThrottlePedal1 / voltageThrottlePedal2 < 0.9) {
         //TODO: SHUTDOWN TORQUE - PEDALS NOT AGREEING
     }
-    if (voltageThrottlePedal1 > MAX_THROTTLE_1) || (voltageThrottlePedal1 < MIN_THROTTLE_1) {
+    if (voltageThrottlePedal1 > MAX_THROTTLE_1 || voltageThrottlePedal1 < MIN_THROTTLE_1) {
         //TODO: SHUTDOWN TORQUE - PEDAL 1 CRAZY
     }
-    if (voltageThrottlePedal2 > MAX_THROTTLE_2) || (voltageThrottlePedal2 < MIN_THROTTLE_2) {
+    if (voltageThrottlePedal2 > MAX_THROTTLE_2 || voltageThrottlePedal2 < MIN_THROTTLE_2) {
         //TODO: SHUTDOWN TORQUE - PEDAL 2 CRAZY
     }
-    if (voltageBrakePedal > MAX_BRAKE) || (voltageBrakePedal < MIN_BRAKE) {
+    if (voltageBrakePedal > MAX_BRAKE || voltageBrakePedal < MIN_BRAKE) {
         //TODO: SHUTDOWN TORQUE - BRAKE CRAZY
     }
 }
