@@ -1,3 +1,9 @@
+/**
+ * Shrivathsav Seshan
+ * Oct 23 2016
+ * The BMS
+ */
+
 #include <Arduino.h>
 #include <stdint.h>
 #include "Linduino.h"
@@ -19,6 +25,7 @@
 #define CHARGE_TEMP_CRITICAL_LOW 0
 #define DISCHARGE_TEMP_CRITICAL_HIGH 60
 #define DISCHARGE_TEMP_CRITICAL_LOW 15
+#define MAX_16BIT_UNSIGNED 65536
 
 /********GLOBAL ARRAYS/VARIABLES CONTAINING DATA FROM CHIP**********/
 const uint8_t TOTAL_IC = 1;
@@ -47,12 +54,41 @@ uint8_t tx_cfg[TOTAL_IC][6]; // data defining how data will be written to daisy 
 */
 uint8_t rx_cfg[TOTAL_IC][8];
 
+/**
+ * CAN Variables
+ */
+FlexCAN can(500000);
+static CAN_message_t msg;
+long msTimer = 0;
+/************CAN MESSAGE ID's **********************/
+#define SHUTDOWN_FAULT 0x001
+#define HIGHEST_CELL_VOLTAGE 0x0B0
+#define LOWEST_CELL_VOLTAGE 0x0B1
+#define AVG_CELL_VOLTAGE 0x0B2
+#define PACK_STATE_OF_CHARGE 0x0B3
+#define PACK_STATE_OF_HEALTH 0x0B4 // Questionable
+#define HIGHEST_TEMP 0x0B5
+#define LOWEST_TEMP 0x0B6
+#define AVG_TEMP 0x0B7
+#define DISCHARGE_CURRENT 0x0B8
+#define CHARGE_CURRENT 0x0B9
+
+/**
+ * BMS State Variables
+ */
+enum ChargeState {
+  DISCHARGE,
+  CHARGE
+};
+ChargeState chargeState = DISCHARGE;
+int numSamplesHighVoltage = 0; // tracks the number of consecutive samples with a high voltage;
 
 void setup() {
     // put your setup code here, to run once:
     Serial.begin(115200);
     LTC6804_initialize();
     init_cfg();
+    can.begin();
 }
 
 /*
@@ -62,6 +98,16 @@ void loop() {
   // put your main code here, to run repeatedly:
     pollVoltage();
     printCells();
+    while (can.read(msg)) {
+        Serial.print(msg.id);
+        Serial.print(": ");
+        for (int i = 0; i < msg.len; i++) {
+            Serial.print(msg.buf[i]);
+        }
+        Serial.println();
+    }
+    uint16_t maxV = findMaxVoltage();
+    uint16_t minV = findMinVoltage();
 }
 
 /*!***********************************
@@ -97,8 +143,54 @@ void pollVoltage() {
     if (error == -1) {
         Serial.println("A PEC error was detected in voltage data");
     }
-    print_cells(); // prints the cell voltages to Serial.
+    printCells(); // prints the cell voltages to Serial.
     delay(100);
+}
+
+uint16_t findMaxVoltage() {
+    uint16_t maxVolt = cell_voltages[0][0];
+    for (int ic = 0; ic < TOTAL_IC; ic++) {
+        for (int cell = 0; cell < 12; cell++) {
+            if (cell_voltages[ic][cell]) > maxVolt) {
+                maxVolt = cell_voltages[ic][cell];
+            }
+        }
+    }
+    return maxVolt;
+}
+
+uint16_t findMinVoltage() {
+    uint16_t minVolt = cell_voltages[0][0];
+    for (int ic = 0; ic < TOTAL_IC; ic++) {
+        for (int cell = 0; cell < 12; cell++) {
+            if (cell_voltages[ic][cell] < minVolt) {
+                minVolt = cell_voltages[ic][cell];
+            }
+        }
+    }
+    return minVolt;
+}
+
+double findAverage() {
+    double average = 0;
+    for (int ic = 0; ic < TOTAL_IC; ic++) {
+        for (int cell = 0; cell < 12; cell++) {
+            average += cell_voltages[ic][cell];
+        }
+    }
+    average = average / (65536 * TOTAL_IC * 12) * 5;
+    return average;
+}
+
+boolean voltageInBounds() {
+    double maxVolt = findMaxVoltage() / 65536.0f * 5.0f;
+    double minVolt = findMinVoltage() / 65536.0f * 5.0f;
+    return !(maxVolt => VOLTAGE_HIGH_CUTOFF || minVolt => VOLTAGE_HIGH_CUTOFF || maxVolt <= VOLTAGE_LOW_CUTOFF || minVolt <= VOLTAGE_LOW_CUTOFF);
+}
+
+boolean voltageInBounds(uint16_t v) {
+    double voltage = v / 65536.0f * 5.0f;
+    return !(v => VOLTAGE_HIGH_CUTOFF || v <= VOLTAGE_LOW_CUTOFF);
 }
 
 void printCells() {
@@ -107,7 +199,8 @@ void printCells() {
         Serial.println(current_ic+1);
         for (int i = 0; i < 12; i++) {
             Serial.print("C"); Serial.print(i+1); Serial.print(": ");
-            Serial.println(cell_voltages[current_ic][i] * 0.0001, 4);
+            float voltage = cell_voltages[current_ic][i] / MAX_16BIT_UNSIGNED * 5.0f;
+            Serial.println(voltage);
         }
         Serial.println();
     }
