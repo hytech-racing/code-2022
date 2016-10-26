@@ -60,6 +60,7 @@ uint8_t rx_cfg[TOTAL_IC][8];
 FlexCAN can(500000);
 static CAN_message_t msg;
 long msTimer = 0;
+
 /************CAN MESSAGE ID's **********************/
 #define SHUTDOWN_FAULT 0x001
 #define HIGHEST_CELL_VOLTAGE 0x0B0
@@ -95,9 +96,11 @@ void setup() {
  * Continuously poll voltages and print them to the Serial Monitor.
  */
 void loop() {
-  // put your main code here, to run repeatedly:
+    // put your main code here, to run repeatedly:
     pollVoltage();
     printCells();
+
+    // TODO:: IMPLEMENT CAN BUS READING
     while (can.read(msg)) {
         Serial.print(msg.id);
         Serial.print(": ");
@@ -106,8 +109,32 @@ void loop() {
         }
         Serial.println();
     }
+
     uint16_t maxV = findMaxVoltage();
     uint16_t minV = findMinVoltage();
+    int avgV = findAverage();
+
+    if !(voltageInBounds(maxV) && voltageInBounds(minV)) {
+        writeShutdownCANMessage();
+    }
+
+    // write max voltage to CAN as telemetry
+    msg.id = HIGHEST_CELL_VOLTAGE;
+    msg.len = sizeof(int);
+    memcpy(&msg.buf[0], convertToMillivolts(maxV), sizeof(int));
+    can.write(msg);
+
+    // write min voltage to CAN as telemetry
+    msg.id = LOWEST_CELL_VOLTAGE;
+    msg.len(sizeof(int));
+    memcpy(&msg.buf[0], convertToMillivolts(minV), sizeof(int));
+    can.write(msg);
+
+    // write avg voltage to can as telemetry
+    msg.id = AVG_CELL_VOLTAGE;
+    msg.len = sizeof(int);
+    memcpy(&msg.buf[0], avgV, sizeof(int));
+    can.write(msg);
 }
 
 /*!***********************************
@@ -171,25 +198,29 @@ uint16_t findMinVoltage() {
     return minVolt;
 }
 
-double findAverage() {
-    double average = 0;
+int convertToMillivolts(uint16_t v) {
+  return (int) ((v / MAX_16BIT_UNSIGNED.0f) * 5000.0f);
+}
+
+int findAverage() {
+    int average = 0;
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         for (int cell = 0; cell < 12; cell++) {
             average += cell_voltages[ic][cell];
         }
     }
-    average = average / (65536 * TOTAL_IC * 12) * 5;
+    average = (int) (average / (MAX_16BIT_UNSIGNED.0f * TOTAL_IC * 12) * 5000);
     return average;
 }
 
 boolean voltageInBounds() {
-    double maxVolt = findMaxVoltage() / 65536.0f * 5.0f;
-    double minVolt = findMinVoltage() / 65536.0f * 5.0f;
+    double maxVolt = findMaxVoltage() / MAX_16BIT_UNSIGNED.0f * 5.0f;
+    double minVolt = findMinVoltage() / MAX_16BIT_UNSIGNED.0f * 5.0f;
     return !(maxVolt => VOLTAGE_HIGH_CUTOFF || minVolt => VOLTAGE_HIGH_CUTOFF || maxVolt <= VOLTAGE_LOW_CUTOFF || minVolt <= VOLTAGE_LOW_CUTOFF);
 }
 
 boolean voltageInBounds(uint16_t v) {
-    double voltage = v / 65536.0f * 5.0f;
+    double voltage = v / MAX_16BIT_UNSIGNED.0f * 5.0f;
     return !(v => VOLTAGE_HIGH_CUTOFF || v <= VOLTAGE_LOW_CUTOFF);
 }
 
@@ -204,5 +235,15 @@ void printCells() {
         }
         Serial.println();
     }
+}
+
+int writeShutdownCANMessage() {
+    msg.id = SHUTDOWN_FAULT;
+    msg.len = 2 * sizeof(int);
+    int counter = 0;
+    memcpy(&msg.buf[counter], &maxV, sizeof(int));
+    counter += sizeof(int);
+    memcpy(&msg.buf[counter], &minV, sizeof(int));
+    return can.write(msg);
 }
 
