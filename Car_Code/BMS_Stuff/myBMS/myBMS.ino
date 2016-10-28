@@ -82,7 +82,7 @@ enum ChargeState {
   CHARGE
 };
 ChargeState chargeState = DISCHARGE;
-int numSamplesHighVoltage = 0; // tracks the number of consecutive samples with a high voltage;
+boolean BMSStatusOK;
 
 void setup() {
     // put your setup code here, to run once:
@@ -90,6 +90,7 @@ void setup() {
     LTC6804_initialize();
     init_cfg();
     can.begin();
+    BMSStatusOK = true;
 }
 
 /*
@@ -102,12 +103,29 @@ void loop() {
 
     // TODO:: IMPLEMENT CAN BUS READING
     while (can.read(msg)) {
-        Serial.print(msg.id);
-        Serial.print(": ");
-        for (int i = 0; i < msg.len; i++) {
-            Serial.print(msg.buf[i]);
+        switch (msg.id) {
+        case 0x001:
+            BMSStatusOK = false;
+            Serial.print("SHUTDOWN RECEIVED");
+            Serial.println(msg.buf);
+            break;
+        case 0x0BC:
+            unsigned char = msg.buf >> 7;
+            if (char == 0) {
+                chargeState = DISCHARGE;
+            } else if (char == 1) {
+                chargeState == CHARGE;
+            }
+            Serial.print("Charge State Received");
+            Serial.println(msg.buf);
+            break;
+        default:
+            Serial.print("ID: ");
+            Serial.println(msg.id);
+            Serial.print("Message: ");
+            Serial.println(msg.buf);
+            break;
         }
-        Serial.println();
     }
 
     uint16_t maxV = findMaxVoltage();
@@ -115,6 +133,7 @@ void loop() {
     int avgV = findAverage();
 
     if !(voltageInBounds(maxV) && voltageInBounds(minV)) {
+        BMSStatusOK = false;
         writeShutdownCANMessage();
     }
 
