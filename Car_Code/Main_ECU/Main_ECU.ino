@@ -30,11 +30,14 @@ const int BMS_OK_PIN = 1;
 const int THERMISTOR_PIN = 4;
 
 enum State { GLVinit=0, waitIMDBMS, waitDriver, AIRClose, fatalFault, drive }; // NOTE: change and update
-State curState = GLVinit; // curState is current state
+
+// CAN message, will be overwritten everytime a CAN message is processed
+CAN_message_t CAN_msg;
 
 //FUNCTION PROTOTYPES
 bool readValues();
 bool checkFatalFault();
+bool sendCAN_Message(int address, int length, int data);
 
 // setup code
 void setup() {
@@ -42,6 +45,8 @@ void setup() {
 
     CAN.begin(); // init CAN system
     Serial.println("CAN system and serial communication initialized");
+    State curState = GLVinit; // curState is current state
+    Serial.println("Current state is GLVinit");
 }
 
 // loop code
@@ -55,7 +60,7 @@ void loop() {
     Serial.println(DISCHARGE_OK);
     Serial.println(thermValue);
     delay(200);
-    
+
     //check CAN for a message for software shutdown
     if (!startupDone) {
         switch (curState) {
@@ -91,7 +96,7 @@ void loop() {
                     }
                     curTime = millis();
                 }
-                if (!(curState == State.fatalFault)) {
+                if (curState != State.fatalFault) {
                     curState = drive;
                 }
                 break;
@@ -115,8 +120,16 @@ bool readValues() {
     thermTemp /= BCONSTANT;
     thermTemp += 1.0 / (TEMPERATURENOMINAL + 273.15);
     thermTemp = 1.0 / thermTemp;
-    thermTemp -= 273.15;  
+    thermTemp -= 273.15;
     return true;
+}
+
+bool sendCAN_Message(int address, int length, int data) { // Sends message on CAN Bus
+    CAN_msg.id = address;
+    CAN_msg.len = length;
+    CAN_msg.buf[0] = data; // NOTE: changes must be made to allow usage of full buffer
+
+    CAN.write(msg);
 }
 
 bool checkFatalFault() { // returns true if fatal fault found ()
