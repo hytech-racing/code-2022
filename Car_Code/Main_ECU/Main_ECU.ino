@@ -56,51 +56,51 @@ void loop() {
     Serial.println(thermValue);
     delay(200);
     
-//    //check CAN for a message for software shutdown
-//    if (!startupDone) {
-//        switch (curState) {
-//            case GLVinit:
-//                curState = waitIMDBMS; //going straight to waitIMD unti further notice
-//                break;
-//            case waitIMDBMS:
-//                if (softwareFault) {
-//                    curState = fatalFault;
-//                } else {
-//                    if (DISCHARGE_OK >= BMS_High) { // if BMS is high
-//                        if (OKHS >= IMD_High) { // if IMD is also high
-//                            curState = waitStartButton; // both BMD and IMD are high, wait for start button press
-//                        }
-//                    }
-//                }
-//                break;
-//            case waitDriver:
-//                if (checkFatalFault()) {
-//                    curState = fatalFault;
-//                } else {
-//                    /*can message for start button press received*/
-//                    curState = closeLatch;
-//                }
-//                break;
-//            case AIRClose: // equivalent to VCCAIR in Google Doc state diagram
-//                initialTime = millis();
-//                unsigned long curTime = millis();
-//                while(curTime <= initialTime + 500){
-//                    if (checkFatalFault()) {
-//                        curState = fatalFault;
-//                        break;
-//                    }
-//                    curTime = millis();
-//                }
-//                if (!(curState == State.fatalFault)) {
-//                    curState = drive;
-//                }
-//                break;
-//            case fatalFault:
-//            case drive:
-//            //send can message to throttle control
-//        }
-//    } else {
-//    }
+    //check CAN for a message for software shutdown
+    if (!startupDone) {
+        switch (curState) {
+            case GLVinit:
+                curState = waitIMDBMS; //going straight to waitIMD unti further notice
+                break;
+            case waitIMDBMS:
+                if (softwareFault) {
+                    curState = fatalFault;
+                } else {
+                    if (DISCHARGE_OK >= BMS_High) { // if BMS is high
+                        if (OKHS >= IMD_High) { // if IMD is also high
+                            curState = waitStartButton; // both BMD and IMD are high, wait for start button press
+                        }
+                    }
+                }
+                break;
+            case waitDriver:
+                if (checkFatalFault()) {
+                    curState = fatalFault;
+                } else {
+                    /*can message for start button press received*/
+                    curState = closeLatch;
+                }
+                break;
+            case AIRClose: // equivalent to VCCAIR in Google Doc state diagram
+                initialTime = millis();
+                unsigned long curTime = millis();
+                while(curTime <= initialTime + 500){
+                    if (checkFatalFault()) {
+                        curState = fatalFault;
+                        break;
+                    }
+                    curTime = millis();
+                }
+                if (!(curState == State.fatalFault)) {
+                    curState = drive;
+                }
+                break;
+            case fatalFault:
+            case drive:
+            //send can message to throttle control
+        }
+    } else {
+    }
 }
 
 bool readValues() {
@@ -108,15 +108,14 @@ bool readValues() {
     OKHS = analogRead(OKHS_PIN) / 67.7;
     thermValue = analogRead(THERMISTOR_PIN);
     //compute actual temperature with math
-    float resistance = ((float) 1023 / (float) thermValue) - 1;
-    resistance = SERIESRESISTOR / resistance;
-    Serial.println(resistance);
+    float resistance = (5.0 * SERIESRESISTOR * 1023) / (3.3 * thermValue) - SERIESRESISTOR;
+//    Serial.println(resistance);
     thermTemp = resistance / THERMISTORNOMINAL;
     thermTemp = log(thermTemp);
     thermTemp /= BCONSTANT;
     thermTemp += 1.0 / (TEMPERATURENOMINAL + 273.15);
     thermTemp = 1.0 / thermTemp;
-    thermTemp -= 273.15;
+    thermTemp -= 273.15;  
     return true;
 }
 
