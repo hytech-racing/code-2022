@@ -48,12 +48,6 @@ void setup() {
     //find the ranges of values coming from each sensor during normal operation of the foot pedals
     //Any values outside of these ranges could be caused by an open circuit, short to ground, or short to sensor power.
     
-    //Error Message Instructions
-    //an error message should be sent out on CAN Bus detailing which implausibility has been detected. 
-    //periodically sent until the implausibility ceases to exist. 
-    //If the implausibility ceases, a corresponding message should be sent on CAN Bus. 
-    //If an implausibility ceases to be detected, normal throttle controls should be reinstated
-    //i.e. the vehicle does not need to be restarted to reset an implausibility fault.
 void loop() {
     readInputValues();
     //Check for errors
@@ -70,7 +64,18 @@ void loop() {
         //TODO: SHUTDOWN TORQUE - BRAKE CRAZY
     }
 }
-
+    //Error Message Instructions
+    //an error message should be sent out on CAN Bus detailing which implausibility has been detected. 
+    //periodically sent until the implausibility ceases to exist. 
+    //If the implausibility ceases, a corresponding message should be sent on CAN Bus. 
+    //If an implausibility ceases to be detected, normal throttle controls should be reinstated
+    //i.e. the vehicle does not need to be restarted to reset an implausibility fault.
+/* LOL FUCK THIS
+int giveError(int errorID) {
+   CAN.write(errorID) 
+   return 1; //placeholder 
+}
+*/
 void readInputValues() {
     voltageThrottlePedal1 = analogRead(THROTTLE_PORT_1);
     voltageThrottlePedal2 = analogRead(THROTTLE_PORT_2);
