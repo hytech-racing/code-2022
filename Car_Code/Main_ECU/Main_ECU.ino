@@ -37,7 +37,8 @@ CAN_message_t CAN_msg;
 //FUNCTION PROTOTYPES
 bool readValues();
 bool checkFatalFault();
-bool sendCAN_Message(int address, int length, int data);
+bool sendCanMessage(int, int, int);
+bool sendCanUpdate();
 
 // setup code
 void setup() {
@@ -124,9 +125,9 @@ bool readValues() {
     return true;
 }
 
-bool sendCAN_Message(int address, int length, int data) { // Sends message on CAN Bus
+bool sendCanMessage(int address, int msgLength, int data) { // Sends message on CAN Bus
     CAN_msg.id = address;
-    CAN_msg.len = length;
+    CAN_msg.len = msgLength;
     CAN_msg.buf[0] = data; // NOTE: changes must be made to allow usage of full buffer
 
     CAN.write(msg);
@@ -138,4 +139,12 @@ bool checkFatalFault() { // returns true if fatal fault found ()
     } else {
         return true;
     }
+}
+
+bool sendCanUpdate() { // Sends updates on CAN Bus
+    CAN_msg.id = address;
+    CAN_msg.len = msgLength;
+    CAN_msg.buf[0] = data; // NOTE: changes must be made to allow usage of full buffer
+
+    CAN.write(msg);
 }
