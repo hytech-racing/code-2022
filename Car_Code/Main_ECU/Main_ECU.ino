@@ -24,6 +24,7 @@ const int BMS_High = 50;
 
 // timer
 unsigned long AIRinitialTime; // use timer = millis() to get time, and compare in ms
+unsigned long AIRcurTime;
 unsigned long updateInitialTime; // timer for canUpdate function calls
 
 const int OKHS_PIN = 0;
@@ -37,8 +38,6 @@ State curState = GLVinit; // curState is current state
 bool readValues();
 bool checkFatalFault();
 
-//setting up state
-State curState;
 
 // setup code
 void setup() {
@@ -90,13 +89,13 @@ void loop() {
                 break;
             case AIRClose: // equivalent to VCCAIR in Google Doc state diagram
                 AIRinitialTime = millis();
-                unsigned long curTime = millis();
-                while(curTime <= AIRinitialTime + 500){
+                AIRcurTime = millis();
+                while(AIRcurTime <= AIRinitialTime + 500){
                     if (checkFatalFault()) {
                         curState = fatalFault;
                         break;
                     }
-                    curTime = millis();
+                    AIRcurTime = millis();
                 }
                 if (!(curState == fatalFault)) {
                     curState = drive;
