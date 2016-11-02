@@ -30,15 +30,11 @@ const int BMS_OK_PIN = 1;
 const int THERMISTOR_PIN = 4;
 
 enum State { GLVinit=0, waitIMDBMS, waitDriver, AIRClose, fatalFault, drive }; // NOTE: change and update
-
-// CAN message, will be overwritten everytime a CAN message is processed
-CAN_message_t CAN_msg;
+State curState = GLVinit; // curState is current state
 
 //FUNCTION PROTOTYPES
 bool readValues();
 bool checkFatalFault();
-bool sendCanMessage(int, int, int);
-bool sendCanUpdate();
 
 // setup code
 void setup() {
@@ -46,8 +42,6 @@ void setup() {
 
     CAN.begin(); // init CAN system
     Serial.println("CAN system and serial communication initialized");
-    State curState = GLVinit; // curState is current state
-    Serial.println("Current state is GLVinit");
 }
 
 // loop code
@@ -61,7 +55,7 @@ void loop() {
     Serial.println(DISCHARGE_OK);
     Serial.println(thermValue);
     delay(200);
-
+    
     //check CAN for a message for software shutdown
     if (!startupDone) {
         switch (curState) {
@@ -74,7 +68,7 @@ void loop() {
                 } else {
                     if (DISCHARGE_OK >= BMS_High) { // if BMS is high
                         if (OKHS >= IMD_High) { // if IMD is also high
-                            curState = waitStartButton; // both BMD and IMD are high, wait for start button press
+                            curState = waitDriver; // both BMD and IMD are high, wait for start button press
                         }
                     }
                 }
@@ -84,7 +78,7 @@ void loop() {
                     curState = fatalFault;
                 } else {
                     /*can message for start button press received*/
-                    curState = closeLatch;
+                    curState = AIRClose;
                 }
                 break;
             case AIRClose: // equivalent to VCCAIR in Google Doc state diagram
@@ -97,12 +91,14 @@ void loop() {
                     }
                     curTime = millis();
                 }
-                if (curState != State.fatalFault) {
+                if (!(curState == fatalFault)) {
                     curState = drive;
                 }
                 break;
             case fatalFault:
+                break;
             case drive:
+                break;
             //send can message to throttle control
         }
     } else {
@@ -121,16 +117,15 @@ bool readValues() {
     thermTemp /= BCONSTANT;
     thermTemp += 1.0 / (TEMPERATURENOMINAL + 273.15);
     thermTemp = 1.0 / thermTemp;
-    thermTemp -= 273.15;
+    thermTemp -= 273.15;  
     return true;
-}
 
-bool sendCanMessage(int address, int msgLength, int data) { // Sends message on CAN Bus
-    CAN_msg.id = address;
-    CAN_msg.len = msgLength;
-    CAN_msg.buf[0] = data; // NOTE: changes must be made to allow usage of full buffer
-
-    CAN.write(msg);
+    while(CAN.read(msg)) {
+        if (msg.id == 0xBBBB) {
+            softwareFault = true;
+            
+        }
+    }
 }
 
 bool checkFatalFault() { // returns true if fatal fault found ()
@@ -139,12 +134,4 @@ bool checkFatalFault() { // returns true if fatal fault found ()
     } else {
         return true;
     }
-}
-
-bool sendCanUpdate() { // Sends updates on CAN Bus
-    CAN_msg.id = address;
-    CAN_msg.len = msgLength;
-    CAN_msg.buf[0] = data; // NOTE: changes must be made to allow usage of full buffer
-
-    CAN.write(msg);
 }
