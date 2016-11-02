@@ -2,10 +2,10 @@
 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
-int OKHS = 0; // voltage after calculation
-int DISCHARGE_OK = 0; // voltage after calculation
-int GLVbattery = 0; // voltage after calculation
-int shutdownCircuit = 0; // voltage after calculation
+float OKHS = 0; // voltage after calculation
+float DISCHARGE_OK = 0; // voltage after calculation
+float GLVbattery = 0; // voltage after calculation
+float shutdownCircuit = 0; // voltage after calculation
 bool OKHSfault = false; // fault status of OKHS, fault if true
 bool DISCHARGE_OKfault = false; // fault status of DISCHARGE_OK, fault if true
 bool startPressed = false; // true if start button is pressed
@@ -23,7 +23,8 @@ const int IMD_High = 50;
 const int BMS_High = 50;
 
 // timer
-unsigned long initialTime; // use timer = millis() to get time, and compare in ms
+unsigned long AIRinitialTime; // use timer = millis() to get time, and compare in ms
+unsigned long updateInitialTime; // timer for canUpdate function calls
 
 const int OKHS_PIN = 0;
 const int BMS_OK_PIN = 1;
@@ -40,13 +41,16 @@ bool checkFatalFault();
 bool sendCanMessage(int, int, int);
 bool sendCanUpdate();
 
+//setting up state
+State curState;
+
 // setup code
 void setup() {
     Serial.begin(115200); // init serial for PC communication
 
     CAN.begin(); // init CAN system
     Serial.println("CAN system and serial communication initialized");
-    State curState = GLVinit; // curState is current state
+    curState = GLVinit; // curState is current state
     Serial.println("Current state is GLVinit");
 }
 
@@ -88,9 +92,9 @@ void loop() {
                 }
                 break;
             case AIRClose: // equivalent to VCCAIR in Google Doc state diagram
-                initialTime = millis();
+                AIRinitialTime = millis();
                 unsigned long curTime = millis();
-                while(curTime <= initialTime + 500){
+                while(curTime <= AIRinitialTime + 500){
                     if (checkFatalFault()) {
                         curState = fatalFault;
                         break;
