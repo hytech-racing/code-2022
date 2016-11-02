@@ -25,7 +25,8 @@ const int BMS_High = 50;
 // timer
 unsigned long AIRinitialTime; // use timer = millis() to get time, and compare in ms
 unsigned long AIRcurTime;
-unsigned long updateInitialTime; // timer for canUpdate function calls
+unsigned long updateInitialTime = millis(); // timer for canUpdate function calls
+unsigned long updateCurTime;
 
 const int OKHS_PIN = 0;
 const int BMS_OK_PIN = 1;
@@ -37,6 +38,8 @@ State curState = GLVinit; // curState is current state
 //FUNCTION PROTOTYPES
 bool readValues();
 bool checkFatalFault();
+bool sendCanMessage(int, int, int);
+bool sendCanUpdate();
 
 
 // setup code
@@ -109,6 +112,11 @@ void loop() {
         }
     } else {
     }
+
+    updateCurTime = millis();
+    if((updateCurTime - updateInitialTime)%500 == 0){ //send updates every half second
+      sendCanUpdate();
+    }
 }
 
 bool readValues() {
@@ -141,3 +149,12 @@ bool checkFatalFault() { // returns true if fatal fault found ()
         return true;
     }
 }
+
+bool sendCanMessage(int address, int msgLength, int data){
+  
+}
+
+bool sendCanUpdate(){
+    
+}
+
