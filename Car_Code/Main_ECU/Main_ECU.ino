@@ -41,6 +41,9 @@ bool checkFatalFault();
 bool sendCanMessage(int, int, int);
 bool sendCanUpdate();
 
+//State Ouptuts for CAN Messages
+byte stateOutput;
+
 
 // setup code
 void setup() {
@@ -69,9 +72,11 @@ void loop() {
     if (!startupDone) {
         switch (curState) {
             case GLVinit:
+                stateOutput = 0b00000000;
                 curState = waitIMDBMS; //going straight to waitIMD unti further notice
                 break;
             case waitIMDBMS:
+                stateOutput = 0b00000001;
                 if (softwareFault) {
                     curState = fatalFault;
                 } else {
@@ -83,6 +88,7 @@ void loop() {
                 }
                 break;
             case waitDriver:
+                stateOutput = 0b00000010;
                 if (checkFatalFault()) {
                     curState = fatalFault;
                 } else {
@@ -91,6 +97,7 @@ void loop() {
                 }
                 break;
             case AIRClose: // equivalent to VCCAIR in Google Doc state diagram
+                stateOutput = 0b00000100;
                 AIRinitialTime = millis();
                 AIRcurTime = millis();
                 while(AIRcurTime <= AIRinitialTime + 500){
@@ -105,8 +112,10 @@ void loop() {
                 }
                 break;
             case fatalFault:
+                stateOutput = 0b00001000;
                 break;
             case drive:
+                stateOutput = 0b00010000;
                 break;
             //send can message to throttle control
         }
@@ -155,6 +164,20 @@ bool sendCanMessage(int address, int msgLength, int data){
 }
 
 bool sendCanUpdate(){
+
+    //prepare to send the voltages as shorts in the CAN message
+    short shortDischargeOk = (short) (DISCHARGE_OK * 10);
+    short shortOKHS = (short) (OKHS * 10);
+    short shortGLV = (short) (GLVbattery * 10);
+    short shortShutdown = (short) (shutdownCircuit * 10);
+
+    //send the message
+    msg.id = 0x50;
+    msg.len = 8;
+    memcpy(&msg.buf[0], &shortDischargeOk, sizeof(short));
+    memcpy(&msg.buf[2], &shortOKHS, sizeof(short));
+    memcpy(&msg.buf[4], &shortGLV, sizeof(short));
+    memcpy(&msg.buf[6], &shortShutdown, sizeof(short));
     
 }
 
