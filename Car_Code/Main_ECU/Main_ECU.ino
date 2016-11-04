@@ -39,7 +39,7 @@ State curState = GLVinit; // curState is current state
 bool readValues();
 bool checkFatalFault();
 bool sendCanMessage(int, int, int);
-bool sendCanUpdate();
+int sendCanUpdate();
 
 //State Ouptuts for CAN Messages
 byte stateOutput;
@@ -163,7 +163,7 @@ bool sendCanMessage(int address, int msgLength, int data){
   
 }
 
-bool sendCanUpdate(){
+int sendCanUpdate(){
 
     //prepare to send the voltages as shorts in the CAN message
     short shortDischargeOk = (short) (DISCHARGE_OK * 10);
@@ -178,6 +178,7 @@ bool sendCanUpdate(){
     memcpy(&msg.buf[2], &shortOKHS, sizeof(short));
     memcpy(&msg.buf[4], &shortGLV, sizeof(short));
     memcpy(&msg.buf[6], &shortShutdown, sizeof(short));
-    
+
+    return CAN.write(msg);
 }
 
