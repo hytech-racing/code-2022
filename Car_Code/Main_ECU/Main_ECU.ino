@@ -1,5 +1,9 @@
 #include <FlexCAN.h> // import teensy library
 
+#define BMS_FAULT (1<<0)
+#define IMD_FAULT (1<<1)
+#define BSPD_FAULT (1<<2)
+
 FlexCAN CAN(500000);
 static CAN_message_t msg;
 float OKHS = 0; // voltage after calculation
@@ -12,7 +16,6 @@ bool startPressed = false; // true if start button is pressed
 float thermTemp = 0.0; // temperature of onboard thermistor (after calculation)
 int thermValue = 0; //raw value from thermistor
 bool startupDone = false; // true when reached drive state
-bool softwareFault = false; // true when software fault found
 const int THERMISTORNOMINAL = 10000;
 const int TEMPERATURENOMINAL = 25;
 const int BCONSTANT = 3900;
@@ -102,12 +105,13 @@ void loop() {
                 AIRcurTime = millis();
                 while(AIRcurTime <= AIRinitialTime + 500){
                     if (checkFatalFault()) {
-                        curState = fatalFault;
                         break;
                     }
                     AIRcurTime = millis();
                 }
                 if (!(curState == fatalFault)) {
+                    //close the latch
+                    digitalWrite(11, HIGH);
                     curState = drive;
                 }
                 break;
@@ -146,17 +150,28 @@ bool readValues() {
 }
 
 bool checkFatalFault() { // returns true if fatal fault found 
-    if (OKHS >= IMD_High && DISCHARGE_OK >= BMS_High && !softwareFault) {
-        return false;
-    } else {
-        return true;
+    CAN_message_t faultMsg;
+    if (OKHS >= IMD_High) {
+        faultMsg.buf[0] = faultMsg.buf[0] | IMD_FAULT;
+    } else if (DISCHARGE_OK >= BMS_High) {
+        faultMsg.buf[0] = faultMsg.buf[0] | BMS_FAULT;
+    } else if {
+        while (CAN.read(msg)) {
+            if (msg.id == 0x0001) {
+                faultMsg.buf[0] = faultMsg.buf[0] | BSPD_FAULT;
+                return true;
+            }
+        }
     }
 
-    while (CAN.read(msg)) {
-        if (msg.id == 0x0001) {
-            softwareFault = true;
-            return true;
-        }
+    if (faultMsg.buf[0] != 0) {
+        curState = fatalFault;
+        faultMsg.id = 0x0002;
+        faultMsg.len = 1;
+        CAN.write(faultMsg);
+        return true;
+    } else {
+        return false;
     }
 }
 
