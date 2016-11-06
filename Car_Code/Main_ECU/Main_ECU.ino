@@ -143,19 +143,20 @@ bool readValues() {
     thermTemp -= 273.15;  
     return true;
 
-    while(CAN.read(msg)) {
-        if (msg.id == 0xBBBB) {
-            softwareFault = true;
-            
-        }
-    }
 }
 
-bool checkFatalFault() { // returns true if fatal fault found ()
+bool checkFatalFault() { // returns true if fatal fault found 
     if (OKHS >= IMD_High && DISCHARGE_OK >= BMS_High && !softwareFault) {
         return false;
     } else {
         return true;
+    }
+
+    while (CAN.read(msg)) {
+        if (msg.id == 0x0001) {
+            softwareFault = true;
+            return true;
+        }
     }
 }
 
