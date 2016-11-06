@@ -34,6 +34,7 @@ unsigned long updateCurTime;
 const int OKHS_PIN = 0;
 const int BMS_OK_PIN = 1;
 const int THERMISTOR_PIN = 4;
+const int GLV_PIN = 3;
 
 enum State { GLVinit=0, waitIMDBMS, waitDriver, AIRClose, fatalFault, drive }; // NOTE: change and update
 State curState = GLVinit; // curState is current state
@@ -69,7 +70,7 @@ void loop() {
     Serial.print("BMS: ");
     Serial.println(DISCHARGE_OK);
     Serial.println(thermValue);
-    delay(200);
+    delay(1);
     
     //check CAN for a message for software shutdown
     if (!startupDone) {
@@ -136,6 +137,7 @@ bool readValues() {
     DISCHARGE_OK = analogRead(BMS_OK_PIN)/ 67.7;
     OKHS = analogRead(OKHS_PIN) / 67.7;
     thermValue = analogRead(THERMISTOR_PIN);
+    GLVbattery = analogRead(GLV_PIN)/67.7;
     //compute actual temperature with math
     float resistance = (5.0 * SERIESRESISTOR * 1023) / (3.3 * thermValue) - SERIESRESISTOR;
 //    Serial.println(resistance);
@@ -182,10 +184,10 @@ bool sendCanMessage(int address, int msgLength, int data){
 int sendCanUpdate(){
 
     //prepare to send the voltages as shorts in the CAN message
-    short shortDischargeOk = (short) (DISCHARGE_OK * 10);
-    short shortOKHS = (short) (OKHS * 10);
-    short shortGLV = (short) (GLVbattery * 10);
-    short shortShutdown = (short) (shutdownCircuit * 10);
+    short shortDischargeOk = (short) (DISCHARGE_OK * 1000);
+    short shortOKHS = (short) (OKHS * 1000);
+    short shortGLV = (short) (GLVbattery * 1000);
+    short shortShutdown = (short) (shutdownCircuit * 1000);
 
     //send the message
     msg.id = 0x50;
@@ -195,6 +197,22 @@ int sendCanUpdate(){
     memcpy(&msg.buf[4], &shortGLV, sizeof(short));
     memcpy(&msg.buf[6], &shortShutdown, sizeof(short));
 
-    return CAN.write(msg);
+    int temp1 = CAN.write(msg);
+
+    bool okhsCheck = OKHS >= IMD_High;
+    bool dischargeCheck = DISCHARGE_OK >= BMS_High;
+    short shortTemp = (short) thermTemp * 100;
+    
+    msg.id = 0x51;
+    msg.len = 5;
+    memcpy(&msg.buf[0], &shortTemp, sizeof(short));
+    memcpy(&msg.buf[2], &okhsCheck, sizeof(bool));
+    memcpy(&msg.buf[3], &dischargeCheck, sizeof(bool));
+    memcpy(&msg.buf[4], &stateOutput, sizeof(byte));
+
+    int temp2 = CAN.write(msg);
+
+    return temp1 + temp2;
+
 }
 
