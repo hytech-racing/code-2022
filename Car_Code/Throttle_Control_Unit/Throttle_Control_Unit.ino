@@ -20,6 +20,13 @@ const int MAX_THROTTLE_2 = 0;
 const int MIN_BRAKE = 0;
 const int MAX_BRAKE = 0;
 
+// additional values to report
+bool implausibilityStatus = false;
+bool throttleCurve = false; // false -> normal, true -> boost
+float thermTemp = 0.0; // temperature of onboard thermistor
+bool brakePlausibility = false; // falt if BSPD signal too low
+bool brakePedalActive = false; // true if brake is considered pressed
+
 //FSAE requires that torque be shut off if an implausibility persists for over 100 msec (EV2.3.5).
 //A deviation of more than 10% pedal travel between the two throttle sensors
 //A failure of position sensor wiring which can cause an open circuit, short to ground, or short to sensor power.
@@ -59,19 +66,7 @@ void setup() {
 void loop() {
     readValues();
     checkDeactivateTractiveSystem();
-    //Check for errors
-    if(voltageThrottlePedal1 / voltageThrottlePedal2 > 1.1 || voltageThrottlePedal1 / voltageThrottlePedal2 < 0.9) {
-        //TODO: SHUTDOWN TORQUE - PEDALS NOT AGREEING
-    }
-    if (voltageThrottlePedal1 > MAX_THROTTLE_1 || voltageThrottlePedal1 < MIN_THROTTLE_1) {
-        //TODO: SHUTDOWN TORQUE - PEDAL 1 CRAZY
-    }
-    if (voltageThrottlePedal2 > MAX_THROTTLE_2 || voltageThrottlePedal2 < MIN_THROTTLE_2) {
-        //TODO: SHUTDOWN TORQUE - PEDAL 2 CRAZY
-    }
-    if (voltageBrakePedal > MAX_BRAKE || voltageBrakePedal < MIN_BRAKE) {
-        //TODO: SHUTDOWN TORQUE - BRAKE CRAZY
-    }
+
 }
     //Error Message Instructions
     //an error message should be sent out on CAN Bus detailing which implausibility has been detected.
@@ -93,5 +88,18 @@ void readValues() {
 }
 
 bool checkDeactivateTractiveSystem() { //
-
+    //Check for errors
+    if(voltageThrottlePedal1 / voltageThrottlePedal2 > 1.1 || voltageThrottlePedal1 / voltageThrottlePedal2 < 0.9) {
+        //TODO: SHUTDOWN TORQUE - PEDALS NOT AGREEING
+    }
+    if (voltageThrottlePedal1 > MAX_THROTTLE_1 || voltageThrottlePedal1 < MIN_THROTTLE_1) {
+        //TODO: SHUTDOWN TORQUE - PEDAL 1 CRAZY
+    }
+    if (voltageThrottlePedal2 > MAX_THROTTLE_2 || voltageThrottlePedal2 < MIN_THROTTLE_2) {
+        //TODO: SHUTDOWN TORQUE - PEDAL 2 CRAZY
+    }
+    if (voltageBrakePedal > MAX_BRAKE || voltageBrakePedal < MIN_BRAKE) {
+        //TODO: SHUTDOWN TORQUE - BRAKE CRAZY
+    }
+    return true;
 }
