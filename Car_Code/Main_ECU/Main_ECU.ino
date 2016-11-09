@@ -29,6 +29,7 @@ const int BMS_High = 50;
 // timer
 Metro updateTimer = Metro(500);
 Metro AIRtimer = Metro(2000);
+Metro FAKE_DRIVER_BUTTON_PRESS = Metro(3000);
 
 const int OKHS_PIN = 0;
 const int BMS_OK_PIN = 1;
@@ -89,15 +90,17 @@ void loop() {
             case waitDriver:
                 stateOutput = 0b00000010;
                 /*can message for start button press received*/
-                AIRtimer.reset();
-                curState = AIRClose;
+                if(FAKE_DRIVER_BUTTON_PRESS.check()){
+                    AIRtimer.reset();
+                    curState = AIRClose;
+                }
                 break;
             case AIRClose: // equivalent to VCCAIR in Google Doc state diagram
                 stateOutput = 0b00000100;
-                if(!AIRtimer.check()){
+                if(AIRtimer.check()){
                     if (!(curState == fatalFault)) {
                         //close the latch
-                        digitalWrite(11, HIGH);
+                        digitalWrite(10, HIGH);
                         curState = drive;
                     }
                 }
@@ -138,6 +141,7 @@ bool readValues() {
 
 bool checkFatalFault() { // returns true if fatal fault found 
     CAN_message_t faultMsg;
+    faultMsg.buf[0] = 0;
     if (OKHS >= IMD_High) {
         faultMsg.buf[0] = faultMsg.buf[0] | IMD_FAULT;
     } else if (DISCHARGE_OK >= BMS_High) {
@@ -152,6 +156,7 @@ bool checkFatalFault() { // returns true if fatal fault found
     
 
     if (faultMsg.buf[0] != 0) {
+        digitalWrite(10, LOW);
         curState = fatalFault;
         faultMsg.id = 0x0002;
         faultMsg.len = 1;
@@ -182,6 +187,21 @@ int sendCanUpdate(){
     memcpy(&msg.buf[4], &shortGLV, sizeof(short));
     memcpy(&msg.buf[6], &shortShutdown, sizeof(short));
 
-    return CAN.write(msg);
+    int temp1 = CAN.write(msg);
+
+    bool okhsCheck = OKHS >= IMD_High;
+    bool dischargeCheck = DISCHARGE_OK >= BMS_High;
+    short shortTemp = (short) thermTemp * 100;
+    
+    msg.id = 0x51;
+    msg.len = 5;
+    memcpy(&msg.buf[0], &shortTemp, sizeof(short));
+    memcpy(&msg.buf[2], &okhsCheck, sizeof(bool));
+    memcpy(&msg.buf[3], &dischargeCheck, sizeof(bool));
+    memcpy(&msg.buf[4], &stateOutput, sizeof(byte));
+
+    int temp2 = CAN.write(msg);
+
+    return temp1 + temp2;
 }
 
