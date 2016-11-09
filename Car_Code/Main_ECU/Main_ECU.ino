@@ -1,4 +1,5 @@
 #include <FlexCAN.h> // import teensy library
+#include <Metro.h>
 
 #define BMS_FAULT (1<<0)
 #define IMD_FAULT (1<<1)
@@ -26,10 +27,8 @@ const int IMD_High = 50;
 const int BMS_High = 50;
 
 // timer
-unsigned long AIRinitialTime; // use timer = millis() to get time, and compare in ms
-unsigned long AIRcurTime;
-unsigned long updateInitialTime = millis(); // timer for canUpdate function calls
-unsigned long updateCurTime;
+Metro updateTimer = Metro(500);
+Metro AIRtimer = Metro(2000);
 
 const int OKHS_PIN = 0;
 const int BMS_OK_PIN = 1;
@@ -90,22 +89,17 @@ void loop() {
             case waitDriver:
                 stateOutput = 0b00000010;
                 /*can message for start button press received*/
+                AIRtimer.reset();
                 curState = AIRClose;
                 break;
             case AIRClose: // equivalent to VCCAIR in Google Doc state diagram
                 stateOutput = 0b00000100;
-                AIRinitialTime = millis();
-                AIRcurTime = millis();
-                while(AIRcurTime <= AIRinitialTime + 500){
-                    if (checkFatalFault()) {
-                        break;
+                if(!AIRtimer.check()){
+                    if (!(curState == fatalFault)) {
+                        //close the latch
+                        digitalWrite(11, HIGH);
+                        curState = drive;
                     }
-                    AIRcurTime = millis();
-                }
-                if (!(curState == fatalFault)) {
-                    //close the latch
-                    digitalWrite(11, HIGH);
-                    curState = drive;
                 }
                 break;
             case fatalFault:
@@ -119,9 +113,9 @@ void loop() {
     } else {
     }
 
-    updateCurTime = millis();
-    if((updateCurTime - updateInitialTime)%500 == 0){ //send updates every half second
+    if(updateTimer.check()){
       sendCanUpdate();
+      updateTimer.reset();
     }
 }
 
@@ -148,13 +142,14 @@ bool checkFatalFault() { // returns true if fatal fault found
         faultMsg.buf[0] = faultMsg.buf[0] | IMD_FAULT;
     } else if (DISCHARGE_OK >= BMS_High) {
         faultMsg.buf[0] = faultMsg.buf[0] | BMS_FAULT;
-    } else if {
-        while (CAN.read(msg)) {
-            if (msg.id == 0x0001) {
-                faultMsg.buf[0] = faultMsg.buf[0] | BSPD_FAULT;
-            }
+    }
+        
+    while (CAN.read(msg)) {
+        if (msg.id == 0x0001) {
+            faultMsg.buf[0] = faultMsg.buf[0] | BSPD_FAULT;
         }
     }
+    
 
     if (faultMsg.buf[0] != 0) {
         curState = fatalFault;
