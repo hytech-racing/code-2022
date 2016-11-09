@@ -25,6 +25,14 @@ const int MAX_BRAKE = 0;
 //A failure of position sensor wiring which can cause an open circuit, short to ground, or short to sensor power.
 bool torqueShutdown = false; //
 
+// Throttle Control Unit states
+enum State { GLVinit=0, waitSDCircInit, tracSysActive, enablingInv, waitRtD, readyToDrive, tracSysNotActive};
+State curState = GLVinit;
+
+// FUNCTION PROTOTYPES
+bool readValues();
+bool checkDeactivateTractiveSystem();
+
 // setup code
 void setup() {
     Serial.begin(115200); // init serial for PC communication
@@ -47,9 +55,10 @@ void setup() {
     //To detect a position sensor wiring failure
     //find the ranges of values coming from each sensor during normal operation of the foot pedals
     //Any values outside of these ranges could be caused by an open circuit, short to ground, or short to sensor power.
-    
+
 void loop() {
-    readInputValues();
+    readValues();
+    checkDeactivateTractiveSystem();
     //Check for errors
     if(voltageThrottlePedal1 / voltageThrottlePedal2 > 1.1 || voltageThrottlePedal1 / voltageThrottlePedal2 < 0.9) {
         //TODO: SHUTDOWN TORQUE - PEDALS NOT AGREEING
@@ -65,21 +74,24 @@ void loop() {
     }
 }
     //Error Message Instructions
-    //an error message should be sent out on CAN Bus detailing which implausibility has been detected. 
-    //periodically sent until the implausibility ceases to exist. 
-    //If the implausibility ceases, a corresponding message should be sent on CAN Bus. 
+    //an error message should be sent out on CAN Bus detailing which implausibility has been detected.
+    //periodically sent until the implausibility ceases to exist.
+    //If the implausibility ceases, a corresponding message should be sent on CAN Bus.
     //If an implausibility ceases to be detected, normal throttle controls should be reinstated
     //i.e. the vehicle does not need to be restarted to reset an implausibility fault.
 /* LOL FUCK THIS
 int giveError(int errorID) {
-   CAN.write(errorID) 
-   return 1; //placeholder 
+   CAN.write(errorID)
+   return 1; //placeholder
 }
 */
-void readInputValues() {
+void readValues() {
     voltageThrottlePedal1 = analogRead(THROTTLE_PORT_1);
     voltageThrottlePedal2 = analogRead(THROTTLE_PORT_2);
     voltageBrakePedal = analogRead(BRAKE_ANALOG_PORT);
     //TODO: decide/set torque values for input values
 }
 
+bool checkDeactivateTractiveSystem() { //
+
+}
