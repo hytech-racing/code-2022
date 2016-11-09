@@ -97,7 +97,7 @@ void loop() {
                 if(!AIRtimer.check()){
                     if (!(curState == fatalFault)) {
                         //close the latch
-                        digitalWrite(11, HIGH);
+                        digitalWrite(10, HIGH);
                         curState = drive;
                     }
                 }
@@ -138,6 +138,7 @@ bool readValues() {
 
 bool checkFatalFault() { // returns true if fatal fault found 
     CAN_message_t faultMsg;
+    faultMsg.buf[0] = 0;
     if (OKHS >= IMD_High) {
         faultMsg.buf[0] = faultMsg.buf[0] | IMD_FAULT;
     } else if (DISCHARGE_OK >= BMS_High) {
@@ -152,6 +153,7 @@ bool checkFatalFault() { // returns true if fatal fault found
     
 
     if (faultMsg.buf[0] != 0) {
+        digitalWrite(10, LOW);
         curState = fatalFault;
         faultMsg.id = 0x0002;
         faultMsg.len = 1;
