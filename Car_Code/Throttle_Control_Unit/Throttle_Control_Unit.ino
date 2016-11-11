@@ -13,12 +13,13 @@ int voltageBrakePedal = 0;//voltage of brakepedal
 const int BRAKE_ANALOG_PORT = 3; //analog port of brake sensor
 const int THROTTLE_PORT_1 = 6; //first throttle sensor port
 const int THROTTLE_PORT_2 = 9; //second throttle sensor port
+// TODO: These values need to be determined from testing
 const int MIN_THROTTLE_1 = 0;//compare pedal travel
-const int MAX_THROTTLE_1 = 0;
+const int MAX_THROTTLE_1 = 1024;
 const int MIN_THROTTLE_2 = 0;
-const int MAX_THROTTLE_2 = 0;
+const int MAX_THROTTLE_2 = 1024;
 const int MIN_BRAKE = 0;
-const int MAX_BRAKE = 0;
+const int MAX_BRAKE = 1024;
 
 // additional values to report
 bool implausibilityStatus = false;
@@ -32,13 +33,20 @@ bool brakePedalActive = false; // true if brake is considered pressed
 //A failure of position sensor wiring which can cause an open circuit, short to ground, or short to sensor power.
 bool torqueShutdown = false; //
 
-// Throttle Control Unit states
-enum State { GLVinit=0, waitSDCircInit, tracSysActive, enablingInv, waitRtD, readyToDrive, tracSysNotActive};
-State curState = GLVinit;
-
 // FUNCTION PROTOTYPES
-bool readValues();
+void readValues();
 bool checkDeactivateTractiveSystem();
+
+//TCU states
+enum TCU_STATE{
+    INITIAL_POWER,
+    SHUTDOWN_CIRC_INIT,
+    TS_ACTIVE,
+    TS_NOT_ACTIVE,
+    INVERTER_ENABLE,
+    RTD_WAIT,
+    RTD     
+} state;
 
 // setup code
 void setup() {
@@ -52,6 +60,7 @@ void setup() {
     pinMode(THROTTLE_PORT_1, INPUT_PULLUP);
     pinMode(THROTTLE_PORT_2, INPUT_PULLUP);
     //open circuit will show a high signal outside of the working range of the sensor.
+    state = INITIAL_POWER;
 }
 
 
@@ -64,9 +73,28 @@ void setup() {
     //Any values outside of these ranges could be caused by an open circuit, short to ground, or short to sensor power.
 
 void loop() {
-    readValues();
-    checkDeactivateTractiveSystem();
-
+    switch(state) {
+        //TODO: check if reqs are met to move to each state
+        case INITIAL_POWER:
+            state = SHUTDOWN_CIRC_INIT;
+            break;
+        case SHUTDOWN_CIRC_INIT:
+            state = TS_ACTIVE;
+            break;
+        case TS_ACTIVE:
+            state = INVERTER_ENABLE;
+            break;
+        case INVERTER_ENABLE:
+            state = RTD_WAIT;
+            break;
+        case RTD_WAIT:
+            state = RTD;
+            break;
+        case RTD:
+            readValues();
+            checkDeactivateTractiveSystem();
+            break;
+    }
 }
     //Error Message Instructions
     //an error message should be sent out on CAN Bus detailing which implausibility has been detected.
@@ -89,17 +117,23 @@ void readValues() {
 
 bool checkDeactivateTractiveSystem() { //
     //Check for errors
-    if(voltageThrottlePedal1 / voltageThrottlePedal2 > 1.1 || voltageThrottlePedal1 / voltageThrottlePedal2 < 0.9) {
-        //TODO: SHUTDOWN TORQUE - PEDALS NOT AGREEING
+    // Throttle 10% check
+    float deviationCheck = ((float) voltageThrottlePedal1) / ((float) voltageThrottlePedal2);
+    if (deviationCheck > 1.10 || (1 / deviationCheck) > 1.10) {
+        // TODO: implausibility
     }
-    if (voltageThrottlePedal1 > MAX_THROTTLE_1 || voltageThrottlePedal1 < MIN_THROTTLE_1) {
-        //TODO: SHUTDOWN TORQUE - PEDAL 1 CRAZY
+    // Checks for failure of position sensor wiring
+    // Check for open circuit or short to ground
+    if (voltageThrottlePedal1 < MIN_THROTTLE_1 || voltageThrottlePedal2 < MIN_THROTTLE_2) {
+        //TODO: implausibility
     }
-    if (voltageThrottlePedal2 > MAX_THROTTLE_2 || voltageThrottlePedal2 < MIN_THROTTLE_2) {
-        //TODO: SHUTDOWN TORQUE - PEDAL 2 CRAZY
+    // Check for short to power
+    if (voltageThrottlePedal1 > MAX_THROTTLE_1 || voltageThrottlePedal2 > MAX_THROTTLE_2) {
+        //TODO: implausibility
     }
+    // Check brake pedal sensor
     if (voltageBrakePedal > MAX_BRAKE || voltageBrakePedal < MIN_BRAKE) {
-        //TODO: SHUTDOWN TORQUE - BRAKE CRAZY
+        //TODO: implausibility
     }
     return true;
 }
