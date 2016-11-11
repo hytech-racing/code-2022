@@ -20,10 +20,25 @@ const int MAX_THROTTLE_2 = 0;
 const int MIN_BRAKE = 0;
 const int MAX_BRAKE = 0;
 
+// additional values to report
+bool implausibilityStatus = false;
+bool throttleCurve = false; // false -> normal, true -> boost
+float thermTemp = 0.0; // temperature of onboard thermistor
+bool brakePlausibility = false; // falt if BSPD signal too low
+bool brakePedalActive = false; // true if brake is considered pressed
+
 //FSAE requires that torque be shut off if an implausibility persists for over 100 msec (EV2.3.5).
 //A deviation of more than 10% pedal travel between the two throttle sensors
 //A failure of position sensor wiring which can cause an open circuit, short to ground, or short to sensor power.
 bool torqueShutdown = false; //
+
+// Throttle Control Unit states
+enum State { GLVinit=0, waitSDCircInit, tracSysActive, enablingInv, waitRtD, readyToDrive, tracSysNotActive};
+State curState = GLVinit;
+
+// FUNCTION PROTOTYPES
+bool readValues();
+bool checkDeactivateTractiveSystem();
 
 // setup code
 void setup() {
@@ -47,15 +62,32 @@ void setup() {
     //To detect a position sensor wiring failure
     //find the ranges of values coming from each sensor during normal operation of the foot pedals
     //Any values outside of these ranges could be caused by an open circuit, short to ground, or short to sensor power.
-    
+
+void loop() {
+    readValues();
+    checkDeactivateTractiveSystem();
+
+}
     //Error Message Instructions
-    //an error message should be sent out on CAN Bus detailing which implausibility has been detected. 
-    //periodically sent until the implausibility ceases to exist. 
-    //If the implausibility ceases, a corresponding message should be sent on CAN Bus. 
+    //an error message should be sent out on CAN Bus detailing which implausibility has been detected.
+    //periodically sent until the implausibility ceases to exist.
+    //If the implausibility ceases, a corresponding message should be sent on CAN Bus.
     //If an implausibility ceases to be detected, normal throttle controls should be reinstated
     //i.e. the vehicle does not need to be restarted to reset an implausibility fault.
-void loop() {
-    readInputValues();
+/* LOL FUCK THIS
+int giveError(int errorID) {
+   CAN.write(errorID)
+   return 1; //placeholder
+}
+*/
+void readValues() {
+    voltageThrottlePedal1 = analogRead(THROTTLE_PORT_1);
+    voltageThrottlePedal2 = analogRead(THROTTLE_PORT_2);
+    voltageBrakePedal = analogRead(BRAKE_ANALOG_PORT);
+    //TODO: decide/set torque values for input values
+}
+
+bool checkDeactivateTractiveSystem() { //
     //Check for errors
     if(voltageThrottlePedal1 / voltageThrottlePedal2 > 1.1 || voltageThrottlePedal1 / voltageThrottlePedal2 < 0.9) {
         //TODO: SHUTDOWN TORQUE - PEDALS NOT AGREEING
@@ -69,12 +101,5 @@ void loop() {
     if (voltageBrakePedal > MAX_BRAKE || voltageBrakePedal < MIN_BRAKE) {
         //TODO: SHUTDOWN TORQUE - BRAKE CRAZY
     }
+    return true;
 }
-
-void readInputValues() {
-    voltageThrottlePedal1 = analogRead(THROTTLE_PORT_1);
-    voltageThrottlePedal2 = analogRead(THROTTLE_PORT_2);
-    voltageBrakePedal = analogRead(BRAKE_ANALOG_PORT);
-    //TODO: decide/set torque values for input values
-}
-
