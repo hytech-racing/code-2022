@@ -96,6 +96,8 @@ boolean BMSStatusOK;
 // TODO: Calculate Internal Resistance
 // TODO: Current goes Negative during Regen Braking.
 // TODO: Switching between discharge and charge very often.
+// TODO: Write Threshold Values into Configuration Registers
+// TODO: Organize Telemetry Messages into a SINGLE CAN message
 void setup() {
     // put your setup code here, to run once:
     Serial.begin(115200);

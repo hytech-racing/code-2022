@@ -13,6 +13,7 @@ int voltageBrakePedal = 0;//voltage of brakepedal
 const int BRAKE_ANALOG_PORT = 3; //analog port of brake sensor
 const int THROTTLE_PORT_1 = 6; //first throttle sensor port
 const int THROTTLE_PORT_2 = 9; //second throttle sensor port
+// TODO: These values need to be determined from testing
 const int MIN_THROTTLE_1 = 0;//compare pedal travel
 const int MAX_THROTTLE_1 = 1024;
 const int MIN_THROTTLE_2 = 0;
@@ -32,15 +33,11 @@ bool brakePedalActive = false; // true if brake is considered pressed
 //A failure of position sensor wiring which can cause an open circuit, short to ground, or short to sensor power.
 bool torqueShutdown = false; //
 
-// Throttle Control Unit states
-enum State { GLVinit=0, waitSDCircInit, tracSysActive, enablingInv, waitRtD, readyToDrive, tracSysNotActive};
-State curState = GLVinit;
-
 // FUNCTION PROTOTYPES
 void readValues();
 bool checkDeactivateTractiveSystem();
 
-//STATE TRACKER
+//TCU states
 enum TCU_STATE{
     INITIAL_POWER,
     SHUTDOWN_CIRC_INIT,
@@ -120,17 +117,23 @@ void readValues() {
 
 bool checkDeactivateTractiveSystem() { //
     //Check for errors
-    if(voltageThrottlePedal1 / voltageThrottlePedal2 > 1.1 || voltageThrottlePedal1 / voltageThrottlePedal2 < 0.9) {
-        //TODO: SHUTDOWN TORQUE - PEDALS NOT AGREEING
+    // Throttle 10% check
+    float deviationCheck = ((float) voltageThrottlePedal1) / ((float) voltageThrottlePedal2);
+    if (deviationCheck > 1.10 || (1 / deviationCheck) > 1.10) {
+        // TODO: implausibility
     }
-    if (voltageThrottlePedal1 > MAX_THROTTLE_1 || voltageThrottlePedal1 < MIN_THROTTLE_1) {
-        //TODO: SHUTDOWN TORQUE - PEDAL 1 CRAZY
+    // Checks for failure of position sensor wiring
+    // Check for open circuit or short to ground
+    if (voltageThrottlePedal1 < MIN_THROTTLE_1 || voltageThrottlePedal2 < MIN_THROTTLE_2) {
+        //TODO: implausibility
     }
-    if (voltageThrottlePedal2 > MAX_THROTTLE_2 || voltageThrottlePedal2 < MIN_THROTTLE_2) {
-        //TODO: SHUTDOWN TORQUE - PEDAL 2 CRAZY
+    // Check for short to power
+    if (voltageThrottlePedal1 > MAX_THROTTLE_1 || voltageThrottlePedal2 > MAX_THROTTLE_2) {
+        //TODO: implausibility
     }
+    // Check brake pedal sensor
     if (voltageBrakePedal > MAX_BRAKE || voltageBrakePedal < MIN_BRAKE) {
-        //TODO: SHUTDOWN TORQUE - BRAKE CRAZY
+        //TODO: implausibility
     }
     return true;
 }
