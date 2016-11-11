@@ -5,6 +5,23 @@
 #define IMD_FAULT (1<<1)
 #define BSPD_FAULT (1<<2)
 
+#define THERMISTORNOMINAL 10000
+#define TEMPERATURENOMINAL 25
+#define BCONSTANT 3900
+#define SERIESRESISTOR 10000
+
+// Values to check if IMD, BMS high
+#define IMD_High 50
+#define BMS_High 50
+
+// Pins
+#define OKHS_PIN 0
+#define BMS_OK_PIN 1
+#define THERMISTOR_PIN 4
+#define SHUTDOWN_SSR_PIN 11
+#define LATCH_SSR_PIN 10
+#define BRAKE_LIGHT_PIN 13
+
 FlexCAN CAN(500000);
 static CAN_message_t msg;
 float OKHS = 0; // voltage after calculation
@@ -17,23 +34,13 @@ bool startPressed = false; // true if start button is pressed
 float thermTemp = 0.0; // temperature of onboard thermistor (after calculation)
 int thermValue = 0; //raw value from thermistor
 bool startupDone = false; // true when reached drive state
-const int THERMISTORNOMINAL = 10000;
-const int TEMPERATURENOMINAL = 25;
-const int BCONSTANT = 3900;
-const int SERIESRESISTOR = 10000;
 
-// Values to check if IMD, BMS high
-const int IMD_High = 50;
-const int BMS_High = 50;
 
 // timer
 Metro updateTimer = Metro(500);
 Metro AIRtimer = Metro(2000);
 Metro FAKE_DRIVER_BUTTON_PRESS = Metro(3000);
 
-const int OKHS_PIN = 0;
-const int BMS_OK_PIN = 1;
-const int THERMISTOR_PIN = 4;
 
 enum State { GLVinit=0, waitIMDBMS, waitDriver, AIRClose, fatalFault, drive }; // NOTE: change and update
 State curState = GLVinit; // curState is current state
@@ -52,12 +59,19 @@ byte stateOutput;
 void setup() {
     Serial.begin(115200); // init serial for PC communication
 
+    // Set up SSR output pins
+    pinMode(SHUTDOWN_SSR_PIN, OUTPUT);
+    pinMode(LATCH_SSR_PIN, OUTPUT);
+    pinMode(BRAKE_LIGHT_PIN, OUTPUT);
+
     CAN.begin(); // init CAN system
     Serial.println("CAN system and serial communication initialized");
     curState = GLVinit; // curState is current state
     Serial.println("Current state is GLVinit");
 
 }
+
+elapsedMillis sinceLatch;
 
 // loop code
 void loop() {
@@ -92,18 +106,30 @@ void loop() {
                 /*can message for start button press received*/
                 if(FAKE_DRIVER_BUTTON_PRESS.check()){
                     AIRtimer.reset();
+                    sinceLatch = 0;
+                    digitalWrite(SHUTDOWN_SSR_PIN, HIGH);   // close Shutoff SSR (Software Switch)
                     curState = AIRClose;
                 }
                 break;
             case AIRClose: // equivalent to VCCAIR in Google Doc state diagram
                 stateOutput = 0b00000100;
-                if(AIRtimer.check()){
-                    if (!(curState == fatalFault)) {
-                        //close the latch
-                        digitalWrite(10, HIGH);
-                        curState = drive;
-                    }
+                if (sinceLatch < 500) {
+                  if (curState != fatalFault) {
+                    // close the latch
+                    digitalWrite(LATCH_SSR_PIN, HIGH);
+                  }
+                } else {
+                  // open latch
+                  digitalWrite(LATCH_SSR_PIN, LOW);
+                  curState = drive;
                 }
+//                if(AIRtimer.check()){
+//                    if (!(curState == fatalFault)) {
+//                        //close the latch
+//                        digitalWrite(10, HIGH);
+//                        curState = drive;
+//                    }
+//                }
                 break;
             case fatalFault:
                 stateOutput = 0b00001000;
