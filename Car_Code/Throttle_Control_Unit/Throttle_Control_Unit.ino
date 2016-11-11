@@ -14,11 +14,11 @@ const int BRAKE_ANALOG_PORT = 3; //analog port of brake sensor
 const int THROTTLE_PORT_1 = 6; //first throttle sensor port
 const int THROTTLE_PORT_2 = 9; //second throttle sensor port
 const int MIN_THROTTLE_1 = 0;//compare pedal travel
-const int MAX_THROTTLE_1 = 0;
+const int MAX_THROTTLE_1 = 1024;
 const int MIN_THROTTLE_2 = 0;
-const int MAX_THROTTLE_2 = 0;
+const int MAX_THROTTLE_2 = 1024;
 const int MIN_BRAKE = 0;
-const int MAX_BRAKE = 0;
+const int MAX_BRAKE = 1024;
 
 // additional values to report
 bool implausibilityStatus = false;
@@ -37,8 +37,19 @@ enum State { GLVinit=0, waitSDCircInit, tracSysActive, enablingInv, waitRtD, rea
 State curState = GLVinit;
 
 // FUNCTION PROTOTYPES
-bool readValues();
+void readValues();
 bool checkDeactivateTractiveSystem();
+
+//STATE TRACKER
+enum TCU_STATE{
+    INITIAL_POWER,
+    SHUTDOWN_CIRC_INIT,
+    TS_ACTIVE,
+    TS_NOT_ACTIVE,
+    INVERTER_ENABLE,
+    RTD_WAIT,
+    RTD     
+} state;
 
 // setup code
 void setup() {
@@ -52,6 +63,7 @@ void setup() {
     pinMode(THROTTLE_PORT_1, INPUT_PULLUP);
     pinMode(THROTTLE_PORT_2, INPUT_PULLUP);
     //open circuit will show a high signal outside of the working range of the sensor.
+    state = INITIAL_POWER;
 }
 
 
@@ -64,9 +76,28 @@ void setup() {
     //Any values outside of these ranges could be caused by an open circuit, short to ground, or short to sensor power.
 
 void loop() {
-    readValues();
-    checkDeactivateTractiveSystem();
-
+    switch(state) {
+        //TODO: check if reqs are met to move to each state
+        case INITIAL_POWER:
+            state = SHUTDOWN_CIRC_INIT;
+            break;
+        case SHUTDOWN_CIRC_INIT:
+            state = TS_ACTIVE;
+            break;
+        case TS_ACTIVE:
+            state = INVERTER_ENABLE;
+            break;
+        case INVERTER_ENABLE:
+            state = RTD_WAIT;
+            break;
+        case RTD_WAIT:
+            state = RTD;
+            break;
+        case RTD:
+            readValues();
+            checkDeactivateTractiveSystem();
+            break;
+    }
 }
     //Error Message Instructions
     //an error message should be sent out on CAN Bus detailing which implausibility has been detected.
