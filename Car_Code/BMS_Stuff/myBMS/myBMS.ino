@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include "Linduino.h"
 #include "LT_SPI.h"
-#include "LTC68042.h"
+#include "LTC68041.h"
 #include <SPI.h>
 #include <FlexCAN.h>
 #include <kinetis_flexcan.h>
@@ -28,7 +28,7 @@
 #define MAX_16BIT_UNSIGNED 65536
 
 /********GLOBAL ARRAYS/VARIABLES CONTAINING DATA FROM CHIP**********/
-const uint8_t TOTAL_IC = 1;
+const uint8_t TOTAL_IC = 8;
 uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages
 uint16_t aux_voltagess[TOTAL_IC][6]; // contains auxillary pin voltages (not batteries)
 
@@ -84,9 +84,27 @@ enum ChargeState {
 ChargeState chargeState = DISCHARGE;
 boolean BMSStatusOK;
 
+/**
+ * Teensy Communication Pin Constants
+ */
+#define MOSI_PIN 17
+#define MISO_PIN 16
+#define SPI_CHIP_SELECT_PIN 15
+#define CLOCK_PIN 14
+#define T_WAKE 50
+
+// TODO: Calculate Internal Resistance
+// TODO: Current goes Negative during Regen Braking.
+// TODO: Switching between discharge and charge very often.
 void setup() {
     // put your setup code here, to run once:
     Serial.begin(115200);
+    SPI.setMOSI(MOSI_PIN);
+    SPI.setMISO(MISO_PIN);
+    SPI.setSCK(CLOCK_PIN);
+    pinMode(SPI_CHIP_SELECT_PIN, OUTPUT);
+    SPI.begin();
+
     LTC6804_initialize();
     init_cfg();
     can.begin();
@@ -105,54 +123,54 @@ void loop() {
     while (can.read(msg)) {
         switch (msg.id) {
         case 0x001:
-            BMSStatusOK = false;
-            Serial.print("SHUTDOWN RECEIVED");
-            Serial.println(msg.buf);
-            break;
+            {
+                BMSStatusOK = false;
+                Serial.print("SHUTDOWN RECEIVED");
+                printCanMessage();
+            } break;
         case 0x0BC:
-            unsigned char = msg.buf >> 7;
-            if (char == 0) {
-                chargeState = DISCHARGE;
-            } else if (char == 1) {
-                chargeState == CHARGE;
-            }
-            Serial.print("Charge State Received");
-            Serial.println(msg.buf);
-            break;
+            {
+                unsigned char chargeStateBit = msg.buf[0] >> 7;
+                if (chargeStateBit == 0) {
+                    chargeState = DISCHARGE;
+                } else if (chargeStateBit == 1) {
+                    chargeState = CHARGE;
+                }
+                Serial.print("Charge State Received");
+                printCanMessage();
+            } break;
         default:
-            Serial.print("ID: ");
-            Serial.println(msg.id);
-            Serial.print("Message: ");
-            Serial.println(msg.buf);
-            break;
+            {
+                printCanMessage();
+            } break;
         }
     }
 
-    uint16_t maxV = findMaxVoltage();
-    uint16_t minV = findMinVoltage();
+    int maxV = convertToMillivolts(findMaxVoltage());
+    int minV = convertToMillivolts(findMinVoltage());
     int avgV = findAverage();
 
-    if !(voltageInBounds(maxV) && voltageInBounds(minV)) {
+    if (!(voltageInBounds(maxV) && voltageInBounds(minV))) {
         BMSStatusOK = false;
-        writeShutdownCANMessage();
+        writeShutdownCANMessage(minV, maxV);
     }
 
     // write max voltage to CAN as telemetry
     msg.id = HIGHEST_CELL_VOLTAGE;
     msg.len = sizeof(int);
-    memcpy(&msg.buf[0], convertToMillivolts(maxV), sizeof(int));
+    memcpy(&msg.buf[0], &maxV, sizeof(int));
     can.write(msg);
 
     // write min voltage to CAN as telemetry
     msg.id = LOWEST_CELL_VOLTAGE;
-    msg.len(sizeof(int));
-    memcpy(&msg.buf[0], convertToMillivolts(minV), sizeof(int));
+    msg.len = (sizeof(int));
+    memcpy(&msg.buf[0], &minV, sizeof(int));
     can.write(msg);
 
     // write avg voltage to can as telemetry
     msg.id = AVG_CELL_VOLTAGE;
     msg.len = sizeof(int);
-    memcpy(&msg.buf[0], avgV, sizeof(int));
+    memcpy(&msg.buf[0], &avgV, sizeof(int));
     can.write(msg);
 }
 
@@ -164,7 +182,7 @@ void init_cfg()
     for(int i = 0; i<TOTAL_IC;i++)
     {
         tx_cfg[i][0] = 0xFE;
-        tx_cfg[i][1] = 0x00 ; 
+        tx_cfg[i][1] = 0x00 ;
         tx_cfg[i][2] = 0x00 ;
         tx_cfg[i][3] = 0x00 ; 
         tx_cfg[i][4] = 0x00 ;
@@ -179,9 +197,9 @@ void pollVoltage() {
      * wakeup_sleep wakes up the LTC6804 from sleep state
      * wakeup_idle wakes up the isoSPI port.
      */
-    wakeup_sleep();
+    wakeFromSleepAllChips();
     LTC6804_wrcfg(TOTAL_IC, tx_cfg);
-    wakeup_idle();
+    wakeFromIdleAllChips();
     LTC6804_adcv();
     delay(10);
     wakeup_idle();
@@ -193,11 +211,25 @@ void pollVoltage() {
     delay(100);
 }
 
+void wakeFromSleepAllChips() {
+    for (int i = 0; i < TOTAL_IC / 3; i++) {
+        wakeup_sleep();
+        delay(3);
+    }
+}
+
+void wakeFromIdleAllChips() {
+    for (int i = 0; i < TOTAL_IC / 3; i++) {
+        wakeup_idle();
+        delay(3);
+    }
+}
+
 uint16_t findMaxVoltage() {
     uint16_t maxVolt = cell_voltages[0][0];
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         for (int cell = 0; cell < 12; cell++) {
-            if (cell_voltages[ic][cell]) > maxVolt) {
+            if (cell_voltages[ic][cell] > maxVolt) {
                 maxVolt = cell_voltages[ic][cell];
             }
         }
@@ -218,7 +250,7 @@ uint16_t findMinVoltage() {
 }
 
 int convertToMillivolts(uint16_t v) {
-  return (int) ((v / MAX_16BIT_UNSIGNED.0f) * 5000.0f);
+    return (int) ((v / (float) MAX_16BIT_UNSIGNED) * 5000.0f);
 }
 
 int findAverage() {
@@ -228,19 +260,19 @@ int findAverage() {
             average += cell_voltages[ic][cell];
         }
     }
-    average = (int) (average / (MAX_16BIT_UNSIGNED.0f * TOTAL_IC * 12) * 5000);
+    average = (int) (average / ((float) MAX_16BIT_UNSIGNED * TOTAL_IC * 12) * 5000);
     return average;
 }
 
 boolean voltageInBounds() {
-    double maxVolt = findMaxVoltage() / MAX_16BIT_UNSIGNED.0f * 5.0f;
-    double minVolt = findMinVoltage() / MAX_16BIT_UNSIGNED.0f * 5.0f;
-    return !(maxVolt => VOLTAGE_HIGH_CUTOFF || minVolt => VOLTAGE_HIGH_CUTOFF || maxVolt <= VOLTAGE_LOW_CUTOFF || minVolt <= VOLTAGE_LOW_CUTOFF);
+    double maxVolt = findMaxVoltage() / MAX_16BIT_UNSIGNED * 5.0f;
+    double minVolt = findMinVoltage() / MAX_16BIT_UNSIGNED * 5.0f;
+    return !(maxVolt >= VOLTAGE_HIGH_CUTOFF || minVolt >= VOLTAGE_HIGH_CUTOFF || maxVolt <= VOLTAGE_LOW_CUTOFF || minVolt <= VOLTAGE_LOW_CUTOFF);
 }
 
-boolean voltageInBounds(uint16_t v) {
-    double voltage = v / MAX_16BIT_UNSIGNED.0f * 5.0f;
-    return !(v => VOLTAGE_HIGH_CUTOFF || v <= VOLTAGE_LOW_CUTOFF);
+boolean voltageInBounds(int v) {
+    double voltage = v / 1000;
+    return !(voltage >= VOLTAGE_HIGH_CUTOFF || voltage <= VOLTAGE_LOW_CUTOFF);
 }
 
 void printCells() {
@@ -256,7 +288,7 @@ void printCells() {
     }
 }
 
-int writeShutdownCANMessage() {
+int writeShutdownCANMessage(int minV, int maxV) {
     msg.id = SHUTDOWN_FAULT;
     msg.len = 2 * sizeof(int);
     int counter = 0;
@@ -266,3 +298,13 @@ int writeShutdownCANMessage() {
     return can.write(msg);
 }
 
+void printCanMessage() {
+    uint8_t len = msg.len;
+    Serial.print("ID: ");
+    Serial.println(msg.id);
+    Serial.print("MESSAGE: ");
+    for (uint8_t i = 0; i < len; i++) {
+        Serial.print(msg.buf[i]);
+    }
+    Serial.println();
+}
