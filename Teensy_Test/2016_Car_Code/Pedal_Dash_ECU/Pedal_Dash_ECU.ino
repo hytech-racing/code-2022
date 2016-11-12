@@ -26,17 +26,22 @@ int PEDAL_SIGNAL_C = A5;
  */
 FlexCAN CAN(500000);
 static CAN_message_t msg;
-uint16_t STATE_MESSAGE_ID = 0x9F;
-uint16_t ENABLE_LED_START = 0xA1;
-uint16_t DISABLE_LED_START = 0xA2;
+uint16_t STATE_MESSAGE_ID = 0xD0;
+uint16_t ENABLE_LED_START = 0xD1;
+uint16_t DISABLE_LED_START = 0xD2;
+uint16_t ENABLE_LED_BMS = 0xD3;
+uint16_t DISABLE_LED_BMS = 0xD4;
+uint16_t ENABLE_LED_IMD = 0xD5;
+uint16_t DISABLE_LED_IMD = 0xD6;
+uint16_t BLINK_LED_START = 0xD7;
 
 /*
  * Timers
  */
-Metro timer_printer = Metro(100);
+Metro timer_printer = Metro(500);
 Metro timer_state_send = Metro(50);
-Metro timer_led_start = Metro(500);
 Metro timer_motor_controller_send = Metro(50);
+Metro timer_led_start_blink = Metro(300);
 
 /*
  * State booleans
@@ -73,8 +78,6 @@ void loop() {
     msg.buf[0] = !digitalRead(BTN_TOGGLE) << 7 | !digitalRead(BTN_CYCLE) << 6 | !digitalRead(BTN_BOOST) << 5 | !digitalRead(BTN_START) << 4;
     msg.buf[0] |= STATE_LED_START << 3 | STATE_LED_IMD << 2 | STATE_LED_BMS << 1 | STATE_READY_SOUND;
     CAN.write(msg);
-    Serial.print("States: ");
-    Serial.println(msg.buf[0], BIN);
   }
 
   /*
@@ -91,33 +94,44 @@ void loop() {
    * Handle incoming CAN messages
    */
   while (CAN.read(msg)) {
-    Serial.print(msg.id, HEX);
-    Serial.print(": ");
-    for (unsigned int i = 0; i < msg.len; i++) {
-      Serial.print(msg.buf[i], HEX);
-      Serial.print(" ");
-    }
-    Serial.println();
-    
     if (msg.id == ENABLE_LED_START) {
       STATE_LED_START = true;
+      STATE_LED_START_BLINK = false;
+      digitalWrite(LED_START, HIGH);
+      Serial.println("Start LED Enabled");
     } else if (msg.id == DISABLE_LED_START) {
       STATE_LED_START = false;
       STATE_LED_START_BLINK = false;
       digitalWrite(LED_START, LOW);
-    }
-  }
-
-  /*
-   * Blink the start button if enabled
-   */
-  if (STATE_LED_START && timer_led_start.check()) {
-    if (STATE_LED_START_BLINK) {
-      digitalWrite(LED_START, LOW);
-    } else {
+      Serial.println("Start LED Disabled");
+    } else if (msg.id == BLINK_LED_START && !STATE_LED_START_BLINK) {
+      STATE_LED_START = true;
+      STATE_LED_START_BLINK = true;
       digitalWrite(LED_START, HIGH);
+      timer_led_start_blink.reset();
+      Serial.println("Start LED Blink");
+    } else if (msg.id == ENABLE_LED_BMS) {
+      STATE_LED_BMS = true;
+      digitalWrite(LED_BMS, HIGH);
+    } else if (msg.id == DISABLE_LED_BMS) {
+      STATE_LED_BMS = false;
+      digitalWrite(LED_BMS, LOW);
+    } else if (msg.id == ENABLE_LED_IMD) {
+      STATE_LED_IMD = true;
+      digitalWrite(LED_IMD, HIGH);
+    } else if (msg.id == DISABLE_LED_IMD) {
+      STATE_LED_IMD = false;
+      digitalWrite(LED_IMD, LOW);
     }
-    STATE_LED_START_BLINK = !STATE_LED_START_BLINK;
+    if (msg.id > 0xBF) {
+      Serial.print(msg.id, HEX);
+      Serial.print(": ");
+      for (unsigned int i = 0; i < msg.len; i++) {
+        Serial.print(msg.buf[i], HEX);
+        Serial.print(" ");
+      }
+      Serial.println();
+    }
   }
 
   if (timer_printer.check()) {
@@ -127,6 +141,15 @@ void loop() {
     Serial.print(" ");
     Serial.println(analogRead(PEDAL_SIGNAL_C));
     Serial.println(analogRead(BTN_START));*/
+  }
+
+  if (timer_led_start_blink.check() && STATE_LED_START_BLINK) {
+    if (STATE_LED_START) {
+      digitalWrite(LED_START, LOW);
+    } else {
+      digitalWrite(LED_START, HIGH);
+    }
+    STATE_LED_START = !STATE_LED_START;
   }
 }
 
