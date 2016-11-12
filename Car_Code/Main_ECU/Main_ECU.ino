@@ -1,4 +1,26 @@
 #include <FlexCAN.h> // import teensy library
+#include <Metro.h>
+
+#define BMS_FAULT (1<<0)
+#define IMD_FAULT (1<<1)
+#define BSPD_FAULT (1<<2)
+
+#define THERMISTORNOMINAL 10000
+#define TEMPERATURENOMINAL 25
+#define BCONSTANT 3900
+#define SERIESRESISTOR 10000
+
+// Values to check if IMD, BMS high
+#define IMD_High 50
+#define BMS_High 50
+
+// Pins
+#define OKHS_PIN 0
+#define BMS_OK_PIN 1
+#define THERMISTOR_PIN 4
+#define SHUTDOWN_SSR_PIN 11
+#define LATCH_SSR_PIN 10
+#define BRAKE_LIGHT_PIN 13
 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
@@ -12,25 +34,13 @@ bool startPressed = false; // true if start button is pressed
 float thermTemp = 0.0; // temperature of onboard thermistor (after calculation)
 int thermValue = 0; //raw value from thermistor
 bool startupDone = false; // true when reached drive state
-bool softwareFault = false; // true when software fault found
-const int THERMISTORNOMINAL = 10000;
-const int TEMPERATURENOMINAL = 25;
-const int BCONSTANT = 3900;
-const int SERIESRESISTOR = 10000;
 
-// Values to check if IMD, BMS high
-const int IMD_High = 50;
-const int BMS_High = 50;
 
 // timer
-unsigned long AIRinitialTime; // use timer = millis() to get time, and compare in ms
-unsigned long AIRcurTime;
-unsigned long updateInitialTime = millis(); // timer for canUpdate function calls
-unsigned long updateCurTime;
+Metro updateTimer = Metro(500);
+Metro AIRtimer = Metro(2000);
+Metro FAKE_DRIVER_BUTTON_PRESS = Metro(3000);
 
-const int OKHS_PIN = 0;
-const int BMS_OK_PIN = 1;
-const int THERMISTOR_PIN = 4;
 
 enum State { GLVinit=0, waitIMDBMS, waitDriver, AIRClose, fatalFault, drive }; // NOTE: change and update
 State curState = GLVinit; // curState is current state
@@ -49,6 +59,11 @@ byte stateOutput;
 void setup() {
     Serial.begin(115200); // init serial for PC communication
 
+    // Set up SSR output pins
+    pinMode(SHUTDOWN_SSR_PIN, OUTPUT);
+    pinMode(LATCH_SSR_PIN, OUTPUT);
+    pinMode(BRAKE_LIGHT_PIN, OUTPUT);
+
     CAN.begin(); // init CAN system
     Serial.println("CAN system and serial communication initialized");
     curState = GLVinit; // curState is current state
@@ -56,9 +71,12 @@ void setup() {
 
 }
 
+elapsedMillis sinceLatch;
+
 // loop code
 void loop() {
     readValues();
+    checkFatalFault();
     Serial.print("TEMPERATURE: ");
     Serial.println(thermTemp);
     Serial.print("OKHS: ");
@@ -77,39 +95,41 @@ void loop() {
                 break;
             case waitIMDBMS:
                 stateOutput = 0b00000001;
-                if (softwareFault) {
-                    curState = fatalFault;
-                } else {
-                    if (DISCHARGE_OK >= BMS_High) { // if BMS is high
-                        if (OKHS >= IMD_High) { // if IMD is also high
-                            curState = waitDriver; // both BMD and IMD are high, wait for start button press
-                        }
+                if (DISCHARGE_OK >= BMS_High) { // if BMS is high
+                    if (OKHS >= IMD_High) { // if IMD is also high
+                        curState = waitDriver; // both BMD and IMD are high, wait for start button press
                     }
                 }
                 break;
             case waitDriver:
                 stateOutput = 0b00000010;
-                if (checkFatalFault()) {
-                    curState = fatalFault;
-                } else {
-                    /*can message for start button press received*/
+                /*can message for start button press received*/
+                if(FAKE_DRIVER_BUTTON_PRESS.check()){
+                    AIRtimer.reset();
+                    sinceLatch = 0;
+                    digitalWrite(SHUTDOWN_SSR_PIN, HIGH);   // close Shutoff SSR (Software Switch)
                     curState = AIRClose;
                 }
                 break;
             case AIRClose: // equivalent to VCCAIR in Google Doc state diagram
                 stateOutput = 0b00000100;
-                AIRinitialTime = millis();
-                AIRcurTime = millis();
-                while(AIRcurTime <= AIRinitialTime + 500){
-                    if (checkFatalFault()) {
-                        curState = fatalFault;
-                        break;
-                    }
-                    AIRcurTime = millis();
+                if (sinceLatch < 500) {
+                  if (curState != fatalFault) {
+                    // close the latch
+                    digitalWrite(LATCH_SSR_PIN, HIGH);
+                  }
+                } else {
+                  // open latch
+                  digitalWrite(LATCH_SSR_PIN, LOW);
+                  curState = drive;
                 }
-                if (!(curState == fatalFault)) {
-                    curState = drive;
-                }
+//                if(AIRtimer.check()){
+//                    if (!(curState == fatalFault)) {
+//                        //close the latch
+//                        digitalWrite(10, HIGH);
+//                        curState = drive;
+//                    }
+//                }
                 break;
             case fatalFault:
                 stateOutput = 0b00001000;
@@ -122,9 +142,9 @@ void loop() {
     } else {
     }
 
-    updateCurTime = millis();
-    if((updateCurTime - updateInitialTime)%500 == 0){ //send updates every half second
+    if(updateTimer.check()){
       sendCanUpdate();
+      updateTimer.reset();
     }
 }
 
@@ -143,19 +163,33 @@ bool readValues() {
     thermTemp -= 273.15;  
     return true;
 
-    while(CAN.read(msg)) {
-        if (msg.id == 0xBBBB) {
-            softwareFault = true;
-            
-        }
-    }
 }
 
-bool checkFatalFault() { // returns true if fatal fault found ()
-    if (OKHS >= IMD_High && DISCHARGE_OK >= BMS_High && !softwareFault) {
-        return false;
-    } else {
+bool checkFatalFault() { // returns true if fatal fault found 
+    CAN_message_t faultMsg;
+    faultMsg.buf[0] = 0;
+    if (OKHS >= IMD_High) {
+        faultMsg.buf[0] = faultMsg.buf[0] | IMD_FAULT;
+    } else if (DISCHARGE_OK >= BMS_High) {
+        faultMsg.buf[0] = faultMsg.buf[0] | BMS_FAULT;
+    }
+        
+    while (CAN.read(msg)) {
+        if (msg.id == 0x0001) {
+            faultMsg.buf[0] = faultMsg.buf[0] | BSPD_FAULT;
+        }
+    }
+    
+
+    if (faultMsg.buf[0] != 0) {
+        digitalWrite(10, LOW);
+        curState = fatalFault;
+        faultMsg.id = 0x0002;
+        faultMsg.len = 1;
+        CAN.write(faultMsg);
         return true;
+    } else {
+        return false;
     }
 }
 
@@ -179,6 +213,21 @@ int sendCanUpdate(){
     memcpy(&msg.buf[4], &shortGLV, sizeof(short));
     memcpy(&msg.buf[6], &shortShutdown, sizeof(short));
 
-    return CAN.write(msg);
+    int temp1 = CAN.write(msg);
+
+    bool okhsCheck = OKHS >= IMD_High;
+    bool dischargeCheck = DISCHARGE_OK >= BMS_High;
+    short shortTemp = (short) thermTemp * 100;
+    
+    msg.id = 0x51;
+    msg.len = 5;
+    memcpy(&msg.buf[0], &shortTemp, sizeof(short));
+    memcpy(&msg.buf[2], &okhsCheck, sizeof(bool));
+    memcpy(&msg.buf[3], &dischargeCheck, sizeof(bool));
+    memcpy(&msg.buf[4], &stateOutput, sizeof(byte));
+
+    int temp2 = CAN.write(msg);
+
+    return temp1 + temp2;
 }
 
