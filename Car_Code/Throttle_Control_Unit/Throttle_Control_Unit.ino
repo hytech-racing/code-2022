@@ -1,4 +1,5 @@
 #include <FlexCAN.h> // import teensy library
+#include <Metro.h>
 
 //Description of Throttle Control Unit
 //Senses the angle of each pedal to determine safely how much torque the motor controller should produce with the motor
@@ -22,10 +23,10 @@ const int MIN_BRAKE = 0;
 const int MAX_BRAKE = 1024;
 
 // additional values to report
-bool implausibilityStatus = false;
+bool implausibilityStatus = false; // for pedal not brake
 bool throttleCurve = false; // false -> normal, true -> boost
 float thermTemp = 0.0; // temperature of onboard thermistor
-bool brakePlausibility = false; // falt if BSPD signal too low
+bool brakePlausibility = false; // fault if BSPD signal too low - still to be designed
 bool brakePedalActive = false; // true if brake is considered pressed
 
 //FSAE requires that torque be shut off if an implausibility persists for over 100 msec (EV2.3.5).
@@ -45,7 +46,7 @@ enum TCU_STATE{
     TS_NOT_ACTIVE,
     INVERTER_ENABLE,
     RTD_WAIT,
-    RTD     
+    RTD
 } state;
 
 // setup code
@@ -102,7 +103,7 @@ void loop() {
     //If the implausibility ceases, a corresponding message should be sent on CAN Bus.
     //If an implausibility ceases to be detected, normal throttle controls should be reinstated
     //i.e. the vehicle does not need to be restarted to reset an implausibility fault.
-/* LOL FUCK THIS
+/*
 int giveError(int errorID) {
    CAN.write(errorID)
    return 1; //placeholder
@@ -136,4 +137,9 @@ bool checkDeactivateTractiveSystem() { //
         //TODO: implausibility
     }
     return true;
+}
+
+void checkBrakeImplausibility() {
+    // TODO: TCU should read in signal from BSPD
+    // Fault occurs when signal is too low
 }
