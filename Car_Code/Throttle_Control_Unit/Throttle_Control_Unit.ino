@@ -37,10 +37,12 @@ bool brakePedalActive = false; // true if brake is considered pressed
 //A failure of position sensor wiring which can cause an open circuit, short to ground, or short to sensor power.
 bool torqueShutdown = false; //
 
+Metro updateTimer = Metro(500);
+
 // FUNCTION PROTOTYPES
 void readValues();
 bool checkDeactivateTractiveSystem();
-int canUpdate();
+int sendCanUpdate();
 
 //TCU states
 enum TCU_STATE{
@@ -52,6 +54,7 @@ enum TCU_STATE{
     RTD_WAIT,
     RTD
 } state;
+byte stateOutput;
 
 // setup code
 void setup() {
@@ -66,6 +69,7 @@ void setup() {
     pinMode(THROTTLE_PORT_2, INPUT_PULLUP);
     //open circuit will show a high signal outside of the working range of the sensor.
     state = INITIAL_POWER;
+    stateOutput = 1;
 }
 
 
@@ -81,24 +85,34 @@ void loop() {
     switch(state) {
         //TODO: check if reqs are met to move to each state
         case INITIAL_POWER:
+            stateOutput = 1;
             state = SHUTDOWN_CIRC_INIT;
             break;
         case SHUTDOWN_CIRC_INIT:
+            stateOutput = 2;
             state = TS_ACTIVE;
             break;
         case TS_ACTIVE:
+            stateOutput = 3;
             state = INVERTER_ENABLE;
             break;
         case INVERTER_ENABLE:
+            stateOutput = 4;
             state = RTD_WAIT;
             break;
         case RTD_WAIT:
+            stateOutput = 5;
             state = RTD;
             break;
         case RTD:
+            stateOutput = 6;
             readValues();
             checkDeactivateTractiveSystem();
             break;
+    }
+    if(updateTimer.check()){
+        sendCanUpdate();
+        updateTimer.reset();
     }
 }
     //Error Message Instructions
@@ -143,15 +157,39 @@ bool checkDeactivateTractiveSystem() { //
     return true;
 }
 
-<<<<<<< Updated upstream
 void checkBrakeImplausibility() {
     // TODO: TCU should read in signal from BSPD
     // Fault occurs when signal is too low
 }
-=======
+
 int sendCanUpdate(){
+    short shortThrottle1 = (short) voltageThrottlePedal1 * 100;
+    short shortThrottle2 = (short) voltageThrottlePedal2 * 100;
+    short shortBrake = (short) voltageBrakePedal * 100;
+    short shortTemp = (short) thermTemp * 100;
 
+    msg.id = 0x30;
+    msg.len = 8;
+    
+    memcpy(&msg.buf[0], &shortThrottle1, sizeof(short));
+    memcpy(&msg.buf[2], &shortThrottle2, sizeof(short));
+    memcpy(&msg.buf[4], &shortBrake, sizeof(short));
+    memcpy(&msg.buf[6], &shortTemp, sizeof(short));
+
+    int temp1 = CAN.write(msg);
+
+    byte statuses = stateOutput;
+    
+    if(implausibilityStatus) statuses += 16;
+    if(throttleCurve) statuses += 32;
+    if(brakePlausibility) statuses += 64;
+    if(brakePedalActive) statuses += 128;
+
+    msg.id = 0x31;
+    msg.len = 1;
+    msg.buf[0] = statuses;
+    
+    int temp2 = CAN.write(msg);
+    
+    return temp1 + temp2;
 }
-
-
->>>>>>> Stashed changes
