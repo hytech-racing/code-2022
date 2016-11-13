@@ -155,16 +155,12 @@ bool checkDeactivateTractiveSystem() {
     return true;
 }
 
-<<<<<<< Updated upstream
 void checkBrakeImplausibility() {
     // TODO: TCU should read in signal from BSPD
     // Fault occurs when signal is too low
     // NOT when fault on brake pedal sensor
 }
-=======
+
 int sendCanUpdate(){
 
 }
-
-
->>>>>>> Stashed changes
