@@ -37,8 +37,6 @@ bool brakePedalActive = false; // true if brake is considered pressed
 //A failure of position sensor wiring which can cause an open circuit, short to ground, or short to sensor power.
 bool torqueShutdown = false; //
 
-Metro updateTimer = Metro(500);
-
 // FUNCTION PROTOTYPES
 void readValues();
 bool checkDeactivateTractiveSystem();
@@ -55,6 +53,12 @@ enum TCU_STATE{
     RTD
 } state;
 byte stateOutput;
+
+// timer
+Metro stateTimer = Metro(500); // Used for how often to send state
+Metro updateTimer = Metro(500); // Read in values from pins
+Metro implausibilityTimer = Metro(50); // Used for throttle error check
+Metro throttleTimer = Metro(500); // Used for sending commands to Motor Controller
 
 // setup code
 void setup() {
@@ -82,6 +86,18 @@ void setup() {
     //Any values outside of these ranges could be caused by an open circuit, short to ground, or short to sensor power.
 
 void loop() {
+    if (updateTimer.check()) {
+        readValues();
+        updateTimer.reset();
+    }
+    if (implausibilityTimer.check()) {
+        checkDeactivateTractiveSystem();
+        implausibilityTimer.reset();
+    }
+    if(stateTimer.check()){
+        sendCanUpdate();
+        stateTimer.reset();
+    }
     switch(state) {
         //TODO: check if reqs are met to move to each state
         case INITIAL_POWER:
@@ -110,10 +126,6 @@ void loop() {
             checkDeactivateTractiveSystem();
             break;
     }
-    if(updateTimer.check()){
-        sendCanUpdate();
-        updateTimer.reset();
-    }
 }
     //Error Message Instructions
     //an error message should be sent out on CAN Bus detailing which implausibility has been detected.
@@ -134,8 +146,8 @@ void readValues() {
     //TODO: decide/set torque values for input values
 }
 
-bool checkDeactivateTractiveSystem() { //
-    //Check for errors
+bool checkDeactivateTractiveSystem() {
+    // Check for errors - AKA implausibility checking
     // Throttle 10% check
     float deviationCheck = ((float) voltageThrottlePedal1) / ((float) voltageThrottlePedal2);
     if (deviationCheck > 1.10 || (1 / deviationCheck) > 1.10) {
@@ -160,6 +172,7 @@ bool checkDeactivateTractiveSystem() { //
 void checkBrakeImplausibility() {
     // TODO: TCU should read in signal from BSPD
     // Fault occurs when signal is too low
+    // NOT when fault on brake pedal sensor
 }
 
 int sendCanUpdate(){
