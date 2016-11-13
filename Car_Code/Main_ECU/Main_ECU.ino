@@ -22,6 +22,8 @@
 #define LATCH_SSR_PIN 10
 #define BRAKE_LIGHT_PIN 13
 
+#define STATE_MESSAGE_ID 0xD0
+
 FlexCAN CAN(500000);
 static CAN_message_t msg;
 float OKHS = 0; // voltage after calculation
@@ -38,7 +40,7 @@ bool startupDone = false; // true when reached drive state
 
 // timer
 Metro updateTimer = Metro(500);
-Metro AIRtimer = Metro(2000);
+Metro AIRtimer = Metro(500);
 Metro FAKE_DRIVER_BUTTON_PRESS = Metro(3000);
 
 
@@ -68,10 +70,8 @@ void setup() {
     Serial.println("CAN system and serial communication initialized");
     curState = GLVinit; // curState is current state
     Serial.println("Current state is GLVinit");
-
+    startPressed = 0;
 }
-
-elapsedMillis sinceLatch;
 
 // loop code
 void loop() {
@@ -84,7 +84,30 @@ void loop() {
     Serial.print("BMS: ");
     Serial.println(DISCHARGE_OK);
     Serial.println(thermValue);
-    delay(200);
+
+    /*
+     * Handle incoming CAN messages
+     */
+    while (CAN.read(msg)) {
+      if (msg.id > 0xBF) {
+        Serial.print(msg.id, HEX);
+        Serial.print(": ");
+        for (unsigned int i = 0; i < msg.len; i++) {
+          Serial.print(msg.buf[i], HEX);
+          Serial.print(" ");
+        }
+        Serial.println();
+      }
+
+      // Scanning CAN for dashboard state message (start button)
+      // Change values based on what message actually is
+      if (curState == waitDriver && msg.id == STATE_MESSAGE_ID) {
+        Serial.println(msg.buf[0], BIN);
+        if (msg.buf[0] & 0x10) {
+          startPressed = 1;
+        }
+      }
+    }
     
     //check CAN for a message for software shutdown
     if (!startupDone) {
@@ -104,32 +127,23 @@ void loop() {
             case waitDriver:
                 stateOutput = 0b00000010;
                 /*can message for start button press received*/
-                if(FAKE_DRIVER_BUTTON_PRESS.check()){
+                 
+                if (startPressed || FAKE_DRIVER_BUTTON_PRESS.check()) {
                     AIRtimer.reset();
-                    sinceLatch = 0;
                     digitalWrite(SHUTDOWN_SSR_PIN, HIGH);   // close Shutoff SSR (Software Switch)
+                    digitalWrite(LATCH_SSR_PIN, HIGH);      // close latch SSR
                     curState = AIRClose;
                 }
                 break;
             case AIRClose: // equivalent to VCCAIR in Google Doc state diagram
                 stateOutput = 0b00000100;
-                if (sinceLatch < 500) {
-                  if (curState != fatalFault) {
-                    // close the latch
-                    digitalWrite(LATCH_SSR_PIN, HIGH);
-                  }
-                } else {
-                  // open latch
-                  digitalWrite(LATCH_SSR_PIN, LOW);
-                  curState = drive;
+                if(AIRtimer.check()){
+                    if (!(curState == fatalFault)) {
+                        digitalWrite(LATCH_SSR_PIN, LOW);  // Open latch SSR
+                        curState = drive;
+                    }
                 }
-//                if(AIRtimer.check()){
-//                    if (!(curState == fatalFault)) {
-//                        //close the latch
-//                        digitalWrite(10, HIGH);
-//                        curState = drive;
-//                    }
-//                }
+                startPressed = false;
                 break;
             case fatalFault:
                 stateOutput = 0b00001000;
@@ -182,7 +196,7 @@ bool checkFatalFault() { // returns true if fatal fault found
     
 
     if (faultMsg.buf[0] != 0) {
-        digitalWrite(10, LOW);
+        digitalWrite(SHUTDOWN_SSR_PIN, LOW);
         curState = fatalFault;
         faultMsg.id = 0x0002;
         faultMsg.len = 1;
