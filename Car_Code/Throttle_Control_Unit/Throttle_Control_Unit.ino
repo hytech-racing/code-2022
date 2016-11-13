@@ -1,26 +1,29 @@
 #include <FlexCAN.h> // import teensy library
 #include <Metro.h>
 
+//ports
+#define BRAKE_ANALOG_PORT 3 //analog port of brake sensor
+#define THROTTLE_PORT_1 6 //first throttle sensor port
+#define THROTTLE_PORT_2 9 //second throttle sensor port
+// TODO: These values need to be determined from testing
+//constants
+#define MIN_THROTTLE_1 0//compare pedal travel
+#define MAX_THROTTLE_1 1024
+#define MIN_THROTTLE_2 0
+#define MAX_THROTTLE_2 1024
+#define MIN_BRAKE 0
+#define MAX_BRAKE 1024
+
 //Description of Throttle Control Unit
 //Senses the angle of each pedal to determine safely how much torque the motor controller should produce with the motor
 //Reads a signal from the Brake System Plausibility Device located on the same board to sense if the BSPD has detected a fault.
 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
-unsigned long timer; // use timer = millis() to get time, and compare in ms
+
 int voltageThrottlePedal1 = 0; //voltage of 1st throttle
 int voltageThrottlePedal2 = 0; //voltage of 2nd throttle
 int voltageBrakePedal = 0;//voltage of brakepedal
-const int BRAKE_ANALOG_PORT = 3; //analog port of brake sensor
-const int THROTTLE_PORT_1 = 6; //first throttle sensor port
-const int THROTTLE_PORT_2 = 9; //second throttle sensor port
-// TODO: These values need to be determined from testing
-const int MIN_THROTTLE_1 = 0;//compare pedal travel
-const int MAX_THROTTLE_1 = 1024;
-const int MIN_THROTTLE_2 = 0;
-const int MAX_THROTTLE_2 = 1024;
-const int MIN_BRAKE = 0;
-const int MAX_BRAKE = 1024;
 
 // additional values to report
 bool implausibilityStatus = false; // for pedal not brake
@@ -37,6 +40,7 @@ bool torqueShutdown = false; //
 // FUNCTION PROTOTYPES
 void readValues();
 bool checkDeactivateTractiveSystem();
+int canUpdate();
 
 //TCU states
 enum TCU_STATE{
@@ -151,8 +155,16 @@ bool checkDeactivateTractiveSystem() {
     return true;
 }
 
+<<<<<<< Updated upstream
 void checkBrakeImplausibility() {
     // TODO: TCU should read in signal from BSPD
     // Fault occurs when signal is too low
     // NOT when fault on brake pedal sensor
 }
+=======
+int sendCanUpdate(){
+
+}
+
+
+>>>>>>> Stashed changes
