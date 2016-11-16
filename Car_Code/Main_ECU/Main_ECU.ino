@@ -5,6 +5,25 @@
 #define IMD_FAULT (1<<1)
 #define BSPD_FAULT (1<<2)
 
+#define THERMISTORNOMINAL 10000
+#define TEMPERATURENOMINAL 25
+#define BCONSTANT 3900
+#define SERIESRESISTOR 10000
+
+// Values to check if IMD, BMS high
+#define IMD_High 50
+#define BMS_High 50
+
+// Pins
+#define OKHS_PIN 0
+#define BMS_OK_PIN 1
+#define THERMISTOR_PIN 4
+#define SHUTDOWN_SSR_PIN 11
+#define LATCH_SSR_PIN 10
+#define BRAKE_LIGHT_PIN 13
+
+#define STATE_MESSAGE_ID 0xD0
+
 FlexCAN CAN(500000);
 static CAN_message_t msg;
 float OKHS = 0; // voltage after calculation
@@ -17,23 +36,13 @@ bool startPressed = false; // true if start button is pressed
 float thermTemp = 0.0; // temperature of onboard thermistor (after calculation)
 int thermValue = 0; //raw value from thermistor
 bool startupDone = false; // true when reached drive state
-const int THERMISTORNOMINAL = 10000;
-const int TEMPERATURENOMINAL = 25;
-const int BCONSTANT = 3900;
-const int SERIESRESISTOR = 10000;
 
-// Values to check if IMD, BMS high
-const int IMD_High = 50;
-const int BMS_High = 50;
 
 // timer
 Metro updateTimer = Metro(500);
-Metro AIRtimer = Metro(2000);
+Metro AIRtimer = Metro(500);
 Metro FAKE_DRIVER_BUTTON_PRESS = Metro(3000);
 
-const int OKHS_PIN = 0;
-const int BMS_OK_PIN = 1;
-const int THERMISTOR_PIN = 4;
 
 enum State { GLVinit=0, waitIMDBMS, waitDriver, AIRClose, fatalFault, drive }; // NOTE: change and update
 State curState = GLVinit; // curState is current state
@@ -52,11 +61,16 @@ byte stateOutput;
 void setup() {
     Serial.begin(115200); // init serial for PC communication
 
+    // Set up SSR output pins
+    pinMode(SHUTDOWN_SSR_PIN, OUTPUT);
+    pinMode(LATCH_SSR_PIN, OUTPUT);
+    pinMode(BRAKE_LIGHT_PIN, OUTPUT);
+
     CAN.begin(); // init CAN system
     Serial.println("CAN system and serial communication initialized");
     curState = GLVinit; // curState is current state
     Serial.println("Current state is GLVinit");
-
+    startPressed = 0;
 }
 
 // loop code
@@ -70,7 +84,30 @@ void loop() {
     Serial.print("BMS: ");
     Serial.println(DISCHARGE_OK);
     Serial.println(thermValue);
-    delay(200);
+
+    /*
+     * Handle incoming CAN messages
+     */
+    while (CAN.read(msg)) {
+      if (msg.id > 0xBF) {
+        Serial.print(msg.id, HEX);
+        Serial.print(": ");
+        for (unsigned int i = 0; i < msg.len; i++) {
+          Serial.print(msg.buf[i], HEX);
+          Serial.print(" ");
+        }
+        Serial.println();
+      }
+
+      // Scanning CAN for dashboard state message (start button)
+      // Change values based on what message actually is
+      if (curState == waitDriver && msg.id == STATE_MESSAGE_ID) {
+        Serial.println(msg.buf[0], BIN);
+        if (msg.buf[0] & 0x10) {
+          startPressed = 1;
+        }
+      }
+    }
     
     //check CAN for a message for software shutdown
     if (!startupDone) {
@@ -90,8 +127,11 @@ void loop() {
             case waitDriver:
                 stateOutput = 0b00000010;
                 /*can message for start button press received*/
-                if(FAKE_DRIVER_BUTTON_PRESS.check()){
+                 
+                if (startPressed || FAKE_DRIVER_BUTTON_PRESS.check()) {
                     AIRtimer.reset();
+                    digitalWrite(SHUTDOWN_SSR_PIN, HIGH);   // close Shutoff SSR (Software Switch)
+                    digitalWrite(LATCH_SSR_PIN, HIGH);      // close latch SSR
                     curState = AIRClose;
                 }
                 break;
@@ -99,11 +139,11 @@ void loop() {
                 stateOutput = 0b00000100;
                 if(AIRtimer.check()){
                     if (!(curState == fatalFault)) {
-                        //close the latch
-                        digitalWrite(10, HIGH);
+                        digitalWrite(LATCH_SSR_PIN, LOW);  // Open latch SSR
                         curState = drive;
                     }
                 }
+                startPressed = false;
                 break;
             case fatalFault:
                 stateOutput = 0b00001000;
@@ -156,7 +196,7 @@ bool checkFatalFault() { // returns true if fatal fault found
     
 
     if (faultMsg.buf[0] != 0) {
-        digitalWrite(10, LOW);
+        digitalWrite(SHUTDOWN_SSR_PIN, LOW);
         curState = fatalFault;
         faultMsg.id = 0x0002;
         faultMsg.len = 1;
