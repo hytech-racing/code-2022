@@ -1,39 +1,53 @@
 /**
  * Nathan Cheek
- * 2016-11-12
+ * 2016-11-15
  * Interface with dashboard lights, buttons, and buzzer. Read pedal sensor values.
  */
 #include <FlexCAN.h>
 #include <Metro.h>
 
 /*
- * Pin definitions
+ * State definitions
  */
-int BTN_TOGGLE = 9;
-int BTN_CYCLE = 10;
-int BTN_BOOST = 11;
-int BTN_START = 12;
-int LED_START = 7;
-int LED_IMD = 6;
-int LED_BMS = 5;
-int READY_SOUND = 8;
-int PEDAL_SIGNAL_A = A3;
-int PEDAL_SIGNAL_B = A4;
-int PEDAL_SIGNAL_C = A5;
+#define PCU_STATE_WAITING_BMS_IMD 1
+#define PCU_STATE_WAITING_DRIVER 2
+#define PCU_STATE_LATCHING 3
+#define PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED 4
+#define PCU_STATE_FATAL_FAULT 5
+#define TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED 1
+#define TCU_STATE_TRACTIVE_SYSTEM_ACTIVE 2
+#define TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE 3
+#define TCU_STATE_ENABLING_INVERTER 4
+#define TCU_STATE_WAITING_READY_TO_DRIVE_SOUND 5
+#define TCU_STATE_READY_TO_DRIVE 6
 
 /*
- * CAN setup
+ * Pin definitions
  */
-FlexCAN CAN(500000);
-static CAN_message_t msg;
-uint16_t STATE_MESSAGE_ID = 0xD0;
-uint16_t ENABLE_LED_START = 0xD1;
-uint16_t DISABLE_LED_START = 0xD2;
-uint16_t ENABLE_LED_BMS = 0xD3;
-uint16_t DISABLE_LED_BMS = 0xD4;
-uint16_t ENABLE_LED_IMD = 0xD5;
-uint16_t DISABLE_LED_IMD = 0xD6;
-uint16_t BLINK_LED_START = 0xD7;
+#define BTN_TOGGLE 9
+#define BTN_CYCLE 10
+#define BTN_BOOST 11
+#define BTN_START 12
+#define LED_START 7
+#define LED_IMD 6
+#define LED_BMS 5
+#define READY_SOUND 8
+#define PEDAL_SIGNAL_A A3
+#define PEDAL_SIGNAL_B A4
+#define PEDAL_SIGNAL_C A5
+
+/*
+ * CAN ID definitions
+ */
+#define PCU_STATUS 0xCF
+#define TCU_STATUS 0xD0
+#define ENABLE_LED_START 0xD1
+#define DISABLE_LED_START 0xD2
+#define ENABLE_LED_BMS 0xD3
+#define DISABLE_LED_BMS 0xD4
+#define ENABLE_LED_IMD 0xD5
+#define DISABLE_LED_IMD 0xD6
+#define BLINK_LED_START 0xD7
 
 /*
  * Timers
@@ -41,16 +55,21 @@ uint16_t BLINK_LED_START = 0xD7;
 Metro timer_printer = Metro(500);
 Metro timer_state_send = Metro(50);
 Metro timer_motor_controller_send = Metro(50);
-Metro timer_led_start_blink = Metro(300);
+Metro timer_led_start_blink_fast = Metro(200);
+Metro timer_led_start_blink_slow = Metro(300);
 
 /*
- * State booleans
+ * Global variables
  */
-boolean STATE_LED_START = false;
-boolean STATE_LED_IMD = false;
-boolean STATE_LED_BMS = false;
-boolean STATE_READY_SOUND = false;
-boolean STATE_LED_START_BLINK = false;
+boolean LED_START_ACTIVE = false;
+boolean LED_IMD_ACTIVE = false;
+boolean LED_BMS_ACTIVE = false;
+boolean READY_SOUND_ACTIVE = false;
+uint8_t LED_START_TYPE = 0; // 0 for steady, 1 for fast blink, 2 for slow blink
+uint8_t STATE = TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED;
+
+FlexCAN CAN(500000);
+static CAN_message_t msg;
 
 void setup() {
   pinMode(BTN_TOGGLE, INPUT_PULLUP);
@@ -70,13 +89,54 @@ void setup() {
 
 void loop() {
   /*
+   * Handle incoming CAN messages
+   */
+  while (CAN.read(msg)) {
+    if (msg.id > 0xCA) { // Ignore Motor Controller messages
+      Serial.print(msg.id, HEX);
+      Serial.print(": ");
+      for (unsigned int i = 0; i < msg.len; i++) {
+        Serial.print(msg.buf[i], HEX);
+        Serial.print(" ");
+      }
+      Serial.println();
+    }
+    
+    if (msg.id == PCU_STATUS) {
+      if (msg.buf[0] >> 3 & 0x1) { // BMS Fault
+        digitalWrite(LED_BMS, HIGH);
+        Serial.println("BMS Fault detected");
+      }
+      if (msg.buf[0] >> 2 & 0x1) { // IMD Fault
+        digitalWrite(LED_IMD, HIGH);
+        Serial.println("IMD Fault detected");
+      }
+      // Waiting for driver to press start button, flash start button
+      if (msg.buf[0] >> 4 == PCU_STATE_WAITING_DRIVER && LED_START_TYPE != 2) {
+        LED_START_TYPE = 2;
+        LED_START_ACTIVE = true;
+        timer_led_start_blink_slow.reset();
+        digitalWrite(LED_START, HIGH);
+        Serial.println("Enabling slow flash start button");
+      }
+      // Shutdown circuit initialized, and not waiting for driver to enable inverter, enable start button steady
+      if (msg.buf[0] >> 4 > PCU_STATE_WAITING_DRIVER && STATE != TCU_STATE_TRACTIVE_SYSTEM_ACTIVE && LED_START_TYPE != 0) { 
+        LED_START_TYPE = 0;
+        LED_START_ACTIVE = true;
+        digitalWrite(LED_START, HIGH);
+        Serial.println("Enabling steady start button");
+      }
+    }
+  }
+
+  /*
    * Send state over CAN
    */
   if (timer_state_send.check()) {
-    msg.id = STATE_MESSAGE_ID;
+    msg.id = TCU_STATUS;
     msg.len = 1;
     msg.buf[0] = !digitalRead(BTN_TOGGLE) << 7 | !digitalRead(BTN_CYCLE) << 6 | !digitalRead(BTN_BOOST) << 5 | !digitalRead(BTN_START) << 4;
-    msg.buf[0] |= STATE_LED_START << 3 | STATE_LED_IMD << 2 | STATE_LED_BMS << 1 | STATE_READY_SOUND;
+    msg.buf[0] |= LED_START_ACTIVE << 3 | LED_IMD_ACTIVE << 2 | LED_BMS_ACTIVE << 1 | READY_SOUND_ACTIVE;
     CAN.write(msg);
   }
 
@@ -91,47 +151,15 @@ void loop() {
   }
 
   /*
-   * Handle incoming CAN messages
+   * Blink start led
    */
-  while (CAN.read(msg)) {
-    if (msg.id == ENABLE_LED_START) {
-      STATE_LED_START = true;
-      STATE_LED_START_BLINK = false;
-      digitalWrite(LED_START, HIGH);
-      Serial.println("Start LED Enabled");
-    } else if (msg.id == DISABLE_LED_START) {
-      STATE_LED_START = false;
-      STATE_LED_START_BLINK = false;
+  if ((LED_START_TYPE == 1 && timer_led_start_blink_fast.check()) || (LED_START_TYPE == 2 && timer_led_start_blink_slow.check())) {
+    if (LED_START_ACTIVE) {
       digitalWrite(LED_START, LOW);
-      Serial.println("Start LED Disabled");
-    } else if (msg.id == BLINK_LED_START && !STATE_LED_START_BLINK) {
-      STATE_LED_START = true;
-      STATE_LED_START_BLINK = true;
+    } else {
       digitalWrite(LED_START, HIGH);
-      timer_led_start_blink.reset();
-      Serial.println("Start LED Blink");
-    } else if (msg.id == ENABLE_LED_BMS) {
-      STATE_LED_BMS = true;
-      digitalWrite(LED_BMS, HIGH);
-    } else if (msg.id == DISABLE_LED_BMS) {
-      STATE_LED_BMS = false;
-      digitalWrite(LED_BMS, LOW);
-    } else if (msg.id == ENABLE_LED_IMD) {
-      STATE_LED_IMD = true;
-      digitalWrite(LED_IMD, HIGH);
-    } else if (msg.id == DISABLE_LED_IMD) {
-      STATE_LED_IMD = false;
-      digitalWrite(LED_IMD, LOW);
     }
-    if (msg.id > 0xBF) {
-      Serial.print(msg.id, HEX);
-      Serial.print(": ");
-      for (unsigned int i = 0; i < msg.len; i++) {
-        Serial.print(msg.buf[i], HEX);
-        Serial.print(" ");
-      }
-      Serial.println();
-    }
+    LED_START_ACTIVE = !LED_START_ACTIVE;
   }
 
   if (timer_printer.check()) {
@@ -141,15 +169,6 @@ void loop() {
     Serial.print(" ");
     Serial.println(analogRead(PEDAL_SIGNAL_C));
     Serial.println(analogRead(BTN_START));*/
-  }
-
-  if (timer_led_start_blink.check() && STATE_LED_START_BLINK) {
-    if (STATE_LED_START) {
-      digitalWrite(LED_START, LOW);
-    } else {
-      digitalWrite(LED_START, HIGH);
-    }
-    STATE_LED_START = !STATE_LED_START;
   }
 }
 
