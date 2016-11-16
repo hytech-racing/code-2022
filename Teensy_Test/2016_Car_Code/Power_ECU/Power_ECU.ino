@@ -36,15 +36,8 @@
 /*
  * CAN ID definitions
  */
-#define PCU_STATUS 0xCF
-#define TCU_STATUS 0xD0
-#define ENABLE_LED_START 0xD1
-#define DISABLE_LED_START 0xD2
-#define ENABLE_LED_BMS 0xD3
-#define DISABLE_LED_BMS 0xD4
-#define ENABLE_LED_IMD 0xD5
-#define DISABLE_LED_IMD 0xD6
-#define BLINK_LED_START 0xD7
+#define PCU_STATUS 0xD0
+#define TCU_STATUS 0xD1
 
 /*
  * Timers
