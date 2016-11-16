@@ -83,6 +83,7 @@ enum ChargeState {
 };
 ChargeState chargeState = DISCHARGE;
 boolean BMSStatusOK;
+boolean tractiveSystemOn;
 
 /**
  * Teensy Communication Pin Constants
@@ -93,8 +94,9 @@ boolean BMSStatusOK;
 #define CLOCK_PIN 14
 #define T_WAKE 50
 
-// TODO: Calculate Internal Resistance
+// TODO: Calculate Internal Resistance: measure current, measure total voltage, calculate resistance, then do something to adjust the voltage measurement.
 // TODO: Current goes Negative during Regen Braking.
+// TODO: Implement Coulomb counting to track state of charge of battery.
 // TODO: Switching between discharge and charge very often.
 // TODO: Write Threshold Values into Configuration Registers
 // TODO: Organize Telemetry Messages into a SINGLE CAN message
@@ -121,26 +123,25 @@ void loop() {
     pollVoltage();
     printCells();
 
-    // TODO:: IMPLEMENT CAN BUS READING
     while (can.read(msg)) {
         switch (msg.id) {
-        case 0x001:
+        case 0x001: // Fault Detected
             {
                 BMSStatusOK = false;
                 Serial.print("SHUTDOWN RECEIVED");
                 printCanMessage();
             } break;
-        case 0x0BC:
-            {
-                unsigned char chargeStateBit = msg.buf[0] >> 7;
-                if (chargeStateBit == 0) {
-                    chargeState = DISCHARGE;
-                } else if (chargeStateBit == 1) {
-                    chargeState = CHARGE;
-                }
-                Serial.print("Charge State Received");
-                printCanMessage();
-            } break;
+//        case 0x0BC:
+//            {
+//                unsigned char chargeStateBit = msg.buf[0] >> 7;
+//                if (chargeStateBit == 0) {
+//                    chargeState = DISCHARGE;
+//                } else if (chargeStateBit == 1) {
+//                    chargeState = CHARGE;
+//                }
+//                Serial.print("Charge State Received");
+//                printCanMessage();
+//            } break;
         default:
             {
                 printCanMessage();
