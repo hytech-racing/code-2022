@@ -55,8 +55,9 @@
 Metro timer_printer = Metro(500);
 Metro timer_state_send = Metro(50);
 Metro timer_motor_controller_send = Metro(50);
-Metro timer_led_start_blink_fast = Metro(200);
-Metro timer_led_start_blink_slow = Metro(300);
+Metro timer_led_start_blink_fast = Metro(150);
+Metro timer_led_start_blink_slow = Metro(400);
+Metro timer_ready_sound = Metro(2000);
 
 /*
  * Global variables
@@ -65,6 +66,7 @@ boolean LED_START_ACTIVE = false;
 boolean LED_IMD_ACTIVE = false;
 boolean LED_BMS_ACTIVE = false;
 boolean READY_SOUND_ACTIVE = false;
+boolean BTN_START_PRESSED = false;
 uint8_t LED_START_TYPE = 0; // 0 for steady, 1 for fast blink, 2 for slow blink
 uint8_t STATE = TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED;
 
@@ -117,15 +119,26 @@ void loop() {
         LED_START_ACTIVE = true;
         timer_led_start_blink_slow.reset();
         digitalWrite(LED_START, HIGH);
-        Serial.println("Enabling slow flash start button");
+        Serial.println("Enabling slow blink start button");
       }
       // Shutdown circuit initialized, and not waiting for driver to enable inverter, enable start button steady
-      if (msg.buf[0] >> 4 > PCU_STATE_WAITING_DRIVER && STATE != TCU_STATE_TRACTIVE_SYSTEM_ACTIVE && LED_START_TYPE != 0) { 
-        LED_START_TYPE = 0;
+      if (msg.buf[0] >> 4 == PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED && STATE != TCU_STATE_TRACTIVE_SYSTEM_ACTIVE && LED_START_TYPE != 1) {
+        STATE = TCU_STATE_TRACTIVE_SYSTEM_ACTIVE; // TODO check that Tractive System is really active
+        LED_START_TYPE = 1;
         LED_START_ACTIVE = true;
+        timer_led_start_blink_fast.reset();
         digitalWrite(LED_START, HIGH);
-        Serial.println("Enabling steady start button");
+        Serial.println("Enabling fast blink start button");
       }
+    }
+
+    if (msg.id == 0xAA && msg.buf[6] == 1 && STATE == TCU_STATE_ENABLING_INVERTER) {
+      STATE = TCU_STATE_WAITING_READY_TO_DRIVE_SOUND;
+      timer_ready_sound.reset();
+      READY_SOUND_ACTIVE = true;
+      digitalWrite(READY_SOUND, HIGH);
+      Serial.println("Inverter enabled");
+      Serial.println("RTDS enabled");
     }
   }
 
@@ -146,7 +159,11 @@ void loop() {
   if (timer_motor_controller_send.check()) {
     msg.id = 0xC0;
     msg.len = 8;
-    generate_MC_message(msg.buf, 0, 0, 0);
+    if (STATE < TCU_STATE_ENABLING_INVERTER) {
+      generate_MC_message(msg.buf, 0, false, false);
+    } else {
+      generate_MC_message(msg.buf, 0, false, true);
+    }
     CAN.write(msg);
   }
 
@@ -169,6 +186,51 @@ void loop() {
     Serial.print(" ");
     Serial.println(analogRead(PEDAL_SIGNAL_C));
     Serial.println(analogRead(BTN_START));*/
+  }
+
+  /*
+   * Temporarily assume Tractive System is active and wait for driver to enable inverter
+   */
+  if (STATE == TCU_STATE_TRACTIVE_SYSTEM_ACTIVE && !BTN_START_PRESSED && !digitalRead(BTN_START)) {
+    Serial.println("Enabling inverter");
+    LED_START_TYPE = 0;
+    LED_START_ACTIVE = true;
+    digitalWrite(LED_START, HIGH);
+    msg.id = 0xC0;
+    msg.len = 8;    
+    for(int i = 0; i < 10; i++) {
+      generate_MC_message(msg.buf,0,false,true); // many enable commands
+      CAN.write(msg);
+    }
+    generate_MC_message(msg.buf,0,false,false); // disable command
+    CAN.write(msg);
+    for(int i = 0; i < 10; i++) {
+      generate_MC_message(msg.buf,0,false,true); // many more enable commands
+      CAN.write(msg);
+    }
+    Serial.println("Send enable command");
+    STATE = TCU_STATE_ENABLING_INVERTER;
+  }
+
+  /*
+   * Deactivate Ready to Drive Sound after timer completes
+   */
+  if (READY_SOUND_ACTIVE && timer_ready_sound.check()) {
+    READY_SOUND_ACTIVE = false;
+    digitalWrite(READY_SOUND, LOW);
+    STATE = TCU_STATE_READY_TO_DRIVE;
+    Serial.println("RTDS deactivated");
+  }
+
+  /*
+   * Differentiate separate button presses
+   * TODO this needs to be completely rewritten
+   */
+  if (!BTN_START_PRESSED && !digitalRead(BTN_START)) {
+    BTN_START_PRESSED = true;
+  }
+  if (BTN_START_PRESSED && digitalRead(BTN_START)) {
+    BTN_START_PRESSED = false;
   }
 }
 
