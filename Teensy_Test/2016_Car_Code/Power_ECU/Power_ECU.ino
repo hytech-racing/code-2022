@@ -1,6 +1,6 @@
 /**
  * Nathan Cheek
- * 2016-11-15
+ * 2016-11-18
  * Control Shutdown Circuit initialization.
  */
 #include <FlexCAN.h>
@@ -44,8 +44,8 @@
  */
 Metro timer_latch = Metro(1000);
 Metro timer_state_send = Metro(100);
-Metro timer_bms_faulting = Metro(100); // At startup the BMS DISCHARGE_OK line drops shortly
-Metro timer_imd_faulting = Metro(100); // At startup the IMD OKHS line drops shortly
+Metro timer_bms_faulting = Metro(500); // At startup the BMS DISCHARGE_OK line drops shortly
+Metro timer_imd_faulting = Metro(500); // At startup the IMD OKHS line drops shortly
 
 /*
  * Global variables
@@ -55,6 +55,8 @@ boolean IMD_FAULT = false;
 boolean BMS_FAULTING = false;
 boolean IMD_FAULTING = false;
 uint8_t STATE = PCU_STATE_WAITING_BMS_IMD;
+uint8_t BTN_START_ID = 0; // increments to differentiate separate button presses
+uint8_t BTN_START_NEW = 0;
 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
@@ -85,12 +87,8 @@ void loop() {
       Serial.println();
     }
 
-    if (STATE == PCU_STATE_WAITING_DRIVER && msg.id == TCU_STATUS && msg.buf[0] & 0x10) {
-      STATE = PCU_STATE_LATCHING;
-      timer_latch.reset();
-      digitalWrite(SSR_LATCH, HIGH);
-      digitalWrite(SSR_SOFTWARE_SHUTOFF, HIGH);
-      Serial.println("Latching");
+    if (msg.id == TCU_STATUS) {
+      BTN_START_ID = msg.buf[1];
     }
   }
 
@@ -105,13 +103,32 @@ void loop() {
     CAN.write(msg);
   }
 
-  /*
-   * Wait till IMD and BMS signals go high at startup
-   */
-  if (STATE == PCU_STATE_WAITING_BMS_IMD && analogRead(SENSE_IMD) > 50 && analogRead(SENSE_BMS) > 50) {
-    STATE = PCU_STATE_WAITING_DRIVER;
+  switch (STATE) {
+    case PCU_STATE_WAITING_BMS_IMD:
+    if (analogRead(SENSE_IMD) > 100 && analogRead(SENSE_BMS) > 100) { // Wait till IMD and BMS signals go high at startup
+      set_state(PCU_STATE_WAITING_DRIVER);
+    }
+    break;
+
+    case PCU_STATE_WAITING_DRIVER:
+    if (BTN_START_NEW == BTN_START_ID) { // Start button has been pressed
+      set_state(PCU_STATE_LATCHING);
+    }
+    break;
+
+    case PCU_STATE_LATCHING:
+    if (timer_latch.check()) { // Disable latching SSR
+      set_state(PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED);
+    }
+    break;
+
+    case PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
+    break;
+
+    case PCU_STATE_FATAL_FAULT:
+    break;
   }
-  
+
   /*
    * Start BMS fault timer if signal drops momentarily
    */
@@ -121,11 +138,18 @@ void loop() {
   }
 
   /*
+   * Reset BMS fault condition if signal comes back within timer period
+   */
+  if (BMS_FAULTING && analogRead(SENSE_BMS) > 50) {
+    BMS_FAULTING = false;
+  }
+
+  /*
    * Declare BMS fault if signal still dropped
    */
-  if (BMS_FAULTING && timer_imd_faulting.check() && analogRead(SENSE_BMS) <= 50) {
+  if (BMS_FAULTING && timer_imd_faulting.check()) {
     BMS_FAULT = true;
-    STATE = PCU_STATE_FATAL_FAULT;
+    set_state(PCU_STATE_FATAL_FAULT);
     digitalWrite(SSR_SOFTWARE_SHUTOFF, LOW);
     Serial.println("BMS fault detected");
   }
@@ -139,20 +163,42 @@ void loop() {
   }
 
   /*
-   * Declare IMD fault if signal still dropped
+   * Reset IMD fault condition if signal comes back within timer period
    */
-  if (IMD_FAULTING && timer_imd_faulting.check() && analogRead(SENSE_IMD) <= 50) {
-    IMD_FAULT = true;
-    STATE = PCU_STATE_FATAL_FAULT;
-    digitalWrite(SSR_SOFTWARE_SHUTOFF, LOW);
-    Serial.println("IMD fault detected");
+  if (IMD_FAULTING && analogRead(SENSE_IMD) > 50) {
+    IMD_FAULTING = false;
   }
 
   /*
-   * Disable latching SSR
+   * Declare IMD fault if signal still dropped
    */
-  if (STATE == PCU_STATE_LATCHING && timer_latch.check()) {
-    STATE = PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED;
+  if (IMD_FAULTING && timer_imd_faulting.check()) {
+    IMD_FAULT = true;
+    set_state(PCU_STATE_FATAL_FAULT);
+    digitalWrite(SSR_SOFTWARE_SHUTOFF, LOW);
+    Serial.println("IMD fault detected");
+  }
+}
+
+/*
+ * Handle changes in state
+ */
+void set_state(uint8_t new_state) {
+  if (STATE == new_state) {
+    return;
+  }
+  STATE = new_state;
+  if (new_state == PCU_STATE_WAITING_DRIVER) {
+    BTN_START_NEW = BTN_START_ID + 1;
+  }
+  if (new_state == PCU_STATE_LATCHING) {
+    timer_latch.reset();
+    digitalWrite(SSR_LATCH, HIGH);
+    digitalWrite(SSR_SOFTWARE_SHUTOFF, HIGH);
+    Serial.println("Latching");
+  }
+  if (new_state == PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED) {
     digitalWrite(SSR_LATCH, LOW);
   }
 }
+
