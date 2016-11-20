@@ -1,5 +1,18 @@
 #include <FlexCAN.h>
 
+/******* PIN definitions ***********/
+#define BTN_TOGGLE 9
+#define BTN_CYCLE 10
+#define BTN_BOOST 11
+#define BTN_START 12
+#define LED_START 7
+#define LED_BMS 6
+#define LED_IMD 5
+#define READY_SOUND 8
+#define PEDAL_SIGNAL_A A3
+#define PEDAL_SIGNAL_B A4
+#define PEDAL_SIGNAL_C A5
+
 /*****Dashboard States and Fault Flags********/
 bool imd_fault;
 bool bms_fault;
@@ -35,11 +48,22 @@ void setup() {
     general_fault = false;
     Serial.begin(115200);
     can.begin();
+
 }
-
-
 
 void loop() {
   // put your main code here, to run repeatedly:
+  pollForButtonPress();
+}
+
+void pollForButtonPress {
+    // check if start button pressed
+}
+
+void toggleButtonInterrupt {
+
+}
+
+void startButtonInterrupt {
 
 }
