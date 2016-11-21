@@ -10,7 +10,7 @@ MC_voltage_information::MC_voltage_information(uint8_t buf[8]) {
 }
 
 void MC_voltage_information::update(uint8_t buf[8]) {
-  memcpy(&message, buf, sizeof(CAN_message_mc_voltage_information_t));
+  memcpy(buf, &message, sizeof(CAN_message_mc_voltage_information_t));
 }
 
 float MC_voltage_information::get_dc_bus_voltage() {

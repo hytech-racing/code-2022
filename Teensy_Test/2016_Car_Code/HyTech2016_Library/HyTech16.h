@@ -2,6 +2,7 @@
 #define __HYTECH16_H__
 
 #include <Arduino.h>
+#include <string.h>
 
 /*
  * ECU state definitions
@@ -35,11 +36,15 @@ typedef struct CAN_message_pcu_status_t {
 
 class PCU_status {
   public:
-    PCU_status(uint8_t buf[8]);
-    void update(uint8_t buf[8]);
+    PCU_status(uint8_t buf[8] = 0); // TODO not sure if this is best
+    void get(uint8_t buf[8]);
+    void set(uint8_t buf[8]);
     uint8_t get_state();
     bool get_bms_fault();
     bool get_imd_fault();
+    void set_state(uint8_t state);
+    void set_bms_fault(bool bms_fault);
+    void set_imd_fault(bool imd_fault);
   private:
     CAN_message_pcu_status_t message;
 };
@@ -51,10 +56,13 @@ typedef struct CAN_message_tcu_status_t {
 
 class TCU_status {
   public:
-    TCU_status(uint8_t buf[8]);
-    void update(uint8_t buf[8]);
+    TCU_status(uint8_t buf[8] = 0); // TODO not sure if this is best
+    void get(uint8_t buf[8]);
+    void set(uint8_t buf[8]);
     uint8_t get_state();
     uint8_t get_btn_start_id();
+    void set_state(uint8_t state);
+    void set_btn_start_id(uint8_t btn_start_id);
   private:
     CAN_message_tcu_status_t message;
 };

@@ -58,10 +58,17 @@ void loop() {
    */
   while (CAN.read(msg)) {
     if (msg.id == ID_TCU_STATUS) {
-      CAN_message_tcu_status_t tcu_status;
-      memcpy(msg.buf, &tcu_status, sizeof(tcu_status));
-      if (btn_start_id != tcu_status.btn_start_id) {
-        btn_start_id = tcu_status.btn_start_id;
+      Serial.print(msg.id);
+      Serial.print(": ");
+      for (unsigned int i = 0; i < msg.len; i++) {
+        Serial.print(msg.buf[i]);
+        Serial.print(" ");
+      }
+      Serial.println();
+      
+      TCU_status message = TCU_status(msg.buf);
+      if (btn_start_id != message.get_btn_start_id()) {
+        btn_start_id = message.get_btn_start_id();
         Serial.print("Start button pressed id ");
         Serial.println(btn_start_id);
       }
@@ -77,6 +84,12 @@ void loop() {
     msg.id = ID_PCU_STATUS;
     msg.len = sizeof(pcu_status);
     CAN.write(msg);
+
+    Serial.println("Debug");
+    Serial.print("BMS fault ");
+    Serial.println(bms_fault);
+    Serial.print("IMD fault ");
+    Serial.println(imd_fault);
   }
 
   switch (state) {

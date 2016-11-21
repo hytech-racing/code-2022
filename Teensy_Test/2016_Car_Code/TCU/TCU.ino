@@ -47,6 +47,7 @@ uint8_t state = TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED;
 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
+TCU_status tcu_status;
 
 void setup() {
   pinMode(BTN_BOOST, INPUT_PULLUP);
@@ -70,19 +71,17 @@ void loop() {
    */
   while (CAN.read(msg)) {
     if (msg.id == ID_PCU_STATUS) {
-      CAN_message_pcu_status_t pcu_status;
-      memcpy(msg.buf, &pcu_status, sizeof(pcu_status));
-      
-      if (pcu_status.bms_fault) {
+      PCU_status message = PCU_status(msg.buf);
+      if (message.get_bms_fault()) {
         digitalWrite(LED_BMS, HIGH);
         Serial.println("BMS Fault detected");
       }
-      if (pcu_status.imd_fault) {
+      if (message.get_imd_fault()) {
         digitalWrite(LED_IMD, HIGH);
         Serial.println("IMD Fault detected");
       }
       
-      switch (pcu_status.state) {
+      switch (message.get_state()) {
         case PCU_STATE_WAITING_BMS_IMD:
         set_start_led(0);
         set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
@@ -112,8 +111,18 @@ void loop() {
       }
     }
 
-    if (msg.id == 0xAA && msg.buf[6] == 1 && state == TCU_STATE_ENABLING_INVERTER) {
+    if (msg.id == ID_MC_INTERNAL_STATES && msg.buf[6] == 1 && state == TCU_STATE_ENABLING_INVERTER) {
       set_state(TCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
+    }
+
+    if (msg.id == ID_MC_INTERNAL_STATES) {
+      MC_internal_states message = MC_internal_states(msg.buf);
+      Serial.print("Inverter ");
+      if (message.get_inverter_enable_state()) {
+        Serial.println("enabled");
+      } else {
+        Serial.println("disabled");
+      }
     }
 
     // TODO Check DC voltage and go to tractive system active or inactive (cockpit brb)
@@ -123,11 +132,19 @@ void loop() {
    * Send state over CAN
    */
   if (timer_state_send.check()) {
-    CAN_message_tcu_status_t tcu_status = {state, btn_start_id};
-    memcpy(&tcu_status, msg.buf, sizeof(tcu_status));
+    tcu_status.set_state(state);
+    tcu_status.set_btn_start_id(btn_start_id);
+    tcu_status.get(msg.buf);
+    Serial.print(tcu_status.get_state());
+    Serial.print(" ");
+    Serial.println(tcu_status.get_btn_start_id());
+    Serial.print(state);
+    Serial.print(" ");
+    Serial.println(btn_start_id);
     msg.id = ID_TCU_STATUS;
-    msg.len = sizeof(tcu_status);
+    msg.len = sizeof(CAN_message_tcu_status_t);
     CAN.write(msg);
+    btn_start_id++;
   }
 
   /*
