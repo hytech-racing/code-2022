@@ -24,8 +24,17 @@
  */
 #define ID_PCU_STATUS 0xD0
 #define ID_TCU_STATUS 0xD1
-#define ID_MC_INTERNAL_STATES 0xAA
+#define ID_MC_TEMPERATURES_1 0xA0
+#define ID_MC_TEMPERATURES_2 0xA1
+#define ID_MC_TEMPERATURES_3 0xA2
+#define ID_MC_ANALOG_INPUTS_VOLTAGES 0xA3
+#define ID_MC_DIGITAL_INPUT_STATUS 0xA4
+#define ID_MC_MOTOR_POSITION_INFORMATION 0xA5
+#define ID_MC_CURRENT_INFORMATION 0xA6
 #define ID_MC_VOLTAGE_INFORMATION 0xA7
+#define ID_MC_FLUX_INFORMATION 0xA8
+#define ID_MC_INTERNAL_VOLTAGES 0xA9
+#define ID_MC_INTERNAL_STATES 0xAA
 #define ID_MC_FAULT_CODES 0xAB
 #define ID_MC_TORQUE_TIMER_INFORMATION 0xAC
 #define ID_MC_MODULATION_INDEX_FLUX_WEAKENING_OUTPUT_INFORMATION 0xAD
@@ -73,6 +82,73 @@ class TCU_status {
   private:
     CAN_message_tcu_status_t message;
 };
+
+typedef struct CAN_message_mc_temperatures_1_t {
+  int16_t module_a_temperature;
+  int16_t module_b_temperature;
+  int16_t module_c_temperature;
+  int16_t gate_driver_board_temperature;
+} CAN_message_mc_temperatures_1_t;
+
+class MC_temperatures_1 {
+  public:
+    MC_temperatures_1();
+    MC_temperatures_1(uint8_t buf[8]);
+    void load(uint8_t buf[8]);
+    void write(uint8_t buf[8]);
+    float get_module_a_temp();
+    float get_module_b_temp();
+    float get_module_c_temp();
+    float get_gate_driver_board_temp();
+  private:
+    CAN_message_mc_temperatures_1_t message;
+};
+
+typedef struct CAN_message_mc_temperatures_2_t {
+  int16_t control_board_temperature;
+  int16_t rtd_1_temperature;
+  int16_t rtd_2_temperature;
+  int16_t rtd_3_temperature;
+} CAN_message_mc_temperatures_2_t;
+
+typedef struct CAN_message_mc_temperatures_3_t {
+  int16_t rtd_4_temperature;
+  int16_t rtd_5_temperature;
+  int16_t motor_temperature;
+  int16_t torque_shudder;
+} CAN_message_mc_temperatures_3_t;
+
+typedef struct CAN_message_mc_analog_input_voltages_t {
+  int16_t analog_input_1;
+  int16_t analog_input_2;
+  int16_t analog_input_3;
+  int16_t analog_input_4;
+} CAN_message_mc_analog_input_voltages_t;
+
+typedef struct CAN_message_mc_digital_input_status_t {
+  bool digital_input_1;
+  bool digital_input_2;
+  bool digital_input_3;
+  bool digital_input_4;
+  bool digital_input_5;
+  bool digital_input_6;
+  bool digital_input_7;
+  bool digital_input_8;
+} CAN_message_mc_digital_input_status_t;
+
+typedef struct CAN_message_mc_motor_position_information_t {
+  int16_t motor_angle;
+  int16_t motor_speed;
+  int16_t electrical_output_frequency;
+  int16_t delta_resolver_filtered;
+} CAN_message_mc_motor_position_information_t;
+
+typedef struct CAN_message_mc_current_information_t {
+  int16_t phase_a_current;
+  int16_t phase_b_current;
+  int16_t phase_c_current;
+  int16_t dc_bus_current;
+} CAN_message_mc_current_information_t;
 
 typedef struct CAN_message_mc_voltage_information_t {
   int16_t dc_bus_voltage;
