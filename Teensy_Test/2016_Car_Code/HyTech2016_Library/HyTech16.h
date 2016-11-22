@@ -36,9 +36,10 @@ typedef struct CAN_message_pcu_status_t {
 
 class PCU_status {
   public:
-    PCU_status(uint8_t buf[8] = 0); // TODO not sure if this is best
-    void get(uint8_t buf[8]);
-    void set(uint8_t buf[8]);
+    PCU_status();
+    PCU_status(uint8_t buf[8]);
+    void load(uint8_t buf[8]);
+    void write(uint8_t buf[8]);
     uint8_t get_state();
     bool get_bms_fault();
     bool get_imd_fault();
@@ -56,9 +57,10 @@ typedef struct CAN_message_tcu_status_t {
 
 class TCU_status {
   public:
-    TCU_status(uint8_t buf[8] = 0); // TODO not sure if this is best
-    void get(uint8_t buf[8]);
-    void set(uint8_t buf[8]);
+    TCU_status();
+    TCU_status(uint8_t buf[8]);
+    void load(uint8_t buf[8]);
+    void write(uint8_t buf[8]);
     uint8_t get_state();
     uint8_t get_btn_start_id();
     void set_state(uint8_t state);
@@ -76,8 +78,9 @@ typedef struct CAN_message_mc_voltage_information_t {
 
 class MC_voltage_information {
   public:
+    MC_voltage_information();
     MC_voltage_information(uint8_t buf[8]);
-    void update(uint8_t buf[8]);
+    void load(uint8_t buf[8]);
     float get_dc_bus_voltage();
     float get_output_voltage();
     float get_phase_ab_voltage();
@@ -109,8 +112,9 @@ typedef struct CAN_message_mc_internal_states_t {
 
 class MC_internal_states {
   public:
+    MC_internal_states();
     MC_internal_states(uint8_t buf[8]);
-    void update(uint8_t buf[8]);
+    void load(uint8_t buf[8]);
     uint8_t get_vsm_state();
     uint8_t get_inverter_state();
     bool get_relay_active_1();

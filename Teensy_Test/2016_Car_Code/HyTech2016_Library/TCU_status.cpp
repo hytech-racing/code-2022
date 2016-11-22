@@ -5,15 +5,18 @@
 
 #include "HyTech16.h"
 
-TCU_status::TCU_status(uint8_t buf[8]) {
-  set(buf);
+TCU_status::TCU_status() {
 }
 
-void TCU_status::get(uint8_t buf[8]) {
+TCU_status::TCU_status(uint8_t buf[8]) {
+  load(buf);
+}
+
+void TCU_status::load(uint8_t buf[8]) {
   memcpy(&message, buf, sizeof(CAN_message_tcu_status_t));
 }
 
-void TCU_status::set(uint8_t buf[8]) {
+void TCU_status::write(uint8_t buf[8]) {
   memcpy(buf, &message, sizeof(CAN_message_tcu_status_t));
 }
 

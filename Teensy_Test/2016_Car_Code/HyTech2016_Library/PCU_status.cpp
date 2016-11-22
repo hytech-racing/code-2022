@@ -5,15 +5,18 @@
 
 #include "HyTech16.h"
 
-PCU_status::PCU_status(uint8_t buf[8]) {
-  set(buf);
+PCU_status::PCU_status() {
 }
 
-void PCU_status::get(uint8_t buf[8]) {
+PCU_status::PCU_status(uint8_t buf[8]) {
+  load(buf);
+}
+
+void PCU_status::load(uint8_t buf[8]) {
   memcpy(&message, buf, sizeof(CAN_message_pcu_status_t));
 }
 
-void PCU_status::set(uint8_t buf[8]) {
+void PCU_status::write(uint8_t buf[8]) {
   memcpy(buf, &message, sizeof(CAN_message_pcu_status_t));
 }
 

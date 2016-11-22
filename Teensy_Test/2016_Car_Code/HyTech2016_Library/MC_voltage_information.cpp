@@ -5,12 +5,15 @@
 
 #include "HyTech16.h"
 
-MC_voltage_information::MC_voltage_information(uint8_t buf[8]) {
-  update(buf);
+MC_voltage_information::MC_voltage_information() {
 }
 
-void MC_voltage_information::update(uint8_t buf[8]) {
-  memcpy(buf, &message, sizeof(CAN_message_mc_voltage_information_t));
+MC_voltage_information::MC_voltage_information(uint8_t buf[8]) {
+  load(buf);
+}
+
+void MC_voltage_information::load(uint8_t buf[8]) {
+  memcpy(&message, buf, sizeof(CAN_message_mc_voltage_information_t));
 }
 
 float MC_voltage_information::get_dc_bus_voltage() {

@@ -5,12 +5,15 @@
 
 #include "HyTech16.h"
 
-MC_internal_states::MC_internal_states(uint8_t buf[8]) {
-  update(buf);
+MC_internal_states::MC_internal_states() {
 }
 
-void MC_internal_states::update(uint8_t buf[8]) {
-  memcpy(buf, &message, sizeof(CAN_message_mc_internal_states_t));
+MC_internal_states::MC_internal_states(uint8_t buf[8]) {
+  load(buf);
+}
+
+void MC_internal_states::load(uint8_t buf[8]) {
+  memcpy(&message, buf, sizeof(CAN_message_mc_internal_states_t));
 }
 
 uint8_t MC_internal_states::get_vsm_state() {

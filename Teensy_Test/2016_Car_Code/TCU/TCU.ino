@@ -47,7 +47,6 @@ uint8_t state = TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED;
 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
-TCU_status tcu_status;
 
 void setup() {
   pinMode(BTN_BOOST, INPUT_PULLUP);
@@ -71,17 +70,17 @@ void loop() {
    */
   while (CAN.read(msg)) {
     if (msg.id == ID_PCU_STATUS) {
-      PCU_status message = PCU_status(msg.buf);
-      if (message.get_bms_fault()) {
+      PCU_status pcu_status(msg.buf);
+      if (pcu_status.get_bms_fault()) {
         digitalWrite(LED_BMS, HIGH);
         Serial.println("BMS Fault detected");
       }
-      if (message.get_imd_fault()) {
+      if (pcu_status.get_imd_fault()) {
         digitalWrite(LED_IMD, HIGH);
         Serial.println("IMD Fault detected");
       }
       
-      switch (message.get_state()) {
+      switch (pcu_status.get_state()) {
         case PCU_STATE_WAITING_BMS_IMD:
         set_start_led(0);
         set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
@@ -132,15 +131,11 @@ void loop() {
    * Send state over CAN
    */
   if (timer_state_send.check()) {
+    TCU_status tcu_status(msg.buf);
     tcu_status.set_state(state);
     tcu_status.set_btn_start_id(btn_start_id);
-    tcu_status.get(msg.buf);
-    Serial.print(tcu_status.get_state());
-    Serial.print(" ");
-    Serial.println(tcu_status.get_btn_start_id());
-    Serial.print(state);
-    Serial.print(" ");
-    Serial.println(btn_start_id);
+    tcu_status.write(msg.buf);
+    Serial.println(msg.buf[1]);
     msg.id = ID_TCU_STATUS;
     msg.len = sizeof(CAN_message_tcu_status_t);
     CAN.write(msg);
@@ -330,4 +325,5 @@ void set_state(uint8_t new_state) {
     Serial.println("RTDS deactivated");
   }
 }
+
 
