@@ -12,6 +12,11 @@ TCU_status::TCU_status(uint8_t buf[8]) {
   load(buf);
 }
 
+TCU_status::TCU_status(uint8_t state, uint8_t btn_start_id) {
+  set_state(state);
+  set_btn_start_id(btn_start_id);
+}
+
 void TCU_status::load(uint8_t buf[8]) {
   memcpy(&message, buf, sizeof(CAN_message_tcu_status_t));
 }

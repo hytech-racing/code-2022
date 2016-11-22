@@ -41,6 +41,8 @@
 #define ID_MC_FIRMWARE_INFORMATION 0xAE
 #define ID_MC_DIAGNOSTIC_DATA 0xAF
 #define ID_MC_COMMAND_MESSAGE 0xC0
+#define ID_MC_READ_WRITE_PARAMETER_COMMAND 0xC1
+#define ID_MC_READ_WRITE_PARAMETER_RESPONSE 0xC2
 
 typedef struct CAN_message_pcu_status_t {
   uint8_t state;
@@ -52,6 +54,7 @@ class PCU_status {
   public:
     PCU_status();
     PCU_status(uint8_t buf[8]);
+    PCU_status(uint8_t state, bool bms_fault, bool imd_fault);
     void load(uint8_t buf[8]);
     void write(uint8_t buf[8]);
     uint8_t get_state();
@@ -73,6 +76,7 @@ class TCU_status {
   public:
     TCU_status();
     TCU_status(uint8_t buf[8]);
+    TCU_status(uint8_t state, uint8_t btn_start_id);
     void load(uint8_t buf[8]);
     void write(uint8_t buf[8]);
     uint8_t get_state();
@@ -95,7 +99,6 @@ class MC_temperatures_1 {
     MC_temperatures_1();
     MC_temperatures_1(uint8_t buf[8]);
     void load(uint8_t buf[8]);
-    void write(uint8_t buf[8]);
     float get_module_a_temp();
     float get_module_b_temp();
     float get_module_c_temp();
@@ -221,12 +224,12 @@ class MC_fault_codes {
     bool get_post_lo_accelerator_open();
     bool get_post_lo_current_sensor_low();
     bool get_post_lo_current_sensor_high();
-    bool get_post_lo_module_temp_low();
-    bool get_post_lo_module_temp_high();
-    bool get_post_lo_ctrl_pcb_temp_low();
-    bool get_post_lo_ctrl_pcb_temp_high();
-    bool get_post_lo_gate_drive_pcb_temp_low();
-    bool get_post_lo_gate_drive_pcb_temp_high();
+    bool get_post_lo_module_temperature_low();
+    bool get_post_lo_module_temperature_high();
+    bool get_post_lo_ctrl_pcb_temperature_low();
+    bool get_post_lo_ctrl_pcb_temperature_high();
+    bool get_post_lo_gate_drive_pcb_temperature_low();
+    bool get_post_lo_gate_drive_pcb_temperature_high();
     bool get_post_lo_5v_sense_voltage_low();
     bool get_post_lo_5v_sense_voltage_high();
     bool get_post_lo_12v_sense_voltage_low();
@@ -247,9 +250,84 @@ class MC_fault_codes {
     bool get_post_hi_reserved3();
     bool get_post_hi_brake_shorted();
     bool get_post_hi_brake_open();
-    // TODO run faults
+    bool get_run_lo_motor_overspeed_fault();
+    bool get_run_lo_overcurrent_fault();
+    bool get_run_lo_overvoltage_fault();
+    bool get_run_lo_inverter_overtemperature_fault();
+    bool get_run_lo_accelerator_input_shorted_fault();
+    bool get_run_lo_accelerator_input_open_fault();
+    bool get_run_lo_direction_command_fault();
+    bool get_run_lo_inverter_response_timeout_fault();
+    bool get_run_lo_hardware_gatedesaturation_fault();
+    bool get_run_lo_hardware_overcurrent_fault();
+    bool get_run_lo_undervoltage_fault();
+    bool get_run_lo_can_command_message_lost_fault();
+    bool get_run_lo_motor_overtemperature_fault();
+    bool get_run_lo_reserved1();
+    bool get_run_lo_reserved2();
+    bool get_run_lo_reserved3();
+    bool get_run_hi_brake_input_shorted_fault();
+    bool get_run_hi_brake_input_open_fault();
+    bool get_run_hi_module_a_overtemperature_fault();
+    bool get_run_hi_module_b_overtemperature_fault();
+    bool get_run_hi_module_c_overtemperature_fault();
+    bool get_run_hi_pcb_overtemperature_fault();
+    bool get_run_hi_gate_drive_board_1_overtemperature_fault();
+    bool get_run_hi_gate_drive_board_2_overtemperature_fault();
+    bool get_run_hi_gate_drive_board_3_overtemperature_fault();
+    bool get_run_hi_current_sensor_fault();
+    bool get_run_hi_reserved1();
+    bool get_run_hi_reserved2();
+    bool get_run_hi_reserved3();
+    bool get_run_hi_reserved4();
+    bool get_run_hi_resolved_not_connected();
+    bool get_run_hi_inverter_discharge_active();
   private:
     CAN_message_mc_fault_codes_t message;
 };
+
+typedef struct CAN_message_mc_torque_timer_information_t {
+  int16_t commanded_torque;
+  int16_t torque_feedback;
+  uint32_t power_on_timer;
+} CAN_message_mc_torque_timer_information_t;
+
+typedef struct CAN_message_mc_modulation_index_flux_weakening_output_information_t {
+  uint16_t modulation_index; // TODO Signed or Unsigned?
+  int16_t flux_weakining_output;
+  int16_t id_command;
+  int16_t iq_command;
+} CAN_message_mc_modulation_index_flux_weakening_output_information_t;
+
+typedef struct CAN_message_mc_firmware_information_t {
+  uint16_t eeprom_version_project_code;
+  uint16_t software_version;
+  uint16_t date_code_mmdd;
+  uint16_t date_code_yyyy;
+} CAN_message_mc_firmware_information_t;
+
+typedef struct CAN_message_mc_command_message_t {
+  int16_t torque_command;
+  int16_t angular_velocity;
+  bool direction;
+  uint8_t inverter_enable_discharge_enable;
+  int16_t commanded_torque_limit;
+} CAN_message_mc_command_message_t;
+
+typedef struct CAN_message_mc_read_write_parameter_command_t {
+  uint16_t parameter_address;
+  bool rw_command;
+  uint8_t reserved1;
+  uint16_t data;
+  uint16_t reserved2;
+} CAN_message_mc_read_write_parameter_command_t;
+
+typedef struct CAN_message_mc_read_write_parameter_response_t {
+  uint16_t parameter_address;
+  bool write_success;
+  uint8_t reserved1;
+  uint16_t data;
+  uint16_t reserved2;
+} CAN_message_mc_read_write_parameter_response_t;
 
 #endif

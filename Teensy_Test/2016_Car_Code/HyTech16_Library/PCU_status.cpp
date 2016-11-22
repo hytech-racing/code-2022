@@ -12,6 +12,12 @@ PCU_status::PCU_status(uint8_t buf[8]) {
   load(buf);
 }
 
+PCU_status::PCU_status(uint8_t state, bool bms_fault, bool imd_fault) {
+  set_state(state);
+  set_bms_fault(bms_fault);
+  set_imd_fault(imd_fault);
+}
+
 void PCU_status::load(uint8_t buf[8]) {
   memcpy(&message, buf, sizeof(CAN_message_pcu_status_t));
 }
