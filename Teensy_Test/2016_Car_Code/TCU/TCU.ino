@@ -186,7 +186,7 @@ void loop() {
    * Send a message to the Motor Controller over CAN when vehicle is not ready to drive
    */
   if (timer_motor_controller_send.check()) {
-    msg.id = 0xC0;
+    msg.id = ID_MC_COMMAND_MESSAGE;
     msg.len = 8;
     if (state < TCU_STATE_ENABLING_INVERTER) {
       generate_MC_message(msg.buf, 0, false, false);

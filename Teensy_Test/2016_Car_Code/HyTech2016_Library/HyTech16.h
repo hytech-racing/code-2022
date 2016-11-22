@@ -27,6 +27,11 @@
 #define ID_MC_INTERNAL_STATES 0xAA
 #define ID_MC_VOLTAGE_INFORMATION 0xA7
 #define ID_MC_FAULT_CODES 0xAB
+#define ID_MC_TORQUE_TIMER_INFORMATION 0xAC
+#define ID_MC_MODULATION_INDEX_FLUX_WEAKENING_OUTPUT_INFORMATION 0xAD
+#define ID_MC_FIRMWARE_INFORMATION 0xAE
+#define ID_MC_DIAGNOSTIC_DATA 0xAF
+#define ID_MC_COMMAND_MESSAGE 0xC0
 
 typedef struct CAN_message_pcu_status_t {
   uint8_t state;
@@ -99,17 +104,6 @@ typedef struct CAN_message_mc_internal_states_t {
   uint8_t direction_command;
 } CAN_message_mc_internal_states_t;
 
-#define RELAY_STATE_1(relay_state) ((relay_state) && 0x01)
-#define RELAY_STATE_2(relay_state) ((relay_state) && 0x02 >> 1)
-#define RELAY_STATE_3(relay_state) ((relay_state) && 0x04 >> 2)
-#define RELAY_STATE_4(relay_state) ((relay_state) && 0x08 >> 3)
-#define RELAY_STATE_5(relay_state) ((relay_state) && 0x10 >> 4)
-#define RELAY_STATE_6(relay_state) ((relay_state) && 0x20 >> 5)
-#define INVERTER_RUN_MODE(inverter_run_mode_discharge_state) ((inverter_run_mode_discharge_state) && 0x01)
-#define INVERTER_ACTIVE_DISCHARGE_STATE(inverter_run_mode_discharge_state) ((inverter_run_mode_discharge_state) && 0xE0 >> 5)
-#define INVERTER_ENABLE_STATE(inverter_enable) ((inverter_enable) && 0x01)
-#define INVERTER_ENABLE_LOCKOUT(inverter_enable) ((inverter_enable) && 0x80 >> 7)
-
 class MC_internal_states {
   public:
     MC_internal_states();
@@ -140,43 +134,44 @@ typedef struct CAN_message_mc_fault_codes_t {
   uint16_t run_fault_hi;
 } CAN_message_mc_fault_codes_t;
 
-#define POST_FAULT_LO_HW_GATE_DESATURATION_FAULT(post_fault_lo) ((post_fault_lo) && 0x0001)
-#define POST_FAULT_LO_HW_OVERCURRENT_FAULT(post_fault_lo) ((post_fault_lo) && 0x0002 >> 1)
-#define POST_FAULT_LO_ACCELERATOR_SHORTED(post_fault_lo) ((post_fault_lo) && 0x0004 >> 2)
-#define POST_FAULT_LO_ACCELERATOR_OPEN(post_fault_lo) ((post_fault_lo) && 0x0008 >> 3)
-#define POST_FAULT_LO_CURRENT_SENSOR_LOW(post_fault_lo) ((post_fault_lo) && 0x0010 >> 4)
-#define POST_FAULT_LO_CURRENT_SENSOR_HIGH(post_fault_lo) ((post_fault_lo) && 0x0020 >> 5)
-#define POST_FAULT_LO_MODULE_TEMP_LOW(post_fault_lo) ((post_fault_lo) && 0x0040 >> 6)
-#define POST_FAULT_LO_MODULE_TEMP_HIGH(post_fault_lo) ((post_fault_lo) && 0x0080 >> 7)
-#define POST_FAULT_LO_CTRL_PCB_TEMP_LOW(post_fault_lo) ((post_fault_lo) && 0x0100 >> 8)
-#define POST_FAULT_LO_CTRL_PCB_TEMP_HIGH(post_fault_lo) ((post_fault_lo) && 0x0200 >> 9)
-#define POST_FAULT_LO_GATE_DRIVE_PCB_TEMP_LOW(post_fault_lo) ((post_fault_lo) && 0x0400 >> 10)
-#define POST_FAULT_LO_GATE_DRIVE_PCB_TEMP_HIGH(post_fault_lo) ((post_fault_lo) && 0x0800 >> 11)
-#define POST_FAULT_LO_5V_SENSE_VOLTAGE_LOW(post_fault_lo) ((post_fault_lo) && 0x1000 >> 12)
-#define POST_FAULT_LO_5V_SENSE_VOLTAGE_HIGH(post_fault_lo) ((post_fault_lo) && 0x2000 >> 13)
-#define POST_FAULT_LO_12V_SENSE_VOLTAGE_LOW(post_fault_lo) ((post_fault_lo) && 0x4000 >> 14)
-#define POST_FAULT_LO_12V_SENSE_VOLTAGE_HIGH(post_fault_lo) ((post_fault_lo) && 0x8000 >> 15)
-
 class MC_fault_codes {
   public:
+    MC_fault_codes();
     MC_fault_codes(uint8_t buf[8]);
-    void update(uint8_t buf[8]);
-    bool get_lo_hw_gate_desaturation_fault();
-    bool get_lo_hw_overcurrent_fault();
-    bool get_lo_accelerator_shorted();
-    bool get_lo_accelerator_open();
-    bool get_lo_current_sensor_low();
-    bool get_lo_current_sensor_high();
-    bool get_lo_module_temp_low();
-    bool get_lo_module_temp_high();
-    bool get_lo_ctrl_pcb_temp_low();
-    bool get_lo_ctrl_pcb_temp_high();
-    bool get_lo_gate_drive_pcb_temp_low();
-    bool get_lo_gate_drive_pcb_temp_high();
-    bool get_lo_5v_sense_voltage_low();
-    bool get_lo_5v_sense_voltage_high();
-    bool get_lo_12v_sense_voltage_low();
-    bool get_lo_12v_sense_voltage_high();
+    void load(uint8_t buf[8]);
+    bool get_post_lo_hw_gate_desaturation_fault();
+    bool get_post_lo_hw_overcurrent_fault();
+    bool get_post_lo_accelerator_shorted();
+    bool get_post_lo_accelerator_open();
+    bool get_post_lo_current_sensor_low();
+    bool get_post_lo_current_sensor_high();
+    bool get_post_lo_module_temp_low();
+    bool get_post_lo_module_temp_high();
+    bool get_post_lo_ctrl_pcb_temp_low();
+    bool get_post_lo_ctrl_pcb_temp_high();
+    bool get_post_lo_gate_drive_pcb_temp_low();
+    bool get_post_lo_gate_drive_pcb_temp_high();
+    bool get_post_lo_5v_sense_voltage_low();
+    bool get_post_lo_5v_sense_voltage_high();
+    bool get_post_lo_12v_sense_voltage_low();
+    bool get_post_lo_12v_sense_voltage_high();
+    bool get_post_hi_25v_sense_voltage_low();
+    bool get_post_hi_25v_sense_voltage_high();
+    bool get_post_hi_15v_sense_voltage_low();
+    bool get_post_hi_15v_sense_voltage_high();
+    bool get_post_hi_dc_bus_voltage_high();
+    bool get_post_hi_dc_bus_voltage_low();
+    bool get_post_hi_precharge_timeout();
+    bool get_post_hi_precharge_voltage_failure();
+    bool get_post_hi_eeprom_checksum_invalid();
+    bool get_post_hi_eeprom_data_out_of_range();
+    bool get_post_hi_eeprom_update_required();
+    bool get_post_hi_reserved1();
+    bool get_post_hi_reserved2();
+    bool get_post_hi_reserved3();
+    bool get_post_hi_brake_shorted();
+    bool get_post_hi_brake_open();
+    // TODO run faults
   private:
     CAN_message_mc_fault_codes_t message;
 };

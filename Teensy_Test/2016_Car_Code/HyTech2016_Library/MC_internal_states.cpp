@@ -25,35 +25,35 @@ uint8_t MC_internal_states::get_inverter_state() {
 }
 
 bool MC_internal_states::get_relay_active_1() {
-  return RELAY_STATE_1(message.relay_state);
+  return message.relay_state && 0x01;
 }
 
 bool MC_internal_states::get_relay_active_2() {
-  return RELAY_STATE_2(message.relay_state);
+  return message.relay_state && 0x02 >> 1;
 }
 
 bool MC_internal_states::get_relay_active_3() {
-  return RELAY_STATE_3(message.relay_state);
+  return message.relay_state && 0x04 >> 2;
 }
 
 bool MC_internal_states::get_relay_active_4() {
-  return RELAY_STATE_4(message.relay_state);
+  return message.relay_state && 0x08 >> 3;
 }
 
 bool MC_internal_states::get_relay_active_5() {
-  return RELAY_STATE_5(message.relay_state);
+  return message.relay_state && 0x10 >> 4;
 }
 
 bool MC_internal_states::get_relay_active_6() {
-  return RELAY_STATE_6(message.relay_state);
+  return message.relay_state && 0x20 >> 5;
 }
 
 bool MC_internal_states::get_inverter_run_mode() {
-  return INVERTER_RUN_MODE(message.inverter_run_mode_discharge_state);
+  return message.inverter_run_mode_discharge_state && 0x01;
 }
 
 uint8_t MC_internal_states::get_inverter_active_discharge_state() {
-  return INVERTER_ACTIVE_DISCHARGE_STATE(message.inverter_run_mode_discharge_state);
+  return message.inverter_run_mode_discharge_state && 0xE0 >> 5;
 }
 
 bool MC_internal_states::get_inverter_command_mode() {
@@ -61,11 +61,11 @@ bool MC_internal_states::get_inverter_command_mode() {
 }
 
 bool MC_internal_states::get_inverter_enable_state() {
-  return INVERTER_ENABLE_STATE(message.inverter_enable);
+  return message.inverter_enable && 0x01;
 }
 
 bool MC_internal_states::get_inverter_enable_lockout() {
-  return INVERTER_ENABLE_LOCKOUT(message.inverter_enable);
+  return message.inverter_enable && 0x80 >> 7;
 }
 
 bool MC_internal_states::get_direction_command() {
