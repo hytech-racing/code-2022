@@ -22,8 +22,8 @@
 /*
  * Timers
  */
-Metro timer_bms_faulting = Metro(500); // At startup the BMS DISCHARGE_OK line drops shortly
-Metro timer_imd_faulting = Metro(500); // At startup the IMD OKHS line drops shortly
+Metro timer_bms_faulting = Metro(1000); // At startup the BMS DISCHARGE_OK line drops shortly
+Metro timer_imd_faulting = Metro(1000); // At startup the IMD OKHS line drops shortly
 Metro timer_latch = Metro(1000);
 Metro timer_state_send = Metro(100);
 
@@ -114,15 +114,15 @@ void loop() {
   /*
    * Start BMS fault timer if signal drops momentarily
    */
-  if (state != PCU_STATE_WAITING_BMS_IMD && analogRead(SENSE_BMS) <= 50) {
+  /*if (state != PCU_STATE_WAITING_BMS_IMD && analogRead(SENSE_IMD) <= 50) { // TODO imd/bms
     bms_faulting = true;
     timer_bms_faulting.reset();
-  }
+  }*/
 
   /*
    * Reset BMS fault condition if signal comes back within timer period
    */
-  if (bms_faulting && analogRead(SENSE_BMS) > 50) {
+  if (bms_faulting && analogRead(SENSE_IMD) > 50) { // TODO imd/bms
     bms_faulting = false;
   }
 

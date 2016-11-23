@@ -13,8 +13,8 @@
 #define PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED 4
 #define PCU_STATE_FATAL_FAULT 5
 #define TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED 1
-#define TCU_STATE_TRACTIVE_SYSTEM_ACTIVE 2
-#define TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE 3
+#define TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE 2
+#define TCU_STATE_TRACTIVE_SYSTEM_ACTIVE 3
 #define TCU_STATE_ENABLING_INVERTER 4
 #define TCU_STATE_WAITING_READY_TO_DRIVE_SOUND 5
 #define TCU_STATE_READY_TO_DRIVE 6
@@ -199,7 +199,18 @@ typedef struct CAN_message_mc_current_information_t {
   int16_t dc_bus_current;
 } CAN_message_mc_current_information_t;
 
-// TODO class MC_current_information
+class MC_current_information {
+  public:
+    MC_current_information();
+    MC_current_information(uint8_t buf[8]);
+    void load(uint8_t buf[8]);
+    float get_phase_a_current();
+    float get_phase_b_current();
+    float get_phase_c_current();
+    float get_dc_bus_current();
+  private:
+    CAN_message_mc_current_information_t message;
+};
 
 typedef struct CAN_message_mc_voltage_information_t {
   int16_t dc_bus_voltage;
@@ -340,7 +351,17 @@ typedef struct CAN_message_mc_torque_timer_information_t {
   uint32_t power_on_timer;
 } CAN_message_mc_torque_timer_information_t;
 
-// TODO class MC_torque_timer_information
+class MC_torque_timer_information {
+  public:
+    MC_torque_timer_information();
+    MC_torque_timer_information(uint8_t buf[8]);
+    void load(uint8_t buf[8]);
+    float get_commanded_torque();
+    float get_torque_feedback();
+    uint32_t get_power_on_timer();
+  private:
+    CAN_message_mc_torque_timer_information_t message;
+};
 
 typedef struct CAN_message_mc_modulation_index_flux_weakening_output_information_t {
   uint16_t modulation_index; // TODO Signed or Unsigned?
@@ -368,7 +389,28 @@ typedef struct CAN_message_mc_command_message_t {
   int16_t commanded_torque_limit;
 } CAN_message_mc_command_message_t;
 
-// TODO class MC_command_message
+class MC_command_message {
+  public:
+    MC_command_message();
+    MC_command_message(uint8_t buf[8]);
+    MC_command_message(int16_t torque_command, int16_t angular_velocity, bool direction, bool inverter_enable, bool discharge_enable, int16_t commanded_torque_limit);
+    load(uint8_t buf[8]);
+    write(uint8_t buf[8]);
+    int16_t get_torque_command();
+    int16_t get_angular_velocity();
+    bool get_direction();
+    bool get_inverter_enable();
+    bool get_discharge_enable();
+    int16_t get_commanded_torque_limit();
+    void set_torque_command(int16_t torque_command);
+    void set_angular_velocity(int16_t angular_velocity);
+    void set_direction(bool direction);
+    void set_inverter_enable(bool inverter_enable);
+    void set_discharge_enable(bool discharge_enable);
+    void set_commanded_torque_limit(int16_t commanded_torque_limit);
+  private:
+    CAN_message_mc_command_message_t message;
+};
 
 typedef struct CAN_message_mc_read_write_parameter_command_t {
   uint16_t parameter_address;

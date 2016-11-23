@@ -10,10 +10,13 @@
 /*
  * Pin definitions
  */
-#define BTN_BOOST 11
-#define BTN_CYCLE 10
+#define BTN_BOOST 9 // 3
+#define BTN_CYCLE 10 // 2
 #define BTN_START 12
-#define BTN_TOGGLE 9
+#define BTN_TOGGLE 11 // 1
+#define COOLING_1 13
+#define COOLING_2 A0
+#define COOLING_3 A1
 #define LED_BMS 6
 #define LED_IMD 5
 #define LED_START 7
@@ -25,7 +28,10 @@
 /*
  * Timers
  */
+Metro timer_btn_cycle = Metro(10);
 Metro timer_btn_start = Metro(10);
+Metro timer_btn_toggle = Metro(10);
+Metro timer_cooling_ramp = Metro(10);
 Metro timer_inverter_enable = Metro(2000); // Timeout failed inverter enable
 Metro timer_led_start_blink_fast = Metro(150);
 Metro timer_led_start_blink_slow = Metro(400);
@@ -36,10 +42,21 @@ Metro timer_state_send = Metro(100);
 /*
  * Global variables
  */
+bool btn_cycle_debouncing = false;
+uint8_t btn_cycle_id = 0; // increments to differentiate separate button presses
+uint8_t btn_cycle_new = 0;
+bool btn_cycle_pressed = false;
 bool btn_start_debouncing = false;
 uint8_t btn_start_id = 0; // increments to differentiate separate button presses
 uint8_t btn_start_new = 0;
 bool btn_start_pressed = false;
+bool btn_toggle_debouncing = false;
+uint8_t btn_toggle_id = 0; // increments to differentiate separate button presses
+uint8_t btn_toggle_new = 0;
+bool btn_toggle_pressed = false;
+uint16_t button_torque = 0;
+bool cooling_ramp_enable = false;
+uint8_t cooling_ramp = 0;
 bool led_start_active = false;
 uint8_t led_start_type = 0; // 0 for off, 1 for steady, 2 for fast blink, 3 for slow blink
 uint8_t state = TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED;
@@ -52,6 +69,9 @@ void setup() {
   pinMode(BTN_CYCLE, INPUT_PULLUP);
   pinMode(BTN_START, INPUT_PULLUP);
   pinMode(BTN_TOGGLE, INPUT_PULLUP);
+  pinMode(COOLING_1, OUTPUT);
+  pinMode(COOLING_2, OUTPUT);
+  pinMode(COOLING_3, OUTPUT);
   pinMode(LED_BMS, OUTPUT);
   pinMode(LED_IMD, OUTPUT);
   pinMode(LED_START, OUTPUT);
@@ -78,8 +98,8 @@ void loop() {
         digitalWrite(LED_IMD, HIGH);
         Serial.println("IMD Fault detected");
       }
-      Serial.print("PCU State: ");
-      Serial.println(pcu_status.get_state());
+      /*Serial.print("PCU State: ");
+      Serial.println(pcu_status.get_state());*/
       
       switch (pcu_status.get_state()) {
         case PCU_STATE_WAITING_BMS_IMD:
@@ -98,23 +118,15 @@ void loop() {
         break;
 
         case PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
-        if (state < TCU_STATE_TRACTIVE_SYSTEM_ACTIVE) {
-          set_start_led(2);
-          set_state(TCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
+        if (state < TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
+          set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
         }
         break;
 
         case PCU_STATE_FATAL_FAULT:
-        set_start_led(0);
         set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
         break;
       }
-    }
-
-    if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
-      MC_voltage_information mc_voltage_information = MC_voltage_information(msg.buf);
-      Serial.print("DC Bus Voltage: ");
-      Serial.println(mc_voltage_information.get_dc_bus_voltage());
     }
 
     if (msg.id == ID_MC_MOTOR_POSITION_INFORMATION) {
@@ -134,15 +146,50 @@ void loop() {
       if (mc_internal_states.get_inverter_enable_state() && state == TCU_STATE_ENABLING_INVERTER) {
         set_state(TCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
       }
-      Serial.print("Inverter ");
+      /*Serial.print("Inverter ");
       if (mc_internal_states.get_inverter_enable_state()) {
         Serial.println("enabled");
       } else {
         Serial.println("disabled");
-      }
+      }*/
     }
 
-    // TODO Check DC voltage and go to tractive system active or inactive (cockpit brb)
+    if (msg.id == ID_MC_TEMPERATURES_3) {
+      MC_temperatures_3 mc_temperatures_3 = MC_temperatures_3(msg.buf);
+      Serial.print("Motor temperature: ");
+      Serial.println(mc_temperatures_3.get_motor_temperature());
+    }
+
+    if (msg.id == ID_MC_TEMPERATURES_1) {
+      MC_temperatures_1 mc_temperatures_1 = MC_temperatures_1(msg.buf);
+      Serial.print("Module A temperature: ");
+      Serial.println(mc_temperatures_1.get_module_a_temperature());
+      Serial.print("Module B temperature: ");
+      Serial.println(mc_temperatures_1.get_module_b_temperature());
+      Serial.print("Module C temperature: ");
+      Serial.println(mc_temperatures_1.get_module_c_temperature());
+      Serial.print("Gate driver board temperature: ");
+      Serial.println(mc_temperatures_1.get_gate_driver_board_temperature());
+    }
+      
+    if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
+      MC_voltage_information mc_voltage_information = MC_voltage_information(msg.buf);
+      if (mc_voltage_information.get_dc_bus_voltage() > 100 && state == TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
+        set_state(TCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
+      }
+      if (mc_voltage_information.get_dc_bus_voltage() <= 100 && state > TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
+        set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
+      }
+      /*Serial.print("DC Bus Voltage: ");
+      Serial.println(mc_voltage_information.get_dc_bus_voltage());*/
+    }
+
+    if (msg.id == ID_MC_TORQUE_TIMER_INFORMATION) {
+      MC_torque_timer_information mc_torque_timer_information = MC_torque_timer_information(msg.buf);
+      Serial.print("Commanded torque: ");
+      Serial.print(mc_torque_timer_information.get_commanded_torque());
+      Serial.println(" Nm");
+    }
   }
  
   /*
@@ -173,20 +220,20 @@ void loop() {
     break;
 
     case TCU_STATE_ENABLING_INVERTER:
-      if (timer_inverter_enable.check()) {
-        set_state(TCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
+      if (timer_inverter_enable.check()) { // Inverter enable timeout
+        set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
       }
     break;
 
     case TCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
-    if (timer_ready_sound.check()) {
+    if (timer_ready_sound.check()) { // RTDS has sounded
       set_state(TCU_STATE_READY_TO_DRIVE);
     }
     break;
 
     case TCU_STATE_READY_TO_DRIVE:
     if (timer_motor_controller_send.check()) {
-      int torque = calculate_torque();
+      int torque = button_torque;
       Serial.println(torque);
       msg.id = 0xC0;
       msg.len = 8;
@@ -223,6 +270,28 @@ void loop() {
   }
 
   /*
+   * Handle cycle button press and depress
+   */
+  if (digitalRead(BTN_CYCLE) == btn_cycle_pressed && !btn_cycle_debouncing) { // Value is different than stored
+    btn_cycle_debouncing = true;
+    timer_btn_cycle.reset();
+  }
+  if (btn_cycle_debouncing && digitalRead(BTN_CYCLE) != btn_cycle_pressed) { // Value returns during debounce period
+    btn_cycle_debouncing = false;
+  }
+  if (btn_cycle_debouncing && timer_btn_cycle.check()) { // Debounce period finishes without value returning
+    btn_cycle_pressed = !btn_cycle_pressed;
+    if (btn_cycle_pressed) {
+      btn_cycle_id++;
+      Serial.print("Cycle button pressed id ");
+      Serial.println(btn_cycle_id);
+      if (button_torque < 500 && state == TCU_STATE_READY_TO_DRIVE) {
+        button_torque += 10;
+      }
+    }
+  }
+
+  /*
    * Handle start button press and depress
    */
   if (digitalRead(BTN_START) == btn_start_pressed && !btn_start_debouncing) { // Value is different than stored
@@ -238,6 +307,41 @@ void loop() {
       btn_start_id++;
       Serial.print("Start button pressed id ");
       Serial.println(btn_start_id);
+    }
+  }
+
+  /*
+   * Handle toggle button press and depress
+   */
+  if (digitalRead(BTN_TOGGLE) == btn_toggle_pressed && !btn_toggle_debouncing) { // Value is different than stored
+    btn_toggle_debouncing = true;
+    timer_btn_toggle.reset();
+  }
+  if (btn_toggle_debouncing && digitalRead(BTN_TOGGLE) != btn_toggle_pressed) { // Value returns during debounce period
+    btn_toggle_debouncing = false;
+  }
+  if (btn_toggle_debouncing && timer_btn_toggle.check()) { // Debounce period finishes without value returning
+    btn_toggle_pressed = !btn_toggle_pressed;
+    if (btn_toggle_pressed) {
+      btn_toggle_id++;
+      Serial.print("Toggle button pressed id ");
+      Serial.println(btn_toggle_id);
+      if (button_torque > 0 && state == TCU_STATE_READY_TO_DRIVE) {
+        button_torque -= 20;
+      }
+    }
+  }
+
+  /*
+   * Handle cooling ramp up
+   */
+  if (cooling_ramp_enable && timer_cooling_ramp.check()) {
+    cooling_ramp++;
+    digitalWrite(COOLING_1, cooling_ramp);
+    digitalWrite(COOLING_2, cooling_ramp);
+    digitalWrite(COOLING_3, cooling_ramp);
+    if (cooling_ramp == 200) {
+      cooling_ramp_enable = false;
     }
   }
 }
@@ -307,7 +411,16 @@ void set_state(uint8_t new_state) {
     return;
   }
   state = new_state;
+  if (new_state == TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
+    set_start_led(0);
+    cooling_ramp = 0;
+    cooling_ramp_enable = false;
+    digitalWrite(COOLING_1, cooling_ramp);
+    digitalWrite(COOLING_2, cooling_ramp);
+    digitalWrite(COOLING_3, cooling_ramp);
+  }
   if (new_state == TCU_STATE_TRACTIVE_SYSTEM_ACTIVE) {
+    set_start_led(2);
     btn_start_new = btn_start_id + 1;
   }
   if (new_state == TCU_STATE_ENABLING_INVERTER) {
@@ -327,6 +440,7 @@ void set_state(uint8_t new_state) {
     }
     Serial.println("Sent enable command");
     timer_inverter_enable.reset();
+    cooling_ramp_enable = true;
   }
   if (new_state == TCU_STATE_WAITING_READY_TO_DRIVE_SOUND) {
     timer_ready_sound.reset();
@@ -337,6 +451,7 @@ void set_state(uint8_t new_state) {
   if (new_state == TCU_STATE_READY_TO_DRIVE) {
     digitalWrite(READY_SOUND, LOW);
     Serial.println("RTDS deactivated");
+    button_torque = 0;
   }
 }
 
