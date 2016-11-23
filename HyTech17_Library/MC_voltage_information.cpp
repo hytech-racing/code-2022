@@ -3,7 +3,7 @@
   Created by Nathan Cheek, November 20, 2016.
  */
 
-#include "HyTech16.h"
+#include "HyTech17.h"
 
 MC_voltage_information::MC_voltage_information() {
 }

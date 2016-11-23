@@ -1,12 +1,11 @@
-/**
+/*
  * Nathan Cheek
  * 2016-11-18
  * Interface with dashboard lights, buttons, and buzzer. Read pedal sensor values.
  */
 #include <FlexCAN.h>
-#include <HyTech16.h>
+#include <HyTech17.h>
 #include <Metro.h>
-#include <string.h>
 
 /*
  * Pin definitions
@@ -79,6 +78,8 @@ void loop() {
         digitalWrite(LED_IMD, HIGH);
         Serial.println("IMD Fault detected");
       }
+      Serial.print("PCU State: ");
+      Serial.println(pcu_status.get_state());
       
       switch (pcu_status.get_state()) {
         case PCU_STATE_WAITING_BMS_IMD:
@@ -110,14 +111,31 @@ void loop() {
       }
     }
 
-    if (msg.id == ID_MC_INTERNAL_STATES && msg.buf[6] == 1 && state == TCU_STATE_ENABLING_INVERTER) {
-      set_state(TCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
+    if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
+      MC_voltage_information mc_voltage_information = MC_voltage_information(msg.buf);
+      Serial.print("DC Bus Voltage: ");
+      Serial.println(mc_voltage_information.get_dc_bus_voltage());
+    }
+
+    if (msg.id == ID_MC_MOTOR_POSITION_INFORMATION) {
+      MC_motor_position_information mc_motor_position_information = MC_motor_position_information(msg.buf);
+      Serial.print("Motor angle: ");
+      Serial.println(mc_motor_position_information.get_motor_angle());
+      Serial.print("Motor speed: ");
+      Serial.println(mc_motor_position_information.get_motor_speed());
+      Serial.print("Electrical output frequency: ");
+      Serial.println(mc_motor_position_information.get_electrical_output_frequency());
+      Serial.print("Delta resolver filtered: ");
+      Serial.println(mc_motor_position_information.get_delta_resolver_filtered());
     }
 
     if (msg.id == ID_MC_INTERNAL_STATES) {
-      MC_internal_states message = MC_internal_states(msg.buf);
+      MC_internal_states mc_internal_states = MC_internal_states(msg.buf);
+      if (mc_internal_states.get_inverter_enable_state() && state == TCU_STATE_ENABLING_INVERTER) {
+        set_state(TCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
+      }
       Serial.print("Inverter ");
-      if (message.get_inverter_enable_state()) {
+      if (mc_internal_states.get_inverter_enable_state()) {
         Serial.println("enabled");
       } else {
         Serial.println("disabled");
@@ -131,15 +149,11 @@ void loop() {
    * Send state over CAN
    */
   if (timer_state_send.check()) {
-    TCU_status tcu_status(msg.buf);
-    tcu_status.set_state(state);
-    tcu_status.set_btn_start_id(btn_start_id);
+    TCU_status tcu_status = TCU_status(state, btn_start_id);
     tcu_status.write(msg.buf);
-    Serial.println(msg.buf[1]);
     msg.id = ID_TCU_STATUS;
     msg.len = sizeof(CAN_message_tcu_status_t);
     CAN.write(msg);
-    btn_start_id++;
   }
 
   /*

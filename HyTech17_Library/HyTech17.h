@@ -1,5 +1,5 @@
-#ifndef __HYTECH16_H__
-#define __HYTECH16_H__
+#ifndef __HYTECH17_H__
+#define __HYTECH17_H__
 
 #include <Arduino.h>
 #include <string.h>
@@ -44,6 +44,9 @@
 #define ID_MC_READ_WRITE_PARAMETER_COMMAND 0xC1
 #define ID_MC_READ_WRITE_PARAMETER_RESPONSE 0xC2
 
+/*
+ * CAN message structs and classes
+ */
 typedef struct CAN_message_pcu_status_t {
   uint8_t state;
   bool bms_fault;
@@ -99,10 +102,10 @@ class MC_temperatures_1 {
     MC_temperatures_1();
     MC_temperatures_1(uint8_t buf[8]);
     void load(uint8_t buf[8]);
-    float get_module_a_temp();
-    float get_module_b_temp();
-    float get_module_c_temp();
-    float get_gate_driver_board_temp();
+    float get_module_a_temperature();
+    float get_module_b_temperature();
+    float get_module_c_temperature();
+    float get_gate_driver_board_temperature();
   private:
     CAN_message_mc_temperatures_1_t message;
 };
@@ -114,6 +117,19 @@ typedef struct CAN_message_mc_temperatures_2_t {
   int16_t rtd_3_temperature;
 } CAN_message_mc_temperatures_2_t;
 
+class MC_temperatures_2 {
+  public:
+    MC_temperatures_2();
+    MC_temperatures_2(uint8_t buf[8]);
+    void load(uint8_t buf[8]);
+    float get_control_board_temperature();
+    float get_rtd_1_temperature();
+    float get_rtd_2_temperature();
+    float get_rtd_3_temperature();
+  private:
+    CAN_message_mc_temperatures_2_t message;
+};
+
 typedef struct CAN_message_mc_temperatures_3_t {
   int16_t rtd_4_temperature;
   int16_t rtd_5_temperature;
@@ -121,12 +137,27 @@ typedef struct CAN_message_mc_temperatures_3_t {
   int16_t torque_shudder;
 } CAN_message_mc_temperatures_3_t;
 
+class MC_temperatures_3 {
+  public:
+    MC_temperatures_3();
+    MC_temperatures_3(uint8_t buf[8]);
+    void load(uint8_t buf[8]);
+    float get_rtd_4_temperature();
+    float get_rtd_5_temperature();
+    float get_motor_temperature();
+    float get_torque_shudder();
+  private:
+    CAN_message_mc_temperatures_3_t message;
+};
+
 typedef struct CAN_message_mc_analog_input_voltages_t {
   int16_t analog_input_1;
   int16_t analog_input_2;
   int16_t analog_input_3;
   int16_t analog_input_4;
 } CAN_message_mc_analog_input_voltages_t;
+
+// TODO class MC_analog_input_voltages
 
 typedef struct CAN_message_mc_digital_input_status_t {
   bool digital_input_1;
@@ -139,6 +170,8 @@ typedef struct CAN_message_mc_digital_input_status_t {
   bool digital_input_8;
 } CAN_message_mc_digital_input_status_t;
 
+// TODO class MC_digital_input_status
+
 typedef struct CAN_message_mc_motor_position_information_t {
   int16_t motor_angle;
   int16_t motor_speed;
@@ -146,12 +179,27 @@ typedef struct CAN_message_mc_motor_position_information_t {
   int16_t delta_resolver_filtered;
 } CAN_message_mc_motor_position_information_t;
 
+class MC_motor_position_information {
+  public:
+    MC_motor_position_information();
+    MC_motor_position_information(uint8_t buf[8]);
+    void load(uint8_t buf[8]);
+    float get_motor_angle();
+    int16_t get_motor_speed();
+    float get_electrical_output_frequency();
+    float get_delta_resolver_filtered();
+  private:
+    CAN_message_mc_motor_position_information_t message;
+};
+
 typedef struct CAN_message_mc_current_information_t {
   int16_t phase_a_current;
   int16_t phase_b_current;
   int16_t phase_c_current;
   int16_t dc_bus_current;
 } CAN_message_mc_current_information_t;
+
+// TODO class MC_current_information
 
 typedef struct CAN_message_mc_voltage_information_t {
   int16_t dc_bus_voltage;
@@ -245,7 +293,7 @@ class MC_fault_codes {
     bool get_post_hi_eeprom_checksum_invalid();
     bool get_post_hi_eeprom_data_out_of_range();
     bool get_post_hi_eeprom_update_required();
-    bool get_post_hi_reserved1();
+    bool get_post_hi_reserved1(); // TODO delete these?
     bool get_post_hi_reserved2();
     bool get_post_hi_reserved3();
     bool get_post_hi_brake_shorted();
@@ -263,7 +311,7 @@ class MC_fault_codes {
     bool get_run_lo_undervoltage_fault();
     bool get_run_lo_can_command_message_lost_fault();
     bool get_run_lo_motor_overtemperature_fault();
-    bool get_run_lo_reserved1();
+    bool get_run_lo_reserved1(); // TODO delete these?
     bool get_run_lo_reserved2();
     bool get_run_lo_reserved3();
     bool get_run_hi_brake_input_shorted_fault();
@@ -276,7 +324,7 @@ class MC_fault_codes {
     bool get_run_hi_gate_drive_board_2_overtemperature_fault();
     bool get_run_hi_gate_drive_board_3_overtemperature_fault();
     bool get_run_hi_current_sensor_fault();
-    bool get_run_hi_reserved1();
+    bool get_run_hi_reserved1(); // TODO delete these?
     bool get_run_hi_reserved2();
     bool get_run_hi_reserved3();
     bool get_run_hi_reserved4();
@@ -292,6 +340,8 @@ typedef struct CAN_message_mc_torque_timer_information_t {
   uint32_t power_on_timer;
 } CAN_message_mc_torque_timer_information_t;
 
+// TODO class MC_torque_timer_information
+
 typedef struct CAN_message_mc_modulation_index_flux_weakening_output_information_t {
   uint16_t modulation_index; // TODO Signed or Unsigned?
   int16_t flux_weakining_output;
@@ -299,12 +349,16 @@ typedef struct CAN_message_mc_modulation_index_flux_weakening_output_information
   int16_t iq_command;
 } CAN_message_mc_modulation_index_flux_weakening_output_information_t;
 
+// TODO class MC_modulation_index_flux_weakening_output_information
+
 typedef struct CAN_message_mc_firmware_information_t {
   uint16_t eeprom_version_project_code;
   uint16_t software_version;
   uint16_t date_code_mmdd;
   uint16_t date_code_yyyy;
 } CAN_message_mc_firmware_information_t;
+
+// TODO class MC_firmware_information
 
 typedef struct CAN_message_mc_command_message_t {
   int16_t torque_command;
@@ -314,6 +368,8 @@ typedef struct CAN_message_mc_command_message_t {
   int16_t commanded_torque_limit;
 } CAN_message_mc_command_message_t;
 
+// TODO class MC_command_message
+
 typedef struct CAN_message_mc_read_write_parameter_command_t {
   uint16_t parameter_address;
   bool rw_command;
@@ -322,6 +378,23 @@ typedef struct CAN_message_mc_read_write_parameter_command_t {
   uint16_t reserved2;
 } CAN_message_mc_read_write_parameter_command_t;
 
+class MC_read_write_parameter_command {
+  public:
+    MC_read_write_parameter_command();
+    MC_read_write_parameter_command(uint8_t buf[8]);
+    MC_read_write_parameter_command(uint16_t parameter_address, bool rw_command, uint16_t data);
+    void load(uint8_t buf[8]);
+    void write(uint8_t buf[8]);
+    uint16_t get_parameter_address();
+    bool get_rw_command();
+    uint16_t get_data();
+    void set_parameter_address(uint16_t parameter_address);
+    void set_rw_command(bool rw_command);
+    void set_data(uint16_t data);
+  private:
+    CAN_message_mc_read_write_parameter_command_t message;
+};
+
 typedef struct CAN_message_mc_read_write_parameter_response_t {
   uint16_t parameter_address;
   bool write_success;
@@ -329,5 +402,17 @@ typedef struct CAN_message_mc_read_write_parameter_response_t {
   uint16_t data;
   uint16_t reserved2;
 } CAN_message_mc_read_write_parameter_response_t;
+
+class MC_read_write_parameter_response {
+  public:
+    MC_read_write_parameter_response();
+    MC_read_write_parameter_response(uint8_t buf[8]);
+    void load(uint8_t buf[8]);
+    uint16_t get_parameter_address();
+    bool get_write_success();
+    uint16_t get_data();
+  private:
+    CAN_message_mc_read_write_parameter_response_t message;
+};
 
 #endif

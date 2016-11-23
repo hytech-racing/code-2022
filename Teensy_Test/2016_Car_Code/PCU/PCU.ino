@@ -1,12 +1,11 @@
-/**
+/*
  * Nathan Cheek
  * 2016-11-18
  * Control Shutdown Circuit initialization.
  */
 #include <FlexCAN.h>
-#include <HyTech16.h>
+#include <HyTech17.h>
 #include <Metro.h>
-#include <string.h>
 
 /*
  * Pin definitions
@@ -79,17 +78,11 @@ void loop() {
    * Send state over CAN
    */
   if (timer_state_send.check()) {
-    CAN_message_pcu_status_t pcu_status = {state, bms_fault, imd_fault};
-    memcpy(&pcu_status, msg.buf, sizeof(pcu_status));
+    PCU_status pcu_status(state, bms_fault, imd_fault);
+    pcu_status.write(msg.buf);
     msg.id = ID_PCU_STATUS;
-    msg.len = sizeof(pcu_status);
+    msg.len = sizeof(CAN_message_pcu_status_t);
     CAN.write(msg);
-
-    Serial.println("Debug");
-    Serial.print("BMS fault ");
-    Serial.println(bms_fault);
-    Serial.print("IMD fault ");
-    Serial.println(imd_fault);
   }
 
   switch (state) {
