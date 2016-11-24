@@ -1,0 +1,22 @@
+<html>
+<head>
+    <title>Watch CAN messages</title>
+</head>
+<body>
+    <div id="messages" style="width: 100%;">
+    <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
+    <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+    <script>
+        function ab2str(buf) { // http://stackoverflow.com/a/14936733/3217076
+            var dataView = new DataView(buf);
+            return "0x" + dataView.getUint32(1).toString(16).toUpperCase(); // TODO check length also show all (up to) 64 bits
+        }
+        var socket = io('/');
+        console.log(socket);
+        socket.on('canMessage', function(msg){
+            $('#messages').append("0x" + msg.id.toString(16).toUpperCase() + " " + ab2str(msg.data) + " " + "<br>");
+        });
+    </script>
+
+</body>
+</html>
