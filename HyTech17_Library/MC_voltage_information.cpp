@@ -16,18 +16,18 @@ void MC_voltage_information::load(uint8_t buf[8]) {
   memcpy(&message, buf, sizeof(CAN_message_mc_voltage_information_t));
 }
 
-float MC_voltage_information::get_dc_bus_voltage() {
-  return message.dc_bus_voltage / 10.0f;
+int16_t MC_voltage_information::get_dc_bus_voltage() {
+  return message.dc_bus_voltage;
 }
 
-float MC_voltage_information::get_output_voltage() {
-  return message.output_voltage / 10.0f;
+int16_t MC_voltage_information::get_output_voltage() {
+  return message.output_voltage;
 }
 
-float MC_voltage_information::get_phase_ab_voltage() {
-  return message.phase_ab_voltage / 10.0f;
+int16_t MC_voltage_information::get_phase_ab_voltage() {
+  return message.phase_ab_voltage;
 }
 
-float MC_voltage_information::get_phase_bc_voltage() {
-  return message.phase_bc_voltage / 10.0f;
+int16_t MC_voltage_information::get_phase_bc_voltage() {
+  return message.phase_bc_voltage;
 }

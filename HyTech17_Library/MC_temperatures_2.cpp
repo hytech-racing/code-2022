@@ -16,18 +16,18 @@ void MC_temperatures_2::load(uint8_t buf[8]) {
   memcpy(&message, buf, sizeof(CAN_message_mc_temperatures_2_t));
 }
 
-float MC_temperatures_2::get_control_board_temperature() {
-  return message.control_board_temperature / 10.0f;
+int16_t MC_temperatures_2::get_control_board_temperature() {
+  return message.control_board_temperature;
 }
 
-float MC_temperatures_2::get_rtd_1_temperature() {
-  return message.rtd_1_temperature / 10.0f;
+int16_t MC_temperatures_2::get_rtd_1_temperature() {
+  return message.rtd_1_temperature;
 }
 
-float MC_temperatures_2::get_rtd_2_temperature() {
-  return message.rtd_2_temperature / 10.0f;
+int16_t MC_temperatures_2::get_rtd_2_temperature() {
+  return message.rtd_2_temperature;
 }
 
-float MC_temperatures_2::get_rtd_3_temperature() {
-  return message.rtd_3_temperature / 10.0f;
+int16_t MC_temperatures_2::get_rtd_3_temperature() {
+  return message.rtd_3_temperature;
 }

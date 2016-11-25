@@ -1,8 +1,8 @@
 #ifndef __HYTECH17_H__
 #define __HYTECH17_H__
 
-#include <Arduino.h>
 #include <string.h>
+#include <stdint.h>
 
 /*
  * ECU state definitions
@@ -102,10 +102,10 @@ class MC_temperatures_1 {
     MC_temperatures_1();
     MC_temperatures_1(uint8_t buf[8]);
     void load(uint8_t buf[8]);
-    float get_module_a_temperature();
-    float get_module_b_temperature();
-    float get_module_c_temperature();
-    float get_gate_driver_board_temperature();
+    int16_t get_module_a_temperature();
+    int16_t get_module_b_temperature();
+    int16_t get_module_c_temperature();
+    int16_t get_gate_driver_board_temperature();
   private:
     CAN_message_mc_temperatures_1_t message;
 };
@@ -122,10 +122,10 @@ class MC_temperatures_2 {
     MC_temperatures_2();
     MC_temperatures_2(uint8_t buf[8]);
     void load(uint8_t buf[8]);
-    float get_control_board_temperature();
-    float get_rtd_1_temperature();
-    float get_rtd_2_temperature();
-    float get_rtd_3_temperature();
+    int16_t get_control_board_temperature();
+    int16_t get_rtd_1_temperature();
+    int16_t get_rtd_2_temperature();
+    int16_t get_rtd_3_temperature();
   private:
     CAN_message_mc_temperatures_2_t message;
 };
@@ -142,10 +142,10 @@ class MC_temperatures_3 {
     MC_temperatures_3();
     MC_temperatures_3(uint8_t buf[8]);
     void load(uint8_t buf[8]);
-    float get_rtd_4_temperature();
-    float get_rtd_5_temperature();
-    float get_motor_temperature();
-    float get_torque_shudder();
+    int16_t get_rtd_4_temperature();
+    int16_t get_rtd_5_temperature();
+    int16_t get_motor_temperature();
+    int16_t get_torque_shudder();
   private:
     CAN_message_mc_temperatures_3_t message;
 };
@@ -184,10 +184,10 @@ class MC_motor_position_information {
     MC_motor_position_information();
     MC_motor_position_information(uint8_t buf[8]);
     void load(uint8_t buf[8]);
-    float get_motor_angle();
+    int16_t get_motor_angle();
     int16_t get_motor_speed();
-    float get_electrical_output_frequency();
-    float get_delta_resolver_filtered();
+    int16_t get_electrical_output_frequency();
+    int16_t get_delta_resolver_filtered();
   private:
     CAN_message_mc_motor_position_information_t message;
 };
@@ -204,10 +204,10 @@ class MC_current_information {
     MC_current_information();
     MC_current_information(uint8_t buf[8]);
     void load(uint8_t buf[8]);
-    float get_phase_a_current();
-    float get_phase_b_current();
-    float get_phase_c_current();
-    float get_dc_bus_current();
+    int16_t get_phase_a_current();
+    int16_t get_phase_b_current();
+    int16_t get_phase_c_current();
+    int16_t get_dc_bus_current();
   private:
     CAN_message_mc_current_information_t message;
 };
@@ -224,10 +224,10 @@ class MC_voltage_information {
     MC_voltage_information();
     MC_voltage_information(uint8_t buf[8]);
     void load(uint8_t buf[8]);
-    float get_dc_bus_voltage();
-    float get_output_voltage();
-    float get_phase_ab_voltage();
-    float get_phase_bc_voltage();
+    int16_t get_dc_bus_voltage();
+    int16_t get_output_voltage();
+    int16_t get_phase_ab_voltage();
+    int16_t get_phase_bc_voltage();
   private:
     CAN_message_mc_voltage_information_t message;
 };
@@ -356,8 +356,8 @@ class MC_torque_timer_information {
     MC_torque_timer_information();
     MC_torque_timer_information(uint8_t buf[8]);
     void load(uint8_t buf[8]);
-    float get_commanded_torque();
-    float get_torque_feedback();
+    int16_t get_commanded_torque();
+    int16_t get_torque_feedback();
     uint32_t get_power_on_timer();
   private:
     CAN_message_mc_torque_timer_information_t message;
@@ -379,7 +379,18 @@ typedef struct CAN_message_mc_firmware_information_t {
   uint16_t date_code_yyyy;
 } CAN_message_mc_firmware_information_t;
 
-// TODO class MC_firmware_information
+class MC_firmware_information {
+  public:
+    MC_firmware_information();
+    MC_firmware_information(uint8_t buf[8]);
+    void load(uint8_t buf[8]);
+    int16_t get_eeprom_version_project_code();
+    int16_t get_software_version();
+    int16_t get_date_code_mmdd();
+    int16_t get_date_code_yyyy();
+  private:
+    CAN_message_mc_firmware_information_t message;
+};
 
 typedef struct CAN_message_mc_command_message_t {
   int16_t torque_command;
@@ -394,8 +405,8 @@ class MC_command_message {
     MC_command_message();
     MC_command_message(uint8_t buf[8]);
     MC_command_message(int16_t torque_command, int16_t angular_velocity, bool direction, bool inverter_enable, bool discharge_enable, int16_t commanded_torque_limit);
-    load(uint8_t buf[8]);
-    write(uint8_t buf[8]);
+    void load(uint8_t buf[8]);
+    void write(uint8_t buf[8]);
     int16_t get_torque_command();
     int16_t get_angular_velocity();
     bool get_direction();

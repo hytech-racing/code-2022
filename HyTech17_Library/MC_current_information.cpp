@@ -16,18 +16,18 @@ void MC_current_information::load(uint8_t buf[8]) {
   memcpy(&message, buf, sizeof(CAN_message_mc_current_information_t));
 }
 
-float MC_current_information::get_phase_a_current() {
-  return message.phase_a_current / 10.0f;
+int16_t MC_current_information::get_phase_a_current() {
+  return message.phase_a_current;
 }
 
-float MC_current_information::get_phase_b_current() {
-  return message.phase_b_current / 10.0f;
+int16_t MC_current_information::get_phase_b_current() {
+  return message.phase_b_current;
 }
 
-float MC_current_information::get_phase_c_current() {
-  return message.phase_c_current / 10.0f;
+int16_t MC_current_information::get_phase_c_current() {
+  return message.phase_c_current;
 }
 
-float MC_current_information::get_dc_bus_current() {
-  return message.dc_bus_current / 10.0f;
+int16_t MC_current_information::get_dc_bus_current() {
+  return message.dc_bus_current;
 }

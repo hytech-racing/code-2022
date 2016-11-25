@@ -16,18 +16,18 @@ void MC_temperatures_3::load(uint8_t buf[8]) {
   memcpy(&message, buf, sizeof(CAN_message_mc_temperatures_3_t));
 }
 
-float MC_temperatures_3::get_rtd_4_temperature() {
-  return message.rtd_4_temperature / 10.0f;
+int16_t MC_temperatures_3::get_rtd_4_temperature() {
+  return message.rtd_4_temperature;
 }
 
-float MC_temperatures_3::get_rtd_5_temperature() {
-  return message.rtd_5_temperature / 10.0f;
+int16_t MC_temperatures_3::get_rtd_5_temperature() {
+  return message.rtd_5_temperature;
 }
 
-float MC_temperatures_3::get_motor_temperature() {
-  return message.motor_temperature / 10.0f;
+int16_t MC_temperatures_3::get_motor_temperature() {
+  return message.motor_temperature;
 }
 
-float MC_temperatures_3::get_torque_shudder() {
-  return message.torque_shudder / 10.0f;
+int16_t MC_temperatures_3::get_torque_shudder() {
+  return message.torque_shudder;
 }

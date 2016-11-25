@@ -16,12 +16,12 @@ void MC_torque_timer_information::load(uint8_t buf[8]) {
   memcpy(&message, buf, sizeof(CAN_message_mc_torque_timer_information_t));
 }
 
-float MC_torque_timer_information::get_commanded_torque() {
-  return message.commanded_torque / 10.0f;
+int16_t MC_torque_timer_information::get_commanded_torque() {
+  return message.commanded_torque;
 }
 
-float MC_torque_timer_information::get_torque_feedback() {
-  return message.torque_feedback / 10.0f;
+int16_t MC_torque_timer_information::get_torque_feedback() {
+  return message.torque_feedback;
 }
 
 uint32_t MC_torque_timer_information::get_power_on_timer() {
