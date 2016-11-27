@@ -1,5 +1,6 @@
 #include <FlexCAN.h> // import teensy library
 #include <Metro.h>
+#include <HyTech17.h>
 
 //ports
 #define BRAKE_ANALOG_PORT 3 //analog port of brake sensor
@@ -42,17 +43,8 @@ void readValues();
 bool checkDeactivateTractiveSystem();
 int sendCanUpdate();
 
-//TCU states
-enum TCU_STATE{
-    INITIAL_POWER,
-    SHUTDOWN_CIRC_INIT,
-    TS_ACTIVE,
-    TS_NOT_ACTIVE,
-    INVERTER_ENABLE,
-    RTD_WAIT,
-    RTD
-} state;
-byte stateOutput;
+// State - use HyTech library
+uint8_t state;
 
 // timer
 Metro stateTimer = Metro(500); // Used for how often to send state
@@ -72,8 +64,7 @@ void setup() {
     pinMode(THROTTLE_PORT_1, INPUT_PULLUP);
     pinMode(THROTTLE_PORT_2, INPUT_PULLUP);
     //open circuit will show a high signal outside of the working range of the sensor.
-    state = INITIAL_POWER;
-    stateOutput = 1;
+    state = TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED;
 }
 
 
@@ -85,48 +76,70 @@ void setup() {
     //find the ranges of values coming from each sensor during normal operation of the foot pedals
     //Any values outside of these ranges could be caused by an open circuit, short to ground, or short to sensor power.
 
-void loop() {
-    if (updateTimer.check()) {
-        readValues();
-        updateTimer.reset();
-    }
-    if (implausibilityTimer.check()) {
-        checkDeactivateTractiveSystem();
-        implausibilityTimer.reset();
-    }
-    if(stateTimer.check()){
-        sendCanUpdate();
-        stateTimer.reset();
-    }
-    switch(state) {
-        //TODO: check if reqs are met to move to each state
-        case INITIAL_POWER:
-            stateOutput = 1;
-            state = SHUTDOWN_CIRC_INIT;
-            break;
-        case SHUTDOWN_CIRC_INIT:
-            stateOutput = 2;
-            state = TS_ACTIVE;
-            break;
-        case TS_ACTIVE:
-            stateOutput = 3;
-            state = INVERTER_ENABLE;
-            break;
-        case INVERTER_ENABLE:
-            stateOutput = 4;
-            state = RTD_WAIT;
-            break;
-        case RTD_WAIT:
-            stateOutput = 5;
-            state = RTD;
-            break;
-        case RTD:
-            stateOutput = 6;
+    void loop() {
+        while (CAN.read(msg)) {
+            if (msg.id == ID_PCU_STATUS) {
+                PCU_status pcu_status(msg.buf);
+                if (pcu_status.get_bms_fault()) {
+                    Serial.println("BMS Fault detected");
+                }
+                if (pcu_status.get_imd_fault()) {
+                    Serial.println("IMD Fault detected");
+                }
+            }
+            switch (pcu_status.get_state()) {
+                case PCU_STATE_WAITING_BMS_IMD:
+                    set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
+                    break;
+                case PCU_STATE_WAITING_DRIVER:
+                    set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
+                    break;
+                case PCU_STATE_LATCHING:
+                    set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
+                    break;
+                case PCU_STATE_WAITING_BMS_IMD:
+                    set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
+                    break;
+
+            }
+        }
+
+        if (updateTimer.check()) {
             readValues();
+            updateTimer.reset();
+        }
+        if (implausibilityTimer.check()) {
             checkDeactivateTractiveSystem();
+            implausibilityTimer.reset();
+        }
+        if(stateTimer.check()){
+            sendCanUpdate();
+            stateTimer.reset();
+        }
+        switch(state) {
+            //TODO: check if reqs are met to move to each state
+            case TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED:
+                state = TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE;
+                break;
+            case TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE:
+                state = TCU_STATE_TRACTIVE_SYSTEM_ACTIVE;
+                break;
+            case TCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
+                state = TCU_STATE_ENABLING_INVERTER;
+                break;
+            case TCU_STATE_ENABLING_INVERTER:
+                state = TCU_STATE_WAITING_READY_TO_DRIVE_SOUND;
+                break;
+            case TCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
+                state = TCU_STATE_READY_TO_DRIVE;
+                break;
+            case TCU_STATE_READY_TO_DRIVE:
+                readValues();
+                checkDeactivateTractiveSystem();
             break;
+        }
     }
-}
+
     //Error Message Instructions
     //an error message should be sent out on CAN Bus detailing which implausibility has been detected.
     //periodically sent until the implausibility ceases to exist.
@@ -169,12 +182,6 @@ bool checkDeactivateTractiveSystem() {
     return true;
 }
 
-void checkBrakeImplausibility() {
-    // TODO: TCU should read in signal from BSPD
-    // Fault occurs when signal is too low
-    // NOT when fault on brake pedal sensor
-}
-
 int sendCanUpdate(){
     short shortThrottle1 = (short) voltageThrottlePedal1 * 100;
     short shortThrottle2 = (short) voltageThrottlePedal2 * 100;
@@ -183,7 +190,7 @@ int sendCanUpdate(){
 
     msg.id = 0x30;
     msg.len = 8;
-    
+
     memcpy(&msg.buf[0], &shortThrottle1, sizeof(short));
     memcpy(&msg.buf[2], &shortThrottle2, sizeof(short));
     memcpy(&msg.buf[4], &shortBrake, sizeof(short));
@@ -191,8 +198,8 @@ int sendCanUpdate(){
 
     int temp1 = CAN.write(msg);
 
-    byte statuses = stateOutput;
-    
+    byte statuses = state;
+
     if(implausibilityStatus) statuses += 16;
     if(throttleCurve) statuses += 32;
     if(brakePlausibility) statuses += 64;
@@ -201,8 +208,8 @@ int sendCanUpdate(){
     msg.id = 0x31;
     msg.len = 1;
     msg.buf[0] = statuses;
-    
+
     int temp2 = CAN.write(msg);
-    
+
     return temp1 + temp2;
 }
