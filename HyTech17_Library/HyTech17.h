@@ -384,10 +384,10 @@ class MC_firmware_information {
     MC_firmware_information();
     MC_firmware_information(uint8_t buf[8]);
     void load(uint8_t buf[8]);
-    int16_t get_eeprom_version_project_code();
-    int16_t get_software_version();
-    int16_t get_date_code_mmdd();
-    int16_t get_date_code_yyyy();
+    uint16_t get_eeprom_version_project_code();
+    uint16_t get_software_version();
+    uint16_t get_date_code_mmdd();
+    uint16_t get_date_code_yyyy();
   private:
     CAN_message_mc_firmware_information_t message;
 };

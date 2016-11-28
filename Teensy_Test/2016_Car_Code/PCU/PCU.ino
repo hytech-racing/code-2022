@@ -57,13 +57,13 @@ void loop() {
    */
   while (CAN.read(msg)) {
     if (msg.id == ID_TCU_STATUS) {
-      Serial.print(msg.id);
+      /*Serial.print(msg.id);
       Serial.print(": ");
       for (unsigned int i = 0; i < msg.len; i++) {
         Serial.print(msg.buf[i]);
         Serial.print(" ");
       }
-      Serial.println();
+      Serial.println();*/
       
       TCU_status message = TCU_status(msg.buf);
       if (btn_start_id != message.get_btn_start_id()) {
@@ -71,6 +71,21 @@ void loop() {
         Serial.print("Start button pressed id ");
         Serial.println(btn_start_id);
       }
+    }
+    if (msg.id == ID_MC_COMMAND_MESSAGE) {
+      MC_command_message mc_command_message = MC_command_message(msg.buf);
+      Serial.print("Torque command: ");
+      Serial.println(mc_command_message.get_torque_command());
+      Serial.print("Angular velocity: ");
+      Serial.println(mc_command_message.get_angular_velocity());
+      Serial.print("Direction: ");
+      Serial.println(mc_command_message.get_direction());
+      Serial.print("Inverter enable: ");
+      Serial.println(mc_command_message.get_inverter_enable());
+      Serial.print("Discharge enable: ");
+      Serial.println(mc_command_message.get_discharge_enable());
+      Serial.print("Commanded torque limit: ");
+      Serial.println(mc_command_message.get_commanded_torque_limit());
     }
   }
 

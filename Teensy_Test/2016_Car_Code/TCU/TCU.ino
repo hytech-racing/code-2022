@@ -98,9 +98,9 @@ void loop() {
         digitalWrite(LED_IMD, HIGH);
         Serial.println("IMD Fault detected");
       }
-      /*Serial.print("PCU State: ");
-      Serial.println(pcu_status.get_state());*/
       
+      Serial.print("PCU State: ");
+      Serial.println(pcu_status.get_state());
       switch (pcu_status.get_state()) {
         case PCU_STATE_WAITING_BMS_IMD:
         set_start_led(0);
@@ -146,12 +146,16 @@ void loop() {
       if (mc_internal_states.get_inverter_enable_state() && state == TCU_STATE_ENABLING_INVERTER) {
         set_state(TCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
       }
-      /*Serial.print("Inverter ");
+      Serial.print("Inverter ");
       if (mc_internal_states.get_inverter_enable_state()) {
         Serial.println("enabled");
       } else {
         Serial.println("disabled");
-      }*/
+      }
+      Serial.print("VSM State: ");
+      Serial.println(mc_internal_states.get_vsm_state());
+      Serial.print("Inverter State: ");
+      Serial.println(mc_internal_states.get_inverter_state());
     }
 
     if (msg.id == ID_MC_TEMPERATURES_3) {
@@ -235,9 +239,11 @@ void loop() {
     if (timer_motor_controller_send.check()) {
       int torque = button_torque;
       Serial.println(torque);
+      MC_command_message message = MC_command_message(torque, 0, false, true, false, 0);
+      message.write(msg.buf);
       msg.id = 0xC0;
       msg.len = 8;
-      generate_MC_message(msg.buf, torque, false, true);
+      //generate_MC_message(msg.buf, torque, false, true);
       CAN.write(msg);
     }
     break;
@@ -246,7 +252,7 @@ void loop() {
   /*
    * Send a message to the Motor Controller over CAN when vehicle is not ready to drive
    */
-  if (timer_motor_controller_send.check()) {
+  if (state < TCU_STATE_READY_TO_DRIVE && timer_motor_controller_send.check()) {
     msg.id = ID_MC_COMMAND_MESSAGE;
     msg.len = 8;
     if (state < TCU_STATE_ENABLING_INVERTER) {
@@ -328,6 +334,9 @@ void loop() {
       Serial.println(btn_toggle_id);
       if (button_torque > 0 && state == TCU_STATE_READY_TO_DRIVE) {
         button_torque -= 20;
+      }
+      if (button_torque > 500) {
+        button_torque = 0;
       }
     }
   }
