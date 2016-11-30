@@ -78,8 +78,8 @@ void setup() {
 
     void loop() {
         while (CAN.read(msg)) {
+            PCU_status pcu_status(msg.buf);
             if (msg.id == ID_PCU_STATUS) {
-                PCU_status pcu_status(msg.buf);
                 if (pcu_status.get_bms_fault()) {
                     Serial.println("BMS Fault detected");
                 }
@@ -95,9 +95,6 @@ void setup() {
                     set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
                     break;
                 case PCU_STATE_LATCHING:
-                    set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
-                    break;
-                case PCU_STATE_WAITING_BMS_IMD:
                     set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
                     break;
 
@@ -212,4 +209,13 @@ int sendCanUpdate(){
     int temp2 = CAN.write(msg);
 
     return temp1 + temp2;
+}
+
+void set_state(uint8_t new_state) {
+    if (state == new_state) {
+        return;
+    }
+    uint8_t old_state = state;
+    state = new_state;
+    // TODO handle state transitions
 }
