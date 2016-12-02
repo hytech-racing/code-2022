@@ -157,7 +157,18 @@ typedef struct CAN_message_mc_analog_input_voltages_t {
   int16_t analog_input_4;
 } CAN_message_mc_analog_input_voltages_t;
 
-// TODO class MC_analog_input_voltages
+class MC_analog_input_voltages {
+  public:
+    MC_analog_input_voltages();
+    MC_analog_input_voltages(uint8_t buf[8]);
+    void load(uint8_t buf[8]);
+    int16_t get_analog_input_1();
+    int16_t get_analog_input_2();
+    int16_t get_analog_input_3();
+    int16_t get_analog_input_4();
+  private:
+    CAN_message_mc_analog_input_voltages_t message;
+};
 
 typedef struct CAN_message_mc_digital_input_status_t {
   bool digital_input_1;
@@ -170,7 +181,22 @@ typedef struct CAN_message_mc_digital_input_status_t {
   bool digital_input_8;
 } CAN_message_mc_digital_input_status_t;
 
-// TODO class MC_digital_input_status
+class MC_digital_input_status {
+  public:
+    MC_digital_input_status();
+    MC_digital_input_status(uint8_t buf[8]);
+    void load(uint8_t buf[8]);
+    bool digital_input_1();
+    bool digital_input_2();
+    bool digital_input_3();
+    bool digital_input_4();
+    bool digital_input_5();
+    bool digital_input_6();
+    bool digital_input_7();
+    bool digital_input_8();
+  private:
+    CAN_message_mc_digital_input_status_t message;
+};
 
 typedef struct CAN_message_mc_motor_position_information_t {
   int16_t motor_angle;
@@ -381,7 +407,7 @@ class MC_modulation_index_flux_weakening_output_information {
     int16_t get_iq_command();
   private:
     CAN_message_mc_modulation_index_flux_weakening_output_information_t message;
-}
+};
 
 typedef struct CAN_message_mc_firmware_information_t {
   uint16_t eeprom_version_project_code;

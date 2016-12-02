@@ -18,7 +18,7 @@ void MC_modulation_index_flux_weakening_output_information::load(uint8_t buf[8])
 }
 
 uint16_t MC_modulation_index_flux_weakening_output_information::get_modulation_index() {
-  return message.modulaton_index;
+  return message.modulation_index;
 }
 
 int16_t MC_modulation_index_flux_weakening_output_information::get_flux_weakening_output() {
