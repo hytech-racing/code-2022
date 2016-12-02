@@ -365,12 +365,23 @@ class MC_torque_timer_information {
 
 typedef struct CAN_message_mc_modulation_index_flux_weakening_output_information_t {
   uint16_t modulation_index; // TODO Signed or Unsigned?
-  int16_t flux_weakining_output;
+  int16_t flux_weakening_output;
   int16_t id_command;
   int16_t iq_command;
 } CAN_message_mc_modulation_index_flux_weakening_output_information_t;
 
-// TODO class MC_modulation_index_flux_weakening_output_information
+class MC_modulation_index_flux_weakening_output_information {
+  public:
+    MC_modulation_index_flux_weakening_output_information();
+    MC_modulation_index_flux_weakening_output_information(uint8_t buf[8]);
+    void load(uint8_t buf[8]);
+    uint16_t get_modulation_index();
+    int16_t get_flux_weakening_output();
+    int16_t get_id_command();
+    int16_t get_iq_command();
+  private:
+    CAN_message_mc_modulation_index_flux_weakening_output_information_t message;
+}
 
 typedef struct CAN_message_mc_firmware_information_t {
   uint16_t eeprom_version_project_code;
