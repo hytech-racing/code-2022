@@ -27,16 +27,17 @@ int voltageThrottlePedal2 = 0; //voltage of 2nd throttle
 int voltageBrakePedal = 0;//voltage of brakepedal
 
 // additional values to report
-bool implausibilityStatus = false; // for pedal not brake
+bool throttleImplausibility = false; // for throttle, not brake
 bool throttleCurve = false; // false -> normal, true -> boost
 float thermTemp = 0.0; // temperature of onboard thermistor
-bool brakePlausibility = false; // fault if BSPD signal too low - still to be designed
+bool brakeImplausibility = false; // fault if BSPD signal too low - still to be designed
 bool brakePedalActive = false; // true if brake is considered pressed
 
-//FSAE requires that torque be shut off if an implausibility persists for over 100 msec (EV2.3.5).
+// FSAE requires that torque be shut off if an implausibility persists for over 100 msec (EV2.3.5).
+// TODO check for checkDeactivateTractiveSystem() (when true) for 100ms of true
 //A deviation of more than 10% pedal travel between the two throttle sensors
 //A failure of position sensor wiring which can cause an open circuit, short to ground, or short to sensor power.
-bool torqueShutdown = false; //
+bool torqueShutdown = false;
 
 // FUNCTION PROTOTYPES
 void readValues();
@@ -97,7 +98,6 @@ void setup() {
                 case PCU_STATE_LATCHING:
                     set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
                     break;
-
             }
         }
 
@@ -161,22 +161,34 @@ bool checkDeactivateTractiveSystem() {
     // Throttle 10% check
     float deviationCheck = ((float) voltageThrottlePedal1) / ((float) voltageThrottlePedal2);
     if (deviationCheck > 1.10 || (1 / deviationCheck) > 1.10) {
-        // TODO: implausibility
+        throttleImplausibility = true;
+    } else if (voltageThrottlePedal1 < MIN_THROTTLE_1 || voltageThrottlePedal2 < MIN_THROTTLE_2) {
+        // Checks for failure of position sensor wiring
+        // Check for open circuit or short to ground
+        throttleImplausibility = true;
+
+    } else if (voltageThrottlePedal1 > MAX_THROTTLE_1 || voltageThrottlePedal2 > MAX_THROTTLE_2) {
+        // Check for short to power
+        throttleImplausibility = true;
+    } else {
+        // No throttle implausibility detected
+        throttleImplausibility = false;
     }
-    // Checks for failure of position sensor wiring
-    // Check for open circuit or short to ground
-    if (voltageThrottlePedal1 < MIN_THROTTLE_1 || voltageThrottlePedal2 < MIN_THROTTLE_2) {
-        //TODO: implausibility
-    }
-    // Check for short to power
-    if (voltageThrottlePedal1 > MAX_THROTTLE_1 || voltageThrottlePedal2 > MAX_THROTTLE_2) {
-        //TODO: implausibility
-    }
+
     // Check brake pedal sensor
     if (voltageBrakePedal > MAX_BRAKE || voltageBrakePedal < MIN_BRAKE) {
-        //TODO: implausibility
+        brakeImplausibility = true;
+    } else {
+        // No brake implausibility detected
+        brakeImplausibility = false;
     }
-    return true;
+
+    // return true if any implausibility present
+    if (throttleImplausibility || brakeImplausibility) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 int sendCanUpdate(){
@@ -185,7 +197,7 @@ int sendCanUpdate(){
     short shortBrake = (short) voltageBrakePedal * 100;
     short shortTemp = (short) thermTemp * 100;
 
-    msg.id = 0x30;
+    msg.id = ID_TCU_STATUS;
     msg.len = 8;
 
     memcpy(&msg.buf[0], &shortThrottle1, sizeof(short));
@@ -197,18 +209,18 @@ int sendCanUpdate(){
 
     byte statuses = state;
 
-    if(implausibilityStatus) statuses += 16;
+    if(throttleImplausibility) statuses += 16;
     if(throttleCurve) statuses += 32;
-    if(brakePlausibility) statuses += 64;
+    if(brakeImplausibility) statuses += 64;
     if(brakePedalActive) statuses += 128;
 
-    msg.id = 0x31;
+    msg.id = ID_TCU_STATUS;
     msg.len = 1;
     msg.buf[0] = statuses;
 
     int temp2 = CAN.write(msg);
 
-    return temp1 + temp2;
+    return temp1 + temp2; // used for error checking?
 }
 
 void set_state(uint8_t new_state) {
