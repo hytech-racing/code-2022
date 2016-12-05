@@ -52,6 +52,7 @@ Metro stateTimer = Metro(500); // Used for how often to send state
 Metro updateTimer = Metro(500); // Read in values from pins
 Metro implausibilityTimer = Metro(50); // Used for throttle error check
 Metro throttleTimer = Metro(500); // Used for sending commands to Motor Controller
+Metro tractiveTimeOut = Metro(5000); // Used to check timeout of tractive system activation
 
 // setup code
 void setup() {
@@ -89,6 +90,7 @@ void setup() {
                 }
             }
             switch (pcu_status.get_state()) {
+                // NOTE: see if this should be happening (depending on current TCU state)
                 case PCU_STATE_WAITING_BMS_IMD:
                     set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
                     break;
@@ -107,6 +109,7 @@ void setup() {
         }
         if (implausibilityTimer.check()) {
             checkDeactivateTractiveSystem();
+            // TODO: deactivate tractive system if above returns true
             implausibilityTimer.reset();
         }
         if(stateTimer.check()){
@@ -116,26 +119,51 @@ void setup() {
         switch(state) {
             //TODO: check if reqs are met to move to each state
             case TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED:
-                state = TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE;
+                // TCU must wait until PCU in SHUTDOWN_CIRCUIT_INITIALIZED state
+                if (pcu_status.get_state() == PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED) {
+                    state = TCU_STATE_WAITING_TRACTIVE_SYSTEM;
+                    tractiveTimeOut.reset(); // resets to check if time out
+                }
+                break;
+            case TCU_STATE_WAITING_TRACTIVE_SYSTEM:
+                // TODO: check if tractive system is active
+                // then change state to tractive system active
+                if (tractiveTimeOut.check()) {
+                    // time out has occured, tractive system not active state
+                    state = TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE;
+                }
+                state = TCU_STATE_TRACTIVE_SYSTEM_ACTIVE;
                 break;
             case TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE:
+                // TODO
                 state = TCU_STATE_TRACTIVE_SYSTEM_ACTIVE;
                 break;
             case TCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
+                // TODO
                 state = TCU_STATE_ENABLING_INVERTER;
                 break;
             case TCU_STATE_ENABLING_INVERTER:
+                // TODO
                 state = TCU_STATE_WAITING_READY_TO_DRIVE_SOUND;
                 break;
             case TCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
+                // TODO
                 state = TCU_STATE_READY_TO_DRIVE;
                 break;
             case TCU_STATE_READY_TO_DRIVE:
-                readValues();
-                checkDeactivateTractiveSystem();
-            break;
+                // TODO
+                break;
         }
     }
+    // Steps of State machine:
+        // Wait for the Power Control Unit to send a CAN Bus message showing that it has entered the Shutdown Circuit Initialized state
+        // Check if the Tractive System is really active. There will be a periodic message on the CAN Bus indicating if the Tractive System is active. This message may originate from the motor controller, or a HyTech ECU. When the Tractive System is active, proceed to the Tractive System Active state. If the Tractive System never activates or becomes inactive, the Throttle Control Unit should enter the Tractive System Not Active state.
+        // The driver must press the Start Button on the dashboard, and press the brake pedal simultaneously to proceed. Wait for a CAN Bus message showing the Start Button is pressed, along with detecting that the brake pedal is simultaneously pressed. The brake pedal threshold should be the same required to light up the brake lights.
+        // Send the Inverter Enable command to the Rinehart PM100DX motor controller. Then wait for the motor controller to return a message that the inverter is enabled.
+        // If the inverter successfully enables, send a Ready to Drive Sound (RTDS) Enable message on CAN Bus for the Dashboard Control Unit to read.
+        // The Dashboard Control Unit will read the RTDS Enable message and sound the RTDS. After the RTDS, the Dashboard ECU will send a Ready to Drive Sound Finished message onto CAN Bus. The Throttle Control Unit should wait for this message, then enter Ready to Drive state, sending torque commands to the motor controller.
+        // If after timeout periods the inverter does not successfully enable or RTDS does not sound, send an inverter disable message then proceed back to step 3 and wait for the driver to press the start button and brake pedal (TODO maybe this should declare a fault; any thoughts about sending inverter disable message?)
+        // If there is a Software Fault, BMS Fault, or IMD Fault, the Power Control Unit will enter a Fatal Fault state. Since the tractive system will be disabled, the Throttle Control Unit should enter the Tractive System Not Active State outlined in Step 2. (TODO maybe revert this to entering a fatal fault state)
 
     //Error Message Instructions
     //an error message should be sent out on CAN Bus detailing which implausibility has been detected.
@@ -221,6 +249,21 @@ int sendCanUpdate(){
     int temp2 = CAN.write(msg);
 
     return temp1 + temp2; // used for error checking?
+
+    // The Throttle Control Unit should periodically send out messages on CAN Bus detailing its current state including:
+        // Raw throttle input values
+        // Implausibility status
+        // Throttle curve in use (normal or boost)
+        // Temperature as read by onboard thermistor
+        // Brake System Plausibility Device status (boolean indicating whether a fault has occurred)
+        // Brake Pedal Active (boolean used by Power Control Unit to control brake lights)
+    // The following Inverter Initialization states should be sent in a CAN Bus message periodically as well as immediately upon change of state.
+        // Waiting for Shutdown Circuit Initialization
+        // Waiting for Tractive System Active
+        // Waiting for driver (start button and brake pedal haven’t been pressed)
+        // Enabling inverter (sent enable command, waiting for Ready to Drive Sound)
+        // Ready to Drive (vehicle responds to throttle)
+
 }
 
 void set_state(uint8_t new_state) {
