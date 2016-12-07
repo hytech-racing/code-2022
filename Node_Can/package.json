@@ -1,0 +1,10 @@
+{
+  "name": "node-can",
+  "version": "0.0.1",
+  "description": "Remote telemetry",
+  "dependencies": {
+    "express": "~4.10.2",
+    "socket.io": "^1.3.5",
+    "socketcan": "^2.1.3"
+  }
+}
