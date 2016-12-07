@@ -65,6 +65,4 @@ void toggleButtonInterrupt {
 }
 
 void startButtonInterrupt {
-
->>>>>>> b9f68b76194bce25ba90bc43ab3b7f3d1266cf8d
 }
