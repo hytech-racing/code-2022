@@ -18,6 +18,7 @@
 #define OKHS_PIN 0
 #define BMS_OK_PIN 1
 #define THERMISTOR_PIN 4
+#define MC_SWITCH_SSR_PIN 6
 #define SHUTDOWN_SSR_PIN 11
 #define LATCH_SSR_PIN 10
 #define BRAKE_LIGHT_PIN 13
@@ -66,6 +67,7 @@ void setup() {
     pinMode(SHUTDOWN_SSR_PIN, OUTPUT);
     pinMode(LATCH_SSR_PIN, OUTPUT);
     pinMode(BRAKE_LIGHT_PIN, OUTPUT);
+    pinMode(MC_SWITCH_SSR_PIN, OUTPUT);
 
     CAN.begin(); // init CAN system
     Serial.println("CAN system and serial communication initialized");
@@ -116,6 +118,10 @@ void loop() {
                 if (DISCHARGE_OK >= BMS_High) { // if BMS is high
                     if (OKHS >= IMD_High) { // if IMD is also high
                         curState = waitDriver; // both BMD and IMD are high, wait for start button press
+
+                        // Once adapted to library, we can change MC enabling to depend on throttle control
+                        // status message
+                        digitalWrite(MC_SWITCH_SSR_PIN, HIGH) // enable MC
                     }
                 }
                 break;
