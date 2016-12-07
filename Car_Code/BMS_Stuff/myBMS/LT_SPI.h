@@ -53,30 +53,30 @@ ongoing work.
 
 // Uncomment the following to use functions that implement LTC SPI routines
 
-// //! @name SPI CLOCK DIVIDER CONSTANTS
-// //! @{
-// #define SPI_CLOCK_DIV4    0x00  // 4 Mhz
-// #define SPI_CLOCK_DIV16   0x01  // 1 Mhz
-// #define SPI_CLOCK_DIV64   0x02  // 250 khz
-// #define SPI_CLOCK_DIV128  0x03  // 125 khz
-// #define SPI_CLOCK_DIV2    0x04  // 8 Mhz
-// #define SPI_CLOCK_DIV8    0x05  // 2 Mhz
-// #define SPI_CLOCK_DIV32   0x06  // 500 khz
-// //! @}
-//
-// //! @name SPI HARDWARE MODE CONSTANTS
-// //! @{
-// #define SPI_MODE0 0x00
-// #define SPI_MODE1 0x04
-// // #define SPI_MODE2 0x08
-// #define SPI_MODE3 0x0C
-// //! @}
-//
-// //! @name SPI SET MASKS
+//! @name SPI CLOCK DIVIDER CONSTANTS
 //! @{
-// #define SPI_MODE_MASK      0x0C    // CPOL = bit 3, CPHA = bit 2 on SPCR
-// #define SPI_CLOCK_MASK     0x03    // SPR1 = bit 1, SPR0 = bit 0 on SPCR
-// #define SPI_2XCLOCK_MASK   0x01    // SPI2X = bit 0 on SPSR
+#define SPI_CLOCK_DIV4    0x00  // 4 Mhz
+#define SPI_CLOCK_DIV16   0x01  // 1 Mhz
+#define SPI_CLOCK_DIV64   0x02  // 250 khz
+#define SPI_CLOCK_DIV128  0x03  // 125 khz
+#define SPI_CLOCK_DIV2    0x04  // 8 Mhz
+#define SPI_CLOCK_DIV8    0x05  // 2 Mhz
+#define SPI_CLOCK_DIV32   0x06  // 500 khz
+//! @}
+
+//! @name SPI HARDWARE MODE CONSTANTS
+//! @{
+#define SPI_MODE0 0x00
+#define SPI_MODE1 0x04
+// #define SPI_MODE2 0x08
+#define SPI_MODE3 0x0C
+//! @}
+
+//! @name SPI SET MASKS
+//! @{
+#define SPI_MODE_MASK      0x0C    // CPOL = bit 3, CPHA = bit 2 on SPCR
+#define SPI_CLOCK_MASK     0x03    // SPR1 = bit 1, SPR0 = bit 0 on SPCR
+#define SPI_2XCLOCK_MASK   0x01    // SPI2X = bit 0 on SPSR
 // //! @}
 
 //! Reads and sends a byte
