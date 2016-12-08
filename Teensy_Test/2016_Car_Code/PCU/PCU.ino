@@ -15,7 +15,8 @@
 #define SENSE_IMD A1
 #define SENSE_SHUTDOWN_OUT A2
 #define SENSE_TEMP A4
-#define SSR_BRAKE_LIGHT 13
+#define SSR_BRAKE_LIGHT 12
+#define SSR_INVERTER 6
 #define SSR_LATCH 10
 #define SSR_SOFTWARE_SHUTOFF 11
 
@@ -42,6 +43,7 @@ static CAN_message_t msg;
 
 void setup() {
   pinMode(SSR_BRAKE_LIGHT, OUTPUT);
+  pinMode(SSR_INVERTER, OUTPUT);
   pinMode(SSR_LATCH, OUTPUT);
   pinMode(SSR_SOFTWARE_SHUTOFF, OUTPUT);
 
@@ -49,6 +51,7 @@ void setup() {
   CAN.begin();
   delay(100);
   Serial.println("CAN transceiver initialized");
+  digitalWrite(SSR_INVERTER, HIGH);
 }
 
 void loop() {
@@ -72,7 +75,7 @@ void loop() {
         Serial.println(btn_start_id);
       }
     }
-    if (msg.id == ID_MC_COMMAND_MESSAGE) {
+    /*if (msg.id == ID_MC_COMMAND_MESSAGE) {
       MC_command_message mc_command_message = MC_command_message(msg.buf);
       Serial.print("Torque command: ");
       Serial.println(mc_command_message.get_torque_command());
@@ -86,7 +89,7 @@ void loop() {
       Serial.println(mc_command_message.get_discharge_enable());
       Serial.print("Commanded torque limit: ");
       Serial.println(mc_command_message.get_commanded_torque_limit());
-    }
+    }*/
   }
 
   /*
