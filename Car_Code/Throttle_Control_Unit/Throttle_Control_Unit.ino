@@ -101,6 +101,10 @@ void setup() {
                 case PCU_STATE_LATCHING:
                     set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
                     break;
+                case PCU_STATE_FATAL_FAULT:
+                    // assuming shutdown_circuit has opened
+                    set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
+                    break;
             }
         }
 
@@ -273,9 +277,18 @@ int sendCanUpdate(){
 
 void set_state(uint8_t new_state) {
     if (state == new_state) {
-        return;
+        return; // don't do anything if same state
     }
-    uint8_t old_state = state;
-    state = new_state;
-    // TODO handle state transitions
+    switch (state) {
+        // TODO handle state transitions
+        case TCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
+            if (new_state == TCU_STATE_ENABLING_INVERTER) {
+                state = TCU_STATE_ENABLING_INVERTER;
+            }
+            break;
+        default:
+            uint8_t old_state = state;
+            state = new_state;
+            break;
+    }
 }
