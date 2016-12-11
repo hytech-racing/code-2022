@@ -80,6 +80,7 @@ void setup() {
 
     void loop() {
         while (CAN.read(msg)) {
+            // TODO: Handle CAN messages from other components (e.g. MC, Dashboard)
             PCU_status pcu_status(msg.buf);
             if (msg.id == ID_PCU_STATUS) {
                 if (pcu_status.get_bms_fault()) {
@@ -126,7 +127,7 @@ void setup() {
                 }
                 break;
             case TCU_STATE_WAITING_TRACTIVE_SYSTEM:
-                // TODO: check if tractive system is active
+                // TODO: check if tractive system is active, &shutdown circuit closed
                 // then change state to tractive system active
                 if (tractiveTimeOut.check()) {
                     // time out has occured, tractive system not active state
@@ -139,8 +140,12 @@ void setup() {
                 state = TCU_STATE_TRACTIVE_SYSTEM_ACTIVE;
                 break;
             case TCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
-                // TODO
-                state = TCU_STATE_ENABLING_INVERTER;
+                // TODO - make sure start button and brake pressed
+                // REVIEW: TCU will check for brake and start button press immediately (no delay?)
+                if (brakePedalActive) { // TODO: check Start button on dashboard - code has not been written yet
+                    set_state(TCU_STATE_ENABLING_INVERTER)
+                }
+                // NOTE: there is no timeout for the above state change
                 break;
             case TCU_STATE_ENABLING_INVERTER:
                 // TODO
