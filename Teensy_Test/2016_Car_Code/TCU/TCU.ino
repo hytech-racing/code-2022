@@ -32,6 +32,7 @@ Metro timer_btn_cycle = Metro(10);
 Metro timer_btn_start = Metro(10);
 Metro timer_btn_toggle = Metro(10);
 Metro timer_cooling_ramp = Metro(10);
+Metro timer_debug_send_self = Metro(100);
 Metro timer_inverter_enable = Metro(2000); // Timeout failed inverter enable
 Metro timer_led_start_blink_fast = Metro(150);
 Metro timer_led_start_blink_slow = Metro(400);
@@ -223,7 +224,17 @@ void loop() {
         Serial.println(mc_internal_states.get_direction_command());
       }
 
-      // TODO ID_MC_FAULT_CODES
+      if (msg.id == ID_MC_FAULT_CODES) {
+        MC_fault_codes mc_fault_codes = MC_fault_codes(msg.buf);
+        Serial.print("POST FAULT LO: 0x");
+        Serial.println(mc_fault_codes.get_post_fault_lo(), HEX);
+        Serial.print("POST FAULT HI: 0x");
+        Serial.println(mc_fault_codes.get_post_fault_hi(), HEX);
+        Serial.print("RUN FAULT LO: 0x");
+        Serial.println(mc_fault_codes.get_run_fault_lo(), HEX);
+        Serial.print("RUN FAULT HI: 0x");
+        Serial.println(mc_fault_codes.get_run_fault_hi(), HEX);
+      }
 
       if (msg.id == ID_MC_TORQUE_TIMER_INFORMATION) {
         MC_torque_timer_information mc_torque_timer_information = MC_torque_timer_information(msg.buf);
@@ -237,6 +248,23 @@ void loop() {
 
       // TODO ID_MC_MODULATION_INDEX_FLUX_WEAKENING_OUTPUT_INFORMATION
       // TODO ID_MC_FIRMWARE_INFORMATION
+
+      if (timer_debug_send_self.check()) {
+        Serial.print("TCU STATE: ");
+        Serial.println(state);
+        Serial.print("START BUTTON ID: ");
+        Serial.println(btn_start_id);
+      }
+
+      if (msg.id == ID_PCU_STATUS) {
+        PCU_status pcu_status = PCU_status(msg.buf);
+        Serial.print("PCU STATE: ");
+        Serial.println(pcu_status.get_state());
+        Serial.print("BMS FAULT: ");
+        Serial.println(pcu_status.get_bms_fault());
+        Serial.print("IMD FAULT: ");
+        Serial.println(pcu_status.get_imd_fault());
+      }
     }
 
     if (msg.id == ID_MC_INTERNAL_STATES) {
