@@ -7,11 +7,12 @@ def main():
         print('Usage:')
         print('debug.py <serial device>')
         quit()
+    global screen
     screen = curses.initscr()
     screen.border(0)
     screen.addstr(0,5,'HYTECH RACING 2016 VEHICLE SERIAL DEBUGGER')
     screen.addstr(3,5,'RMS INVERTER')
-    screen.addstr(4,5,'UPTIME: ')
+    screen.addstr(4,5,'RMS UPTIME: ')
     screen.addstr(5,5,'MOTOR TEMP: ')
     screen.addstr(6,5,'TORQUE SHUDDER: ')
     screen.addstr(7,5,'MOTOR ANGLE: ')
@@ -44,19 +45,20 @@ def main():
 
 def live(screen):
     ser = serial.Serial(sys.argv[1], 115200)
-
     incomingLine = ''
+    screen.nodelay(True)
     char = screen.getch()
     while char != ord('q') and char != ord('Q'):
         char = screen.getch()
-        if (ser.inWaiting() > 0):
-            incomingLine += ser.read(ser.inWaiting()).decode('ascii')
+        data = ser.read()
+        if len(data) > 0:
+            incomingLine += data
             if ('\n' in incomingLine):
                 updateScreen(screen, incomingLine[0:incomingLine.find('\n')])
                 incomingLine = incomingLine[incomingLine.find('\n') + 1:]
 
 def updateScreen(screen, incomingLine):
-    if ('UPTIME' in incomingLine):
+    if ('RMS UPTIME' in incomingLine):
         clearLine(4,5)
         screen.addstr(4,5,incomingLine)
     if ('MOTOR TEMP' in incomingLine):

@@ -57,6 +57,7 @@ bool btn_toggle_pressed = false;
 uint16_t button_torque = 0;
 bool cooling_ramp_enable = false;
 uint8_t cooling_ramp = 0;
+bool debug = true;
 bool led_start_active = false;
 uint8_t led_start_type = 0; // 0 for off, 1 for steady, 2 for fast blink, 3 for slow blink
 uint8_t state = TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED;
@@ -129,16 +130,113 @@ void loop() {
       }
     }
 
-    if (msg.id == ID_MC_MOTOR_POSITION_INFORMATION) {
-      MC_motor_position_information mc_motor_position_information = MC_motor_position_information(msg.buf);
-      Serial.print("Motor angle: ");
-      Serial.println(mc_motor_position_information.get_motor_angle());
-      Serial.print("Motor speed: ");
-      Serial.println(mc_motor_position_information.get_motor_speed());
-      Serial.print("Electrical output frequency: ");
-      Serial.println(mc_motor_position_information.get_electrical_output_frequency());
-      Serial.print("Delta resolver filtered: ");
-      Serial.println(mc_motor_position_information.get_delta_resolver_filtered());
+    if (debug) {
+      if (msg.id == ID_MC_TEMPERATURES_1) {
+        MC_temperatures_1 mc_temperatures_1 = MC_temperatures_1(msg.buf);
+        Serial.print("MODULE A TEMP: ");
+        Serial.println(mc_temperatures_1.get_module_a_temperature());
+        Serial.print("MODULE B TEMP: ");
+        Serial.println(mc_temperatures_1.get_module_b_temperature());
+        Serial.print("MODULE C TEMP: ");
+        Serial.println(mc_temperatures_1.get_module_c_temperature());
+        Serial.print("GATE DRIVER BOARD TEMP: ");
+        Serial.println(mc_temperatures_1.get_gate_driver_board_temperature());
+      }
+
+      // TODO ID_MC_TEMPERATURES_2
+
+      if (msg.id == ID_MC_TEMPERATURES_3) {
+        MC_temperatures_3 mc_temperatures_3 = MC_temperatures_3(msg.buf);
+        Serial.print("RTD 4 TEMP: ");
+        Serial.println(mc_temperatures_3.get_rtd_4_temperature());
+        Serial.print("RTD 5 TEMP: ");
+        Serial.println(mc_temperatures_3.get_rtd_5_temperature());
+        Serial.print("MOTOR TEMP: ");
+        Serial.println(mc_temperatures_3.get_motor_temperature());
+        Serial.print("TORQUE SHUDDER: ");
+        Serial.println(mc_temperatures_3.get_torque_shudder());
+      }
+
+      // TODO ID_MC_ANALOG_INPUTS_VOLTAGES
+      // TODO ID_MC_DIGITAL_INPUT_STATUS
+
+      if (msg.id == ID_MC_MOTOR_POSITION_INFORMATION) {
+        MC_motor_position_information mc_motor_position_information = MC_motor_position_information(msg.buf);
+        Serial.print("MOTOR ANGLE: ");
+        Serial.println(mc_motor_position_information.get_motor_angle());
+        Serial.print("MOTOR SPEED: ");
+        Serial.println(mc_motor_position_information.get_motor_speed());
+        Serial.print("ELEC OUTPUT FREQ: ");
+        Serial.println(mc_motor_position_information.get_electrical_output_frequency());
+        Serial.print("DELTA RESOLVER FILT: ");
+        Serial.println(mc_motor_position_information.get_delta_resolver_filtered());
+      }
+
+      if (msg.id == ID_MC_CURRENT_INFORMATION) {
+        MC_current_information mc_current_information = MC_current_information(msg.buf);
+        Serial.print("PHASE A CURRENT: ");
+        Serial.println(mc_current_information.get_phase_a_current());
+        Serial.print("PHASE B CURRENT: ");
+        Serial.println(mc_current_information.get_phase_b_current());
+        Serial.print("PHASE C CURRENT: ");
+        Serial.println(mc_current_information.get_phase_c_current());
+        Serial.print("DC BUS CURRENT: ");
+        Serial.println(mc_current_information.get_dc_bus_current());
+      }
+
+      if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
+        MC_voltage_information mc_voltage_information = MC_voltage_information(msg.buf);
+        Serial.print("DC BUS VOLTAGE: ");
+        Serial.println(mc_voltage_information.get_dc_bus_voltage());
+        Serial.print("OUTPUT VOLTAGE: ");
+        Serial.println(mc_voltage_information.get_output_voltage());
+        Serial.print("PHASE AB VOLTAGE: ");
+        Serial.println(mc_voltage_information.get_phase_ab_voltage());
+        Serial.print("PHASE BC VOLTAGE: ");
+        Serial.println(mc_voltage_information.get_phase_bc_voltage());
+      }
+
+      if (msg.id == ID_MC_INTERNAL_STATES) {
+        MC_internal_states mc_internal_states = MC_internal_states(msg.buf);
+        Serial.print("VSM STATE: ");
+        Serial.println(mc_internal_states.get_vsm_state());
+        Serial.print("INVERTER STATE: ");
+        Serial.println(mc_internal_states.get_inverter_state());
+
+        // TODO relay states
+        
+        Serial.print("INVERTER RUN MODE: ");
+        Serial.println(mc_internal_states.get_inverter_run_mode());
+        Serial.print("INVERTER ACTIVE DISCHARGE STATE: ");
+        Serial.println(mc_internal_states.get_inverter_active_discharge_state());
+        Serial.print("INVERTER COMMAND MODE: ");
+        Serial.println(mc_internal_states.get_inverter_command_mode());
+        Serial.print("INVERTER ENABLE: ");
+        if (mc_internal_states.get_inverter_enable_state()) {
+          Serial.println("ENABLED");
+        } else {
+          Serial.println("DISABLED");
+        }
+        Serial.print("INVERTER LOCKOUT: ");
+        Serial.println(mc_internal_states.get_inverter_enable_lockout());
+        Serial.print("DIRECTION COMMAND: ");
+        Serial.println(mc_internal_states.get_direction_command());
+      }
+
+      // TODO ID_MC_FAULT_CODES
+
+      if (msg.id == ID_MC_TORQUE_TIMER_INFORMATION) {
+        MC_torque_timer_information mc_torque_timer_information = MC_torque_timer_information(msg.buf);
+        Serial.print("COMMANDED TORQUE: ");
+        Serial.println(mc_torque_timer_information.get_commanded_torque());
+        Serial.print("TORQUE FEEDBACK: ");
+        Serial.println(mc_torque_timer_information.get_torque_feedback());
+        Serial.print("RMS UPTIME: ");
+        Serial.println(mc_torque_timer_information.get_power_on_timer());
+      }
+
+      // TODO ID_MC_MODULATION_INDEX_FLUX_WEAKENING_OUTPUT_INFORMATION
+      // TODO ID_MC_FIRMWARE_INFORMATION
     }
 
     if (msg.id == ID_MC_INTERNAL_STATES) {
@@ -146,36 +244,8 @@ void loop() {
       if (mc_internal_states.get_inverter_enable_state() && state == TCU_STATE_ENABLING_INVERTER) {
         set_state(TCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
       }
-      Serial.print("Inverter ");
-      if (mc_internal_states.get_inverter_enable_state()) {
-        Serial.println("enabled");
-      } else {
-        Serial.println("disabled");
-      }
-      Serial.print("VSM State: ");
-      Serial.println(mc_internal_states.get_vsm_state());
-      Serial.print("Inverter State: ");
-      Serial.println(mc_internal_states.get_inverter_state());
     }
 
-    if (msg.id == ID_MC_TEMPERATURES_3) {
-      MC_temperatures_3 mc_temperatures_3 = MC_temperatures_3(msg.buf);
-      Serial.print("Motor temperature: ");
-      Serial.println(mc_temperatures_3.get_motor_temperature());
-    }
-
-    if (msg.id == ID_MC_TEMPERATURES_1) {
-      MC_temperatures_1 mc_temperatures_1 = MC_temperatures_1(msg.buf);
-      Serial.print("Module A temperature: ");
-      Serial.println(mc_temperatures_1.get_module_a_temperature());
-      Serial.print("Module B temperature: ");
-      Serial.println(mc_temperatures_1.get_module_b_temperature());
-      Serial.print("Module C temperature: ");
-      Serial.println(mc_temperatures_1.get_module_c_temperature());
-      Serial.print("Gate driver board temperature: ");
-      Serial.println(mc_temperatures_1.get_gate_driver_board_temperature());
-    }
-      
     if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
       MC_voltage_information mc_voltage_information = MC_voltage_information(msg.buf);
       if (mc_voltage_information.get_dc_bus_voltage() > 100 && state == TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
@@ -184,15 +254,6 @@ void loop() {
       if (mc_voltage_information.get_dc_bus_voltage() <= 100 && state > TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
         set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
       }
-      /*Serial.print("DC Bus Voltage: ");
-      Serial.println(mc_voltage_information.get_dc_bus_voltage());*/
-    }
-
-    if (msg.id == ID_MC_TORQUE_TIMER_INFORMATION) {
-      MC_torque_timer_information mc_torque_timer_information = MC_torque_timer_information(msg.buf);
-      Serial.print("Commanded torque: ");
-      Serial.print(mc_torque_timer_information.get_commanded_torque());
-      Serial.println(" Nm");
     }
   }
  
