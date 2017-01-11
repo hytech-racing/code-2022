@@ -91,6 +91,19 @@ class TCU_status {
     CAN_message_tcu_status_t message;
 };
 
+typedef struct CAN_message_bms_voltages_t {
+  int avgVoltage;
+  int lowVoltage;
+  int highVoltage;
+} CAN_message_bms_voltages;
+
+class BMS_voltages {
+  public:
+    BMS_voltages();
+    BMS_voltages(uint8_t buf[8]);
+    BMS_voltages(uint8_t)
+}
+
 typedef struct CAN_message_mc_temperatures_1_t {
   int16_t module_a_temperature;
   int16_t module_b_temperature;
