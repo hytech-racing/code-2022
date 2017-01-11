@@ -16,6 +16,22 @@ void MC_fault_codes::load(uint8_t buf[8]) {
   memcpy(&message, buf, sizeof(CAN_message_mc_fault_codes_t));
 }
 
+uint16_t MC_fault_codes::get_post_fault_lo() {
+  return message.post_fault_lo;
+}
+
+uint16_t MC_fault_codes::get_post_fault_hi() {
+  return message.post_fault_hi;
+}
+
+uint16_t MC_fault_codes::get_run_fault_lo() {
+  return message.run_fault_lo;
+}
+
+uint16_t MC_fault_codes::get_run_fault_hi() {
+  return message.run_fault_hi;
+}
+
 bool MC_fault_codes::get_post_lo_hw_gate_desaturation_fault() {
   return message.post_fault_lo && 0x0001;
 }

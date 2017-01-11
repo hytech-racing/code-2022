@@ -317,6 +317,10 @@ class MC_fault_codes {
     MC_fault_codes();
     MC_fault_codes(uint8_t buf[8]);
     void load(uint8_t buf[8]);
+    uint16_t get_post_fault_lo();
+    uint16_t get_post_fault_hi();
+    uint16_t get_run_fault_lo();
+    uint16_t get_run_fault_hi();
     bool get_post_lo_hw_gate_desaturation_fault();
     bool get_post_lo_hw_overcurrent_fault();
     bool get_post_lo_accelerator_shorted();
