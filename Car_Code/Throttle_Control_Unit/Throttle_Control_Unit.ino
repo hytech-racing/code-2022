@@ -81,32 +81,50 @@ void setup() {
     void loop() {
         while (CAN.read(msg)) {
             // TODO: Handle CAN messages from other components (e.g. MC, Dashboard)
-            PCU_status pcu_status(msg.buf);
             if (msg.id == ID_PCU_STATUS) {
+                PCU_status pcu_status(msg.buf);
                 if (pcu_status.get_bms_fault()) {
                     Serial.println("BMS Fault detected");
                 }
                 if (pcu_status.get_imd_fault()) {
                     Serial.println("IMD Fault detected");
                 }
-            }
-            switch (pcu_status.get_state()) {
-                // NOTE: see if this should be happening (depending on current TCU state)
-                case PCU_STATE_WAITING_BMS_IMD:
-                    set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
-                    break;
-                case PCU_STATE_WAITING_DRIVER:
-                    set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
-                    break;
-                case PCU_STATE_LATCHING:
-                    set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
-                    break;
-                case PCU_STATE_FATAL_FAULT:
-                    // assuming shutdown_circuit has opened
-                    set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
-                    break;
+                switch (pcu_status.get_state()) {
+                    // NOTE: see if this should be happening (depending on current TCU state)
+                    case PCU_STATE_WAITING_BMS_IMD:
+                        set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
+                        break;
+                    case PCU_STATE_WAITING_DRIVER:
+                        set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
+                        break;
+                    case PCU_STATE_LATCHING:
+                        set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
+                        break;
+                    case PCU_STATE_FATAL_FAULT:
+                        // assuming shutdown_circuit has opened
+                        set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
+                        break;
+                    case PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
+                        // TCU must wait until PCU in PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED to go into TCU_STATE_WAITING_TRACTIVE_SYSTEM
+                        if (state == TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED) {
+                            set_state(TCU_STATE_WAITING_TRACTIVE_SYSTEM);
+                        }
+                }
+            } else if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
+                MC_voltage_information mc_voltage_information(msg.buf);
+                if (state == TCU_STATE_WAITING_TRACTIVE_SYSTEM) {
+                    // This code checks (when waiting for tractive system) if the tractive system has turned on
+                    if (mc_voltage_information.get_dc_bus_voltage() > 100) {
+                        // Assume this condition is the way to check if tractive system is on
+                        set_state(TCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
+                        // NOTE: You must assume that for tractive system to turn on, the AIRs will be closed
+                    }
+                }
             }
         }
+
+        // CAN BUS
+// DC Bus voltage (Motor controller) is higher than 100 (v??)
 
         if (updateTimer.check()) {
             readValues();
@@ -117,7 +135,7 @@ void setup() {
             // TODO: deactivate tractive system if above returns true
             implausibilityTimer.reset();
         }
-        if(stateTimer.check()){
+        if (stateTimer.check()){
             sendCanUpdate();
             stateTimer.reset();
         }
@@ -125,13 +143,10 @@ void setup() {
             //TODO: check if reqs are met to move to each state
             case TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED:
                 // TCU must wait until PCU in SHUTDOWN_CIRCUIT_INITIALIZED state
-                if (pcu_status.get_state() == PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED) {
-                    state = TCU_STATE_WAITING_TRACTIVE_SYSTEM;
-                    tractiveTimeOut.reset(); // resets to check if time out
-                }
+                // NOTE Process handled in CAN message handler
                 break;
             case TCU_STATE_WAITING_TRACTIVE_SYSTEM:
-                // TODO: check if tractive system is active, &shutdown circuit closed
+                // TODO: check if tractive system is active, & shutdown circuit closed
                 // then change state to tractive system active
                 if (tractiveTimeOut.check()) {
                     // time out has occured, tractive system not active state
@@ -140,27 +155,32 @@ void setup() {
                 state = TCU_STATE_TRACTIVE_SYSTEM_ACTIVE;
                 break;
             case TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE:
-                // TODO
+                // Wait for AIRs to close - get from Main_ECU status, then change to tractive system
+                // NOTE: This process is handled in CAN message handler
                 state = TCU_STATE_TRACTIVE_SYSTEM_ACTIVE;
                 break;
             case TCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
                 // TODO - make sure start button and brake pressed
                 // REVIEW: TCU will check for brake and start button press immediately (no delay?)
+                // TODO: TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE if AIRs open
                 if (brakePedalActive) { // TODO: check Start button on dashboard - code has not been written yet
-                    set_state(TCU_STATE_ENABLING_INVERTER)
+                    set_state(TCU_STATE_ENABLING_INVERTER);
                 }
                 // NOTE: there is no timeout for the above state change
                 break;
             case TCU_STATE_ENABLING_INVERTER:
-                // TODO
+                // TODO: next state if inverter enabled
+                // TODO: TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE if AIRs open
                 state = TCU_STATE_WAITING_READY_TO_DRIVE_SOUND;
                 break;
             case TCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
-                // TODO
+                // TODO: sound goes off
+                // TODO: state change if sound finished
+                // TODO: TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE if AIRs open
                 state = TCU_STATE_READY_TO_DRIVE;
                 break;
             case TCU_STATE_READY_TO_DRIVE:
-                // TODO
+                // TODO: TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE if AIRs open
                 break;
         }
     }
