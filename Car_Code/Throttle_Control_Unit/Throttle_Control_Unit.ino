@@ -81,30 +81,35 @@ void setup() {
     void loop() {
         while (CAN.read(msg)) {
             // TODO: Handle CAN messages from other components (e.g. MC, Dashboard)
-            PCU_status pcu_status(msg.buf);
             if (msg.id == ID_PCU_STATUS) {
+                PCU_status pcu_status(msg.buf);
                 if (pcu_status.get_bms_fault()) {
                     Serial.println("BMS Fault detected");
                 }
                 if (pcu_status.get_imd_fault()) {
                     Serial.println("IMD Fault detected");
                 }
-            }
-            switch (pcu_status.get_state()) {
-                // NOTE: see if this should be happening (depending on current TCU state)
-                case PCU_STATE_WAITING_BMS_IMD:
-                    set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
-                    break;
-                case PCU_STATE_WAITING_DRIVER:
-                    set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
-                    break;
-                case PCU_STATE_LATCHING:
-                    set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
-                    break;
-                case PCU_STATE_FATAL_FAULT:
-                    // assuming shutdown_circuit has opened
-                    set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
-                    break;
+                switch (pcu_status.get_state()) {
+                    // NOTE: see if this should be happening (depending on current TCU state)
+                    case PCU_STATE_WAITING_BMS_IMD:
+                        set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
+                        break;
+                    case PCU_STATE_WAITING_DRIVER:
+                        set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
+                        break;
+                    case PCU_STATE_LATCHING:
+                        set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
+                        break;
+                    case PCU_STATE_FATAL_FAULT:
+                        // assuming shutdown_circuit has opened
+                        set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
+                        break;
+                    case PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
+                        // TCU must wait until PCU in PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED to go into TCU_STATE_WAITING_TRACTIVE_SYSTEM
+                        if (state == TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED) {
+                            set_state(TCU_STATE_WAITING_TRACTIVE_SYSTEM);
+                        }
+                }
             }
         }
 
@@ -131,7 +136,7 @@ void setup() {
                 }
                 break;
             case TCU_STATE_WAITING_TRACTIVE_SYSTEM:
-                // TODO: check if tractive system is active, &shutdown circuit closed
+                // TODO: check if tractive system is active, & shutdown circuit closed
                 // then change state to tractive system active
                 if (tractiveTimeOut.check()) {
                     // time out has occured, tractive system not active state
