@@ -145,27 +145,32 @@ void setup() {
                 state = TCU_STATE_TRACTIVE_SYSTEM_ACTIVE;
                 break;
             case TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE:
-                // TODO
+                // Wait for AIRs to close - get from Main_ECU status, then change to tractive system
+                // NOTE: This process is handled in CAN message handler
                 state = TCU_STATE_TRACTIVE_SYSTEM_ACTIVE;
                 break;
             case TCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
                 // TODO - make sure start button and brake pressed
                 // REVIEW: TCU will check for brake and start button press immediately (no delay?)
+                // TODO: TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE if AIRs open
                 if (brakePedalActive) { // TODO: check Start button on dashboard - code has not been written yet
-                    set_state(TCU_STATE_ENABLING_INVERTER)
+                    set_state(TCU_STATE_ENABLING_INVERTER);
                 }
                 // NOTE: there is no timeout for the above state change
                 break;
             case TCU_STATE_ENABLING_INVERTER:
-                // TODO
+                // TODO: next state if inverter enabled
+                // TODO: TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE if AIRs open
                 state = TCU_STATE_WAITING_READY_TO_DRIVE_SOUND;
                 break;
             case TCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
-                // TODO
+                // TODO: sound goes off
+                // TODO: state change if sound finished
+                // TODO: TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE if AIRs open
                 state = TCU_STATE_READY_TO_DRIVE;
                 break;
             case TCU_STATE_READY_TO_DRIVE:
-                // TODO
+                // TODO: TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE if AIRs open
                 break;
         }
     }
