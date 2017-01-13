@@ -110,8 +110,21 @@ void setup() {
                             set_state(TCU_STATE_WAITING_TRACTIVE_SYSTEM);
                         }
                 }
+            } else if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
+                MC_voltage_information mc_voltage_information(msg.buf);
+                if (state == TCU_STATE_WAITING_TRACTIVE_SYSTEM) {
+                    // This code checks (when waiting for tractive system) if the tractive system has turned on
+                    if (mc_voltage_information.get_dc_bus_voltage() > 100) {
+                        // Assume this condition is the way to check if tractive system is on
+                        set_state(TCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
+                        // NOTE: You must assume that for tractive system to turn on, the AIRs will be closed
+                    }
+                }
             }
         }
+
+        // CAN BUS
+// DC Bus voltage (Motor controller) is higher than 100 (v??)
 
         if (updateTimer.check()) {
             readValues();
@@ -122,7 +135,7 @@ void setup() {
             // TODO: deactivate tractive system if above returns true
             implausibilityTimer.reset();
         }
-        if(stateTimer.check()){
+        if (stateTimer.check()){
             sendCanUpdate();
             stateTimer.reset();
         }
@@ -130,10 +143,7 @@ void setup() {
             //TODO: check if reqs are met to move to each state
             case TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED:
                 // TCU must wait until PCU in SHUTDOWN_CIRCUIT_INITIALIZED state
-                if (pcu_status.get_state() == PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED) {
-                    state = TCU_STATE_WAITING_TRACTIVE_SYSTEM;
-                    tractiveTimeOut.reset(); // resets to check if time out
-                }
+                // NOTE Process handled in CAN message handler
                 break;
             case TCU_STATE_WAITING_TRACTIVE_SYSTEM:
                 // TODO: check if tractive system is active, & shutdown circuit closed
