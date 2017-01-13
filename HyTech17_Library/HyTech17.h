@@ -46,6 +46,14 @@
 #define ID_MC_READ_WRITE_PARAMETER_RESPONSE 0xC2
 
 /*
+ * A GENERAL_NOTE: the load functions in these classes take a byte array containing data from a CAN read.
+ * The data contained in this byte array is used to populate the object.
+ *
+ * A GENERAL_NOTE: The write functions in these classes take a byte array that is meant to be populated 
+ * with the data contained in the object. The byte array can then be written to CAN.
+ */
+
+/*
  * CAN message structs and classes
  */
 typedef struct CAN_message_pcu_status_t {
@@ -92,16 +100,26 @@ class TCU_status {
 };
 
 typedef struct CAN_message_bms_voltages_t {
-  int avgVoltage;
-  int lowVoltage;
-  int highVoltage;
+  uint16_t avgVoltage;
+  uint16_t lowVoltage;
+  uint16_t highVoltage;
 } CAN_message_bms_voltages;
 
 class BMS_voltages {
   public:
     BMS_voltages();
-    BMS_voltages(uint8_t buf[8]);
-    BMS_voltages(uint8_t)
+    BMS_voltages(uint8_t buf[]);
+    BMS_voltages(uint16_t avg, uint16_t low, uint16_t high);
+    void load(uint8_t buf[]);
+    void write(uint8_t buf[]);
+    uint16_t getAverage();
+    uint16_t getLow();
+    uint16_t getHigh();
+    void setAverage(uint16_t avg);
+    void setLow(uint16_t low);
+    void setHigh(uint16_t high);
+  private:
+    CAN_message_bms_voltages bmsVoltages;
 }
 
 typedef struct CAN_message_mc_temperatures_1_t {
@@ -174,8 +192,8 @@ typedef struct CAN_message_mc_analog_input_voltages_t {
 class MC_analog_input_voltages {
   public:
     MC_analog_input_voltages();
-    MC_analog_input_voltages(uint8_t buf[8]);
-    void load(uint8_t buf[8]);
+    MC_analog_input_voltages(uint8_t buf[]);
+    void load(uint8_t buf[]);
     int16_t get_analog_input_1();
     int16_t get_analog_input_2();
     int16_t get_analog_input_3();
