@@ -11,8 +11,6 @@
 #include "LTC68041.h"
 #include "HyTech17.h"
 #include <SPI.h>
-#include <FlexCAN.h>
-#include <kinetis_flexcan.h>
 
 /************BATTERY CONSTRAINTS AND CONSTANTS**********************/
 #define VOLTAGE_LOW_CUTOFF 3.0
@@ -29,7 +27,7 @@
 #define MAX_16BIT_UNSIGNED 65536
 
 /********GLOBAL ARRAYS/VARIABLES CONTAINING DATA FROM CHIP**********/
-const uint8_t TOTAL_IC = 8;
+const uint8_t TOTAL_IC = 1;
 uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages
 uint16_t aux_voltagess[TOTAL_IC][6]; // contains auxillary pin voltages (not batteries)
 
@@ -55,13 +53,6 @@ uint8_t tx_cfg[TOTAL_IC][6]; // data defining how data will be written to daisy 
 */
 uint8_t rx_cfg[TOTAL_IC][8];
 
-/**
- * CAN Variables
- */
-FlexCAN can(500000);
-static CAN_message_t msg;
-long msTimer = 0;
-
 /************CAN MESSAGE ID's **********************/
 #define SHUTDOWN_FAULT 0x001
 #define HIGHEST_CELL_VOLTAGE 0x0B0
@@ -86,34 +77,11 @@ ChargeState chargeState = DISCHARGE;
 boolean BMSStatusOK;
 boolean tractiveSystemOn;
 
-/**
- * Teensy Communication Pin Constants
- */
-#define MOSI_PIN 17
-#define MISO_PIN 16
-#define SPI_CHIP_SELECT_PIN 15
-#define CLOCK_PIN 14
-#define T_WAKE 50
-
-// TODO: Calculate Internal Resistance: measure current, measure total voltage, calculate resistance, then do something to adjust the voltage measurement.
-// TODO: Current goes Negative during Regen Braking.
-// TODO: Implement Coulomb counting to track state of charge of battery.
-// TODO: Switching between discharge and charge very often.
-// TODO: Write Threshold Values into Configuration Registers
-// TODO: Organize Telemetry Messages into a SINGLE CAN message
-void setup() {
-    // put your setup code here, to run once:
-    Serial.begin(115200);
-    SPI.setMOSI(MOSI_PIN);
-    SPI.setMISO(MISO_PIN);
-    SPI.setSCK(CLOCK_PIN);
-    pinMode(SPI_CHIP_SELECT_PIN, OUTPUT);
-    SPI.begin();
-
-    LTC6804_initialize();
-    init_cfg();
-    can.begin();
-    BMSStatusOK = true;
+void setup()                  
+{
+  Serial.begin(115200);
+  LTC6804_initialize();  //Initialize LTC6804 hardware
+  init_cfg();        //initialize the 6804 configuration array to be written
 }
 
 /*
@@ -121,61 +89,17 @@ void setup() {
  */
 void loop() {
     // put your main code here, to run repeatedly:
+    waitForUserInput();
     pollVoltage();
     printCells();
-
-    while (can.read(msg)) {
-        switch (msg.id) {
-        case 0x001: // Fault Detected
-            {
-                BMSStatusOK = false;
-                Serial.print("SHUTDOWN RECEIVED");
-                printCanMessage();
-            } break;
-//        case 0x0BC:
-//            {
-//                unsigned char chargeStateBit = msg.buf[0] >> 7;
-//                if (chargeStateBit == 0) {
-//                    chargeState = DISCHARGE;
-//                } else if (chargeStateBit == 1) {
-//                    chargeState = CHARGE;
-//                }
-//                Serial.print("Charge State Received");
-//                printCanMessage();
-//            } break;
-        default:
-            {
-                printCanMessage();
-            } break;
-        }
-    }
 
     int maxV = convertToMillivolts(findMaxVoltage());
     int minV = convertToMillivolts(findMinVoltage());
     int avgV = findAverage();
 
-    if (!(voltageInBounds(maxV) && voltageInBounds(minV))) {
-        BMSStatusOK = false;
-        writeShutdownCANMessage(minV, maxV);
-    }
-
-    // write max voltage to CAN as telemetry
-    msg.id = HIGHEST_CELL_VOLTAGE;
-    msg.len = sizeof(int);
-    memcpy(&msg.buf[0], &maxV, sizeof(int));
-    can.write(msg);
-
-    // write min voltage to CAN as telemetry
-    msg.id = LOWEST_CELL_VOLTAGE;
-    msg.len = (sizeof(int));
-    memcpy(&msg.buf[0], &minV, sizeof(int));
-    can.write(msg);
-
-    // write avg voltage to can as telemetry
-    msg.id = AVG_CELL_VOLTAGE;
-    msg.len = sizeof(int);
-    memcpy(&msg.buf[0], &avgV, sizeof(int));
-    can.write(msg);
+    Serial.print("Max Voltage: "); Serial.println(maxV);
+    Serial.print("Min Voltage: "); Serial.println(minV);
+    Serial.print("Average Voltage: "); Serial.println(avgV);
 }
 
 /*!***********************************
@@ -292,23 +216,18 @@ void printCells() {
     }
 }
 
-int writeShutdownCANMessage(int minV, int maxV) {
-    msg.id = SHUTDOWN_FAULT;
-    msg.len = 2 * sizeof(int);
-    int counter = 0;
-    memcpy(&msg.buf[counter], &maxV, sizeof(int));
-    counter += sizeof(int);
-    memcpy(&msg.buf[counter], &minV, sizeof(int));
-    return can.write(msg);
+void waitForUserInput() {
+    if (Serial.available()) {
+        while (Serial.available()) {
+            Serial.read();
+        }
+    } // clear buffer
+    Serial.println("Continue?");
+    while (!Serial.available()) {
+        // wait for input
+    }
+    while (Serial.available()) {
+        Serial.read();
+    } // clear buffer
 }
 
-void printCanMessage() {
-    uint8_t len = msg.len;
-    Serial.print("ID: ");
-    Serial.println(msg.id);
-    Serial.print("MESSAGE: ");
-    for (uint8_t i = 0; i < len; i++) {
-        Serial.print(msg.buf[i]);
-    }
-    Serial.println();
-}
