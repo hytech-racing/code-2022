@@ -326,9 +326,9 @@ void loop() {
 
     case TCU_STATE_READY_TO_DRIVE:
     if (timer_motor_controller_send.check()) {
-      int torque = button_torque;
+      uint16_t torque = button_torque;
       Serial.println(torque);
-      MC_command_message message = MC_command_message(torque, 0, false, true, false, 0);
+      MC_command_message message = MC_command_message(torque, 0, 1, 1, 0, 0);
       message.write(msg.buf);
       msg.id = 0xC0;
       msg.len = 8;
@@ -345,9 +345,9 @@ void loop() {
     msg.id = ID_MC_COMMAND_MESSAGE;
     msg.len = 8;
     if (state < TCU_STATE_ENABLING_INVERTER) {
-      generate_MC_message(msg.buf, 0, false, false);
+      generate_MC_message(msg.buf, 0, true, false);
     } else if (state < TCU_STATE_READY_TO_DRIVE) {
-      generate_MC_message(msg.buf, 0, false, true);
+      generate_MC_message(msg.buf, 0, true, true);
     }
     CAN.write(msg);
   }
@@ -380,8 +380,8 @@ void loop() {
       btn_cycle_id++;
       Serial.print("Cycle button pressed id ");
       Serial.println(btn_cycle_id);
-      if (button_torque < 500 && state == TCU_STATE_READY_TO_DRIVE) {
-        button_torque += 10;
+      if (button_torque < 1000 && state == TCU_STATE_READY_TO_DRIVE) {
+        button_torque += 50;
       }
     }
   }
@@ -422,9 +422,9 @@ void loop() {
       Serial.print("Toggle button pressed id ");
       Serial.println(btn_toggle_id);
       if (button_torque > 0 && state == TCU_STATE_READY_TO_DRIVE) {
-        button_torque -= 20;
+        button_torque -= 100;
       }
-      if (button_torque > 500) {
+      if (button_torque > 1000) {
         button_torque = 0;
       }
     }
@@ -527,13 +527,13 @@ void set_state(uint8_t new_state) {
     msg.id = 0xC0;
     msg.len = 8;
     for(int i = 0; i < 10; i++) {
-      generate_MC_message(msg.buf,0,false,true); // many enable commands
+      generate_MC_message(msg.buf,0,true,true); // many enable commands
       CAN.write(msg);
     }
-    generate_MC_message(msg.buf,0,false,false); // disable command
+    generate_MC_message(msg.buf,0,true,false); // disable command
     CAN.write(msg);
     for(int i = 0; i < 10; i++) {
-      generate_MC_message(msg.buf,0,false,true); // many more enable commands
+      generate_MC_message(msg.buf,0,true,true); // many more enable commands
       CAN.write(msg);
     }
     Serial.println("Sent enable command");
