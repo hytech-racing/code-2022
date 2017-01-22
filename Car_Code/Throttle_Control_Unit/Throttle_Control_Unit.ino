@@ -42,13 +42,13 @@ bool torqueShutdown = false;
 // FUNCTION PROTOTYPES
 void readValues();
 bool checkDeactivateTractiveSystem();
-int sendCanUpdate();
+int sendCANUpdate();
 
 // State - use HyTech library
 uint8_t state;
 
 // timer
-Metro stateTimer = Metro(500); // Used for how often to send state
+Metro CANUpdateTimer = Metro(500); // Used for how often to send state
 Metro updateTimer = Metro(500); // Read in values from pins
 Metro implausibilityTimer = Metro(50); // Used for throttle error check
 Metro throttleTimer = Metro(500); // Used for sending commands to Motor Controller
@@ -66,7 +66,7 @@ void setup() {
     pinMode(THROTTLE_PORT_1, INPUT_PULLUP);
     pinMode(THROTTLE_PORT_2, INPUT_PULLUP);
     //open circuit will show a high signal outside of the working range of the sensor.
-    state = TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED;
+    set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
 }
 
 
@@ -92,7 +92,9 @@ void setup() {
                 switch (pcu_status.get_state()) {
                     // NOTE: see if this should be happening (depending on current TCU state)
                     case PCU_STATE_WAITING_BMS_IMD:
+                        break;
                     case PCU_STATE_WAITING_DRIVER:
+                        break;
                     case PCU_STATE_LATCHING:
                         set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
                         break;
@@ -132,13 +134,14 @@ void setup() {
             // TODO: deactivate tractive system if above returns true
             implausibilityTimer.reset();
         }
-        if (stateTimer.check()){
-            sendCanUpdate();
-            stateTimer.reset();
+        if (CANUpdateTimer.check()){
+            sendCANUpdate();
+            CANUpdateTimer.reset();
         }
         switch(state) {
             //TODO: check if reqs are met to move to each state
             case TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED:
+                break;
             case TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE:
                 // TCU must wait until PCU in SHUTDOWN_CIRCUIT_INITIALIZED state
                 // NOTE: Process handled in CAN message handler
@@ -149,9 +152,9 @@ void setup() {
                 // NOTE: Don't know why we need both this and the CAN check we have above
                 if (tractiveTimeOut.check()) {
                     // time out has occured, tractive system not active state
-                    state = TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE;
+                    set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
                 } else {
-                    state = TCU_STATE_TRACTIVE_SYSTEM_ACTIVE;
+                    set_state(TCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
                 }
                 break;
             case TCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
@@ -164,12 +167,12 @@ void setup() {
                 break;
             case TCU_STATE_ENABLING_INVERTER:
                 // TODO: next state if inverter enabled
-                state = TCU_STATE_WAITING_READY_TO_DRIVE_SOUND;
+                set_state(TCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
                 break;
             case TCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
                 // TODO: sound goes off
                 // TODO: state change if sound finished
-                state = TCU_STATE_READY_TO_DRIVE;
+                set_state(TCU_STATE_READY_TO_DRIVE);
                 break;
             case TCU_STATE_READY_TO_DRIVE:
                 break;
@@ -239,7 +242,7 @@ bool checkDeactivateTractiveSystem() {
     }
 }
 
-int sendCanUpdate(){
+int sendCANUpdate(){
     short shortThrottle1 = (short) voltageThrottlePedal1 * 100;
     short shortThrottle2 = (short) voltageThrottlePedal2 * 100;
     short shortBrake = (short) voltageBrakePedal * 100;
@@ -270,36 +273,27 @@ int sendCanUpdate(){
 
     return temp1 + temp2; // used for error checking?
 
-    // The Throttle Control Unit should periodically send out messages on CAN Bus detailing its current state including:
-        // Raw throttle input values
-        // Implausibility status
-        // Throttle curve in use (normal or boost)
-        // Temperature as read by onboard thermistor
-        // Brake System Plausibility Device status (boolean indicating whether a fault has occurred)
-        // Brake Pedal Active (boolean used by Power Control Unit to control brake lights)
-    // The following Inverter Initialization states should be sent in a CAN Bus message periodically as well as immediately upon change of state.
-        // Waiting for Shutdown Circuit Initialization
-        // Waiting for Tractive System Active
-        // Waiting for driver (start button and brake pedal haven’t been pressed)
-        // Enabling inverter (sent enable command, waiting for Ready to Drive Sound)
-        // Ready to Drive (vehicle responds to throttle)
-
 }
 
 void set_state(uint8_t new_state) {
     if (state == new_state) {
         return; // don't do anything if same state
+    } else if (new_state == TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED) {
+        // setup() call
+        state = TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED;
+    } else {
+        switch (state) {
+            // TODO handle state transitions
+            case TCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
+                if (new_state == TCU_STATE_ENABLING_INVERTER) {
+                    state = TCU_STATE_ENABLING_INVERTER;
+                }
+                break;
+            default:
+                uint8_t old_state = state;
+                state = new_state;
+                break;
+        }
     }
-    switch (state) {
-        // TODO handle state transitions
-        case TCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
-            if (new_state == TCU_STATE_ENABLING_INVERTER) {
-                state = TCU_STATE_ENABLING_INVERTER;
-            }
-            break;
-        default:
-            uint8_t old_state = state;
-            state = new_state;
-            break;
-    }
+    sendCANUpdate(); // New message sent since change of state
 }
