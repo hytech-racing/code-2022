@@ -69,137 +69,107 @@ void setup() {
     set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
 }
 
-
-//FSAE requires that torque be shut off if an implausibility persists for over 100 msec (EV2.3.5).
-    //A deviation of more than 10% pedal travel between the two throttle sensors
-    //A failure of position sensor wiring which can cause an open circuit, short to ground, or short to sensor power.
-
-    //To detect a position sensor wiring failure
-    //find the ranges of values coming from each sensor during normal operation of the foot pedals
-    //Any values outside of these ranges could be caused by an open circuit, short to ground, or short to sensor power.
-
-    void loop() {
-        while (CAN.read(msg)) {
-            // TODO: Handle CAN messages from other components (e.g. MC, Dashboard)
-            if (msg.id == ID_PCU_STATUS) {
-                PCU_status pcu_status(msg.buf);
-                if (pcu_status.get_bms_fault()) {
-                    Serial.println("BMS Fault detected");
-                }
-                if (pcu_status.get_imd_fault()) {
-                    Serial.println("IMD Fault detected");
-                }
-                switch (pcu_status.get_state()) {
-                    // NOTE: see if this should be happening (depending on current TCU state)
-                    case PCU_STATE_WAITING_BMS_IMD:
-                        break;
-                    case PCU_STATE_WAITING_DRIVER:
-                        break;
-                    case PCU_STATE_LATCHING:
-                        set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
-                        break;
-                    case PCU_STATE_FATAL_FAULT:
-                        // assuming shutdown_circuit has opened
-                        set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
-                        break;
-                    case PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
-                        // TCU must wait until PCU in PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED to go into TCU_STATE_WAITING_TRACTIVE_SYSTEM
-                        if (state == TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED || state == TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
-                            set_state(TCU_STATE_WAITING_TRACTIVE_SYSTEM);
-                        }
-                        break;
-                }
-            } else if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
-                MC_voltage_information mc_voltage_information(msg.buf);
-                if (state == TCU_STATE_WAITING_TRACTIVE_SYSTEM) {
-                    // This code checks (when waiting for tractive system) if the tractive system has turned on
-                    if (mc_voltage_information.get_dc_bus_voltage() > 100) {
-                        // Assume this condition is the way to check if tractive system is on
-                        set_state(TCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
-                        // NOTE: You must assume that for tractive system to turn on, the AIRs will be closed
+void loop() {
+    while (CAN.read(msg)) {
+        // TODO: Handle CAN messages from other components (e.g. MC, Dashboard)
+        if (msg.id == ID_PCU_STATUS) {
+            PCU_status pcu_status(msg.buf);
+            if (pcu_status.get_bms_fault()) {
+                Serial.println("BMS Fault detected");
+            }
+            if (pcu_status.get_imd_fault()) {
+                Serial.println("IMD Fault detected");
+            }
+            switch (pcu_status.get_state()) {
+                // NOTE: see if this should be happening (depending on current TCU state)
+                case PCU_STATE_WAITING_BMS_IMD:
+                    break;
+                case PCU_STATE_WAITING_DRIVER:
+                    break;
+                case PCU_STATE_LATCHING:
+                    set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
+                    break;
+                case PCU_STATE_FATAL_FAULT:
+                    // assuming shutdown_circuit has opened
+                    set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
+                    break;
+                case PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
+                    // TCU must wait until PCU in PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED to go into TCU_STATE_WAITING_TRACTIVE_SYSTEM
+                    if (state == TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED || state == TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
+                        set_state(TCU_STATE_WAITING_TRACTIVE_SYSTEM);
                     }
+                    break;
+            }
+        } else if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
+            MC_voltage_information mc_voltage_information(msg.buf);
+            if (state == TCU_STATE_WAITING_TRACTIVE_SYSTEM) {
+                // This code checks (when waiting for tractive system) if the tractive system has turned on
+                if (mc_voltage_information.get_dc_bus_voltage() > 100) {
+                    // Assume this condition is the way to check if tractive system is on
+                    set_state(TCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
+                    // NOTE: You must assume that for tractive system to turn on, the AIRs will be closed
                 }
             }
         }
+    }
 
-        // CAN BUS
+    // CAN BUS
 // DC Bus voltage (Motor controller) is higher than 100 (v??)
 
-        if (updateTimer.check()) {
-            readValues();
-            updateTimer.reset();
-        }
-        if (implausibilityTimer.check()) {
-            checkDeactivateTractiveSystem();
-            // TODO: deactivate tractive system if above returns true
-            implausibilityTimer.reset();
-        }
-        if (CANUpdateTimer.check()){
-            sendCANUpdate();
-            CANUpdateTimer.reset();
-        }
-        switch(state) {
-            //TODO: check if reqs are met to move to each state
-            case TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED:
-                break;
-            case TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE:
-                // TCU must wait until PCU in SHUTDOWN_CIRCUIT_INITIALIZED state
-                // NOTE: Process handled in CAN message handler
-                break;
-            case TCU_STATE_WAITING_TRACTIVE_SYSTEM:
-                // TODO: check if tractive system is active, & shutdown circuit closed
-                // then change state to tractive system active
-                // NOTE: Don't know why we need both this and the CAN check we have above
-                if (tractiveTimeOut.check()) {
-                    // time out has occured, tractive system not active state
-                    set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
-                } else {
-                    set_state(TCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
-                }
-                break;
-            case TCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
-                // TODO - make sure start button and brake pressed
-                // REVIEW: TCU will check for brake and start button press immediately (no delay?)
-                if (brakePedalActive) { // TODO: check Start button on dashboard - code has not been written yet
-                    set_state(TCU_STATE_ENABLING_INVERTER);
-                }
-                // NOTE: there is no timeout for the above state change
-                break;
-            case TCU_STATE_ENABLING_INVERTER:
-                // TODO: next state if inverter enabled
-                set_state(TCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
-                break;
-            case TCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
-                // TODO: sound goes off
-                // TODO: state change if sound finished
-                set_state(TCU_STATE_READY_TO_DRIVE);
-                break;
-            case TCU_STATE_READY_TO_DRIVE:
-                break;
-        }
+    if (updateTimer.check()) {
+        readValues();
+        updateTimer.reset();
     }
-    // Steps of State machine:
-        // Wait for the Power Control Unit to send a CAN Bus message showing that it has entered the Shutdown Circuit Initialized state
-        // Check if the Tractive System is really active. There will be a periodic message on the CAN Bus indicating if the Tractive System is active. This message may originate from the motor controller, or a HyTech ECU. When the Tractive System is active, proceed to the Tractive System Active state. If the Tractive System never activates or becomes inactive, the Throttle Control Unit should enter the Tractive System Not Active state.
-        // The driver must press the Start Button on the dashboard, and press the brake pedal simultaneously to proceed. Wait for a CAN Bus message showing the Start Button is pressed, along with detecting that the brake pedal is simultaneously pressed. The brake pedal threshold should be the same required to light up the brake lights.
-        // Send the Inverter Enable command to the Rinehart PM100DX motor controller. Then wait for the motor controller to return a message that the inverter is enabled.
-        // If the inverter successfully enables, send a Ready to Drive Sound (RTDS) Enable message on CAN Bus for the Dashboard Control Unit to read.
-        // The Dashboard Control Unit will read the RTDS Enable message and sound the RTDS. After the RTDS, the Dashboard ECU will send a Ready to Drive Sound Finished message onto CAN Bus. The Throttle Control Unit should wait for this message, then enter Ready to Drive state, sending torque commands to the motor controller.
-        // If after timeout periods the inverter does not successfully enable or RTDS does not sound, send an inverter disable message then proceed back to step 3 and wait for the driver to press the start button and brake pedal (TODO maybe this should declare a fault; any thoughts about sending inverter disable message?)
-        // If there is a Software Fault, BMS Fault, or IMD Fault, the Power Control Unit will enter a Fatal Fault state. Since the tractive system will be disabled, the Throttle Control Unit should enter the Tractive System Not Active State outlined in Step 2. (TODO maybe revert this to entering a fatal fault state)
-
-    //Error Message Instructions
-    //an error message should be sent out on CAN Bus detailing which implausibility has been detected.
-    //periodically sent until the implausibility ceases to exist.
-    //If the implausibility ceases, a corresponding message should be sent on CAN Bus.
-    //If an implausibility ceases to be detected, normal throttle controls should be reinstated
-    //i.e. the vehicle does not need to be restarted to reset an implausibility fault.
-/*
-int giveError(int errorID) {
-   CAN.write(errorID)
-   return 1; //placeholder
+    if (implausibilityTimer.check()) {
+        checkDeactivateTractiveSystem();
+        // TODO: deactivate tractive system if above returns true
+        implausibilityTimer.reset();
+    }
+    if (CANUpdateTimer.check()){
+        sendCANUpdate();
+        CANUpdateTimer.reset();
+    }
+    switch(state) {
+        //TODO: check if reqs are met to move to each state
+        case TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED:
+            break;
+        case TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE:
+            // TCU must wait until PCU in SHUTDOWN_CIRCUIT_INITIALIZED state
+            // NOTE: Process handled in CAN message handler
+            break;
+        case TCU_STATE_WAITING_TRACTIVE_SYSTEM:
+            // TODO: check if tractive system is active, & shutdown circuit closed
+            // then change state to tractive system active
+            // NOTE: Don't know why we need both this and the CAN check we have above
+            if (tractiveTimeOut.check()) {
+                // time out has occured, tractive system not active state
+                set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
+            } else {
+                set_state(TCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
+            }
+            break;
+        case TCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
+            // TODO - make sure start button and brake pressed
+            // REVIEW: TCU will check for brake and start button press immediately (no delay?)
+            if (brakePedalActive) { // TODO: check Start button on dashboard - code has not been written yet
+                set_state(TCU_STATE_ENABLING_INVERTER);
+            }
+            // NOTE: there is no timeout for the above state change
+            break;
+        case TCU_STATE_ENABLING_INVERTER:
+            // TODO: next state if inverter enabled
+            set_state(TCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
+            break;
+        case TCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
+            // TODO: sound goes off
+            // TODO: state change if sound finished
+            set_state(TCU_STATE_READY_TO_DRIVE);
+            break;
+        case TCU_STATE_READY_TO_DRIVE:
+            break;
+    }
 }
-*/
+
 void readValues() {
     voltageThrottlePedal1 = analogRead(THROTTLE_PORT_1);
     voltageThrottlePedal2 = analogRead(THROTTLE_PORT_2);
