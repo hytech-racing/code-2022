@@ -120,10 +120,8 @@ void loop() {
         readValues();
         updateTimer.reset();
     }
-    if (implausibilityTimer.check()) {
-        checkDeactivateTractiveSystem();
-        // TODO: deactivate tractive system if above returns true
-        implausibilityTimer.reset();
+    checkDeactivateTractiveSystem();
+    // TODO: deactivate tractive system if above returns true
     }
     if (CANUpdateTimer.check()){
         sendCANUpdate();
@@ -182,18 +180,17 @@ bool checkDeactivateTractiveSystem() {
     // Throttle 10% check
     float deviationCheck = ((float) voltageThrottlePedal1) / ((float) voltageThrottlePedal2);
     if (deviationCheck > 1.10 || (1 / deviationCheck) > 1.10) {
-        throttleImplausibility = true;
+        throttleImplausibility = implausibilityTimer.check();
     } else if (voltageThrottlePedal1 < MIN_THROTTLE_1 || voltageThrottlePedal2 < MIN_THROTTLE_2) {
         // Checks for failure of position sensor wiring
         // Check for open circuit or short to ground
-        throttleImplausibility = true;
-
+        throttleImplausibility = implausibilityTimer.check();
     } else if (voltageThrottlePedal1 > MAX_THROTTLE_1 || voltageThrottlePedal2 > MAX_THROTTLE_2) {
         // Check for short to power
-        throttleImplausibility = true;
+        throttleImplausibility = implausibilityTimer.check();
     } else {
         // No throttle implausibility detected
-        throttleImplausibility = false;
+        implausibilityTimer.reset();
     }
 
     // Check brake pedal sensor
@@ -204,7 +201,7 @@ bool checkDeactivateTractiveSystem() {
         brakeImplausibility = false;
     }
 
-    // return true if any implausibility present
+    // return true if implausibility passes time threshold
     if (throttleImplausibility || brakeImplausibility) {
         return true;
     } else {
