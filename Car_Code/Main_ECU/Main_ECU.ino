@@ -104,7 +104,7 @@ void loop() {
         }
       }
     }
-    
+
     //check CAN for a message for software shutdown
     if (!startupDone) {
         switch (curState) {
@@ -129,7 +129,7 @@ void loop() {
                 stateOutput = 0b00000010;
                 Serial.println("Waiting for start button...");
                 /*can message for start button press received*/
-                 
+
                 if (startPressed || FAKE_DRIVER_BUTTON_PRESS.check()) {
                     AIRtimer.reset();
                     Serial.println("Latching...");
@@ -185,12 +185,12 @@ bool readValues() {
     thermTemp /= BCONSTANT;
     thermTemp += 1.0 / (TEMPERATURENOMINAL + 273.15);
     thermTemp = 1.0 / thermTemp;
-    thermTemp -= 273.15;  
+    thermTemp -= 273.15;
     return true;
 
 }
 
-bool checkFatalFault() { // returns true if fatal fault found 
+bool checkFatalFault() { // returns true if fatal fault found
     CAN_message_t faultMsg;
     faultMsg.buf[0] = 0;
     if (curState == waitDriver || curState == AIRClose || curState == drive) {
@@ -200,13 +200,13 @@ bool checkFatalFault() { // returns true if fatal fault found
           faultMsg.buf[0] = faultMsg.buf[0] | BMS_FAULT;
       }
     }
-        
+
     while (CAN.read(msg)) {
         if (msg.id == 0x0001) {
             faultMsg.buf[0] = faultMsg.buf[0] | BSPD_FAULT;
         }
     }
-    
+
 
     if (faultMsg.buf[0] != 0) {
         Serial.println("FATAL FAULT OCCURRED");
@@ -223,10 +223,6 @@ bool checkFatalFault() { // returns true if fatal fault found
         return false;
     }
 }
-
-//bool sendCanMessage(int address, int msgLength, int data){
-//  
-//}
 
 int sendCanUpdate(){
 
@@ -249,7 +245,7 @@ int sendCanUpdate(){
     bool okhsCheck = OKHS >= IMD_High;
     bool dischargeCheck = DISCHARGE_OK >= BMS_High;
     short shortTemp = (short) thermTemp * 100;
-    
+
     msg.id = 0x51;
     msg.len = 5;
     memcpy(&msg.buf[0], &shortTemp, sizeof(short));
@@ -261,4 +257,3 @@ int sendCanUpdate(){
 
     return temp1 + temp2;
 }
-
