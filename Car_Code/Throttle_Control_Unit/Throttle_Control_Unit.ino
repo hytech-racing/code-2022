@@ -33,10 +33,7 @@ float thermTemp = 0.0; // temperature of onboard thermistor
 bool brakeImplausibility = false; // fault if BSPD signal too low - still to be designed
 bool brakePedalActive = false; // true if brake is considered pressed
 
-// FSAE requires that torque be shut off if an implausibility persists for over 100 msec (EV2.3.5).
-// TODO check for checkDeactivateTractiveSystem() (when true) for 100ms of true
-//A deviation of more than 10% pedal travel between the two throttle sensors
-//A failure of position sensor wiring which can cause an open circuit, short to ground, or short to sensor power.
+// FSAE requires that torque be shut off if an implausibility persists for over 100 msec (EV3.5.4).
 bool torqueShutdown = false;
 
 // FUNCTION PROTOTYPES
@@ -97,6 +94,9 @@ void loop() {
                     // TCU must wait until PCU in PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED to go into TCU_STATE_WAITING_TRACTIVE_SYSTEM
                     if (state == TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED || state == TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
                         set_state(TCU_STATE_WAITING_TRACTIVE_SYSTEM);
+
+                        // reset tractive system timeout
+                        tractiveTimeOut.reset();
                     }
                     break;
             }
@@ -114,17 +114,19 @@ void loop() {
     }
 
     // CAN BUS
-// DC Bus voltage (Motor controller) is higher than 100 (v??)
+    // DC Bus voltage (Motor controller) is higher than 100 (v??)
 
     if (updateTimer.check()) {
         readValues();
         updateTimer.reset();
     }
+
     // implausibility Timer checking
     if (!checkDeactivateTractiveSystem()) {
-        implausibilityTimer.reset();
         // timer reset if you should not deactivate tractive system
+        implausibilityTimer.reset();
     } else {
+        // Cannot be restarted by driver (EV7.9.3)
         torqueShutdown = true;
     }
 
@@ -141,23 +143,23 @@ void loop() {
             // NOTE: Process handled in CAN message handler
             break;
         case TCU_STATE_WAITING_TRACTIVE_SYSTEM:
-            // TODO: check if tractive system is active, & shutdown circuit closed
-            // then change state to tractive system active
-            // NOTE: Don't know why we need both this and the CAN check we have above
+            // NOTE: Assume tractive system will go off if shut down circuit opens - handled in CAN read
+
             if (tractiveTimeOut.check()) {
                 // time out has occured, tractive system not active state
                 set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
-            } else {
-                set_state(TCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
             }
+
             break;
         case TCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
             // TODO - make sure start button and brake pressed
             // REVIEW: TCU will check for brake and start button press immediately (no delay?)
-            if (brakePedalActive) { // TODO: check Start button on dashboard - code has not been written yet
+            // NOTE: there is no timeout for the above state change
+            if (brakePedalActive) {
+                // TODO: check Start button on dashboard - code has not been written yet
+                // REVIEW: Testing purposes goes directly to enabling inverter
                 set_state(TCU_STATE_ENABLING_INVERTER);
             }
-            // NOTE: there is no timeout for the above state change
             break;
         case TCU_STATE_ENABLING_INVERTER:
             // TODO: next state if inverter enabled
