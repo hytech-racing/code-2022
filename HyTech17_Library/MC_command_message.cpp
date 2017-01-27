@@ -6,6 +6,7 @@
 #include "HyTech17.h"
 
 MC_command_message::MC_command_message() {
+  message = {};
 }
 
 MC_command_message::MC_command_message(uint8_t buf[8]) {
@@ -13,6 +14,7 @@ MC_command_message::MC_command_message(uint8_t buf[8]) {
 }
 
 MC_command_message::MC_command_message(int16_t torque_command, int16_t angular_velocity, bool direction, bool inverter_enable, bool discharge_enable, int16_t commanded_torque_limit) {
+  message = {};
   set_torque_command(torque_command);
   set_angular_velocity(angular_velocity);
   set_direction(direction);
@@ -84,7 +86,7 @@ void MC_command_message::set_angular_velocity(int16_t angular_velocity) {
 }
 
 void MC_command_message::set_direction(bool direction) {
-  message.direction = direction;
+  message.direction = direction & 0x1;
 }
 
 void MC_command_message::set_inverter_enable(bool inverter_enable) {
