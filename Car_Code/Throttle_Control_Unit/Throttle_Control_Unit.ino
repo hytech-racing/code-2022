@@ -110,6 +110,14 @@ void loop() {
                     // NOTE: You must assume that for tractive system to turn on, the AIRs will be closed
                 }
             }
+        } else if (msg.id == ID_MC_INTERNAL_STATES) {
+            MC_internal_states mc_internal_states(msg.buf);
+            if (state == TCU_STATE_ENABLING_INVERTER) {
+                // This code checks if the inverter has turned on
+                if (mc_internal_states.get_inverter_enable_state()) {
+                    set_state(TCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
+                }
+            }
         }
     }
 
@@ -180,8 +188,7 @@ void loop() {
             }
             break;
         case TCU_STATE_ENABLING_INVERTER:
-            // TODO: next state if inverter enabled
-            set_state(TCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
+            // NOTE: checking for inverter enable done in CAN message handler
             break;
         case TCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
             // TODO: sound goes off
