@@ -6,6 +6,7 @@
 #include "HyTech17.h"
 
 MC_motor_position_information::MC_motor_position_information() {
+    message = {};
 }
 
 MC_motor_position_information::MC_motor_position_information(uint8_t buf[8]) {
@@ -13,7 +14,15 @@ MC_motor_position_information::MC_motor_position_information(uint8_t buf[8]) {
 }
 
 void MC_motor_position_information::load(uint8_t buf[8]) {
-  memcpy(&message, buf, sizeof(CAN_message_mc_motor_position_information_t));
+    message = {};
+    int index = 0;
+    memcpy(&(message.motor_angle), buf + index, sizeof(int16_t));
+    index += sizeof(int16_t);
+    memcpy(&(message.motor_speed), buf + index, sizeof(int16_t));
+    index += sizeof(int16_t);
+    memcpy(&(message.electrical_output_frequency), buf + index, sizeof(int16_t));
+    index += sizeof(int16_t);
+    memcpy(&(message.delta_resolver_filtered), buf + index, sizeof(int16_t));
 }
 
 int16_t MC_motor_position_information::get_motor_angle() {

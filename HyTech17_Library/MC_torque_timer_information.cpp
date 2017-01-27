@@ -6,14 +6,21 @@
 #include "HyTech17.h"
 
 MC_torque_timer_information::MC_torque_timer_information() {
+    message = {};
 }
 
 MC_torque_timer_information::MC_torque_timer_information(uint8_t buf[8]) {
-  load(buf);
+    load(buf);
 }
 
 void MC_torque_timer_information::load(uint8_t buf[8]) {
-  memcpy(&message, buf, sizeof(CAN_message_mc_torque_timer_information_t));
+    message = {};
+    int index = 0;
+    memcpy(&(message.commanded_torque), buf + index, sizeof(int16_t));
+    index += sizeof(int16_t);
+    memcpy(&(message.torque_feedback), buf + index, sizeof(int16_t));
+    index += sizeof(int16_t);
+    memcpy(&(message.power_on_timer), buf + index, sizeof(uint32_t));
 }
 
 int16_t MC_torque_timer_information::get_commanded_torque() {

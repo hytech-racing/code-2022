@@ -6,14 +6,23 @@
 #include "HyTech17.h"
 
 MC_voltage_information::MC_voltage_information() {
+    message = {};
 }
 
 MC_voltage_information::MC_voltage_information(uint8_t buf[8]) {
-  load(buf);
+    load(buf);
 }
 
 void MC_voltage_information::load(uint8_t buf[8]) {
-  memcpy(&message, buf, sizeof(CAN_message_mc_voltage_information_t));
+    message = {};
+    int index = 0;
+    memcpy(&(message.dc_bus_voltage), buf + index, sizeof(int16_t));
+    index += sizeof(int16_t);
+    memcpy(&(message.output_voltage), buf + index, sizeof(int16_t));
+    index += sizeof(int16_t);
+    memcpy(&(message.phase_ab_voltage), buf + index, sizeof(int16_t));
+    index += sizeof(int16_t);
+    memcpy(&(message.phase_bc_voltage), buf + index, sizeof(int16_t));
 }
 
 int16_t MC_voltage_information::get_dc_bus_voltage() {

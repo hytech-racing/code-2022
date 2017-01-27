@@ -6,6 +6,7 @@
 #include "HyTech17.h"
 
 MC_fault_codes::MC_fault_codes() {
+    message = {};
 }
 
 MC_fault_codes::MC_fault_codes(uint8_t buf[8]) {
@@ -13,7 +14,15 @@ MC_fault_codes::MC_fault_codes(uint8_t buf[8]) {
 }
 
 void MC_fault_codes::load(uint8_t buf[8]) {
-  memcpy(&message, buf, sizeof(CAN_message_mc_fault_codes_t));
+    message = {};
+    int index = 0;
+    memcpy(&(message.post_fault_lo), buf + index, sizeof(int16_t));
+    index += sizeof(int16_t);
+    memcpy(&(message.post_fault_hi), buf + index, sizeof(int16_t));
+    index += sizeof(int16_t);
+    memcpy(&(message.run_fault_lo), buf + index, sizeof(int16_t));
+    index += sizeof(int16_t);
+    memcpy(&(message.run_fault_hi), buf + index, sizeof(int16_t));
 }
 
 uint16_t MC_fault_codes::get_post_fault_lo() {

@@ -120,7 +120,7 @@ class BMS_voltages {
     void setHigh(uint16_t high);
   private:
     CAN_message_bms_voltages bmsVoltages;
-}
+};
 
 typedef struct CAN_message_mc_temperatures_1_t {
   int16_t module_a_temperature;
@@ -216,8 +216,9 @@ typedef struct CAN_message_mc_digital_input_status_t {
 class MC_digital_input_status {
   public:
     MC_digital_input_status();
-    MC_digital_input_status(uint8_t buf[8]);
-    void load(uint8_t buf[8]);
+    MC_digital_input_status(uint8_t buf[]);
+    void load(uint8_t buf[]);
+    void loadByteIntoBooleanStruct(int* index, uint8_t buf[], bool* structVariable);
     bool digital_input_1();
     bool digital_input_2();
     bool digital_input_3();
@@ -500,23 +501,22 @@ typedef struct CAN_message_mc_read_write_parameter_command_t {
   uint16_t parameter_address;
   bool rw_command;
   uint8_t reserved1;
-  uint16_t data;
-  uint16_t reserved2;
+  uint8_t data[4];
 } CAN_message_mc_read_write_parameter_command_t;
 
 class MC_read_write_parameter_command {
   public:
     MC_read_write_parameter_command();
     MC_read_write_parameter_command(uint8_t buf[8]);
-    MC_read_write_parameter_command(uint16_t parameter_address, bool rw_command, uint16_t data);
+    MC_read_write_parameter_command(uint16_t parameter_address, bool rw_command, uint8_t data[]);
     void load(uint8_t buf[8]);
     void write(uint8_t buf[8]);
     uint16_t get_parameter_address();
     bool get_rw_command();
-    uint16_t get_data();
+    uint8_t* get_data();
     void set_parameter_address(uint16_t parameter_address);
     void set_rw_command(bool rw_command);
-    void set_data(uint16_t data);
+    void set_data(uint8_t data[]);
   private:
     CAN_message_mc_read_write_parameter_command_t message;
 };
@@ -525,8 +525,7 @@ typedef struct CAN_message_mc_read_write_parameter_response_t {
   uint16_t parameter_address;
   bool write_success;
   uint8_t reserved1;
-  uint16_t data;
-  uint16_t reserved2;
+  uint8_t data[4];
 } CAN_message_mc_read_write_parameter_response_t;
 
 class MC_read_write_parameter_response {
@@ -536,7 +535,7 @@ class MC_read_write_parameter_response {
     void load(uint8_t buf[8]);
     uint16_t get_parameter_address();
     bool get_write_success();
-    uint16_t get_data();
+    uint8_t* get_data();
   private:
     CAN_message_mc_read_write_parameter_response_t message;
 };
