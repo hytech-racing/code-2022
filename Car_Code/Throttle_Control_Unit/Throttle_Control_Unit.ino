@@ -33,10 +33,7 @@ float thermTemp = 0.0; // temperature of onboard thermistor
 bool brakeImplausibility = false; // fault if BSPD signal too low - still to be designed
 bool brakePedalActive = false; // true if brake is considered pressed
 
-// FSAE requires that torque be shut off if an implausibility persists for over 100 msec (EV2.3.5).
-// TODO check for checkDeactivateTractiveSystem() (when true) for 100ms of true
-//A deviation of more than 10% pedal travel between the two throttle sensors
-//A failure of position sensor wiring which can cause an open circuit, short to ground, or short to sensor power.
+// FSAE requires that torque be shut off if an implausibility persists for over 100 msec (EV3.5.4).
 bool torqueShutdown = false;
 
 // FUNCTION PROTOTYPES
@@ -97,6 +94,9 @@ void loop() {
                     // TCU must wait until PCU in PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED to go into TCU_STATE_WAITING_TRACTIVE_SYSTEM
                     if (state == TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED || state == TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
                         set_state(TCU_STATE_WAITING_TRACTIVE_SYSTEM);
+
+                        // reset tractive system timeout
+                        tractiveTimeOut.reset();
                     }
                     break;
             }
@@ -110,19 +110,34 @@ void loop() {
                     // NOTE: You must assume that for tractive system to turn on, the AIRs will be closed
                 }
             }
+        } else if (msg.id == ID_MC_INTERNAL_STATES) {
+            MC_internal_states mc_internal_states(msg.buf);
+            if (state == TCU_STATE_ENABLING_INVERTER) {
+                // This code checks if the inverter has turned on
+                if (mc_internal_states.get_inverter_enable_state()) {
+                    set_state(TCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
+                }
+            }
         }
     }
 
     // CAN BUS
-// DC Bus voltage (Motor controller) is higher than 100 (v??)
+    // DC Bus voltage (Motor controller) is higher than 100 (v??)
 
     if (updateTimer.check()) {
         readValues();
         updateTimer.reset();
     }
-    checkDeactivateTractiveSystem();
-    // TODO: deactivate tractive system if above returns true
+
+    // implausibility Timer checking
+    if (!checkDeactivateTractiveSystem()) {
+        // timer reset if you should not deactivate tractive system
+        implausibilityTimer.reset();
+    } else {
+        // Cannot be restarted by driver (EV7.9.3)
+        torqueShutdown = true;
     }
+
     if (CANUpdateTimer.check()){
         sendCANUpdate();
         CANUpdateTimer.reset();
@@ -136,27 +151,44 @@ void loop() {
             // NOTE: Process handled in CAN message handler
             break;
         case TCU_STATE_WAITING_TRACTIVE_SYSTEM:
-            // TODO: check if tractive system is active, & shutdown circuit closed
-            // then change state to tractive system active
-            // NOTE: Don't know why we need both this and the CAN check we have above
+            // NOTE: Assume tractive system will go off if shut down circuit opens - handled in CAN read
+
             if (tractiveTimeOut.check()) {
                 // time out has occured, tractive system not active state
                 set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
-            } else {
-                set_state(TCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
             }
+
             break;
         case TCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
             // TODO - make sure start button and brake pressed
             // REVIEW: TCU will check for brake and start button press immediately (no delay?)
-            if (brakePedalActive) { // TODO: check Start button on dashboard - code has not been written yet
-                set_state(TCU_STATE_ENABLING_INVERTER);
-            }
             // NOTE: there is no timeout for the above state change
+            if (brakePedalActive) {
+                // TODO: check Start button on dashboard - code has not been written yet
+
+                // Sending enable torque message
+                set_state(TCU_STATE_ENABLING_INVERTER);
+                MC_command_message enableInverterCommand;
+                enableInverterCommand.set_inverter_enable(true);
+                uint8_t MC_enable_message[8];
+                enableInverterCommand.write(MC_enable_message);
+
+                msg.id = ID_MC_COMMAND_MESSAGE;
+                msg.len = 8;
+                memcpy(&msg.buf[0], &MC_enable_message[0], sizeof(uint8_t));
+                memcpy(&msg.buf[1], &MC_enable_message[1], sizeof(uint8_t));
+                memcpy(&msg.buf[2], &MC_enable_message[2], sizeof(uint8_t));
+                memcpy(&msg.buf[3], &MC_enable_message[3], sizeof(uint8_t));
+                memcpy(&msg.buf[4], &MC_enable_message[4], sizeof(uint8_t));
+                memcpy(&msg.buf[5], &MC_enable_message[5], sizeof(uint8_t));
+                memcpy(&msg.buf[6], &MC_enable_message[6], sizeof(uint8_t));
+                memcpy(&msg.buf[7], &MC_enable_message[7], sizeof(uint8_t));
+
+                CAN.write(msg);
+            }
             break;
         case TCU_STATE_ENABLING_INVERTER:
-            // TODO: next state if inverter enabled
-            set_state(TCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
+            // NOTE: checking for inverter enable done in CAN message handler
             break;
         case TCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
             // TODO: sound goes off
@@ -180,17 +212,14 @@ bool checkDeactivateTractiveSystem() {
     // Throttle 10% check
     float deviationCheck = ((float) voltageThrottlePedal1) / ((float) voltageThrottlePedal2);
     if (deviationCheck > 1.10 || (1 / deviationCheck) > 1.10) {
-        throttleImplausibility = implausibilityTimer.check();
+        throttleImplausibility = true;
     } else if (voltageThrottlePedal1 < MIN_THROTTLE_1 || voltageThrottlePedal2 < MIN_THROTTLE_2) {
         // Checks for failure of position sensor wiring
         // Check for open circuit or short to ground
-        throttleImplausibility = implausibilityTimer.check();
+        throttleImplausibility = true;
     } else if (voltageThrottlePedal1 > MAX_THROTTLE_1 || voltageThrottlePedal2 > MAX_THROTTLE_2) {
         // Check for short to power
-        throttleImplausibility = implausibilityTimer.check();
-    } else {
-        // No throttle implausibility detected
-        implausibilityTimer.reset();
+        throttleImplausibility = true;
     }
 
     // Check brake pedal sensor
@@ -201,7 +230,7 @@ bool checkDeactivateTractiveSystem() {
         brakeImplausibility = false;
     }
 
-    // return true if implausibility passes time threshold
+    // return true if any implausibility present
     if (throttleImplausibility || brakeImplausibility) {
         return true;
     } else {
