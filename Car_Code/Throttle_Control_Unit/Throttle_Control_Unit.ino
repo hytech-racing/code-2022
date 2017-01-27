@@ -120,11 +120,14 @@ void loop() {
         readValues();
         updateTimer.reset();
     }
-    if (implausibilityTimer.check()) {
-        checkDeactivateTractiveSystem();
-        // TODO: deactivate tractive system if above returns true
+    // implausibility Timer checking
+    if (!checkDeactivateTractiveSystem()) {
         implausibilityTimer.reset();
+        // timer reset if you should not deactivate tractive system
+    } else {
+        torqueShutdown = true;
     }
+
     if (CANUpdateTimer.check()){
         sendCANUpdate();
         CANUpdateTimer.reset();
