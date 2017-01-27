@@ -217,13 +217,9 @@ bool checkDeactivateTractiveSystem() {
         // Checks for failure of position sensor wiring
         // Check for open circuit or short to ground
         throttleImplausibility = true;
-
     } else if (voltageThrottlePedal1 > MAX_THROTTLE_1 || voltageThrottlePedal2 > MAX_THROTTLE_2) {
         // Check for short to power
         throttleImplausibility = true;
-    } else {
-        // No throttle implausibility detected
-        throttleImplausibility = false;
     }
 
     // Check brake pedal sensor
