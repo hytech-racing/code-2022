@@ -157,8 +157,26 @@ void loop() {
             // NOTE: there is no timeout for the above state change
             if (brakePedalActive) {
                 // TODO: check Start button on dashboard - code has not been written yet
-                // REVIEW: Testing purposes goes directly to enabling inverter
+
+                // Sending enable torque message
                 set_state(TCU_STATE_ENABLING_INVERTER);
+                MC_command_message enableInverterCommand;
+                enableInverterCommand.set_inverter_enable(true);
+                uint8_t MC_enable_message[8];
+                enableInverterCommand.write(MC_enable_message);
+
+                msg.id = ID_MC_COMMAND_MESSAGE;
+                msg.len = 8;
+                memcpy(&msg.buf[0], &MC_enable_message[0], sizeof(uint8_t));
+                memcpy(&msg.buf[1], &MC_enable_message[1], sizeof(uint8_t));
+                memcpy(&msg.buf[2], &MC_enable_message[2], sizeof(uint8_t));
+                memcpy(&msg.buf[3], &MC_enable_message[3], sizeof(uint8_t));
+                memcpy(&msg.buf[4], &MC_enable_message[4], sizeof(uint8_t));
+                memcpy(&msg.buf[5], &MC_enable_message[5], sizeof(uint8_t));
+                memcpy(&msg.buf[6], &MC_enable_message[6], sizeof(uint8_t));
+                memcpy(&msg.buf[7], &MC_enable_message[7], sizeof(uint8_t));
+
+                CAN.write(msg);
             }
             break;
         case TCU_STATE_ENABLING_INVERTER:
