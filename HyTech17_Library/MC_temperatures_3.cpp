@@ -15,14 +15,10 @@ MC_temperatures_3::MC_temperatures_3(uint8_t buf[8]) {
 
 void MC_temperatures_3::load(uint8_t buf[8]) {
     message = {};
-    int index = 0;
-    memcpy(&(message.rtd_4_temperature), buf + index, sizeof(int16_t));
-    index += sizeof(int16_t);
-    memcpy(&(message.rtd_5_temperature), buf + index, sizeof(int16_t));
-    index += sizeof(int16_t);
-    memcpy(&(message.motor_temperature), buf + index, sizeof(int16_t));
-    index += sizeof(int16_t);
-    memcpy(&(message.torque_shudder), buf + index, sizeof(int16_t));
+    memcpy(&(message.rtd_4_temperature), &buf[0], sizeof(int16_t));
+    memcpy(&(message.rtd_5_temperature), &buf[2], sizeof(int16_t));
+    memcpy(&(message.motor_temperature), &buf[4], sizeof(int16_t));
+    memcpy(&(message.torque_shudder), &buf[6], sizeof(int16_t));
 }
 
 int16_t MC_temperatures_3::get_rtd_4_temperature() {

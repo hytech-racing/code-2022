@@ -15,14 +15,10 @@ MC_temperatures_1::MC_temperatures_1(uint8_t buf[8]) {
 
 void MC_temperatures_1::load(uint8_t buf[8]) {
     message = {};
-    int index = 0;
-    memcpy(&(message.module_a_temperature), buf + index, sizeof(int16_t));
-    index += sizeof(int16_t);
-    memcpy(&(message.module_b_temperature), buf + index, sizeof(int16_t));
-    index += sizeof(int16_t);
-    memcpy(&(message.module_c_temperature), buf + index, sizeof(int16_t));
-    index += sizeof(int16_t);
-    memcpy(&(message.gate_driver_board_temperature), buf + index, sizeof(int16_t));
+    memcpy(&(message.module_a_temperature), &buf[0], sizeof(int16_t));
+    memcpy(&(message.module_b_temperature), &buf[2], sizeof(int16_t));
+    memcpy(&(message.module_c_temperature), &buf[4], sizeof(int16_t));
+    memcpy(&(message.gate_driver_board_temperature), &buf[6], sizeof(int16_t));
 }
 
 int16_t MC_temperatures_1::get_module_a_temperature() {

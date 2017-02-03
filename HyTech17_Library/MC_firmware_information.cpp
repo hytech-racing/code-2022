@@ -15,14 +15,10 @@ MC_firmware_information::MC_firmware_information(uint8_t buf[8]) {
 
 void MC_firmware_information::load(uint8_t buf[8]) {
     message = {};
-    int index = 0;
-    memcpy(&(message.eeprom_version_project_code), buf + index, sizeof(uint16_t));
-    index += sizeof(uint16_t);
-    memcpy(&(message.software_version), buf + index, sizeof(uint16_t));
-    index += sizeof(uint16_t);
-    memcpy(&(message.date_code_mmdd), buf + index, sizeof(uint16_t));
-    index += sizeof(uint16_t);
-    memcpy(&(message.date_code_yyyy), buf + index, sizeof(uint16_t));
+    memcpy(&(message.eeprom_version_project_code), &buf[0], sizeof(uint16_t));
+    memcpy(&(message.software_version), &buf[2], sizeof(uint16_t));
+    memcpy(&(message.date_code_mmdd), &buf[4], sizeof(uint16_t));
+    memcpy(&(message.date_code_yyyy), &buf[6], sizeof(uint16_t));
 }
 
 uint16_t MC_firmware_information::get_eeprom_version_project_code() {

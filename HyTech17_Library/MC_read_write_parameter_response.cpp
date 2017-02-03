@@ -15,16 +15,12 @@ MC_read_write_parameter_response::MC_read_write_parameter_response(uint8_t buf[8
 
 void MC_read_write_parameter_response::load(uint8_t buf[8]) {
     message = {};
-    int index = 0;
-    memcpy(&(message.parameter_address), buf + index, sizeof(uint16_t));
-    index += sizeof(uint16_t);
+    memcpy(&(message.parameter_address), &buf[0], sizeof(uint16_t));
     uint8_t booleanByte = 0;
-    memcpy(&booleanByte, buf + index, sizeof(uint8_t));
+    memcpy(&booleanByte, &buf[2], sizeof(uint8_t));
     message.write_success = booleanByte > 0;
-    index += sizeof(uint8_t);
-    memcpy(&(message.reserved1), buf + index, sizeof(uint8_t));
-    index += sizeof(uint8_t);
-    memcpy(message.data, buf + index, sizeof(int));
+    memcpy(&(message.reserved1), &buf[3], sizeof(uint8_t));
+    memcpy(message.data, &buf[4], sizeof(int32_t));
 }
 
 uint16_t MC_read_write_parameter_response::get_parameter_address() {

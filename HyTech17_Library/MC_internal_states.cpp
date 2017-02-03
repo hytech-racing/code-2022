@@ -15,20 +15,13 @@ MC_internal_states::MC_internal_states(uint8_t buf[8]) {
 
 void MC_internal_states::load(uint8_t buf[8]) {
     message = {};
-    int index = 0;
-    memcpy(&(message.vsm_state), buf + index, sizeof(uint16_t));
-    index += sizeof(uint16_t);
-    memcpy(&(message.inverter_state), buf + index, sizeof(uint8_t));
-    index += sizeof(uint8_t);
-    memcpy(&(message.relay_state), buf + index, sizeof(uint8_t));
-    index += sizeof(uint8_t);
-    memcpy(&(message.inverter_run_mode_discharge_state), buf + index, sizeof(uint8_t));
-    index += sizeof(uint8_t);
-    memcpy(&(message.inverter_command_mode), buf + index, sizeof(uint8_t));
-    index += sizeof(uint8_t);
-    memcpy(&(message.inverter_enable), buf + index, sizeof(uint8_t));
-    index += sizeof(uint8_t);
-    memcpy(&(message.direction_command), buf + index, sizeof(uint8_t));
+    memcpy(&(message.vsm_state), &buf[0], sizeof(uint16_t));
+    memcpy(&(message.inverter_state), &buf[2], sizeof(uint8_t));
+    memcpy(&(message.relay_state), &buf[3], sizeof(uint8_t));
+    memcpy(&(message.inverter_run_mode_discharge_state), &buf[4], sizeof(uint8_t));
+    memcpy(&(message.inverter_command_mode), &buf[5], sizeof(uint8_t));
+    memcpy(&(message.inverter_enable), &buf[6], sizeof(uint8_t));
+    memcpy(&(message.direction_command), &buf[7], sizeof(uint8_t));
 }
 
 uint8_t MC_internal_states::get_vsm_state() {

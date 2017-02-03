@@ -21,31 +21,23 @@ MC_read_write_parameter_command::MC_read_write_parameter_command(uint16_t parame
 
 void MC_read_write_parameter_command::load(uint8_t buf[8]) {
     message = {};
-    int index = 0;
-    memcpy(&(message.parameter_address), buf + index, sizeof(uint16_t));
-    index += sizeof(uint16_t);
+    memcpy(&(message.parameter_address), &buf[0], sizeof(uint16_t));
     uint8_t booleanByte = 0;
-    memcpy(&booleanByte, buf + index, sizeof(uint8_t));
+    memcpy(&booleanByte, &buf[2], sizeof(uint8_t));
     message.rw_command = booleanByte > 0;
-    index += sizeof(uint8_t);
-    memcpy(&(message.reserved1), buf + index, sizeof(uint8_t));
-    index += sizeof(uint8_t);
-    memcpy(message.data, buf + index, sizeof(int));
+    memcpy(&(message.reserved1), &buf[3], sizeof(uint8_t));
+    memcpy(message.data, &buf[4], sizeof(int32_t));
 }
 
 void MC_read_write_parameter_command::write(uint8_t buf[8]) {
-    int index = 0;
-    memcpy(buf + index, &(message.parameter_address), sizeof(uint16_t));
-    index += sizeof(uint16_t);
+    memcpy(&buf[0], &(message.parameter_address), sizeof(uint16_t));
     uint8_t booleanByte = 0;
     if (message.rw_command) {
         booleanByte = true;
     }
-    memcpy(buf + index, &booleanByte, sizeof(uint8_t));
-    index += sizeof(uint8_t);
-    // memcpy(&(message.reserved1), buf + index, sizeof(uint8_t));
-    index += sizeof(uint8_t);
-    memcpy(buf + index, &message.data, sizeof(int));
+    memcpy(&buf[2], &booleanByte, sizeof(uint8_t));
+    // byte 3 is reserved
+    memcpy(&buf[4], &message.data, sizeof(int32_t));
 }
 
 uint16_t MC_read_write_parameter_command::get_parameter_address() {

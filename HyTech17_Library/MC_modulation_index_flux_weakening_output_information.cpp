@@ -16,14 +16,10 @@ MC_modulation_index_flux_weakening_output_information::MC_modulation_index_flux_
 
 void MC_modulation_index_flux_weakening_output_information::load(uint8_t buf[8]) {
     message = {};
-    int index = 0;
-    memcpy(&(message.modulation_index), buf + index, sizeof(uint16_t));
-    index += sizeof(uint16_t);
-    memcpy(&(message.flux_weakening_output), buf + index, sizeof(int16_t));
-    index += sizeof(int16_t);
-    memcpy(&(message.id_command), buf + index, sizeof(int16_t));
-    index += sizeof(int16_t);
-    memcpy(&(message.iq_command), buf + index, sizeof(int16_t));
+    memcpy(&(message.modulation_index), &buf[0], sizeof(uint16_t));
+    memcpy(&(message.flux_weakening_output), &buf[2], sizeof(int16_t));
+    memcpy(&(message.id_command), &buf[4], sizeof(int16_t));
+    memcpy(&(message.iq_command), &buf[6], sizeof(int16_t));
 }
 
 uint16_t MC_modulation_index_flux_weakening_output_information::get_modulation_index() {

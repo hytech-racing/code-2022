@@ -49,7 +49,7 @@
  * A GENERAL_NOTE: the load functions in these classes take a byte array containing data from a CAN read.
  * The data contained in this byte array is used to populate the object.
  *
- * A GENERAL_NOTE: The write functions in these classes take a byte array that is meant to be populated 
+ * A GENERAL_NOTE: The write functions in these classes take a byte array that is meant to be populated
  * with the data contained in the object. The byte array can then be written to CAN.
  */
 

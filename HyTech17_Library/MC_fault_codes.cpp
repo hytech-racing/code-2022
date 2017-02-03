@@ -15,14 +15,10 @@ MC_fault_codes::MC_fault_codes(uint8_t buf[8]) {
 
 void MC_fault_codes::load(uint8_t buf[8]) {
     message = {};
-    int index = 0;
-    memcpy(&(message.post_fault_lo), buf + index, sizeof(int16_t));
-    index += sizeof(int16_t);
-    memcpy(&(message.post_fault_hi), buf + index, sizeof(int16_t));
-    index += sizeof(int16_t);
-    memcpy(&(message.run_fault_lo), buf + index, sizeof(int16_t));
-    index += sizeof(int16_t);
-    memcpy(&(message.run_fault_hi), buf + index, sizeof(int16_t));
+    memcpy(&(message.post_fault_lo), &buf[0], sizeof(int16_t));
+    memcpy(&(message.post_fault_hi), &buf[2], sizeof(int16_t));
+    memcpy(&(message.run_fault_lo), &buf[4], sizeof(int16_t));
+    memcpy(&(message.run_fault_hi), &buf[6], sizeof(int16_t));
 }
 
 uint16_t MC_fault_codes::get_post_fault_lo() {

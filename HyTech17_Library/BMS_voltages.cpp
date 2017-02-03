@@ -26,24 +26,18 @@ BMS_voltages::BMS_voltages(uint16_t avg, uint16_t low, uint16_t high) {
  */
 void BMS_voltages::load(uint8_t buf[]) {
     bmsVoltages = {};
-    int index = 0;
-    memcpy(&(bmsVoltages.avgVoltage), buf + index, sizeof(uint16_t));
-    index += sizeof(uint16_t);
-    memcpy(&(bmsVoltages.lowVoltage), buf + index, sizeof(uint16_t));
-    index += sizeof(uint16_t);
-    memcpy(&(bmsVoltages.highVoltage), buf + index, sizeof(uint16_t));
+    memcpy(&(bmsVoltages.avgVoltage), &buf[0], sizeof(uint16_t));
+    memcpy(&(bmsVoltages.lowVoltage), &buf[2], sizeof(uint16_t));
+    memcpy(&(bmsVoltages.highVoltage), &buf[4], sizeof(uint16_t));
 }
 
 /*
  * Populates the specified byte array using the data stored in this object.
  */
 void BMS_voltages::write(uint8_t buf[]) {
-    int index = 0;
-    memcpy(buf + index, &bmsVoltages.avgVoltage, sizeof(uint16_t));
-    index += sizeof(uint16_t);
-    memcpy(buf + index, &bmsVoltages.avgVoltage, sizeof(uint16_t));
-    index += sizeof(uint16_t);
-    memcpy(buf + index, &bmsVoltages.avgVoltage, sizeof(uint16_t));
+    memcpy(&buf[0], &bmsVoltages.avgVoltage, sizeof(uint16_t));
+    memcpy(&buf[2], &bmsVoltages.avgVoltage, sizeof(uint16_t));
+    memcpy(&buf[4], &bmsVoltages.avgVoltage, sizeof(uint16_t));
 }
 
 uint16_t BMS_voltages::getAverage() {

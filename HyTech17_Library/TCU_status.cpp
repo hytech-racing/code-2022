@@ -6,6 +6,7 @@
 #include "HyTech17.h"
 
 TCU_status::TCU_status() {
+    message = {};
 }
 
 TCU_status::TCU_status(uint8_t buf[8]) {
@@ -18,11 +19,14 @@ TCU_status::TCU_status(uint8_t state, uint8_t btn_start_id) {
 }
 
 void TCU_status::load(uint8_t buf[8]) {
-  memcpy(&message, buf, sizeof(CAN_message_tcu_status_t));
+    message = {};
+    memcpy(&(message.state), &buf[0], sizeof(uint8_t));
+    memcpy(&(message.btn_start_id), &buf[1], sizeof(uint8_t));
 }
 
 void TCU_status::write(uint8_t buf[8]) {
-  memcpy(buf, &message, sizeof(CAN_message_tcu_status_t));
+    memcpy(&buf[0], &(message.state), sizeof(uint8_t));
+    memcpy(&buf[1], &(message.btn_start_id), sizeof(uint8_t));
 }
 
 uint8_t TCU_status::get_state() {
