@@ -19,8 +19,8 @@
 #define BMS_OK_PIN 1
 #define THERMISTOR_PIN 4
 #define MC_SWITCH_SSR_PIN 6
-#define SHUTDOWN_SSR_PIN 11
-#define LATCH_SSR_PIN 10
+#define BMS_LATCH_SSR_PIN 11
+#define IMD_LATCH_SSR_PIN 10
 #define BRAKE_LIGHT_PIN 13
 
 #define STATE_MESSAGE_ID 0xD0
@@ -64,8 +64,9 @@ void setup() {
     Serial.begin(115200); // init serial for PC communication
 
     // Set up SSR output pins
-    pinMode(SHUTDOWN_SSR_PIN, OUTPUT);
-    pinMode(LATCH_SSR_PIN, OUTPUT);
+    //pinMode(SHUTDOWN_SSR_PIN, OUTPUT);
+    pinMode(BMS_LATCH_SSR_PIN, OUTPUT);
+    pinMode(IMD_LATCH_SSR_PIN, OUTPUT);
     pinMode(BRAKE_LIGHT_PIN, OUTPUT);
     pinMode(MC_SWITCH_SSR_PIN, OUTPUT);
 
@@ -133,8 +134,8 @@ void loop() {
                 if (startPressed || FAKE_DRIVER_BUTTON_PRESS.check()) {
                     AIRtimer.reset();
                     Serial.println("Latching...");
-                    digitalWrite(SHUTDOWN_SSR_PIN, HIGH);   // close Shutoff SSR (Software Switch)
-                    digitalWrite(LATCH_SSR_PIN, HIGH);      // close latch SSR
+                    digitalWrite(BMS_LATCH_SSR_PIN, HIGH);   // close latch A SSR (Software Switch)
+                    digitalWrite(IMD_LATCH_SSR_PIN, HIGH);   // close latch B SSR
                     curState = AIRClose;
                 }
                 break;
@@ -142,7 +143,8 @@ void loop() {
                 stateOutput = 0b00000100;
                 if(AIRtimer.check()){
                       Serial.println("Completed latching");
-                      digitalWrite(LATCH_SSR_PIN, LOW);  // Open latch SSR
+                      digitalWrite(BMS_LATCH_SSR_PIN, LOW);  // Open latch SSR
+                      digitalWrite(IMD_LATCH_SSR_PIN, LOW);  // open latch B SSR
                       curState = drive;
                 }
                 startPressed = false;
@@ -212,7 +214,7 @@ bool checkFatalFault() { // returns true if fatal fault found
         Serial.println("FATAL FAULT OCCURRED");
         Serial.print("FAULT ID: ");
         Serial.println(faultMsg.buf[0], BIN);
-        digitalWrite(SHUTDOWN_SSR_PIN, LOW);  // Open shutdown circuit
+        //digitalWrite(SHUTDOWN_SSR_PIN, LOW);  // Open shutdown circuit
         curState = fatalFault;
         faultId = faultMsg.buf[0];
         faultMsg.id = 0x002;
