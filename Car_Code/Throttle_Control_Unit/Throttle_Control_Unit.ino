@@ -1,6 +1,6 @@
 #include <FlexCAN.h> // import teensy library
 #include <Metro.h>
-#include <HyTech17.h>
+#include "HyTech17.h"
 
 //ports
 #define BRAKE_ANALOG_PORT 3 //analog port of brake sensor
