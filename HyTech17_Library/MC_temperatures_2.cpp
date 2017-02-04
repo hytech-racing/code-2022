@@ -6,14 +6,19 @@
 #include "HyTech17.h"
 
 MC_temperatures_2::MC_temperatures_2() {
+    message = {};
 }
 
 MC_temperatures_2::MC_temperatures_2(uint8_t buf[8]) {
-  load(buf);
+    load(buf);
 }
 
 void MC_temperatures_2::load(uint8_t buf[8]) {
-  memcpy(&message, buf, sizeof(CAN_message_mc_temperatures_2_t));
+    message = {};
+    memcpy(&(message.control_board_temperature), &buf[0], sizeof(int16_t));
+    memcpy(&(message.rtd_1_temperature), &buf[2], sizeof(int16_t));
+    memcpy(&(message.rtd_2_temperature), &buf[4], sizeof(int16_t));
+    memcpy(&(message.rtd_3_temperature), &buf[6], sizeof(int16_t));
 }
 
 int16_t MC_temperatures_2::get_control_board_temperature() {

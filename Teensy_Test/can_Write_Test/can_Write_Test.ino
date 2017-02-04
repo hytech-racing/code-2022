@@ -21,7 +21,7 @@ void setup() {
 
 void loop() {
   
-  msg.buf[0] = Serial.parseInt();
+  msg.buf[0] = millis();
   CAN.write(msg);
   delay(2000);
   

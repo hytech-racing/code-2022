@@ -6,6 +6,7 @@
 #include "HyTech17.h"
 
 MC_command_message::MC_command_message() {
+  message = {};
 }
 
 MC_command_message::MC_command_message(uint8_t buf[8]) {
@@ -13,6 +14,7 @@ MC_command_message::MC_command_message(uint8_t buf[8]) {
 }
 
 MC_command_message::MC_command_message(int16_t torque_command, int16_t angular_velocity, bool direction, bool inverter_enable, bool discharge_enable, int16_t commanded_torque_limit) {
+  message = {};
   set_torque_command(torque_command);
   set_angular_velocity(angular_velocity);
   set_direction(direction);
@@ -21,12 +23,27 @@ MC_command_message::MC_command_message(int16_t torque_command, int16_t angular_v
   set_commanded_torque_limit(commanded_torque_limit);
 }
 
-void MC_command_message::load(uint8_t buf[8]) {
-  memcpy(&message, buf, sizeof(CAN_message_mc_command_message_t));
+
+void MC_command_message::load(uint8_t buf[]) {
+  memcpy(&(message.torque_command), &buf[0], sizeof(uint16_t));
+  memcpy(&(message.angular_velocity), &buf[2], sizeof(uint16_t));
+  unsigned char booleanByte1;
+  memcpy(&booleanByte1, &buf[4], sizeof(char));
+  message.direction = (booleanByte1 & 0b10000000) > 0;
+  memcpy(&(message.inverter_enable_discharge_enable), &buf[5], sizeof(uint8_t));
+  memcpy(&(message.commanded_torque_limit), &buf[6], sizeof(uint16_t));
 }
 
 void MC_command_message::write(uint8_t buf[8]) {
-  memcpy(buf, &message, sizeof(CAN_message_mc_command_message_t));
+  memcpy(&buf[0], &(message.torque_command), sizeof(uint16_t));
+  memcpy(&buf[2], &(message.angular_velocity), sizeof(uint16_t));
+  unsigned char booleanByte1 = 0;
+  if (message.direction) {
+      booleanByte1 = 1;
+  }
+  memcpy(&buf[4], &booleanByte1, sizeof(char));
+  memcpy(&buf[5], &(message.inverter_enable_discharge_enable), sizeof(uint8_t));
+  memcpy(&buf[6], &(message.commanded_torque_limit), sizeof(uint16_t));
 }
 
 int16_t MC_command_message::get_torque_command() {
@@ -62,7 +79,7 @@ void MC_command_message::set_angular_velocity(int16_t angular_velocity) {
 }
 
 void MC_command_message::set_direction(bool direction) {
-  message.direction = direction;
+  message.direction = direction & 0x1;
 }
 
 void MC_command_message::set_inverter_enable(bool inverter_enable) {

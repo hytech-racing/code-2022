@@ -6,6 +6,7 @@
 #include "HyTech17.h"
 
 MC_internal_states::MC_internal_states() {
+    message = {};
 }
 
 MC_internal_states::MC_internal_states(uint8_t buf[8]) {
@@ -13,7 +14,14 @@ MC_internal_states::MC_internal_states(uint8_t buf[8]) {
 }
 
 void MC_internal_states::load(uint8_t buf[8]) {
-  memcpy(&message, buf, sizeof(CAN_message_mc_internal_states_t));
+    message = {};
+    memcpy(&(message.vsm_state), &buf[0], sizeof(uint16_t));
+    memcpy(&(message.inverter_state), &buf[2], sizeof(uint8_t));
+    memcpy(&(message.relay_state), &buf[3], sizeof(uint8_t));
+    memcpy(&(message.inverter_run_mode_discharge_state), &buf[4], sizeof(uint8_t));
+    memcpy(&(message.inverter_command_mode), &buf[5], sizeof(uint8_t));
+    memcpy(&(message.inverter_enable), &buf[6], sizeof(uint8_t));
+    memcpy(&(message.direction_command), &buf[7], sizeof(uint8_t));
 }
 
 uint8_t MC_internal_states::get_vsm_state() {

@@ -6,6 +6,7 @@
 #include "HyTech17.h"
 
 MC_current_information::MC_current_information() {
+    message = {};
 }
 
 MC_current_information::MC_current_information(uint8_t buf[8]) {
@@ -13,7 +14,11 @@ MC_current_information::MC_current_information(uint8_t buf[8]) {
 }
 
 void MC_current_information::load(uint8_t buf[8]) {
-  memcpy(&message, buf, sizeof(CAN_message_mc_current_information_t));
+    message = {};
+    memcpy(&(message.phase_a_current), &buf[0], sizeof(int16_t));
+    memcpy(&(message.phase_b_current), &buf[2], sizeof(int16_t));
+    memcpy(&(message.phase_c_current), &buf[4], sizeof(int16_t));
+    memcpy(&(message.dc_bus_current), &buf[6], sizeof(int16_t));
 }
 
 int16_t MC_current_information::get_phase_a_current() {

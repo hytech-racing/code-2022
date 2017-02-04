@@ -15,8 +15,8 @@
 #define BTN_START 12
 #define BTN_TOGGLE 11 // 1
 #define COOLING_1 13
-#define COOLING_2 A0
-#define COOLING_3 A1
+#define COOLING_2 A8
+#define COOLING_3 A9
 #define LED_BMS 6
 #define LED_IMD 5
 #define LED_START 7
@@ -31,7 +31,7 @@
 Metro timer_btn_cycle = Metro(10);
 Metro timer_btn_start = Metro(10);
 Metro timer_btn_toggle = Metro(10);
-Metro timer_cooling_ramp = Metro(10);
+Metro timer_cooling_ramp = Metro(100);
 Metro timer_debug_send_self = Metro(100);
 Metro timer_inverter_enable = Metro(2000); // Timeout failed inverter enable
 Metro timer_led_start_blink_fast = Metro(150);
@@ -58,7 +58,7 @@ bool btn_toggle_pressed = false;
 uint16_t button_torque = 0;
 bool cooling_ramp_enable = false;
 uint8_t cooling_ramp = 0;
-bool debug = true;
+bool debug = false;
 bool led_start_active = false;
 uint8_t led_start_type = 0; // 0 for off, 1 for steady, 2 for fast blink, 3 for slow blink
 uint8_t state = TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED;
@@ -71,9 +71,6 @@ void setup() {
   pinMode(BTN_CYCLE, INPUT_PULLUP);
   pinMode(BTN_START, INPUT_PULLUP);
   pinMode(BTN_TOGGLE, INPUT_PULLUP);
-  pinMode(COOLING_1, OUTPUT);
-  pinMode(COOLING_2, OUTPUT);
-  pinMode(COOLING_3, OUTPUT);
   pinMode(LED_BMS, OUTPUT);
   pinMode(LED_IMD, OUTPUT);
   pinMode(LED_START, OUTPUT);
@@ -326,9 +323,11 @@ void loop() {
 
     case TCU_STATE_READY_TO_DRIVE:
     if (timer_motor_controller_send.check()) {
-      int torque = button_torque;
+      //uint16_t torque = button_torque;
+      uint16_t torque = calculate_torque();
+      Serial.print("Requesting torque: ");
       Serial.println(torque);
-      MC_command_message message = MC_command_message(torque, 0, false, true, false, 0);
+      MC_command_message message = MC_command_message(torque, 0, 1, 1, 0, 0);
       message.write(msg.buf);
       msg.id = 0xC0;
       msg.len = 8;
@@ -345,9 +344,9 @@ void loop() {
     msg.id = ID_MC_COMMAND_MESSAGE;
     msg.len = 8;
     if (state < TCU_STATE_ENABLING_INVERTER) {
-      generate_MC_message(msg.buf, 0, false, false);
+      generate_MC_message(msg.buf, 0, true, false);
     } else if (state < TCU_STATE_READY_TO_DRIVE) {
-      generate_MC_message(msg.buf, 0, false, true);
+      generate_MC_message(msg.buf, 0, true, true);
     }
     CAN.write(msg);
   }
@@ -380,8 +379,8 @@ void loop() {
       btn_cycle_id++;
       Serial.print("Cycle button pressed id ");
       Serial.println(btn_cycle_id);
-      if (button_torque < 500 && state == TCU_STATE_READY_TO_DRIVE) {
-        button_torque += 10;
+      if (button_torque < 1000 && state == TCU_STATE_READY_TO_DRIVE) {
+        button_torque += 50;
       }
     }
   }
@@ -422,9 +421,9 @@ void loop() {
       Serial.print("Toggle button pressed id ");
       Serial.println(btn_toggle_id);
       if (button_torque > 0 && state == TCU_STATE_READY_TO_DRIVE) {
-        button_torque -= 20;
+        button_torque -= 100;
       }
-      if (button_torque > 500) {
+      if (button_torque > 1000) {
         button_torque = 0;
       }
     }
@@ -435,12 +434,14 @@ void loop() {
    */
   if (cooling_ramp_enable && timer_cooling_ramp.check()) {
     cooling_ramp++;
-    digitalWrite(COOLING_1, cooling_ramp);
-    digitalWrite(COOLING_2, cooling_ramp);
-    digitalWrite(COOLING_3, cooling_ramp);
+    analogWrite(COOLING_1, cooling_ramp);
+    analogWrite(COOLING_2, cooling_ramp);
+    analogWrite(COOLING_3, cooling_ramp);
     if (cooling_ramp == 200) {
       cooling_ramp_enable = false;
     }
+    Serial.print("Cooling ");
+    Serial.println(cooling_ramp);
   }
 }
 
@@ -455,21 +456,22 @@ void generate_MC_message(unsigned char* message, int torque, boolean backwards, 
   message[7] = 0;
 }
 
-int calculate_torque() {
-  /*Serial.print("A ");
-  Serial.print(analogRead(PEDAL_SIGNAL_A));
-  Serial.print(" B ");
-  Serial.print(analogRead(PEDAL_SIGNAL_B));
-  Serial.print(" C ");
-  Serial.println(analogRead(PEDAL_SIGNAL_C));*/
-  int val = analogRead(PEDAL_SIGNAL_A);
-  if (val < 150) {
-    val = 150;
+uint16_t calculate_torque() {
+  Serial.print("A ");
+  Serial.println(analogRead(PEDAL_SIGNAL_A));
+  Serial.print("B ");
+  Serial.println(analogRead(PEDAL_SIGNAL_B));
+  Serial.print("C ");
+  Serial.println(analogRead(PEDAL_SIGNAL_C));
+  uint16_t val = analogRead(PEDAL_SIGNAL_B);
+  if (val > 690) {
+    val = 690;
   }
-  if (val > 260) {
-    val = 260;
+  if (val < 590) {
+    val = 590;
   }
-  return map(val, 150, 260, 0, 200);
+  val = 690 - val;
+  return val * 10;
 }
 
 /*
@@ -513,9 +515,9 @@ void set_state(uint8_t new_state) {
     set_start_led(0);
     cooling_ramp = 0;
     cooling_ramp_enable = false;
-    digitalWrite(COOLING_1, cooling_ramp);
-    digitalWrite(COOLING_2, cooling_ramp);
-    digitalWrite(COOLING_3, cooling_ramp);
+    analogWrite(COOLING_1, cooling_ramp);
+    analogWrite(COOLING_2, cooling_ramp);
+    analogWrite(COOLING_3, cooling_ramp);
   }
   if (new_state == TCU_STATE_TRACTIVE_SYSTEM_ACTIVE) {
     set_start_led(2);
@@ -527,17 +529,18 @@ void set_state(uint8_t new_state) {
     msg.id = 0xC0;
     msg.len = 8;
     for(int i = 0; i < 10; i++) {
-      generate_MC_message(msg.buf,0,false,true); // many enable commands
+      generate_MC_message(msg.buf,0,true,true); // many enable commands
       CAN.write(msg);
     }
-    generate_MC_message(msg.buf,0,false,false); // disable command
+    generate_MC_message(msg.buf,0,true,false); // disable command
     CAN.write(msg);
     for(int i = 0; i < 10; i++) {
-      generate_MC_message(msg.buf,0,false,true); // many more enable commands
+      generate_MC_message(msg.buf,0,true,true); // many more enable commands
       CAN.write(msg);
     }
     Serial.println("Sent enable command");
     timer_inverter_enable.reset();
+    timer_cooling_ramp.reset();
     cooling_ramp_enable = true;
   }
   if (new_state == TCU_STATE_WAITING_READY_TO_DRIVE_SOUND) {

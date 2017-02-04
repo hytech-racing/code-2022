@@ -6,6 +6,7 @@
 #include "HyTech17.h"
 
 PCU_status::PCU_status() {
+    message = {};
 }
 
 PCU_status::PCU_status(uint8_t buf[8]) {
@@ -19,11 +20,27 @@ PCU_status::PCU_status(uint8_t state, bool bms_fault, bool imd_fault) {
 }
 
 void PCU_status::load(uint8_t buf[8]) {
-  memcpy(&message, buf, sizeof(CAN_message_pcu_status_t));
+    message = {};
+    memcpy(&(message.state), &buf[0], sizeof(uint8_t));
+    uint8_t booleanByte = 0;
+    memcpy(&booleanByte, &buf[1], sizeof(uint8_t));
+    message.bms_fault = booleanByte > 0;
+    memcpy(&booleanByte), &buf[2], sizeof(uint8_t));
+    message.imd_fault = booleanByte > 0;
 }
 
 void PCU_status::write(uint8_t buf[8]) {
-  memcpy(buf, &message, sizeof(CAN_message_pcu_status_t));
+    memcpy(&buf[0], &(message.state), sizeof(uint8_t));
+    uint8_t booleanByte = 0;
+    if (message.bms_fault) {
+        booleanByte = 1;
+    }
+    memcpy(&buf[1], &booleanByte, sizeof(uint8_t));
+    booleanByte = 0;
+    if (message.imd_fault) {
+        booleanByte = 1;
+    }
+    memcpy(&buf[2], &booleanByte, sizeof(uint8_t));
 }
 
 uint8_t PCU_status::get_state() {
