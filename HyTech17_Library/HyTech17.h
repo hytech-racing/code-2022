@@ -46,6 +46,7 @@
 #define ID_MC_READ_WRITE_PARAMETER_RESPONSE 0xC2
 
 /*
+
  * A GENERAL_NOTE: the load functions in these classes take a byte array containing data from a CAN read.
  * The data contained in this byte array is used to populate the object.
  *
@@ -54,6 +55,7 @@
  */
 
 /*
+
  * CAN message structs and classes
  */
 typedef struct CAN_message_pcu_status_t {
@@ -98,6 +100,7 @@ class TCU_status {
   private:
     CAN_message_tcu_status_t message;
 };
+
 
 typedef struct CAN_message_bms_voltages_t {
   uint16_t avgVoltage;
@@ -192,8 +195,8 @@ typedef struct CAN_message_mc_analog_input_voltages_t {
 class MC_analog_input_voltages {
   public:
     MC_analog_input_voltages();
-    MC_analog_input_voltages(uint8_t buf[]);
-    void load(uint8_t buf[]);
+    MC_analog_input_voltages(uint8_t buf[8]);
+    void load(uint8_t buf[8]);
     int16_t get_analog_input_1();
     int16_t get_analog_input_2();
     int16_t get_analog_input_3();
