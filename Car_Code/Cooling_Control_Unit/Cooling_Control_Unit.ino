@@ -2,6 +2,10 @@
 #include <HyTech17.h>
 
 #define DRIVE_STATE 8 //PLACEHOLDER, need to decide right value for drive state from TCU
+#define FAN_IDLE 20 //PLACEHOLDER
+#define PUMP_IDLE 20 //PLACEHOLDER
+#define FAN_PIN_1 10 //PLACEHOLDER
+#define FAN_PIN_2 14 //PLACEHOLDER
 //TODO: ports
 
 FlexCAN CAN(500000);
@@ -10,7 +14,9 @@ static CAN_message_t msg;
 // State - use HyTech library
 uint8_t state;
 bool started =  false;
-
+int fanSpeed = 0;
+int pumpSpeed = 0;
+int pumpPin = 12; //arbitrary
 // setup code
 void setup() {
     Serial.begin(115200); // init serial
@@ -40,8 +46,12 @@ void loop() {
             case 0x51: // Main ECU thermTemp
                 if (msg.buf[0] > 40) {
                     // Increase fan speed with PWM
-                } else {
+                    fanSpeed +=1;
+                    analogWrite(FAN_PIN_1, fanSpeed);
+                } else if (msg.buf[0] < 40 && fanSpeed > FAN_IDLE){
                     // Decrease fan speed with PWM
+                    fanSpeed -= 1;
+                    analogWrite(FAN_PIN_1, fanSpeed);
                 }
                 break;
             case ID_TCU_STATUS: // TCU thermTemp
@@ -51,6 +61,12 @@ void loop() {
                     // Decrease fan speed with PWM
                 }
                 break;
+            case 0x00: //motor controller temp message
+                if (msg.buf[0] > 40) {
+                    
+                } else {
+                    
+                }
             default
                 sendCanUpdate();
                 break;

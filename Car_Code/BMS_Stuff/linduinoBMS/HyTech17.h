@@ -46,16 +46,14 @@
 #define ID_MC_READ_WRITE_PARAMETER_RESPONSE 0xC2
 
 /*
-
  * A GENERAL_NOTE: the load functions in these classes take a byte array containing data from a CAN read.
  * The data contained in this byte array is used to populate the object.
  *
- * A GENERAL_NOTE: The write functions in these classes take a byte array that is meant to be populated
+ * A GENERAL_NOTE: The write functions in these classes take a byte array that is meant to be populated 
  * with the data contained in the object. The byte array can then be written to CAN.
  */
 
 /*
-
  * CAN message structs and classes
  */
 typedef struct CAN_message_pcu_status_t {
@@ -100,7 +98,6 @@ class TCU_status {
   private:
     CAN_message_tcu_status_t message;
 };
-
 
 typedef struct CAN_message_bms_voltages_t {
   uint16_t avgVoltage;
@@ -195,8 +192,8 @@ typedef struct CAN_message_mc_analog_input_voltages_t {
 class MC_analog_input_voltages {
   public:
     MC_analog_input_voltages();
-    MC_analog_input_voltages(uint8_t buf[8]);
-    void load(uint8_t buf[8]);
+    MC_analog_input_voltages(uint8_t buf[]);
+    void load(uint8_t buf[]);
     int16_t get_analog_input_1();
     int16_t get_analog_input_2();
     int16_t get_analog_input_3();
@@ -221,7 +218,6 @@ class MC_digital_input_status {
     MC_digital_input_status();
     MC_digital_input_status(uint8_t buf[]);
     void load(uint8_t buf[]);
-    void loadByteIntoBooleanStruct(int* index, uint8_t buf[], bool* structVariable);
     bool digital_input_1();
     bool digital_input_2();
     bool digital_input_3();
@@ -232,6 +228,7 @@ class MC_digital_input_status {
     bool digital_input_8();
   private:
     CAN_message_mc_digital_input_status_t message;
+    void populateBooleanStructVariables(int* index, uint8_t buf[], bool* var);
 };
 
 typedef struct CAN_message_mc_motor_position_information_t {
@@ -264,8 +261,8 @@ typedef struct CAN_message_mc_current_information_t {
 class MC_current_information {
   public:
     MC_current_information();
-    MC_current_information(uint8_t buf[8]);
-    void load(uint8_t buf[8]);
+    MC_current_information(uint8_t buf[]);
+    void load(uint8_t buf[]);
     int16_t get_phase_a_current();
     int16_t get_phase_b_current();
     int16_t get_phase_c_current();
@@ -504,22 +501,23 @@ typedef struct CAN_message_mc_read_write_parameter_command_t {
   uint16_t parameter_address;
   bool rw_command;
   uint8_t reserved1;
-  uint8_t data[4];
+  uint16_t data;
+  uint16_t reserved2;
 } CAN_message_mc_read_write_parameter_command_t;
 
 class MC_read_write_parameter_command {
   public:
     MC_read_write_parameter_command();
     MC_read_write_parameter_command(uint8_t buf[8]);
-    MC_read_write_parameter_command(uint16_t parameter_address, bool rw_command, uint8_t data[]);
+    MC_read_write_parameter_command(uint16_t parameter_address, bool rw_command, uint16_t data);
     void load(uint8_t buf[8]);
     void write(uint8_t buf[8]);
     uint16_t get_parameter_address();
     bool get_rw_command();
-    uint8_t* get_data();
+    uint16_t get_data();
     void set_parameter_address(uint16_t parameter_address);
     void set_rw_command(bool rw_command);
-    void set_data(uint8_t data[]);
+    void set_data(uint16_t data);
   private:
     CAN_message_mc_read_write_parameter_command_t message;
 };
@@ -528,7 +526,8 @@ typedef struct CAN_message_mc_read_write_parameter_response_t {
   uint16_t parameter_address;
   bool write_success;
   uint8_t reserved1;
-  uint8_t data[4];
+  uint16_t data;
+  uint16_t reserved2;
 } CAN_message_mc_read_write_parameter_response_t;
 
 class MC_read_write_parameter_response {
@@ -538,7 +537,7 @@ class MC_read_write_parameter_response {
     void load(uint8_t buf[8]);
     uint16_t get_parameter_address();
     bool get_write_success();
-    uint8_t* get_data();
+    uint16_t get_data();
   private:
     CAN_message_mc_read_write_parameter_response_t message;
 };

@@ -25,6 +25,9 @@
 ### EV7.9 Insulation Monitoring Device
 * The status of the IMD must be displayed to the driver by a red indicator light in the cockpit
 
+### EV7.9.3 Tractive System Disabling
+* The tractive system must remain disabled until manually reset by a person other than the driver. It must not be possible for the driver to re-activate the tractive system from within the car in case of an IMD-related fault.
+
 ### EV9.2 Ready-to-Drive Sound
 * The car must make a characteristic sound, for a minimum of 1 second and a maximum of 3 seconds, when it is ready to drive.
 

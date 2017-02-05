@@ -1,0 +1,31 @@
+- current sensing
+- balancing
+- 
+
+Least Significant Bit is at the right.
+
+CFRG0:
+- Bits 7-3: From most to least significant, GPIO5 - GPIO1. Write Default 0: GPIO[x] pin pull down OFF. 1: GPIO[x] pin pull down ON. Read 0: GPIO[x] pin at logic 0. 1: GPIO[x] pin at logic 1.
+- Bit 2: REFON: Default 0: Reference shuts down after conversion. 1: Reference remains powered on until watchdog timeout
+- Bit 1: SWTRD (read only): Status of SWTEN (the software timer).
+- Bit 0: ADCOPT: Default 0: Selects 27khz sampling frequency for ADC.
+
+CFGR3 - CFGR1:
+- 24 Total Bits. From Most significant to least significant, contains 12 bits of VOV (Overvoltage comparison voltage), followed immediately by 12 bits of VUV (Undervoltage comparison voltage).
+
+CFGR4:
+- From Most significant to least significant, contains DCC8 - DCC1. Flag to discharge cells 8 to 1.
+
+CFGR5:
+- Bits 7-4: 4 DCTO bits from most to least significant. Time to discharge. 0x0 is disabled (default). Max value of 0xF is two hours of discharge based on DCC[x] flags.
+- Bits 3-0: From most significant to least significant, contains DCC12 - DCC9
+
+Linduino wrcfg() command takes an array containing 6 byte arrays. A single 6 byte array for each BMS chip.
+
+     : Most -> Least Significant
+CFRG0: 0b00000000
+CFRG1: 0bUUUUUUUU
+CFRG2: 0bOOOOUUUU
+CFRG3: 0bOOOOOOOO
+CFRG4: 0b00000000
+CFRG5: 0b00000000

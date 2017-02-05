@@ -7,6 +7,7 @@
 #include "HyTech17.h"
 
 MC_modulation_index_flux_weakening_output_information::MC_modulation_index_flux_weakening_output_information() {
+    message = {};
 }
 
 MC_modulation_index_flux_weakening_output_information::MC_modulation_index_flux_weakening_output_information(uint8_t buf[8]) {
@@ -14,7 +15,11 @@ MC_modulation_index_flux_weakening_output_information::MC_modulation_index_flux_
 }
 
 void MC_modulation_index_flux_weakening_output_information::load(uint8_t buf[8]) {
-  memcpy(&message, buf, sizeof(CAN_message_mc_modulation_index_flux_weakening_output_information_t));
+    message = {};
+    memcpy(&(message.modulation_index), &buf[0], sizeof(uint16_t));
+    memcpy(&(message.flux_weakening_output), &buf[2], sizeof(int16_t));
+    memcpy(&(message.id_command), &buf[4], sizeof(int16_t));
+    memcpy(&(message.iq_command), &buf[6], sizeof(int16_t));
 }
 
 uint16_t MC_modulation_index_flux_weakening_output_information::get_modulation_index() {
