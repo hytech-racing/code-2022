@@ -23,10 +23,18 @@ bool motor_fault;
 bool pedal_fault;
 bool general_fault;
 
+unsigned long lastDebounceTOGGLE = 0;  // the last time the output pin was toggled
+unsigned long lastDebounceCYCLE = 0;  // the last time the output pin was toggled
+unsigned long lastDebounceBOOST = 0;  // the last time the output pin was toggled
+unsigned long lastDebounceSTART = 0;  // the last time the output pin was toggled
+unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
+
 /*************** BUTTON TYPES ****************
  *  Start Button
  *  Toggle Button
  *  SelectButton
+ *  Select Button
+ *  Boost Button
 */
 int count;
 
@@ -34,6 +42,7 @@ int count;
  * CAN Variables
  */
 FlexCAN can(500000);
+FlexCAN CAN(500000);
 static CAN_message_t msg;
 
 void setup() {
