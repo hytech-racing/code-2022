@@ -126,7 +126,7 @@ class BMS_voltages {
     void setHigh(uint16_t high);
   private:
     CAN_message_bms_voltage_t bmsVoltageMessage;
-}
+};
 
 
 enum CHARGING_STATE {
@@ -175,7 +175,7 @@ class BMS_temperatures {
     void setLowTemp(uint16_t low);
     void setHighTemp(uint16_t high);
   private:
-    CAN_message_mc_temperatures_1_t bmsTemperatureMessage;
+    CAN_message_bms_temperature_t bmsTemperatureMessage;
 };
 
 typedef struct CAN_message_mc_temperatures_1_t {
