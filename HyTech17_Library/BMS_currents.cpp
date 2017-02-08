@@ -18,7 +18,7 @@ BMS_currents::BMS_currents(float _current, CHARGING_STATE state) {
     setChargingState(state);
 }
 
-BMS_currents::load(uint8_t buf[]) {
+void BMS_currents::load(uint8_t buf[]) {
     bmsCurrentMessage = {};
     memcpy(&(bmsCurrentMessage.current), &buf[0], sizeof(float));
     int num;
@@ -32,7 +32,7 @@ BMS_currents::load(uint8_t buf[]) {
     }
 }
 
-BMS_currents::write(uint8_t buf[]) {
+void BMS_currents::write(uint8_t buf[]) {
     memcpy(&buf[0], &(bmsCurrentMessage.current), sizeof(float));
     memcpy(&buf[4], &(bmsCurrentMessage.chargeState), sizeof(int));
 }
