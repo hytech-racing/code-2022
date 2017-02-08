@@ -126,7 +126,7 @@ class BMS_voltages {
     void setHigh(uint16_t high);
   private:
     CAN_message_bms_voltage_t bmsVoltageMessage;
-}
+};
 
 
 enum CHARGING_STATE {
