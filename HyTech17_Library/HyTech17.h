@@ -25,6 +25,9 @@
  */
 #define ID_PCU_STATUS 0xD0
 #define ID_TCU_STATUS 0xD1
+#define ID_BMS_VOLTAGE 0xD2
+#define ID_BMS_CURRENT 0xD3
+#define ID_BMS_TEMPERATURE 0xD4
 #define ID_MC_TEMPERATURES_1 0xA0
 #define ID_MC_TEMPERATURES_2 0xA1
 #define ID_MC_TEMPERATURES_3 0xA2
@@ -101,12 +104,12 @@ class TCU_status {
     CAN_message_tcu_status_t message;
 };
 
-
-typedef struct CAN_message_bms_voltages_t {
-  uint16_t avgVoltage;
-  uint16_t lowVoltage;
-  uint16_t highVoltage;
-} CAN_message_bms_voltages;
+typedef struct CAN_message_bms_voltage_t {
+    // integer from 0 to 65536 mapping from 0 to 5v
+    uint16_t avgVoltage;
+    uint16_t lowVoltage;
+    uint16_t highVoltage;
+} CAN_message_bms_voltage_t;
 
 class BMS_voltages {
   public:
@@ -122,7 +125,57 @@ class BMS_voltages {
     void setLow(uint16_t low);
     void setHigh(uint16_t high);
   private:
-    CAN_message_bms_voltages bmsVoltages;
+    CAN_message_bms_voltage_t bmsVoltageMessage;
+}
+
+
+enum CHARGING_STATE {
+    DISCHARGING = 0,
+    CHARGING = 1,
+    UNKNOWN = 2
+};
+
+typedef struct CAN_message_bms_current_t {
+    float current;
+    CHARGING_STATE chargeState;
+} CAN_message_bms_current_t;
+
+class BMS_currents {
+  public:
+    BMS_currents();
+    BMS_currents(uint8_t buf[]);
+    BMS_currents(float _current, CHARGING_STATE state);
+    void load(uint8_t buf[]);
+    void write(uint8_t buf[]);
+    float getCurrent();
+    CHARGING_STATE getChargingState();
+    void setCurrent(float _current);
+    void setChargingState(CHARGING_STATE state);
+  private:
+    CAN_message_bms_current_t bmsCurrentMessage;
+};
+
+typedef struct CAN_message_bms_temperature_t {
+    uint16_t avgTemp;
+    uint16_t lowTemp;
+    uint16_t highTemp;
+} CAN_message_bms_temperature_t;
+
+class BMS_temperatures {
+  public:
+    BMS_temperatures();
+    BMS_temperatures(uint8_t buf[]);
+    BMS_temperatures(uint16_t avg, uint16_t low, uint16_t high);
+    void load(uint8_t buf[]);
+    void write(uint8_t buf[]);
+    uint16_t getAvgTemp();
+    uint16_t getLowTemp();
+    uint16_t getHighTemp();
+    void setAvgTemp(uint16_t avg);
+    void setLowTemp(uint16_t low);
+    void setHighTemp(uint16_t high);
+  private:
+    CAN_message_mc_temperatures_1_t bmsTemperatureMessage;
 };
 
 typedef struct CAN_message_mc_temperatures_1_t {
