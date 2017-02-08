@@ -23,6 +23,7 @@ MC_command_message::MC_command_message(int16_t torque_command, int16_t angular_v
   set_commanded_torque_limit(commanded_torque_limit);
 }
 
+
 void MC_command_message::load(uint8_t buf[]) {
   memcpy(&(message.torque_command), &buf[0], sizeof(uint16_t));
   memcpy(&(message.angular_velocity), &buf[2], sizeof(uint16_t));

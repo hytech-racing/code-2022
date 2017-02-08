@@ -14,6 +14,7 @@ MC_analog_input_voltages::MC_analog_input_voltages(uint8_t buf[8]) {
 }
 
 void MC_analog_input_voltages::load(uint8_t buf[8]) {
+
   // memcpy(&message, buf, sizeof(CAN_message_mc_analog_input_voltages_t));
     message = {};
     memcpy(&(message.analog_input_1), &buf[0], sizeof(int16_t));

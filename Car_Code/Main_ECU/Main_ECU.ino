@@ -19,8 +19,8 @@
 #define BMS_OK_PIN 1
 #define THERMISTOR_PIN 4
 #define MC_SWITCH_SSR_PIN 6
-#define SHUTDOWN_SSR_PIN 11
-#define LATCH_SSR_PIN 10
+#define BMS_LATCH_SSR_PIN 11
+#define IMD_LATCH_SSR_PIN 10
 #define BRAKE_LIGHT_PIN 13
 
 #define STATE_MESSAGE_ID 0xD0
@@ -64,8 +64,9 @@ void setup() {
     Serial.begin(115200); // init serial for PC communication
 
     // Set up SSR output pins
-    pinMode(SHUTDOWN_SSR_PIN, OUTPUT);
-    pinMode(LATCH_SSR_PIN, OUTPUT);
+    //pinMode(SHUTDOWN_SSR_PIN, OUTPUT);
+    pinMode(BMS_LATCH_SSR_PIN, OUTPUT);
+    pinMode(IMD_LATCH_SSR_PIN, OUTPUT);
     pinMode(BRAKE_LIGHT_PIN, OUTPUT);
     pinMode(MC_SWITCH_SSR_PIN, OUTPUT);
 
@@ -104,7 +105,7 @@ void loop() {
         }
       }
     }
-    
+
     //check CAN for a message for software shutdown
     if (!startupDone) {
         switch (curState) {
@@ -129,12 +130,12 @@ void loop() {
                 stateOutput = 0b00000010;
                 Serial.println("Waiting for start button...");
                 /*can message for start button press received*/
-                 
+
                 if (startPressed || FAKE_DRIVER_BUTTON_PRESS.check()) {
                     AIRtimer.reset();
                     Serial.println("Latching...");
-                    digitalWrite(SHUTDOWN_SSR_PIN, HIGH);   // close Shutoff SSR (Software Switch)
-                    digitalWrite(LATCH_SSR_PIN, HIGH);      // close latch SSR
+                    digitalWrite(BMS_LATCH_SSR_PIN, HIGH);   // close latch A SSR (Software Switch)
+                    digitalWrite(IMD_LATCH_SSR_PIN, HIGH);   // close latch B SSR
                     curState = AIRClose;
                 }
                 break;
@@ -142,7 +143,8 @@ void loop() {
                 stateOutput = 0b00000100;
                 if(AIRtimer.check()){
                       Serial.println("Completed latching");
-                      digitalWrite(LATCH_SSR_PIN, LOW);  // Open latch SSR
+                      digitalWrite(BMS_LATCH_SSR_PIN, LOW);  // Open latch SSR
+                      digitalWrite(IMD_LATCH_SSR_PIN, LOW);  // open latch B SSR
                       curState = drive;
                 }
                 startPressed = false;
@@ -185,12 +187,12 @@ bool readValues() {
     thermTemp /= BCONSTANT;
     thermTemp += 1.0 / (TEMPERATURENOMINAL + 273.15);
     thermTemp = 1.0 / thermTemp;
-    thermTemp -= 273.15;  
+    thermTemp -= 273.15;
     return true;
 
 }
 
-bool checkFatalFault() { // returns true if fatal fault found 
+bool checkFatalFault() { // returns true if fatal fault found
     CAN_message_t faultMsg;
     faultMsg.buf[0] = 0;
     if (curState == waitDriver || curState == AIRClose || curState == drive) {
@@ -200,19 +202,19 @@ bool checkFatalFault() { // returns true if fatal fault found
           faultMsg.buf[0] = faultMsg.buf[0] | BMS_FAULT;
       }
     }
-        
+
     while (CAN.read(msg)) {
         if (msg.id == 0x0001) {
             faultMsg.buf[0] = faultMsg.buf[0] | BSPD_FAULT;
         }
     }
-    
+
 
     if (faultMsg.buf[0] != 0) {
         Serial.println("FATAL FAULT OCCURRED");
         Serial.print("FAULT ID: ");
         Serial.println(faultMsg.buf[0], BIN);
-        digitalWrite(SHUTDOWN_SSR_PIN, LOW);  // Open shutdown circuit
+        //digitalWrite(SHUTDOWN_SSR_PIN, LOW);  // Open shutdown circuit
         curState = fatalFault;
         faultId = faultMsg.buf[0];
         faultMsg.id = 0x002;
@@ -223,10 +225,6 @@ bool checkFatalFault() { // returns true if fatal fault found
         return false;
     }
 }
-
-//bool sendCanMessage(int address, int msgLength, int data){
-//  
-//}
 
 int sendCanUpdate(){
 
@@ -249,7 +247,7 @@ int sendCanUpdate(){
     bool okhsCheck = OKHS >= IMD_High;
     bool dischargeCheck = DISCHARGE_OK >= BMS_High;
     short shortTemp = (short) thermTemp * 100;
-    
+
     msg.id = 0x51;
     msg.len = 5;
     memcpy(&msg.buf[0], &shortTemp, sizeof(short));
@@ -261,4 +259,3 @@ int sendCanUpdate(){
 
     return temp1 + temp2;
 }
-
