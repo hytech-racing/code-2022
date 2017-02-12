@@ -109,6 +109,7 @@ typedef struct CAN_message_dcu_status_t {
     uint8_t btn_press_id;
     uint8_t light_active_1;
     uint8_t light_active_2;
+    uint8_t RTDS_state; // ready to drive sound state
 } CAN_message_dcu_status;
 
 class DCU_status {
@@ -118,7 +119,12 @@ public:
     void load(uint8_t buf[8]);
     void write(uint8_t buf[8]);
     uint8_t get_btn_press_id();
-    void set_btn_press_id(uint8_t buf);
+    uint8_t get_light_active_1();
+    uint8_t get_light_active_2();
+    uint8_t get_ready_to_drive_sound_state();
+    void set_light_active_1(uint8_t light_active_1);
+    void set_light_active_2(uint8_t light_active_2);
+    void set_RTDS_state(uint8_t RTDS_state);
 private:
     CAN_message_dcu_status_t message;
 }
