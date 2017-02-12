@@ -51,3 +51,18 @@ uint8_t DCU_status::get_rtds_state() {
   return message.rtds_state;
 }
 
+void DCU_status::set_btn_press_id(uint8_t btn_press_id) {
+  message.btn_press_id = btn_press_id;
+}
+
+void DCU_status::set_light_active_1(uint8_t light_active_1) {
+  message.light_active_1 = light_active_1;
+}
+
+void DCU_status::set_light_active_2(uint8_t light_active_2) {
+  message.light_active_2 = light_active_2;
+}
+
+void DCU_status::set_rtds_state(uint8_t rtds_state) {
+  message.rtds_state = rtds_state;
+}
