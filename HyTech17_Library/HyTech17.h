@@ -122,6 +122,7 @@ public:
     uint8_t get_light_active_1();
     uint8_t get_light_active_2();
     uint8_t get_ready_to_drive_sound_state();
+    void set_btn_press_id(uint8_t btn_press_id);
     void set_light_active_1(uint8_t light_active_1);
     void set_light_active_2(uint8_t light_active_2);
     void set_RTDS_state(uint8_t RTDS_state);
