@@ -20,3 +20,18 @@ DCU_status::DCU_status(uint8_t btn_press_id, uint8_t light_active_1, uint8_t lig
     set_rtds_state(rtds_state);
 }
 
+void DCU_status::load(uint8_t buf[8]) {
+    message = {};
+    memcpy(&(message.btn_press_id), &buf[0], sizeof(uint8_t));
+    memcpy(&(message.light_active_1), &buf[1], sizeof(uint8_t));
+    memcpy(&(message.light_active_2), &buf[2], sizeof(uint8_t));
+    memcpy(&(message.rtds_state), &buf[3], sizeof(uint8_t));
+}
+
+void DCU_status::write(uint8_t buf[8]) {
+    memcpy(&buf[0], &(message.btn_press_id), sizeof(uint8_t));
+    memcpy(&buf[1], &(message.light_active_1), sizeof(uint8_t));
+    memcpy(&buf[2], &(message.light_active_2), sizeof(uint8_t));
+    memcpy(&buf[3], &(message.rtds_state), sizeof(uint8_t));
+}
+
