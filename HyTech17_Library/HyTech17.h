@@ -114,8 +114,8 @@ typedef struct CAN_message_dcu_status_t {
 
 class DCU_status {
 public:
-    TCU_status();
-    TCU_status(uint8_t buf[8]);
+    DCU_status();
+    DCU_status(uint8_t buf[8]);
     void load(uint8_t buf[8]);
     void write(uint8_t buf[8]);
     uint8_t get_btn_press_id();
