@@ -25,7 +25,7 @@ void PCU_status::load(uint8_t buf[8]) {
     uint8_t booleanByte = 0;
     memcpy(&booleanByte, &buf[1], sizeof(uint8_t));
     message.bms_fault = booleanByte > 0;
-    memcpy(&booleanByte), &buf[2], sizeof(uint8_t));
+    memcpy(&booleanByte, &buf[2], sizeof(uint8_t));
     message.imd_fault = booleanByte > 0;
 }
 
