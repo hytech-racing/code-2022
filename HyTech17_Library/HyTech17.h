@@ -116,6 +116,7 @@ class DCU_status {
 public:
     DCU_status();
     DCU_status(uint8_t buf[8]);
+    DCU_status(uint8_t btn_press_id, uint8_t light_active_1, uint8_t light_active_2, uint8_t rtds_state);
     void load(uint8_t buf[8]);
     void write(uint8_t buf[8]);
     uint8_t get_btn_press_id();
