@@ -24,7 +24,6 @@ bool pedal_fault;
 bool general_fault;
 
 unsigned long lastDebounceTOGGLE = 0;  // the last time the output pin was toggled
-unsigned long lastDebounceCYCLE = 0;  // the last time the output pin was toggled
 unsigned long lastDebounceBOOST = 0;  // the last time the output pin was toggled
 unsigned long lastDebounceSTART = 0;  // the last time the output pin was toggled
 unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
@@ -32,7 +31,6 @@ unsigned long debounceDelay = 50;    // the debounce time; increase if the out
 /*************** BUTTON TYPES ****************
  *  Start Button
  *  Toggle Button
- *  SelectButton
  *  Select Button
  *  Boost Button
 */
