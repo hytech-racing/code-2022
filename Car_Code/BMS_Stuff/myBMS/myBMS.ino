@@ -30,8 +30,8 @@
 #define MAX_16BIT_UNSIGNED 65536
 
 /********GLOBAL ARRAYS/VARIABLES CONTAINING DATA FROM CHIP**********/
-const uint8_t TOTAL_IC = 8;
-uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages
+const uint8_t TOTAL_IC = 1;
+uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages. Stores numbers in 0.1 mV.
 uint16_t aux_voltagess[TOTAL_IC][6]; // contains auxillary pin voltages (not batteries)
 
 /*!<
@@ -63,27 +63,13 @@ FlexCAN can(500000);
 static CAN_message_t msg;
 long msTimer = 0;
 
-/************CAN MESSAGE ID's **********************/
-#define SHUTDOWN_FAULT 0x001
-#define HIGHEST_CELL_VOLTAGE 0x0B0
-#define LOWEST_CELL_VOLTAGE 0x0B1
-#define AVG_CELL_VOLTAGE 0x0B2
-#define PACK_STATE_OF_CHARGE 0x0B3
-#define PACK_STATE_OF_HEALTH 0x0B4 // Questionable
-#define HIGHEST_TEMP 0x0B5
-#define LOWEST_TEMP 0x0B6
-#define AVG_TEMP 0x0B7
-#define DISCHARGE_CURRENT 0x0B8
-#define CHARGE_CURRENT 0x0B9
-
 /**
  * BMS State Variables
  */
-enum ChargeState {
-  DISCHARGE,
-  CHARGE
-};
-ChargeState chargeState = DISCHARGE;
+BMS_voltages bmsVoltageMessage;
+BMS_currents bmsCurrentMessage;
+BMS_temperatures bmsTempMessage;
+// TODO: Add BMS Status to CAN Library. To send fault messages.
 boolean BMSStatusOK;
 boolean tractiveSystemOn;
 
@@ -96,12 +82,6 @@ boolean tractiveSystemOn;
 #define CLOCK_PIN 14
 #define T_WAKE 50
 
-// TODO: Calculate Internal Resistance: measure current, measure total voltage, calculate resistance, then do something to adjust the voltage measurement.
-// TODO: Current goes Negative during Regen Braking.
-// TODO: Implement Coulomb counting to track state of charge of battery.
-// TODO: Switching between discharge and charge very often.
-// TODO: Write Threshold Values into Configuration Registers
-// TODO: Organize Telemetry Messages into a SINGLE CAN message
 void setup() {
     // put your setup code here, to run once:
     Serial.begin(115200);
@@ -120,63 +100,16 @@ void setup() {
 /*
  * Continuously poll voltages and print them to the Serial Monitor.
  */
+ // NOTE: Implement Coulomb counting to track state of charge of battery.
 void loop() {
     // put your main code here, to run repeatedly:
-    pollVoltage();
+    pollVoltage(); // cell_voltages[] array populated with cell voltages now.
     printCells();
 
-    while (can.read(msg)) {
-        switch (msg.id) {
-        case 0x001: // Fault Detected
-            {
-                BMSStatusOK = false;
-                Serial.print("SHUTDOWN RECEIVED");
-                printCanMessage();
-            } break;
-//        case 0x0BC:
-//            {
-//                unsigned char chargeStateBit = msg.buf[0] >> 7;
-//                if (chargeStateBit == 0) {
-//                    chargeState = DISCHARGE;
-//                } else if (chargeStateBit == 1) {
-//                    chargeState = CHARGE;
-//                }
-//                Serial.print("Charge State Received");
-//                printCanMessage();
-//            } break;
-        default:
-            {
-                printCanMessage();
-            } break;
-        }
-    }
+    pollThermistors();
+    pollCurrent();
 
-    int maxV = convertToMillivolts(findMaxVoltage());
-    int minV = convertToMillivolts(findMinVoltage());
-    int avgV = findAverage();
-
-    if (!(voltageInBounds(maxV) && voltageInBounds(minV))) {
-        BMSStatusOK = false;
-        writeShutdownCANMessage(minV, maxV);
-    }
-
-    // write max voltage to CAN as telemetry
-    msg.id = HIGHEST_CELL_VOLTAGE;
-    msg.len = sizeof(int);
-    memcpy(&msg.buf[0], &maxV, sizeof(int));
-    can.write(msg);
-
-    // write min voltage to CAN as telemetry
-    msg.id = LOWEST_CELL_VOLTAGE;
-    msg.len = (sizeof(int));
-    memcpy(&msg.buf[0], &minV, sizeof(int));
-    can.write(msg);
-
-    // write avg voltage to can as telemetry
-    msg.id = AVG_CELL_VOLTAGE;
-    msg.len = sizeof(int);
-    memcpy(&msg.buf[0], &avgV, sizeof(int));
-    can.write(msg);
+    avgMinMaxTotalVoltage(); // min, max, avg, and total volts stored in bmsVoltageMessage object.
 }
 
 /*!***********************************
@@ -184,6 +117,7 @@ void loop() {
  **************************************/
 void init_cfg()
 {
+    // TODO: Write Threshold Values into Configuration Registers
     for(int i = 0; i<TOTAL_IC;i++)
     {
         tx_cfg[i][0] = 0xFE;
@@ -208,12 +142,20 @@ void pollVoltage() {
     LTC6804_adcv();
     delay(10);
     wakeup_idle();
-    uint8_t error = LTC6804_rdcv(0, TOTAL_IC, cell_voltages); // calls the chip to read and store voltage values in the array.
+    uint8_t error = LTC6804_rdcv(0, TOTAL_IC, cell_voltages); // asks chip to read voltages and stores in given array.
     if (error == -1) {
         Serial.println("A PEC error was detected in voltage data");
     }
     printCells(); // prints the cell voltages to Serial.
     delay(100);
+}
+
+void pollThermistors() {
+    // TODO: Implement function to poll auxillary registers that are connected to thermistors
+}
+
+void pollCurrent() {
+    // TODO: Implement function to poll auxillary registers that are connected to current sensor.
 }
 
 void wakeFromSleepAllChips() {
@@ -230,54 +172,34 @@ void wakeFromIdleAllChips() {
     }
 }
 
-uint16_t findMaxVoltage() {
+void avgMinMaxTotalVoltage() {
+    double totalVolts = 0; // stored as double volts
     uint16_t maxVolt = cell_voltages[0][0];
-    for (int ic = 0; ic < TOTAL_IC; ic++) {
-        for (int cell = 0; cell < 12; cell++) {
-            if (cell_voltages[ic][cell] > maxVolt) {
-                maxVolt = cell_voltages[ic][cell];
-            }
-        }
-    }
-    return maxVolt;
-}
-
-uint16_t findMinVoltage() {
     uint16_t minVolt = cell_voltages[0][0];
+    double avgVolt = 0; // stored as double volts
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         for (int cell = 0; cell < 12; cell++) {
-            if (cell_voltages[ic][cell] < minVolt) {
-                minVolt = cell_voltages[ic][cell];
+            uint16_t currentCell = cell_voltages[ic][cell];
+            if (currentCell > maxVolt) {
+                maxVolt = currentCell;
             }
+            if (currentCell < minVolt) {
+                minVolt = currentCell;
+            }
+            totalVolts += currentCell * 0.0001;
         }
     }
-    return minVolt;
+    avgVolt = totalVolts / (TOTAL_IC * 12); // stored as double volts
+    bmsVoltageMessage.avgVoltage = static_cast<uint16_t>(avgVolt * 1000 + 0.5);
+    bmsVoltageMessage.totalVoltage = static_cast<uint16_t>(totalVolts + 0.5);
+    bmsVoltageMessage.lowVoltage = minVolt;
+    bmsVoltageMessage.highVoltage = maxVolt;
 }
 
-int convertToMillivolts(uint16_t v) {
-    return (int) ((v / (float) MAX_16BIT_UNSIGNED) * 5000.0f);
-}
 
-int findAverage() {
-    int average = 0;
-    for (int ic = 0; ic < TOTAL_IC; ic++) {
-        for (int cell = 0; cell < 12; cell++) {
-            average += cell_voltages[ic][cell];
-        }
-    }
-    average = (int) (average / ((float) MAX_16BIT_UNSIGNED * TOTAL_IC * 12) * 5000);
-    return average;
-}
 
-boolean voltageInBounds() {
-    double maxVolt = findMaxVoltage() / MAX_16BIT_UNSIGNED * 5.0f;
-    double minVolt = findMinVoltage() / MAX_16BIT_UNSIGNED * 5.0f;
-    return !(maxVolt >= VOLTAGE_HIGH_CUTOFF || minVolt >= VOLTAGE_HIGH_CUTOFF || maxVolt <= VOLTAGE_LOW_CUTOFF || minVolt <= VOLTAGE_LOW_CUTOFF);
-}
-
-boolean voltageInBounds(int v) {
-    double voltage = v / 1000;
-    return !(voltage >= VOLTAGE_HIGH_CUTOFF || voltage <= VOLTAGE_LOW_CUTOFF);
+uint16_t convertToMillivolts(uint16_t v) {
+    return v / 10;
 }
 
 void printCells() {
@@ -286,21 +208,11 @@ void printCells() {
         Serial.println(current_ic+1);
         for (int i = 0; i < 12; i++) {
             Serial.print("C"); Serial.print(i+1); Serial.print(": ");
-            float voltage = cell_voltages[current_ic][i] / MAX_16BIT_UNSIGNED * 5.0f;
-            Serial.println(voltage);
+            float voltage = cell_voltages[current_ic][i] * 0.0001;
+            Serial.println(voltage, 4);
         }
         Serial.println();
     }
-}
-
-int writeShutdownCANMessage(int minV, int maxV) {
-    msg.id = SHUTDOWN_FAULT;
-    msg.len = 2 * sizeof(int);
-    int counter = 0;
-    memcpy(&msg.buf[counter], &maxV, sizeof(int));
-    counter += sizeof(int);
-    memcpy(&msg.buf[counter], &minV, sizeof(int));
-    return can.write(msg);
 }
 
 void printCanMessage() {

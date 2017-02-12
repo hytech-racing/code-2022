@@ -109,25 +109,27 @@ typedef struct CAN_message_bms_voltage_t {
     uint16_t avgVoltage;
     uint16_t lowVoltage;
     uint16_t highVoltage;
+    uint16_t totalVoltage;
 } CAN_message_bms_voltage_t;
 
 class BMS_voltages {
   public:
     BMS_voltages();
     BMS_voltages(uint8_t buf[]);
-    BMS_voltages(uint16_t avg, uint16_t low, uint16_t high);
+    BMS_voltages(uint16_t avg, uint16_t low, uint16_t high, uint16_t, total);
     void load(uint8_t buf[]);
     void write(uint8_t buf[]);
     uint16_t getAverage();
     uint16_t getLow();
     uint16_t getHigh();
+    uint16_t getTotal();
     void setAverage(uint16_t avg);
     void setLow(uint16_t low);
     void setHigh(uint16_t high);
+    void setTotal(uint16_t total);
   private:
     CAN_message_bms_voltage_t bmsVoltageMessage;
-}
-
+};
 
 enum CHARGING_STATE {
     DISCHARGING = 0,
