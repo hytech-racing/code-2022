@@ -28,6 +28,7 @@
 #define ID_BMS_VOLTAGE 0xD2
 #define ID_BMS_CURRENT 0xD3
 #define ID_BMS_TEMPERATURE 0xD4
+#define ID_DCU_STATUS 0xD5
 #define ID_MC_TEMPERATURES_1 0xA0
 #define ID_MC_TEMPERATURES_2 0xA1
 #define ID_MC_TEMPERATURES_3 0xA2
@@ -103,6 +104,24 @@ class TCU_status {
   private:
     CAN_message_tcu_status_t message;
 };
+
+typedef struct CAN_message_dcu_status_t {
+    uint8_t btn_press_id;
+    uint8_t light_active_1;
+    uint8_t light_active_2;
+} CAN_message_dcu_status;
+
+class DCU_status {
+public:
+    TCU_status();
+    TCU_status(uint8_t buf[8]);
+    void load(uint8_t buf[8]);
+    void write(uint8_t buf[8]);
+    uint8_t get_btn_press_id();
+    void set_btn_press_id(uint8_t buf);
+private:
+    CAN_message_dcu_status_t message;
+}
 
 typedef struct CAN_message_bms_voltage_t {
     // integer from 0 to 65536 mapping from 0 to 5v
