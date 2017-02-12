@@ -129,7 +129,7 @@ public:
     void set_rtds_state(uint8_t rtds_state);
 private:
     CAN_message_dcu_status_t message;
-}
+};
 
 typedef struct CAN_message_bms_voltage_t {
     // integer from 0 to 65536 mapping from 0 to 5v
