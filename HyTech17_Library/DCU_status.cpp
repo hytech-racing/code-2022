@@ -35,3 +35,19 @@ void DCU_status::write(uint8_t buf[8]) {
     memcpy(&buf[3], &(message.rtds_state), sizeof(uint8_t));
 }
 
+uint8_t DCU_status::get_btn_press_id() {
+  return message.btn_press_id;
+}
+
+uint8_t DCU_status::get_light_active_1() {
+  return message.light_active_1;
+}
+
+uint8_t DCU_status::get_light_active_2() {
+  return message.light_active_2;
+}
+
+uint8_t DCU_status::get_rtds_state() {
+  return message.rtds_state;
+}
+
