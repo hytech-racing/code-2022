@@ -23,9 +23,12 @@ bool motor_fault;
 bool pedal_fault;
 bool general_fault;
 
+Metro timer_btn_start = Metro(10);
+
 unsigned long lastDebounceTOGGLE = 0;  // the last time the output pin was toggled
 unsigned long lastDebounceBOOST = 0;  // the last time the output pin was toggled
 unsigned long lastDebounceSTART = 0;  // the last time the output pin was toggled
+bool btn_start_pressed = false;
 unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
 
 /*************** BUTTON TYPES ****************
@@ -64,7 +67,24 @@ void loop() {
 }
 
 void pollForButtonPress {
-    // check if start button pressed
+  /*
+   * Handle start button press and depress
+   */
+  if (digitalRead(BTN_START) == btn_start_pressed && !btn_start_debouncing) { // Value is different than stored
+    btn_start_debouncing = true;
+    timer_btn_start.reset();
+  }
+  if (btn_start_debouncing && digitalRead(BTN_START) != btn_start_pressed) { // Value returns during debounce period
+    btn_start_debouncing = false;
+  }
+  if (btn_start_debouncing && timer_btn_start.check()) { // Debounce period finishes without value returning
+    btn_start_pressed = !btn_start_pressed;
+    if (btn_start_pressed) {
+      lastDebounceSTART++;
+      Serial.print("Start button pressed id ");
+      Serial.println(lastDebounceSTART);
+    }
+  }
 }
 
 void toggleButtonInterrupt {
