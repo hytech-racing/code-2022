@@ -31,8 +31,14 @@
 
 /********GLOBAL ARRAYS/VARIABLES CONTAINING DATA FROM CHIP**********/
 const uint8_t TOTAL_IC = 1;
-uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages. Stores numbers in 0.1 mV.
-uint16_t aux_voltagess[TOTAL_IC][6]; // contains auxillary pin voltages (not batteries)
+uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages. Stores numbers in 0.1 mV units.
+uint16_t aux_voltagess[TOTAL_IC][6]; // contains auxiliary pin voltages.
+                                     /* Data contained in this array is in this format:
+                                      * Thermistor 1
+                                      * Thermistor 2
+                                      * Thermistor 3
+                                      * Current Sensor
+                                      */
 
 /*!<
   The tx_cfg[][6] stores the LTC6804 configuration data that is going to be written
@@ -69,9 +75,7 @@ long msTimer = 0;
 BMS_voltages bmsVoltageMessage;
 BMS_currents bmsCurrentMessage;
 BMS_temperatures bmsTempMessage;
-// TODO: Add BMS Status to CAN Library. To send fault messages.
-boolean BMSStatusOK;
-boolean tractiveSystemOn;
+BMS_errors bmsErrorMessage;
 
 /**
  * Teensy Communication Pin Constants
@@ -106,8 +110,7 @@ void loop() {
     pollVoltage(); // cell_voltages[] array populated with cell voltages now.
     printCells();
 
-    pollThermistors();
-    pollCurrent();
+    pollAuxiliaryVoltages();
 
     avgMinMaxTotalVoltage(); // min, max, avg, and total volts stored in bmsVoltageMessage object.
 }
@@ -117,7 +120,7 @@ void loop() {
  **************************************/
 void init_cfg()
 {
-    // TODO: Write Threshold Values into Configuration Registers
+    // TODO: Write Threshold Values into Configuration Registers?
     for(int i = 0; i<TOTAL_IC;i++)
     {
         tx_cfg[i][0] = 0xFE;
@@ -144,18 +147,27 @@ void pollVoltage() {
     wakeup_idle();
     uint8_t error = LTC6804_rdcv(0, TOTAL_IC, cell_voltages); // asks chip to read voltages and stores in given array.
     if (error == -1) {
-        Serial.println("A PEC error was detected in voltage data");
+        Serial.println("A PEC error was detected in cell voltage data");
     }
     printCells(); // prints the cell voltages to Serial.
     delay(100);
 }
 
-void pollThermistors() {
-    // TODO: Implement function to poll auxillary registers that are connected to thermistors
-}
-
-void pollCurrent() {
-    // TODO: Implement function to poll auxillary registers that are connected to current sensor.
+void pollAuxiliaryVoltages() {
+    wakeFromSleepAllChips();
+    LTC6804_wrcfg(TOTAL_IC, tx_cfg);
+    wakeFromIdleAllChips();
+    LTC6804_adax();
+    delay(10);
+    wakeup_idle();
+    uint8_t error = LTC6804_rdaux(0, TOTAL_IC, aux_voltagess);
+    if (error == -1) {
+        Serial.println("A PEC error was detected in auxiliary voltage data");
+    }
+    printAux();
+    delay(100);
+    // TODO: Take auxiliary voltage data from thermistor and convert raw analog data into temperature values.
+    // TODO: Take auxilliary voltage data from current sensor and convert raw analog data into current values.
 }
 
 void wakeFromSleepAllChips() {
@@ -195,8 +207,6 @@ void avgMinMaxTotalVoltage() {
     bmsVoltageMessage.lowVoltage = minVolt;
     bmsVoltageMessage.highVoltage = maxVolt;
 }
-
-
 
 uint16_t convertToMillivolts(uint16_t v) {
     return v / 10;

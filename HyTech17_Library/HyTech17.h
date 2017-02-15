@@ -28,6 +28,7 @@
 #define ID_BMS_VOLTAGE 0xD2
 #define ID_BMS_CURRENT 0xD3
 #define ID_BMS_TEMPERATURE 0xD4
+#define ID_BMS_ERROR 0xD5
 #define ID_MC_TEMPERATURES_1 0xA0
 #define ID_MC_TEMPERATURES_2 0xA1
 #define ID_MC_TEMPERATURES_3 0xA2
@@ -179,6 +180,76 @@ class BMS_temperatures {
   private:
     CAN_message_mc_temperatures_1_t bmsTemperatureMessage;
 };
+
+typedef struct CAN_message_bms_error_t {
+    // TODO: Implement BMS Error message
+    /* Error Flags as bit map:
+     * errorFlagsByte1
+     * -0- -1- -2- -3- -4- -5- -6- -7-
+     * 0. Discharge overvoltage
+     * 1. Discharge undervoltage
+     * 2. Charge overvoltage
+     * 3. Charge undervoltage
+     * 4. Discharge overcurrent
+     * 5. Discharge undercurrent
+     * 6. Charge overcurrent
+     * 7. Charge undercurrent
+     */
+    /*
+     * errorFlagsByte2
+     * -0- -1- -2- -3- -4- -5- -6- -7-
+     * 0. Discharge overtemp
+     * 1. Discahrge undertemp
+     * 2. Charge overtemp
+     * 3. Charge undertemp
+     */
+     uint8_t errorFlagsByte1;
+     uint8_t errorFlagsByte2;
+     uint8_t BMSStatusOK;
+} CAN_message_bms_error_t;
+
+class BMS_errors {
+  public:
+    BMS_errors();
+    BMS_errors(uint8_t buf[]);
+    void load(uint8_t buf[]);
+    void write(uint8_t buf[]);
+    /***************GETTERS*****************/
+    bool getDischargeOvervoltage();
+    bool getDischargeUndervoltage();
+    bool getChargeOvervoltage();
+    bool getChargeUndervoltage();
+
+    bool getDischargeOvercurrent();
+    bool getDishargeUndercurrent();
+    bool getChargeOvercurrent();
+    bool getChargeUndercurrent();
+
+    bool getDischargeOvertemp();
+    bool getDischargeUndertemp();
+    bool getChargeOvertemp();
+    bool getChargeUndertemp();
+
+    bool getBMSStatusOK();
+
+    /***************SETTERS*****************/
+    void setDischargeOvervoltage(bool flag);
+    void setDischargeUndervoltage(bool flag);
+    void setChargeOvervoltage(bool flag);
+    void setChargeUndervoltage(bool flag);
+
+    void setDischargeOvercurrent(bool flag);
+    void setDishargeUndercurrent(bool flag);
+    void setChargeOvercurrent(bool flag);
+    void setChargeUndercurrent(bool flag);
+
+    void setDischargeOvertemp(bool flag);
+    void setDischargeUndertemp(bool flag);
+    void setChargeOvertemp(bool flag);
+    void setChargeUndertemp(bool flag);
+
+    void setBMSStatusOK(bool flag);
+}
 
 typedef struct CAN_message_mc_temperatures_1_t {
   int16_t module_a_temperature;
