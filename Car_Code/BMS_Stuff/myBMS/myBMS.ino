@@ -36,7 +36,7 @@
 #define DISCHARGE_TEMP_CRITICAL_HIGH 60
 #define DISCHARGE_TEMP_CRITICAL_LOW 15
 #define MAX_16BIT_UNSIGNED 65536
-
+/*
 /********GLOBAL ARRAYS/VARIABLES CONTAINING DATA FROM CHIP**********/
 const uint8_t TOTAL_IC = 1;
 uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages. Stores numbers in 0.1 mV units.
@@ -219,7 +219,7 @@ void avgMinMaxTotalVoltage() {
     Serial.print("Total: "); Serial.println(totalVolts, 4);
     Serial.print("Min: "); Serial.println(minVolt);
     Serial.print("Max: "); Serial.println(maxVolt);
-    
+
 }
 
 void balanceCellsDuringCharge() {
@@ -270,4 +270,5 @@ void waitForUserInput() {
     while (!Serial.available()) {
         // wait for input
     }
+    Serial.println();
 }

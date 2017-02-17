@@ -121,9 +121,6 @@ void loop() {
         }
     }
 
-    // CAN BUS
-    // DC Bus voltage (Motor controller) is higher than 100 (v??)
-
     if (updateTimer.check()) {
         readValues();
         updateTimer.reset();
@@ -145,6 +142,7 @@ void loop() {
     switch(state) {
         //TODO: check if reqs are met to move to each state
         case TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED:
+            // NOTE: Process handled in CAN message handler
             break;
         case TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE:
             // TCU must wait until PCU in SHUTDOWN_CIRCUIT_INITIALIZED state
@@ -256,10 +254,10 @@ int sendCANUpdate(){
 
     byte statuses = state;
 
-    if(throttleImplausibility) statuses += 16;
-    if(throttleCurve) statuses += 32;
-    if(brakeImplausibility) statuses += 64;
-    if(brakePedalActive) statuses += 128;
+    if(throttleImplausibility) statuses |= (1<<4);
+    if(throttleCurve) statuses |= (1<<5);
+    if(brakeImplausibility) statuses |= (1<<6);
+    if(brakePedalActive) statuses |= (1<<7);
 
     msg.id = ID_TCU_STATUS;
     msg.len = 1;
@@ -279,12 +277,12 @@ void set_state(uint8_t new_state) {
         state = TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED;
     } else {
         switch (state) {
-            // TODO handle state transitions
+            // NOTE: handles state transitions in special cases
             case TCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
                 if (new_state == TCU_STATE_ENABLING_INVERTER) {
                     state = TCU_STATE_ENABLING_INVERTER;
+                    break;
                 }
-                break;
             default:
                 uint8_t old_state = state;
                 state = new_state;
