@@ -8,6 +8,11 @@
 #define FAN_PIN_2 A8 
 #define FAN_PIN_3 A9
 #define TEMP_THRESHOLD 40
+#define COUNTER_RESET A0
+#define FAN_SPEED_MAX 255
+#define FAN_ID_1 0x51 
+#define FAN_ID_2 0 //PLACEHOLDER
+#define FAN_ID_3 0 //PLACEHOLDER
 //TODO: ports
 
 FlexCAN CAN(500000);
@@ -27,7 +32,6 @@ bool started =  false;
 int fanSpeed_1 = FAN_IDLE; 
 int fanSpeed_2 = FAN_IDLE;
 int fanSpeed_3 = FAN_IDLE;
-int pumpPin = 12; //arbitrary
 // setup code
 void setup() {
     Serial.begin(115200); // init serial
@@ -42,7 +46,7 @@ void setup() {
     pinMode(D11, INPUT);
     pinMode(D12, INPUT);
     pinMode(D13, INPUT);
-    pinMode(A0, OUTPUT);
+    pinMode(COUNTER_RESET, OUTPUT);
     pinMode(A1, INPUT);
 
     //fan output pins
@@ -54,7 +58,7 @@ void setup() {
     Serial.println("CAN system and serial communication initialized");
 }
 
-// loop code
+// TODO use library functions to get temp values, etc.
 void loop() {
     //check the flow sensor if timer is up
     if(pulseTimer.check()) { 
@@ -81,8 +85,9 @@ void loop() {
         flowRate = freq/7.5;
         Serial.print("flow rate: ");
         Serial.println(flowRate);
-        digitalWrite(6, HIGH);
-        digitalWrite(6, LOW);
+        //TODO send CAN message with the flow rate
+        digitalWrite(COUNTER_RESET, HIGH);
+        digitalWrite(COUNTER_RESET, LOW);
         pulseTimer.reset();
     }
     if (timer.check()) {
@@ -107,13 +112,13 @@ void loop() {
                 if (msg.id == 0x51 || msg.id == FAN_ID_2 || msg.id == FAN_ID_3 { //TODO: PLACEHOLDER IDs
                     if (msg.buf[0] > TEMP_THRESHOLD) {
                         // Increase fan speed with PWM
-                        if (msg.id==0x51) {
+                        if (msg.id==0x51 && fanSpeed_1 <= FAN_SPEED_MAX) {
                             fanSpeed_1 +=1;
                             analogWrite(FAN_PIN_1, fanSpeed_1);
-                        } else if (msg.id==FAN_ID_2) {
+                        } else if (msg.id==FAN_ID_2 && fanSpeed_2 <= FAN_SPEED_MAX) {
                             fanSpeed_2 +=1;
                             analogWrite(FAN_PIN_2, fanSpeed_2);
-                        } else if (msg.id==FAN_ID_3) {
+                        } else if (msg.id==FAN_ID_3 && fanSpeed_3 <= FAN_SPEED_MAX) {
                             fanSpeed_3 +=1;
                             analogWrite(FAN_PIN_2, fanSpeed_3);
                         }
@@ -134,6 +139,7 @@ void loop() {
                 }
             }
         }
+        timer.reset();
     }
 }
 
