@@ -5,6 +5,16 @@
  * Modified
  */
 
+//#include <Arduino.h>
+//#include <stdint.h>
+//#include "Linduino.h"
+//#include "LT_SPI.h"
+//#include "LTC68041.h"
+//#include "HyTech17.h"
+//#include <SPI.h>
+//#include <FlexCAN.h>
+//#include <kinetis_flexcan.h>
+
 #include <Arduino.h>
 #include <stdint.h>
 #include "Linduino.h"
@@ -12,8 +22,6 @@
 #include "LTC68041.h"
 #include "HyTech17.h"
 #include <SPI.h>
-#include <FlexCAN.h>
-#include <kinetis_flexcan.h>
 
 /************BATTERY CONSTRAINTS AND CONSTANTS**********************/
 #define VOLTAGE_LOW_CUTOFF 3.0
@@ -32,7 +40,7 @@
 /********GLOBAL ARRAYS/VARIABLES CONTAINING DATA FROM CHIP**********/
 const uint8_t TOTAL_IC = 1;
 uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages. Stores numbers in 0.1 mV units.
-uint16_t aux_voltagess[TOTAL_IC][6]; // contains auxiliary pin voltages.
+uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
                                      /* Data contained in this array is in this format:
                                       * Thermistor 1
                                       * Thermistor 2
@@ -65,8 +73,8 @@ uint8_t rx_cfg[TOTAL_IC][8];
 /**
  * CAN Variables
  */
-FlexCAN can(500000);
-static CAN_message_t msg;
+//FlexCAN can(500000);
+//static CAN_message_t msg;
 long msTimer = 0;
 
 /**
@@ -75,7 +83,7 @@ long msTimer = 0;
 BMS_voltages bmsVoltageMessage;
 BMS_currents bmsCurrentMessage;
 BMS_temperatures bmsTempMessage;
-BMS_errors bmsErrorMessage;
+BMS_status bmsStatusMessage;
 
 /**
  * Teensy Communication Pin Constants
@@ -89,16 +97,16 @@ BMS_errors bmsErrorMessage;
 void setup() {
     // put your setup code here, to run once:
     Serial.begin(115200);
-    SPI.setMOSI(MOSI_PIN);
-    SPI.setMISO(MISO_PIN);
-    SPI.setSCK(CLOCK_PIN);
-    pinMode(SPI_CHIP_SELECT_PIN, OUTPUT);
-    SPI.begin();
+    // SPI.setMOSI(MOSI_PIN);
+    // SPI.setMISO(MISO_PIN);
+    // SPI.setSCK(CLOCK_PIN);
+    // pinMode(SPI_CHIP_SELECT_PIN, OUTPUT);
+    // SPI.begin();
+//    pinMode(A0, INPUT);
 
     LTC6804_initialize();
     init_cfg();
-    can.begin();
-    BMSStatusOK = true;
+//    can.begin();
 }
 
 /*
@@ -107,10 +115,12 @@ void setup() {
  // NOTE: Implement Coulomb counting to track state of charge of battery.
 void loop() {
     // put your main code here, to run repeatedly:
+    waitForUserInput();
     pollVoltage(); // cell_voltages[] array populated with cell voltages now.
-    printCells();
 
     pollAuxiliaryVoltages();
+//    int thermValue = analogRead(A0);
+//    Serial.print("Thermistor reading: "); Serial.println(thermValue);
 
     avgMinMaxTotalVoltage(); // min, max, avg, and total volts stored in bmsVoltageMessage object.
 }
@@ -120,7 +130,6 @@ void loop() {
  **************************************/
 void init_cfg()
 {
-    // TODO: Write Threshold Values into Configuration Registers?
     for(int i = 0; i<TOTAL_IC;i++)
     {
         tx_cfg[i][0] = 0xFE;
@@ -160,7 +169,7 @@ void pollAuxiliaryVoltages() {
     LTC6804_adax();
     delay(10);
     wakeup_idle();
-    uint8_t error = LTC6804_rdaux(0, TOTAL_IC, aux_voltagess);
+    uint8_t error = LTC6804_rdaux(0, TOTAL_IC, aux_voltages);
     if (error == -1) {
         Serial.println("A PEC error was detected in auxiliary voltage data");
     }
@@ -202,10 +211,23 @@ void avgMinMaxTotalVoltage() {
         }
     }
     avgVolt = totalVolts / (TOTAL_IC * 12); // stored as double volts
-    bmsVoltageMessage.avgVoltage = static_cast<uint16_t>(avgVolt * 1000 + 0.5);
-    bmsVoltageMessage.totalVoltage = static_cast<uint16_t>(totalVolts + 0.5);
-    bmsVoltageMessage.lowVoltage = minVolt;
-    bmsVoltageMessage.highVoltage = maxVolt;
+    bmsVoltageMessage.setAverage(static_cast<uint16_t>(avgVolt * 1000 + 0.5));
+    bmsVoltageMessage.setTotal(static_cast<uint16_t>(totalVolts + 0.5));
+    bmsVoltageMessage.setLow(minVolt);
+    bmsVoltageMessage.setHigh(maxVolt);
+    Serial.print("Avg: "); Serial.println(avgVolt, 4);
+    Serial.print("Total: "); Serial.println(totalVolts, 4);
+    Serial.print("Min: "); Serial.println(minVolt);
+    Serial.print("Max: "); Serial.println(maxVolt);
+    
+}
+
+void balanceCellsDuringCharge() {
+    // TODO: Implement cell balancing during full charge to prevent overcharging.
+}
+
+void balanceCellsDuringDrivingRegen() {
+    // TODO: Implement cell balancing during driving regen.
 }
 
 uint16_t convertToMillivolts(uint16_t v) {
@@ -225,13 +247,27 @@ void printCells() {
     }
 }
 
-void printCanMessage() {
-    uint8_t len = msg.len;
-    Serial.print("ID: ");
-    Serial.println(msg.id);
-    Serial.print("MESSAGE: ");
-    for (uint8_t i = 0; i < len; i++) {
-        Serial.print(msg.buf[i]);
+void printAux() {
+    for (int current_ic = 0; current_ic < TOTAL_IC; current_ic++) {
+        Serial.print("IC: ");
+        Serial.println(current_ic + 1);
+        for (int i = 0; i < 6; i++) {
+            Serial.print("Aux-"); Serial.print(i+1); Serial.print(": ");
+            float voltage = aux_voltages[current_ic][i] * 0.0001;
+            Serial.println(voltage, 4);
+        }
+        Serial.println();
     }
-    Serial.println();
+}
+
+void waitForUserInput() {
+    if (Serial.available()) {
+        while (Serial.available()) {
+            Serial.read();
+        }
+    } // clear buffer
+    Serial.println("Continue?");
+    while (!Serial.available()) {
+        // wait for input
+    }
 }

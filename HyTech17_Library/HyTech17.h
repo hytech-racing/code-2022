@@ -117,7 +117,7 @@ class BMS_voltages {
   public:
     BMS_voltages();
     BMS_voltages(uint8_t buf[]);
-    BMS_voltages(uint16_t avg, uint16_t low, uint16_t high, uint16_t, total);
+    BMS_voltages(uint16_t avg, uint16_t low, uint16_t high, uint16_t total);
     void load(uint8_t buf[]);
     void write(uint8_t buf[]);
     uint16_t getAverage();
@@ -178,7 +178,7 @@ class BMS_temperatures {
     void setLowTemp(uint16_t low);
     void setHighTemp(uint16_t high);
   private:
-    CAN_message_mc_temperatures_1_t bmsTemperatureMessage;
+    CAN_message_bms_temperature_t bmsTemperatureMessage;
 };
 
 typedef struct CAN_message_bms_error_t {
@@ -208,10 +208,10 @@ typedef struct CAN_message_bms_error_t {
      uint8_t BMSStatusOK;
 } CAN_message_bms_error_t;
 
-class BMS_errors {
+class BMS_status {
   public:
-    BMS_errors();
-    BMS_errors(uint8_t buf[]);
+    BMS_status();
+    BMS_status(uint8_t buf[]);
     void load(uint8_t buf[]);
     void write(uint8_t buf[]);
     /***************GETTERS*****************/
@@ -221,7 +221,7 @@ class BMS_errors {
     bool getChargeUndervoltage();
 
     bool getDischargeOvercurrent();
-    bool getDishargeUndercurrent();
+    bool getDischargeUndercurrent();
     bool getChargeOvercurrent();
     bool getChargeUndercurrent();
 
@@ -239,7 +239,7 @@ class BMS_errors {
     void setChargeUndervoltage(bool flag);
 
     void setDischargeOvercurrent(bool flag);
-    void setDishargeUndercurrent(bool flag);
+    void setDischargeUndercurrent(bool flag);
     void setChargeOvercurrent(bool flag);
     void setChargeUndercurrent(bool flag);
 
@@ -249,7 +249,9 @@ class BMS_errors {
     void setChargeUndertemp(bool flag);
 
     void setBMSStatusOK(bool flag);
-}
+  private:
+    CAN_message_bms_error_t bmsErrorMessage;
+};
 
 typedef struct CAN_message_mc_temperatures_1_t {
   int16_t module_a_temperature;
