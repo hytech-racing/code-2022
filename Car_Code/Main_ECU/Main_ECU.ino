@@ -1,6 +1,8 @@
 #include <FlexCAN.h> // import teensy library
 #include <Metro.h>
 
+// TODO: Convert to HyTech library
+
 #define BMS_FAULT (1<<0)
 #define IMD_FAULT (1<<1)
 #define BSPD_FAULT (1<<2)
