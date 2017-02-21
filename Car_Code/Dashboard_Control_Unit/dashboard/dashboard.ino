@@ -1,4 +1,6 @@
 #include <FlexCAN.h>
+#include <HyTech17.h>
+#include <Metro.h>
 
 /******* PIN definitions ***********/
 #define BTN_TOGGLE 9
@@ -23,10 +25,25 @@ bool motor_fault;
 bool pedal_fault;
 bool general_fault;
 
+Metro timer_btn_start = Metro(10);
+Metro timer_led_start_blink_fast = Metro(150);
+Metro timer_led_start_blink_slow = Metro(400);
+Metro timer_inverter_enable = Metro(2000);  // Timeout failed inverter enable
+Metro timer_ready_sound = Metro(2000);      // Time to play RTD sound
+
+unsigned long lastDebounceTOGGLE = 0;  // the last time the output pin was toggled
+unsigned long lastDebounceBOOST = 0;  // the last time the output pin was toggled
+unsigned long lastDebounceSTART = 0;  // the last time the output pin was toggled
+uint8_t btn_start_new = 0;
+bool btn_start_pressed = false;
+unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
+uint8_t led_start_type = 0;
+
 /*************** BUTTON TYPES ****************
  *  Start Button
  *  Toggle Button
- *  SelectButton
+ *  Select Button
+ *  Boost Button
 */
 int count;
 
@@ -34,6 +51,7 @@ int count;
  * CAN Variables
  */
 FlexCAN can(500000);
+FlexCAN CAN(500000);
 static CAN_message_t msg;
 
 void setup() {
@@ -46,6 +64,9 @@ void setup() {
     motor_fault = false;
     pedal_fault = false;
     general_fault = false;
+    state = DCU_STATE_INITIAL_STARTUP;
+    pinMode(LED_BMS, OUTPUT);
+    pinMode(LED_IMD, OUTPUT);
     Serial.begin(115200);
     can.begin();
 
@@ -53,11 +74,148 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  pollForButtonPress();
+  while (CAN.read(msg)) {
+    // Handle PCU (power board) status messages
+    if (msg.id == ID_PCU_STATUS) {
+      // Load message into PCU_status object
+      PCU_status pcu_status(msg.buf);
+
+      Serial.print("PCU State: ");
+      Serial.println(pcu_status.get_state());
+
+      // Handle PCU fault states
+      if (pcu_status.get_bms_fault()) {
+        bms_fault = true;
+        digitalWrite(LED_BMS, HIGH);
+      }
+      if (pcu_status.get_imd_fault()) {
+        imd_fault = true;
+        digitalWrite(LED_IMD, HIGH);
+      }
+      // Set Dashboard internal state based on PCU state
+      // If not ready to power up, or ready to drive, start light off
+      // If ready and waiting for 1st press, flash start light slow
+      // If waiting for 2nd press, flash start light fast
+      switch (pcu_status.get_state()) {
+        case PCU_STATE_WAITING_BMS_IMD:
+          set_start_led(0);
+          set_state(DCU_STATE_WAITING_TRACTIVE_SYSTEM);
+          break;
+        case PCU_STATE_WAITING_DRIVER:
+          set_start_led(3); // slow blink
+          set_state(DCU_STATE_WAITING_TRACTIVE_SYSTEM);
+          break;
+        case PCU_STATE_LATCHING:
+          set_start_led(0);
+          set_state(DCU_STATE_PRESSED_TRACTIVE_SYSTEM);
+          break;
+        case PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
+          set_state(DCU_STATE_WAITING_MC_ENABLE);
+          break;
+        case PCU_STATE_FATAL_FAULT:
+          set_state(DCU_STATE_FATAL_FAULT);
+          break;
+      }
+    }
+    // Handle motor controller state messages
+    if (msg.id == ID_MC_INTERNAL_STATES) {
+        MC_internal_states mc_internal_states = MC_internal_states(msg.buf);
+        // if start button has been pressed and inverter is enabled, play RTD sound
+        if (mc_internal_states.get_inverter_enable_state && state == DCU_STATE_PRESSED_MC_ENABLE) {
+            set_state(DCU_STATE_PLAYING_RTD);
+        }
+    }
+
+    // TODO: Could be replaced by TCU status messages?
+
+    // // Handle motor controller voltage messages
+    // if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
+    //     MC_voltage_information mc_voltage_information = MC_voltage_information(msg.buf);
+    //
+    // }
+  }
+
+  // TODO: more state machine stuff possibly?
+  /*
+   * State machine
+   */
+  switch (state) {
+      case DCU_STATE_WAITING_TRACTIVE_SYSTEM:
+        if (btn_start_new == lastDebounceSTART) {
+            set_state(DCU_STATE_PRESSED_TRACTIVE_SYSTEM);
+        }
+        break;
+      case DCU_STATE_WAITING_MC_ENABLE:
+        if (btn_start_new == lastDebounceSTART) {
+            set_state(DCU_STATE_PRESSED_MC_ENABLE);
+        }
+        break;
+      case DCU_STATE_PRESSED_MC_ENABLE:
+        if (timer_inverter_enable.check()) {    // inverter did not enable
+            set_state(DCU_STATE_TS_INACTIVE);
+        }
+        break;
+      case DCU_STATE_PLAYING_RTD:
+        if (timer_ready_sound.check()) {        // RTD sound is finished
+            set_state(DCU_STATE_READY_TO_DRIVE);
+        }
+        break;
+  }
+
+  // TODO: Implement broadcast of state messages
+  // TODO: Blink start LED (should just be copypasta from Nathan's TCU)
+  // TODO: other buttons
+  pollForButtonPress(); // fix this
 }
 
 void pollForButtonPress {
-    // check if start button pressed
+  /*
+   * Handle start button press and depress
+   */
+  if (digitalRead(BTN_START) == btn_start_pressed && !btn_start_debouncing) { // Value is different than stored
+    btn_start_debouncing = true;
+    timer_btn_start.reset();
+  }
+  if (btn_start_debouncing && digitalRead(BTN_START) != btn_start_pressed) { // Value returns during debounce period
+    btn_start_debouncing = false;
+  }
+  if (btn_start_debouncing && timer_btn_start.check()) { // Debounce period finishes without value returning
+    btn_start_pressed = !btn_start_pressed;
+    if (btn_start_pressed) {
+      lastDebounceSTART++;
+      Serial.print("Start button pressed id ");
+      Serial.println(lastDebounceSTART);
+    }
+  }
+}
+
+/*
+ * Set the Start LED
+ */
+void set_start_led(uint8_t type) {
+  if (led_start_type != type) {
+    led_start_type = type;
+
+    if (type == 0) {
+      digitalWrite(LED_START, LOW);
+      led_start_active = false;
+      Serial.println("Setting Start LED off");
+      return;
+    }
+
+    digitalWrite(LED_START, HIGH);
+    led_start_active = true;
+
+    if (type == 1) {
+      Serial.println("Setting Start LED solid on");
+    } else if (type == 2) {
+      timer_led_start_blink_fast.reset();
+      Serial.println("Setting Start LED fast blink");
+    } else if (type == 3) {
+      timer_led_start_blink_slow.reset();
+      Serial.println("Setting Start LED slow blink");
+    }
+  }
 }
 
 void toggleButtonInterrupt {

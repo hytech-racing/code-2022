@@ -4,7 +4,7 @@
  * Interface with dashboard lights, buttons, and buzzer. Read pedal sensor values.
  */
 #include <FlexCAN.h>
-#include <HyTech17.h>
+#include "HyTech17.h"
 #include <Metro.h>
 
 /*
@@ -58,7 +58,7 @@ bool btn_toggle_pressed = false;
 uint16_t button_torque = 0;
 bool cooling_ramp_enable = false;
 uint8_t cooling_ramp = 0;
-bool debug = false;
+bool debug = true;
 bool led_start_active = false;
 uint8_t led_start_type = 0; // 0 for off, 1 for steady, 2 for fast blink, 3 for slow blink
 uint8_t state = TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED;
@@ -323,8 +323,8 @@ void loop() {
 
     case TCU_STATE_READY_TO_DRIVE:
     if (timer_motor_controller_send.check()) {
-      //uint16_t torque = button_torque;
-      uint16_t torque = calculate_torque();
+      uint16_t torque = button_torque;
+//      uint16_t torque = calculate_torque();
       Serial.print("Requesting torque: ");
       Serial.println(torque);
       MC_command_message message = MC_command_message(torque, 0, 1, 1, 0, 0);

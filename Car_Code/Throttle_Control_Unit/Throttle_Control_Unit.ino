@@ -1,6 +1,6 @@
 #include <FlexCAN.h> // import teensy library
 #include <Metro.h>
-#include <HyTech17.h>
+#include "HyTech17.h"
 
 //ports
 #define BRAKE_ANALOG_PORT 3 //analog port of brake sensor
@@ -254,10 +254,10 @@ int sendCANUpdate(){
 
     byte statuses = state;
 
-    if(throttleImplausibility) statuses += 16;
-    if(throttleCurve) statuses += 32;
-    if(brakeImplausibility) statuses += 64;
-    if(brakePedalActive) statuses += 128;
+    if(throttleImplausibility) statuses |= (1<<4);
+    if(throttleCurve) statuses |= (1<<5);
+    if(brakeImplausibility) statuses |= (1<<6);
+    if(brakePedalActive) statuses |= (1<<7);
 
     msg.id = ID_TCU_STATUS;
     msg.len = 1;
