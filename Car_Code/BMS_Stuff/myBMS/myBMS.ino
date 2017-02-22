@@ -25,7 +25,7 @@
 
 /************BATTERY CONSTRAINTS AND CONSTANTS**********************/
 #define VOLTAGE_LOW_CUTOFF 3.0
-#define VOLTAGE_HIGH_CUTOFF 4.2
+#define VOLTAGE_HIGH_CUTOFF 4.0
 #define DISCHARGE_CURRENT_CONSTANT_HIGH 220
 #define DISCHARGE_CURRENT_PEAK_HIGH 440
 #define CHARGE_CURRENT_CONSTANT_HIGH 220
@@ -47,6 +47,7 @@ uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
                                       * Thermistor 3
                                       * Current Sensor
                                       */
+int16_t cell_delta_voltage[TOTAL_IC][12]; // contains 12 signed dV values in 0.1 mV units
 
 /*!<
   The tx_cfg[][6] stores the LTC6804 configuration data that is going to be written
@@ -84,6 +85,8 @@ BMS_voltages bmsVoltageMessage;
 BMS_currents bmsCurrentMessage;
 BMS_temperatures bmsTempMessage;
 BMS_status bmsStatusMessage;
+int minVoltageICIndex;
+int minVoltageCellIndex;
 
 /**
  * Teensy Communication Pin Constants
@@ -107,6 +110,8 @@ void setup() {
     LTC6804_initialize();
     init_cfg();
 //    can.begin();
+    pollVoltage();
+    memcpy(cell_delta_voltage, cell_voltages, 2 * TOTAL_IC * 12);
 }
 
 /*
@@ -201,11 +206,14 @@ void avgMinMaxTotalVoltage() {
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         for (int cell = 0; cell < 12; cell++) {
             uint16_t currentCell = cell_voltages[ic][cell];
+            cell_delta_voltage[ic][cell] = currentCell - cell_delta_voltage[ic][cell];
             if (currentCell > maxVolt) {
                 maxVolt = currentCell;
             }
             if (currentCell < minVolt) {
                 minVolt = currentCell;
+                minVoltageICIndex = ic;
+                minVoltageCellIndex = cell;
             }
             totalVolts += currentCell * 0.0001;
         }
@@ -219,15 +227,36 @@ void avgMinMaxTotalVoltage() {
     Serial.print("Total: "); Serial.println(totalVolts, 4);
     Serial.print("Min: "); Serial.println(minVolt);
     Serial.print("Max: "); Serial.println(maxVolt);
-
 }
 
 void balanceCellsDuringCharge() {
-    // TODO: Implement cell balancing during full charge to prevent overcharging.
+    // 1 volt operating window. Balancing will kick in when any cell is greater than 0.25 volts of the lowest cell.
+    uint16_t minVolt = bmsVoltageMessage.lowVoltage; // stored in mV
+    int16_t minVoltDeltaVoltage = cell_delta_voltage[minVoltageICIndex][minVoltageCellIndex]; // stored in 0.1 mV
+    double minTimeFactor = (4000.0 - minVolt) / (cell_delta_voltage[minVoltageICIndex][minVoltageCellIndex] * 0.1);
+    for (int ic = 0; ic < TOTAL_IC; ic++) {
+        for (int cell = 0; cell < 12; cell++) {
+            double currentTimeFactor = (4000.0 - cell_voltages[ic][cell] * 0.1) / (cell_delta_voltage[ic][cell] * 0.1);
+            if (currentTimeFactor < minTimeFactor) {
+                // this case represents when the current cell is charging FASTER than the lowest voltage cell in the pack
+                // turn on balancing, a.k.a discharge this cell indefinitely.
+                beginCellDischarge(ic, cell);
+            } else if (currentTimeFactor > minTimeFactor){
+                // this case represents when the current cell is charging slower than the lowest voltage cell in the pack
+                // turn off balancing, a.k.a STOP discharging this cell.
+                endCellDischarge(ic, cell);
+            }
+        }
+    }
 }
 
-void balanceCellsDuringDrivingRegen() {
-    // TODO: Implement cell balancing during driving regen.
+void beginCellDischarge(int ic, int cell) {
+    // TODO: Implement cell discharge by writing to configuration registers.
+}
+
+void endCellDischarge(int ic, int cell) {
+    // TODO: Implement ending cell discharge by writing to configuration registers.
+    // NOTE: Is it even possible to write different values to various configuration registers?
 }
 
 uint16_t convertToMillivolts(uint16_t v) {
