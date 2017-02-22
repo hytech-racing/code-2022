@@ -1,5 +1,6 @@
 #include <FlexCAN.h> // import teensy library
 #include <Metro.h>
+#include <HyTech17.h>
 
 // TODO: Convert to HyTech library
 
@@ -25,8 +26,6 @@
 #define IMD_LATCH_SSR_PIN 10
 #define BRAKE_LIGHT_PIN 13
 
-#define STATE_MESSAGE_ID 0xD0
-
 FlexCAN CAN(500000);
 static CAN_message_t msg;
 float OKHS = 0; // voltage after calculation
@@ -41,15 +40,13 @@ int thermValue = 0; //raw value from thermistor
 bool startupDone = false; // true when reached drive state
 int faultId = 0;
 
-
 // timer
 Metro updateTimer = Metro(500);
 Metro AIRtimer = Metro(500);
 Metro FAKE_DRIVER_BUTTON_PRESS = Metro(10000);
 
-
-enum State { GLVinit=0, waitIMDBMS, waitDriver, AIRClose, fatalFault, drive }; // NOTE: change and update
-State curState = GLVinit; // curState is current state
+uint8_t state; // state from HyTech Library
+// enum State { GLVinit=0, waitIMDBMS, PCU_STATE_WAITING_DRIVER, PCU_STATE_LATCHING, fatalFault, drive }; // NOTE: change and update
 
 //FUNCTION PROTOTYPES
 bool readValues();
@@ -59,7 +56,6 @@ int sendCanUpdate();
 
 //State Ouptuts for CAN Messages
 byte stateOutput;
-
 
 // setup code
 void setup() {
@@ -74,8 +70,6 @@ void setup() {
 
     CAN.begin(); // init CAN system
     Serial.println("CAN system and serial communication initialized");
-    curState = GLVinit; // curState is current state
-    Serial.println("Current state is GLVinit");
     startPressed = 0;
 }
 
@@ -100,7 +94,7 @@ void loop() {
 
       // Scanning CAN for dashboard state message (start button)
       // Change values based on what message actually is
-      if (curState == waitDriver && msg.id == STATE_MESSAGE_ID) {
+      if (state == PCU_STATE_WAITING_DRIVER && msg.id == ID_PCU_STATUS) {
         Serial.println(msg.buf[0], BIN);
         if (msg.buf[0] & 0x10) {
           startPressed = 1;
@@ -110,17 +104,17 @@ void loop() {
 
     //check CAN for a message for software shutdown
     if (!startupDone) {
-        switch (curState) {
+        switch (state) {
             case GLVinit:
                 stateOutput = 0b00000000;
-                curState = waitIMDBMS; //going straight to waitIMD until further notice
+                state = PCU_STATE_WAITING_BMS_IMD; //going straight to waitIMD until further notice
                 break;
-            case waitIMDBMS:
+            case PCU_STATE_WAITING_BMS_IMD:
                 stateOutput = 0b00000001;
                 Serial.println("Waiting for IMD/BMS OK...");
                 if (DISCHARGE_OK >= BMS_High) { // if BMS is high
                     if (OKHS >= IMD_High) { // if IMD is also high
-                        curState = waitDriver; // both BMD and IMD are high, wait for start button press
+                        state = PCU_STATE_WAITING_DRIVER; // both BMD and IMD are high, wait for start button press
 
                         // Once adapted to library, we can change MC enabling to depend on throttle control
                         // status message
@@ -128,7 +122,7 @@ void loop() {
                     }
                 }
                 break;
-            case waitDriver:
+            case PCU_STATE_WAITING_DRIVER:
                 stateOutput = 0b00000010;
                 Serial.println("Waiting for start button...");
                 /*can message for start button press received*/
@@ -138,20 +132,20 @@ void loop() {
                     Serial.println("Latching...");
                     digitalWrite(BMS_LATCH_SSR_PIN, HIGH);   // close latch A SSR (Software Switch)
                     digitalWrite(IMD_LATCH_SSR_PIN, HIGH);   // close latch B SSR
-                    curState = AIRClose;
+                    state = PCU_STATE_LATCHING;
                 }
                 break;
-            case AIRClose: // equivalent to VCCAIR in Google Doc state diagram
+            case PCU_STATE_LATCHING: // equivalent to VCCAIR in Google Doc state diagram
                 stateOutput = 0b00000100;
                 if(AIRtimer.check()){
                       Serial.println("Completed latching");
                       digitalWrite(BMS_LATCH_SSR_PIN, LOW);  // Open latch SSR
                       digitalWrite(IMD_LATCH_SSR_PIN, LOW);  // open latch B SSR
-                      curState = drive;
+                      state = PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED;
                 }
                 startPressed = false;
                 break;
-            case fatalFault:
+            case PCU_STATE_FATAL_FAULT:
                 stateOutput = 0b00001000;
                 Serial.println("FAULTED");
                 if (faultId & 1) {
@@ -162,7 +156,7 @@ void loop() {
                   Serial.println("BSPD Fault");
                 }
                 break;
-            case drive:
+            case PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
                 Serial.println("Drive state");
                 stateOutput = 0b00010000;
                 break;
@@ -197,7 +191,7 @@ bool readValues() {
 bool checkFatalFault() { // returns true if fatal fault found
     CAN_message_t faultMsg;
     faultMsg.buf[0] = 0;
-    if (curState == waitDriver || curState == AIRClose || curState == drive) {
+    if (state == PCU_STATE_WAITING_DRIVER || state == PCU_STATE_LATCHING || state == drive) {
       if (OKHS < IMD_High) {
           faultMsg.buf[0] = faultMsg.buf[0] | IMD_FAULT;
       } if (DISCHARGE_OK < BMS_High) {
@@ -217,7 +211,7 @@ bool checkFatalFault() { // returns true if fatal fault found
         Serial.print("FAULT ID: ");
         Serial.println(faultMsg.buf[0], BIN);
         //digitalWrite(SHUTDOWN_SSR_PIN, LOW);  // Open shutdown circuit
-        curState = fatalFault;
+        state = PCU_STATE_FATAL_FAULT;
         faultId = faultMsg.buf[0];
         faultMsg.id = 0x002;
         faultMsg.len = 1;
