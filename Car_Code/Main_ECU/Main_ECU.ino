@@ -47,16 +47,11 @@ Metro updateTimer = Metro(500); // Read in values from inputs
 Metro AIRtimer = Metro(500);
 
 uint8_t state; // state from HyTech Library
-// enum State { GLVinit=0, waitIMDBMS, PCU_STATE_WAITING_DRIVER, PCU_STATE_LATCHING, fatalFault, drive }; // NOTE: change and update
 
 //FUNCTION PROTOTYPES
 bool readValues();
 bool checkFatalFault();
-bool sendCanMessage(int, int, int);
 int sendCanUpdate();
-
-//State Ouptuts for CAN Messages
-byte stateOutput;
 
 // setup code
 void setup() {
@@ -66,7 +61,6 @@ void setup() {
     Serial.println("CAN system and serial communication initialized");
 
     // Set up SSR output pins
-    //pinMode(SHUTDOWN_SSR_PIN, OUTPUT);
     pinMode(BMS_LATCH_SSR_PIN, OUTPUT);
     pinMode(IMD_LATCH_SSR_PIN, OUTPUT);
     pinMode(BRAKE_LIGHT_PIN, OUTPUT);
@@ -75,7 +69,6 @@ void setup() {
     startPressed = 0;
 }
 
-// loop code
 void loop() {
     checkFatalFault();
 
@@ -105,11 +98,9 @@ void loop() {
 
     switch (state) {
         case GLVinit:
-            stateOutput = 0b00000000;
             state = PCU_STATE_WAITING_BMS_IMD; //going straight to waitIMD until further notice
             break;
         case PCU_STATE_WAITING_BMS_IMD:
-            stateOutput = 0b00000001;
             Serial.println("Waiting for IMD/BMS OK...");
             if (DISCHARGE_OK >= BMS_High) { // if BMS is high
                 if (OKHS >= IMD_High) { // if IMD is also high
@@ -122,7 +113,6 @@ void loop() {
             }
             break;
         case PCU_STATE_WAITING_DRIVER:
-            stateOutput = 0b00000010;
             Serial.println("Waiting for start button...");
             /*can message for start button press received*/
 
@@ -135,7 +125,6 @@ void loop() {
             }
             break;
         case PCU_STATE_LATCHING: // equivalent to VCCAIR in Google Doc state diagram
-            stateOutput = 0b00000100;
             if(AIRtimer.check()){
                   Serial.println("Completed latching");
                   digitalWrite(BMS_LATCH_SSR_PIN, LOW);  // Open latch SSR
@@ -145,7 +134,6 @@ void loop() {
             startPressed = false;
             break;
         case PCU_STATE_FATAL_FAULT:
-            stateOutput = 0b00001000;
             Serial.println("FAULTED");
             if (faultId & 1) {
               Serial.println("BMS Fault");
@@ -157,7 +145,6 @@ void loop() {
             break;
         case PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
             Serial.println("Drive state");
-            stateOutput = 0b00010000;
             break;
     }
 
@@ -210,7 +197,6 @@ bool checkFatalFault() { // returns true if fatal fault found
         Serial.println("FATAL FAULT OCCURRED");
         Serial.print("FAULT ID: ");
         Serial.println(faultMsg.buf[0], BIN);
-        //digitalWrite(SHUTDOWN_SSR_PIN, LOW);  // Open shutdown circuit
         state = PCU_STATE_FATAL_FAULT;
         faultId = faultMsg.buf[0];
         faultMsg.id = 0x002;
@@ -249,7 +235,7 @@ int sendCanUpdate(){
     memcpy(&msg.buf[0], &shortTemp, sizeof(short));
     memcpy(&msg.buf[2], &okhsCheck, sizeof(bool));
     memcpy(&msg.buf[3], &dischargeCheck, sizeof(bool));
-    memcpy(&msg.buf[4], &stateOutput, sizeof(byte));
+    memcpy(&msg.buf[4], &PCU_STATE_FATAL_FAULT, sizeof(byte));
 
     int temp2 = CAN.write(msg);
 
