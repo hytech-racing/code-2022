@@ -5,6 +5,7 @@
 // TODO: Convert to HyTech library
 // TODO: Create debug flag and debug mode (serial printing status values)
 
+//TODO make sure faults are in CAN library
 #define BMS_FAULT (1<<0)
 #define IMD_FAULT (1<<1)
 #define BSPD_FAULT (1<<2)
