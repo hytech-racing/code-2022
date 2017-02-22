@@ -41,9 +41,9 @@ bool startupDone = false; // true when reached drive state
 int faultId = 0;
 
 // timer
-Metro updateTimer = Metro(500);
+Metro CANUpdateTimer = Metro(500); // Used for how often to send state
+Metro updateTimer = Metro(500); // Read in values from inputs
 Metro AIRtimer = Metro(500);
-Metro FAKE_DRIVER_BUTTON_PRESS = Metro(10000);
 
 uint8_t state; // state from HyTech Library
 // enum State { GLVinit=0, waitIMDBMS, PCU_STATE_WAITING_DRIVER, PCU_STATE_LATCHING, fatalFault, drive }; // NOTE: change and update
