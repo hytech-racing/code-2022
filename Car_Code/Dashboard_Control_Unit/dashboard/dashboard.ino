@@ -26,8 +26,8 @@ bool pedal_fault;
 bool general_fault;
 
 Metro timer_btn_start = Metro(10);
-Metro timer_led_start_blink_fast = Metro(150);
-Metro timer_led_start_blink_slow = Metro(400);
+Metro timer_led_start_blink_fast = Metro(250);
+Metro timer_led_start_blink_slow = Metro(500);
 Metro timer_inverter_enable = Metro(2000);  // Timeout failed inverter enable
 Metro timer_ready_sound = Metro(2000);      // Time to play RTD sound
 
@@ -36,6 +36,7 @@ unsigned long lastDebounceBOOST = 0;  // the last time the output pin was toggl
 unsigned long lastDebounceSTART = 0;  // the last time the output pin was toggled
 uint8_t btn_start_new = 0;
 bool btn_start_pressed = false;
+bool led_start_active = false;
 unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
 uint8_t led_start_type = 0;
 
@@ -163,7 +164,19 @@ void loop() {
   }
 
   // TODO: Implement broadcast of state messages
-  // TODO: Blink start LED (should just be copypasta from Nathan's TCU)
+
+  /*
+   * Blink start led
+   */
+  if ((led_start_type == 2 && timer_led_start_blink_fast.check()) || (led_start_type == 3 && timer_led_start_blink_slow.check())) {
+    if (led_start_active) {
+      digitalWrite(LED_START, LOW);
+    } else {
+      digitalWrite(LED_START, HIGH);
+    }
+    led_start_active = !led_start_active;
+  }
+
   // TODO: other buttons
   pollForButtonPress(); // fix this
 }
