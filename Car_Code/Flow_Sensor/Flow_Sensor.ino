@@ -42,7 +42,6 @@ void loop() {
     digitalWrite(6, HIGH);
     digitalWrite(6, LOW);
     pulseTimer.reset();
-
   }
 
 

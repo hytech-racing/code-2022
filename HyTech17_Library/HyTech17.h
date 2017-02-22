@@ -19,6 +19,15 @@
 #define TCU_STATE_ENABLING_INVERTER 5
 #define TCU_STATE_WAITING_READY_TO_DRIVE_SOUND 6
 #define TCU_STATE_READY_TO_DRIVE 7
+#define DCU_STATE_INITIAL_STARTUP 1
+#define DCU_STATE_WAITING_TRACTIVE_SYSTEM 2
+#define DCU_STATE_PRESSED_TRACTIVE_SYSTEM 3
+#define DCU_STATE_WAITING_MC_ENABLE 4
+#define DCU_STATE_PRESSED_MC_ENABLE 5
+#define DCU_STATE_PLAYING_RTD 6
+#define DCU_STATE_READY_TO_DRIVE 7
+#define DCU_STATE_TS_INACTIVE 8
+#define DCU_STATE_FATAL_FAULT 9
 
 /*
  * CAN ID definitions
@@ -28,6 +37,7 @@
 #define ID_BMS_VOLTAGE 0xD2
 #define ID_BMS_CURRENT 0xD3
 #define ID_BMS_TEMPERATURE 0xD4
+#define ID_BMS_STATUS 0xD5
 #define ID_DCU_STATUS 0xD5
 #define ID_MC_TEMPERATURES_1 0xA0
 #define ID_MC_TEMPERATURES_2 0xA1
@@ -59,7 +69,6 @@
  */
 
 /*
-
  * CAN message structs and classes
  */
 typedef struct CAN_message_pcu_status_t {
@@ -136,25 +145,27 @@ typedef struct CAN_message_bms_voltage_t {
     uint16_t avgVoltage;
     uint16_t lowVoltage;
     uint16_t highVoltage;
+    uint16_t totalVoltage;
 } CAN_message_bms_voltage_t;
 
 class BMS_voltages {
   public:
     BMS_voltages();
     BMS_voltages(uint8_t buf[]);
-    BMS_voltages(uint16_t avg, uint16_t low, uint16_t high);
+    BMS_voltages(uint16_t avg, uint16_t low, uint16_t high, uint16_t total);
     void load(uint8_t buf[]);
     void write(uint8_t buf[]);
     uint16_t getAverage();
     uint16_t getLow();
     uint16_t getHigh();
+    uint16_t getTotal();
     void setAverage(uint16_t avg);
     void setLow(uint16_t low);
     void setHigh(uint16_t high);
+    void setTotal(uint16_t total);
   private:
     CAN_message_bms_voltage_t bmsVoltageMessage;
 };
-
 
 enum CHARGING_STATE {
     DISCHARGING = 0,
@@ -203,6 +214,78 @@ class BMS_temperatures {
     void setHighTemp(uint16_t high);
   private:
     CAN_message_bms_temperature_t bmsTemperatureMessage;
+};
+
+typedef struct CAN_message_bms_error_t {
+    // TODO: Implement BMS Error message
+    /* Error Flags as bit map:
+     * errorFlagsByte1
+     * -0- -1- -2- -3- -4- -5- -6- -7-
+     * 0. Discharge overvoltage
+     * 1. Discharge undervoltage
+     * 2. Charge overvoltage
+     * 3. Charge undervoltage
+     * 4. Discharge overcurrent
+     * 5. Discharge undercurrent
+     * 6. Charge overcurrent
+     * 7. Charge undercurrent
+     */
+    /*
+     * errorFlagsByte2
+     * -0- -1- -2- -3- -4- -5- -6- -7-
+     * 0. Discharge overtemp
+     * 1. Discahrge undertemp
+     * 2. Charge overtemp
+     * 3. Charge undertemp
+     */
+     uint8_t errorFlagsByte1;
+     uint8_t errorFlagsByte2;
+     uint8_t BMSStatusOK;
+} CAN_message_bms_error_t;
+
+class BMS_status {
+  public:
+    BMS_status();
+    BMS_status(uint8_t buf[]);
+    void load(uint8_t buf[]);
+    void write(uint8_t buf[]);
+    /***************GETTERS*****************/
+    bool getDischargeOvervoltage();
+    bool getDischargeUndervoltage();
+    bool getChargeOvervoltage();
+    bool getChargeUndervoltage();
+
+    bool getDischargeOvercurrent();
+    bool getDischargeUndercurrent();
+    bool getChargeOvercurrent();
+    bool getChargeUndercurrent();
+
+    bool getDischargeOvertemp();
+    bool getDischargeUndertemp();
+    bool getChargeOvertemp();
+    bool getChargeUndertemp();
+
+    bool getBMSStatusOK();
+
+    /***************SETTERS*****************/
+    void setDischargeOvervoltage(bool flag);
+    void setDischargeUndervoltage(bool flag);
+    void setChargeOvervoltage(bool flag);
+    void setChargeUndervoltage(bool flag);
+
+    void setDischargeOvercurrent(bool flag);
+    void setDischargeUndercurrent(bool flag);
+    void setChargeOvercurrent(bool flag);
+    void setChargeUndercurrent(bool flag);
+
+    void setDischargeOvertemp(bool flag);
+    void setDischargeUndertemp(bool flag);
+    void setChargeOvertemp(bool flag);
+    void setChargeUndertemp(bool flag);
+
+    void setBMSStatusOK(bool flag);
+  private:
+    CAN_message_bms_error_t bmsErrorMessage;
 };
 
 typedef struct CAN_message_mc_temperatures_1_t {
