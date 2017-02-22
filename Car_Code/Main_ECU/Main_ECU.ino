@@ -165,9 +165,13 @@ void loop() {
     } else {
     }
 
-    if(updateTimer.check()){
+    if(CANUpdateTimer.check()){
       sendCanUpdate();
-      updateTimer.reset();
+      CANUpdateTimer.reset();
+    }
+    if(updateTimer.check()){
+        readValues();
+        updateTimer.reset();
     }
 }
 
