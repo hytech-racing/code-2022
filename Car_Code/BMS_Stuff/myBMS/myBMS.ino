@@ -246,7 +246,7 @@ void avgMinMaxTotalVoltage() {
 
 void balanceCellsDuringCharging() {
     // 1 volt operating window. Balancing will kick in when any cell is greater than 0.25 volts of the lowest cell.
-    uint16_t minVolt = bmsVoltageMessage.lowVoltage; // stored in mV
+    uint16_t minVolt = bmsVoltageMessage.getLow(); // stored in mV
     int16_t minVoltDeltaVoltage = cell_delta_voltage[minVoltageICIndex][minVoltageCellIndex]; // stored in 0.1 mV
     double minTimeFactor = (4000.0 - minVolt) / (cell_delta_voltage[minVoltageICIndex][minVoltageCellIndex] * 0.1);
     uint8_t batteryIndexCounter = 0;
@@ -292,22 +292,22 @@ void raiseVoltageTempCurrentFlags() {
     float current = bmsCurrentMessage.getCurrent(); // stored in amps
     if (current < 0) {
         // when batteries are charging
-        if (bmsVoltageMessage.minVolt < VOLTAGE_LOW_CUTOFF) {
-            bmsErrorMessage.setChargeUndervoltage(true);
-            bmsErrorMessage.setBMSStatusOK(false);
+        if (bmsVoltageMessage.getLow() < VOLTAGE_LOW_CUTOFF) {
+            bmsStatusMessage.setChargeUndervoltage(true);
+            bmsStatusMessage.setBMSStatusOK(false);
         }
 
-        if (bmsVoltageMessage.maxVolt > VOLTAGE_HIGH_CUTOFF) {
-            bmsErrorMessage.setChargeOvervoltage(true);
-            bmsErrorMessage.setBMSStatusOK(false);
+        if (bmsVoltageMessage.getHigh() > VOLTAGE_HIGH_CUTOFF) {
+            bmsStatusMessage.setChargeOvervoltage(true);
+            bmsStatusMessage.setBMSStatusOK(false);
         }
 
         if (current < CHARGE_CURRENT_CONSTANT_HIGH) {
             if (chargeCurrentConstantHighFlag) {
                 if (millis() - chargeCurrentConstantHighTime > CHARGE_CURRENT_CONSTANT_HIGH_TIME) {
                     // constant charging current flow has exceeded limit and time
-                    bmsErrorMessage.setChargeOvercurrent(true);
-                    bmsErrorMessage.setBMSStatusOK(false);
+                    bmsStatusMessage.setChargeOvercurrent(true);
+                    bmsStatusMessage.setBMSStatusOK(false);
                 }
             } else {
                 chargeCurrentConstantHighFlag = true;
@@ -321,8 +321,8 @@ void raiseVoltageTempCurrentFlags() {
             if (chargeCurrentPeakHighFlag) {
                 if (millis() - chargeCurrentPeakHighTime > CHARGE_CURRENT_PEAK_HIGH_TIME) {
                     // peak charging current flow has exceeded limit and time
-                    bmsErrorMessage.setChargeOvercurrent(true);
-                    bmsErrorMessage.setBMSStatusOK(false);
+                    bmsStatusMessage.setChargeOvercurrent(true);
+                    bmsStatusMessage.setBMSStatusOK(false);
                 }
             } else {
                 chargeCurrentPeakHighFlag = true;
@@ -333,31 +333,31 @@ void raiseVoltageTempCurrentFlags() {
         }
 
         if (current > CHARGE_CURRENT_LOW_CUTOFF) {
-            bmsErrorMessage.setChargeUndercurrent(true);
-            bmsErrorMessage.setBMSStatusOK(false);
+            bmsStatusMessage.setChargeUndercurrent(true);
+            bmsStatusMessage.setBMSStatusOK(false);
         }
-        if (bmsTempMessage.highTemp > CHARGE_TEMP_CRITICAL_HIGH) {
-            bmsErrorMessage.setChargeOvertemp(true);
-            bmsErrorMessage.setBMSStatusOK(false);
+        if (bmsTempMessage.getHighTemp() > CHARGE_TEMP_CRITICAL_HIGH) {
+            bmsStatusMessage.setChargeOvertemp(true);
+            bmsStatusMessage.setBMSStatusOK(false);
         }
     } else if (current > 0) {
         // when batteries are discharging
-        if (bmsVoltageMessage.minVolt < VOLTAGE_LOW_CUTOFF) {
-            bmsErrorMessage.setDischargeUndervoltage(true);
-            bmsErrorMessage.setBMSStatusOK(false);
+        if (bmsVoltageMessage.getLow() < VOLTAGE_LOW_CUTOFF) {
+            bmsStatusMessage.setDischargeUndervoltage(true);
+            bmsStatusMessage.setBMSStatusOK(false);
         }
 
-        if (bmsVoltageMessage.maxVolt > VOLTAGE_HIGH_CUTOFF) {
-            bmsErrorMessage.setDischargeOvervoltage(true);
-            bmsErrorMessage.setBMSStatusOK(false);
+        if (bmsVoltageMessage.getHigh() > VOLTAGE_HIGH_CUTOFF) {
+            bmsStatusMessage.setDischargeOvervoltage(true);
+            bmsStatusMessage.setBMSStatusOK(false);
         }
 
         if (current > DISCHARGE_CURRENT_CONSTANT_HIGH) {
             if (dischargeCurrentConstantHighFlag) {
                 if (millis() - dischargeCurrentConstantHighTime > DISCHARGE_CURRENT_CONSTANT_HIGH_TIME) {
                     // constant discharging current draw has exceeded time and limit
-                    bmsErrorMessage.setDischargeOvercurrent(true);
-                    bmsErrorMessage.setBMSStatusOK(false);
+                    bmsStatusMessage.setDischargeOvercurrent(true);
+                    bmsStatusMessage.setBMSStatusOK(false);
                 }
             } else {
                 dischargeCurrentConstantHighFlag = true;
@@ -371,8 +371,8 @@ void raiseVoltageTempCurrentFlags() {
             if (dischargeCurrentPeakHighFlag) {
                 if (millis() - dischargeCurrentPeakHighTime > DISCHARGE_CURRENT_PEAK_HIGH_TIME) {
                     // peak discharging current draw has exceeded time and limit
-                    bmsErrorMessage.setDischargeOvercurrent(true);
-                    bmsErrorMessage.setBMSStatusOK(false);
+                    bmsStatusMessage.setDischargeOvercurrent(true);
+                    bmsStatusMessage.setBMSStatusOK(false);
                 }
             } else {
                 dischargeCurrentPeakHighFlag = true;
@@ -382,9 +382,9 @@ void raiseVoltageTempCurrentFlags() {
             dischargeCurrentPeakHighFlag = false;
         }
 
-        if (bmsTempMessage.highTemp > CHARGE_TEMP_CRITICAL_HIGH) {
-            bmsErrorMessage.setDischargeOvertemp(true);
-            bmsErrorMessage.setBMSStatusOK(false);
+        if (bmsTempMessage.getHighTemp() > CHARGE_TEMP_CRITICAL_HIGH) {
+            bmsStatusMessage.setDischargeOvertemp(true);
+            bmsStatusMessage.setBMSStatusOK(false);
         }
     }
 }
