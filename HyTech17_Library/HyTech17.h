@@ -282,6 +282,8 @@ class BMS_status {
     void setChargeOvertemp(bool flag);
     void setChargeUndertemp(bool flag);
 
+    void clearAllFlags();
+
     void setBMSStatusOK(bool flag);
   private:
     CAN_message_bms_error_t bmsErrorMessage;
