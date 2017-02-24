@@ -10,9 +10,10 @@
 #define TEMP_THRESHOLD 40
 #define COUNTER_RESET A0
 #define FAN_SPEED_MAX 255
-#define FAN_ID_1 0x51 
-#define FAN_ID_2 0 //PLACEHOLDER
-#define FAN_ID_3 0 //PLACEHOLDER
+#define MC1_ID 0xA0 
+#define MC2_ID 0xA1 
+#define MC3_ID 0xA2 
+#define BMS_ID 0xD4
 //TODO: ports
 
 FlexCAN CAN(500000);
@@ -32,6 +33,13 @@ bool started =  false;
 int fanSpeed_1 = FAN_IDLE; 
 int fanSpeed_2 = FAN_IDLE;
 int fanSpeed_3 = FAN_IDLE;
+
+//objects 
+MC_temperatures_1 mc1;
+MC_temperatures_2 mc2;
+MC_temperatures_3 mc3;
+BMS_temperatures bms;
+
 // setup code
 void setup() {
     Serial.begin(115200); // init serial
@@ -100,43 +108,34 @@ void loop() {
                 analogWrite(FAN_PIN_3, fanSpeed_3);
             }
             if (started) {
-                // TODO Read AVG_TEMP message from components and utilize PWM to change
-                // fan speed based on temps
-                // Code not yet written on BMS to send temperatures
-    
-                // TODO Handle CAN messages from other components
-                // Placeholder code
-                // Will update when I figure out ports for fans, how to increase
-                // fan speed, which fans to increase the speed of, and how to adjust
-                // fan speed based on temperature
-                if (msg.id == 0x51 || msg.id == FAN_ID_2 || msg.id == FAN_ID_3 { //TODO: PLACEHOLDER IDs
-                    if (msg.buf[0] > TEMP_THRESHOLD) {
-                        // Increase fan speed with PWM
-                        if (msg.id==0x51 && fanSpeed_1 <= FAN_SPEED_MAX) {
-                            fanSpeed_1 +=1;
-                            analogWrite(FAN_PIN_1, fanSpeed_1);
-                        } else if (msg.id==FAN_ID_2 && fanSpeed_2 <= FAN_SPEED_MAX) {
-                            fanSpeed_2 +=1;
-                            analogWrite(FAN_PIN_2, fanSpeed_2);
-                        } else if (msg.id==FAN_ID_3 && fanSpeed_3 <= FAN_SPEED_MAX) {
-                            fanSpeed_3 +=1;
-                            analogWrite(FAN_PIN_2, fanSpeed_3);
-                        }
-                    } else if (msg.buf[0] < TEMP_THRESHOLD){
-                        // Decrease fan speed with PWM
-                        if (msg.id==0x51 && fanSpeed_1 > FAN_IDLE) {
-                            fanSpeed_1 -= 1;
-                            analogWrite(FAN_PIN_1, fanSpeed_1);
-                        } else if (msg.id==FAN_ID_2 && fanSpeed_2 > FAN_IDLE) {
-                            fanSpeed_2 -= 1;
-                            analogWrite(FAN_PIN_2, fanSpeed_2);
-                        } else if (msg.id==FAN_ID_3 && fanSpeed_3 > FAN_IDLE) {
-                            fanSpeed_3 -= 1;
-                            analogWrite(FAN_PIN_3, fanSpeed_3);
-                        }
+                //TODO figure out which fans are pointing at what aka what fans(3) are paired with what parts(4)
+                if (msg.id == MC1_ID) {
+                    mc1.load(msg.buf);
+                    if (mc1.get_gate_driver_board_temperature() >= TEMP_THRESHOLD && fanSpeed_1 < FAN_SPEED_MAX) {
+                        fanSpeed_1 += 1;
+                    } else if (mc1.get_gate_driver_board_temperature() < TEMP_THRESHOLD && fanSpeed_1 > FAN_IDLE) {
+                        fanSpeed_1 -= 1;
                     }
-                    sendCanUpdate();
+                    analogWrite(FAN_PIN_1, fanSpeed_1);
+
+                } else if (msg.id == MC2_ID) {
+                    mc2.load(msg.buf);
+                    if (mc2.get_control_board_temperature() >= TEMP_THRESHOLD && fanSpeed_2 < FAN_SPEED_MAX) {
+                        fanSpeed_2 += 1;
+                    } else if (mc2.get_control_board_temperature() < TEMP_THRESHOLD && fanSpeed_2 > FAN_IDLE) {
+                        fanSpeed_2 -= 1;
+                    }
+                    analogWrite(FAN_PIN_2, fanSpeed_2);
+                } else if (msg.id == BMS_ID) {
+                    bms.load(msg.buf);
+                    if (bms.getAvgTemp() >= TEMP_THRESHOLD && fanSpeed_3 < FAN_SPEED_MAX) {
+                        fanSpeed_3 += 1;
+                    } else if (bms.getAvgTemp() < TEMP_THRESHOLD && fanSpeed_3 > FAN_IDLE) {
+                        fanSpeed_3 -= 1;
+                    }
+                    analogWrite(FAN_PIN_3, fanSpeed_3);
                 }
+                sendCanUpdate();
             }
         }
         timer.reset();
