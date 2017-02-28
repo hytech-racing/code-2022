@@ -231,6 +231,27 @@ void set_start_led(uint8_t type) {
   }
 }
 
+void set_state(uint8_t new_state) {
+    if (state == new_state)
+        return;
+    state = new_state;
+    if (new_state == DCU_STATE_WAITING_MC_ENABLE || new_state == DCU_STATE_WAITING_TRACTIVE_SYSTEM) {
+        btn_start_new = lastDebounceSTART + 1;
+    }
+    if (new_state == DCU_STATE_PRESSED_MC_ENABLE || new_state == DCU_STATE_PRESSED_TRACTIVE_SYSTEM) {
+        // Send CAN message indicating button press
+    }
+    if (new_state == DCU_STATE_PLAYING_RTD) {
+        timer_ready_sound.reset();
+        digitalWrite(READY_SOUND, HIGH);
+        Serial.println("Playing RTD sound");
+    }
+    if (new_state == DCU_STATE_READY_TO_DRIVE) {
+        digitalWrite(READY_SOUND, LOW);
+        Serial.println("RTD sound finished");
+    }
+}
+
 void toggleButtonInterrupt {
 
 }
