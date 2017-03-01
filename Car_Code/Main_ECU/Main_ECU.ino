@@ -222,14 +222,28 @@ bool checkFatalFault() { // returns true if fatal fault found
 }
 
 int sendCanUpdate(){
+    PCU_status curPCU_status = new PCU_status();
+    msg.id = ID_PCU_STATUS;
+    msg.len = 8;
+
+    short shortOKHS = (short) (OKHS * 10);
+    short shortDischargeOk = (short) (DISCHARGE_OK * 10);
+
+    curPCU_status.set_state(state);
+    curPCU_status.set_bms_fault(DISCHARGE_OK < BMS_High);
+    curPCU_status.set_imd_fault(OKHS < IMD_High);
+    curPCU_status.set_okhs_value(shortOKHS);
+    curPCU_status.set_discharge_ok_value(shortDischargeOk);
+
+    curPCU_status.write(msg.buf);
+    CAN.write(msg);
 
     //prepare to send the voltages as shorts in the CAN message
-    short shortDischargeOk = (short) (DISCHARGE_OK * 10);
-    short shortOKHS = (short) (OKHS * 10);
+    // TODO: Send CAN status message 2
     short shortGLV = (short) (GLVbattery * 10);
     short shortShutdown = (short) (shutdownCircuit * 10);
-
     //send the message
+    // TODO: Send CAN Status voltages
     msg.id = 0x50;
     msg.len = 8;
     memcpy(&msg.buf[0], &shortDischargeOk, sizeof(short));
@@ -239,16 +253,16 @@ int sendCanUpdate(){
 
     int temp1 = CAN.write(msg);
 
-    bool okhsCheck = OKHS >= IMD_High;
-    bool dischargeCheck = DISCHARGE_OK >= BMS_High;
+
     short shortTemp = (short) thermTemp * 100;
 
+    // TODO: Send CAN status Metrics
     msg.id = 0x51;
     msg.len = 5;
     memcpy(&msg.buf[0], &shortTemp, sizeof(short));
     memcpy(&msg.buf[2], &okhsCheck, sizeof(bool));
     memcpy(&msg.buf[3], &dischargeCheck, sizeof(bool));
-    memcpy(&msg.buf[4], &PCU_STATE_FATAL_FAULT, sizeof(byte));
+    memcpy(&msg.buf[4], &state, sizeof(byte));
 
     int temp2 = CAN.write(msg);
 
