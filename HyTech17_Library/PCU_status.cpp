@@ -1,5 +1,5 @@
 /*
-  PCU_stats.cpp - HyTech Power Control Unit CAN message: Status
+  PCU_status.cpp - HyTech Power Control Unit CAN message: Status
   Created by Nathan Cheek, November 20, 2016.
  */
 
@@ -55,6 +55,14 @@ bool PCU_status::get_imd_fault() {
   return message.imd_fault;
 }
 
+bool PCU_status::get_okhs_check() {
+    return message.okhs_check;
+}
+
+bool PCU_status::get_discharge_check() {
+    return message.discharge_check;
+}
+
 void PCU_status::set_state(uint8_t state) {
   message.state = state;
 }
@@ -65,4 +73,12 @@ void PCU_status::set_bms_fault(bool bms_fault) {
 
 void PCU_status::set_imd_fault(bool imd_fault) {
   message.imd_fault = imd_fault;
+}
+
+void PCU_status::set_okhs_check(bool okhs_check) {
+    message.okhs_check = okhs_check;
+}
+
+void PCU_status::set_discharge_check(bool discharge_check) {
+    message.discharge_check = discharge_check;
 }

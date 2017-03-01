@@ -12,6 +12,7 @@
 #define PCU_STATE_LATCHING 3
 #define PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED 4
 #define PCU_STATE_FATAL_FAULT 5
+
 #define TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED 1
 #define TCU_STATE_WAITING_TRACTIVE_SYSTEM 2
 #define TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE 3
@@ -19,6 +20,7 @@
 #define TCU_STATE_ENABLING_INVERTER 5
 #define TCU_STATE_WAITING_READY_TO_DRIVE_SOUND 6
 #define TCU_STATE_READY_TO_DRIVE 7
+
 #define DCU_STATE_INITIAL_STARTUP 1
 #define DCU_STATE_WAITING_TRACTIVE_SYSTEM 2
 #define DCU_STATE_PRESSED_TRACTIVE_SYSTEM 3
@@ -72,9 +74,11 @@
  * CAN message structs and classes
  */
 typedef struct CAN_message_pcu_status_t {
-  uint8_t state;
-  bool bms_fault;
-  bool imd_fault;
+    uint8_t state;
+    bool bms_fault;
+    bool imd_fault;
+    bool okhs_check;
+    bool discharge_check;
 } CAN_msg_pcu_status;
 
 class PCU_status {
@@ -87,9 +91,13 @@ class PCU_status {
     uint8_t get_state();
     bool get_bms_fault();
     bool get_imd_fault();
+    bool get_okhs_check();
+    bool get_discharge_check();
     void set_state(uint8_t state);
     void set_bms_fault(bool bms_fault);
     void set_imd_fault(bool imd_fault);
+    void set_okhs_check(bool okhs_check);
+    void set_discharge_check(bool discharge_check);
   private:
     CAN_message_pcu_status_t message;
 };
