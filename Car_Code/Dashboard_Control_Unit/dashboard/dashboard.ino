@@ -118,6 +118,14 @@ void loop() {
           break;
       }
     }
+
+    // Handle TCU broadcast state messages
+    if (msg.id == ID_TCU_STATUS) {
+        TCU_status tcu_status(msg.buf);
+        Serial.print("TCU State: ");
+        Serial.println(tcu_status.get_state());
+    }
+
     // Handle motor controller state messages
     if (msg.id == ID_MC_INTERNAL_STATES) {
         MC_internal_states mc_internal_states = MC_internal_states(msg.buf);
