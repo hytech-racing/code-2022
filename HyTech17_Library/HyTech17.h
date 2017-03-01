@@ -77,27 +77,27 @@ typedef struct CAN_message_pcu_status_t {
     uint8_t state;
     bool bms_fault;
     bool imd_fault;
-    bool okhs_check;
-    bool discharge_check;
+    uint16_t okhs_value;
+    uint16_t discharge_ok_value;
 } CAN_msg_pcu_status;
 
 class PCU_status {
   public:
     PCU_status();
     PCU_status(uint8_t buf[8]);
-    PCU_status(uint8_t state, bool bms_fault, bool imd_fault);
+    PCU_status(uint8_t state, bool bms_fault, bool imd_fault, uint16_t okhs_value, uint16_t discharge_ok_value);
     void load(uint8_t buf[8]);
     void write(uint8_t buf[8]);
     uint8_t get_state();
     bool get_bms_fault();
     bool get_imd_fault();
-    bool get_okhs_check();
-    bool get_discharge_check();
+    bool get_okhs_value();
+    bool get_discharge_ok_value();
     void set_state(uint8_t state);
     void set_bms_fault(bool bms_fault);
     void set_imd_fault(bool imd_fault);
-    void set_okhs_check(bool okhs_check);
-    void set_discharge_check(bool discharge_check);
+    void set_okhs_value(uint16_t okhs_value);
+    void set_discharge_ok_value(uint16_t discharge_ok_value);
   private:
     CAN_message_pcu_status_t message;
 };
