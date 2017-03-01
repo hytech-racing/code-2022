@@ -13,10 +13,12 @@ PCU_status::PCU_status(uint8_t buf[8]) {
   load(buf);
 }
 
-PCU_status::PCU_status(uint8_t state, bool bms_fault, bool imd_fault) {
+PCU_status::PCU_status(uint8_t state, bool bms_fault, bool imd_fault, bool okhs_check, bool discharge_check) {
   set_state(state);
   set_bms_fault(bms_fault);
   set_imd_fault(imd_fault);
+  set_okhs_check(okhs_check);
+  set_discharge_check(discharge_check);
 }
 
 void PCU_status::load(uint8_t buf[8]) {
@@ -27,11 +29,17 @@ void PCU_status::load(uint8_t buf[8]) {
     message.bms_fault = booleanByte > 0;
     memcpy(&booleanByte, &buf[2], sizeof(uint8_t));
     message.imd_fault = booleanByte > 0;
+    memcpy(&booleanByte, &buf[3], sizeof(uint8_t));
+    message.okhs_check = booleanByte > 0;
+    memcpy(&booleanByte, &buf[4], sizeof(uint8_t));
+    message.discharge_check = booleanByte > 0;
 }
 
 void PCU_status::write(uint8_t buf[8]) {
+    uint8_t booleanByte;
+
     memcpy(&buf[0], &(message.state), sizeof(uint8_t));
-    uint8_t booleanByte = 0;
+    booleanByte = 0;
     if (message.bms_fault) {
         booleanByte = 1;
     }
@@ -41,6 +49,16 @@ void PCU_status::write(uint8_t buf[8]) {
         booleanByte = 1;
     }
     memcpy(&buf[2], &booleanByte, sizeof(uint8_t));
+    booleanByte = 0;
+    if (message.okhs_check) {
+        booleanByte = 1;
+    }
+    memcpy(&buf[3], &booleanByte, sizeof(uint8_t));
+    booleanByte = 0;
+    if (message.discharge_check) {
+        booleanByte = 1;
+    }
+    memcpy(&buf[4], &booleanByte, sizeof(uint8_t));
 }
 
 uint8_t PCU_status::get_state() {
