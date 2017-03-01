@@ -4,6 +4,7 @@
 
 // TODO: Convert to HyTech library
 // TODO: Create debug flag and debug mode (serial printing status values)
+#define debugFlag true
 
 //TODO make sure faults are in CAN library
 #define BMS_FAULT (1<<0)
@@ -40,7 +41,7 @@ bool startPressed = false; // true if start button is pressed
 float thermTemp = 0.0; // temperature of onboard thermistor (after calculation)
 int thermValue = 0; //raw value from thermistor
 bool startupDone = false; // true when reached drive state
-int faultId = 0;
+uint8_t faultId = 0;
 
 // timer
 Metro CANUpdateTimer = Metro(500); // Used for how often to send state
@@ -102,7 +103,8 @@ void loop() {
             state = PCU_STATE_WAITING_BMS_IMD; //going straight to waitIMD until further notice
             break;
         case PCU_STATE_WAITING_BMS_IMD:
-            Serial.println("Waiting for IMD/BMS OK...");
+            if (debugFlag)
+                Serial.println("Waiting for IMD/BMS OK...");
             if (DISCHARGE_OK >= BMS_High) { // if BMS is high
                 if (OKHS >= IMD_High) { // if IMD is also high
                     state = PCU_STATE_WAITING_DRIVER; // both BMD and IMD are high, wait for start button press
@@ -114,12 +116,14 @@ void loop() {
             }
             break;
         case PCU_STATE_WAITING_DRIVER:
-            Serial.println("Waiting for start button...");
+            if (debugFlag)
+                Serial.println("Waiting for start button...");
             /*can message for start button press received*/
 
             if (startPressed) {
                 AIRtimer.reset();
-                Serial.println("Latching...");
+                if (debugFlag)
+                    Serial.println("Latching...");
                 digitalWrite(BMS_LATCH_SSR_PIN, HIGH);   // close latch A SSR (Software Switch)
                 digitalWrite(IMD_LATCH_SSR_PIN, HIGH);   // close latch B SSR
                 state = PCU_STATE_LATCHING;
@@ -127,25 +131,31 @@ void loop() {
             break;
         case PCU_STATE_LATCHING: // equivalent to VCCAIR in Google Doc state diagram
             if(AIRtimer.check()){
-                  Serial.println("Completed latching");
-                  digitalWrite(BMS_LATCH_SSR_PIN, LOW);  // Open latch SSR
-                  digitalWrite(IMD_LATCH_SSR_PIN, LOW);  // open latch B SSR
-                  state = PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED;
+                if (debugFlag)
+                    Serial.println("Completed latching");
+                digitalWrite(BMS_LATCH_SSR_PIN, LOW);  // Open latch SSR
+                digitalWrite(IMD_LATCH_SSR_PIN, LOW);  // open latch B SSR
+                state = PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED;
             }
             startPressed = false;
             break;
         case PCU_STATE_FATAL_FAULT:
             Serial.println("FAULTED");
-            if (faultId & 1) {
-              Serial.println("BMS Fault");
-            } if (faultId & 2) {
-              Serial.println("IMD Fault");
-            } if (faultId & 4) {
-              Serial.println("BSPD Fault");
+            switch (faultId) {
+                case 1 :
+                    Serial.println("BMS Fault Detected by PCU");
+                    break;
+                case 2:
+                    Serial.println("IMD Fault Detected by PCU");
+                    break;
+                case 3:
+                    Serial.println("BSPD Fault detected by PCU");
+                    break;
             }
             break;
         case PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
-            Serial.println("Drive state");
+            if (debugFlag)
+                Serial.println("Drive state");
             break;
     }
 
@@ -165,7 +175,8 @@ bool readValues() {
     thermValue = analogRead(THERMISTOR_PIN);
     //compute actual temperature with math
     float resistance = (5.0 * SERIESRESISTOR * 1023) / (3.3 * thermValue) - SERIESRESISTOR;
-//    Serial.println(resistance);
+    if (debugFlag)
+        Serial.println("Resistance: " + resistance);
     thermTemp = resistance / THERMISTORNOMINAL;
     thermTemp = log(thermTemp);
     thermTemp /= BCONSTANT;
@@ -182,7 +193,8 @@ bool checkFatalFault() { // returns true if fatal fault found
     if (state == PCU_STATE_WAITING_DRIVER || state == PCU_STATE_LATCHING || state == drive) {
       if (OKHS < IMD_High) {
           faultMsg.buf[0] = faultMsg.buf[0] | IMD_FAULT;
-      } if (DISCHARGE_OK < BMS_High) {
+      }
+      if (DISCHARGE_OK < BMS_High) {
           faultMsg.buf[0] = faultMsg.buf[0] | BMS_FAULT;
       }
     }
