@@ -102,6 +102,11 @@ class PCU_status {
     CAN_message_pcu_status_t message;
 };
 
+typedef struct CAN_message_pcu_voltages_t {
+    uint16_t GLV_battery_voltage;
+    uint16_t shutdown_circuit_voltage;
+} CAN_msg_pcu_voltages;
+
 typedef struct CAN_message_tcu_status_t {
   uint8_t state;
   uint8_t btn_start_id;
