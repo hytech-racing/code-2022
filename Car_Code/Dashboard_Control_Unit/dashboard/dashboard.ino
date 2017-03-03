@@ -124,16 +124,27 @@ void loop() {
         TCU_status tcu_status(msg.buf);
         Serial.print("TCU State: ");
         Serial.println(tcu_status.get_state());
+        switch (tcu_status.get_state()) {
+            case TCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
+                set_state(DCU_STATE_WAITING_MC_ENABLE);
+                break;
+            case TCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
+                set_state(DCU_STATE_PLAYING_RTD);
+                break;
+            case TCU_STATE_READY_TO_DRIVE:
+                set_state(DCU_STATE_READY_TO_DRIVE);
+                break;
+        }
     }
 
     // Handle motor controller state messages
-    if (msg.id == ID_MC_INTERNAL_STATES) {
-        MC_internal_states mc_internal_states = MC_internal_states(msg.buf);
-        // if start button has been pressed and inverter is enabled, play RTD sound
-        if (mc_internal_states.get_inverter_enable_state && state == DCU_STATE_PRESSED_MC_ENABLE) {
-            set_state(DCU_STATE_PLAYING_RTD);
-        }
-    }
+    // if (msg.id == ID_MC_INTERNAL_STATES) {
+    //     MC_internal_states mc_internal_states = MC_internal_states(msg.buf);
+    //     // if start button has been pressed and inverter is enabled, play RTD sound
+    //     if (mc_internal_states.get_inverter_enable_state && state == DCU_STATE_PRESSED_MC_ENABLE) {
+    //         set_state(DCU_STATE_PLAYING_RTD);
+    //     }
+    // }
 
     // TODO: Could be replaced by TCU status messages?
 
