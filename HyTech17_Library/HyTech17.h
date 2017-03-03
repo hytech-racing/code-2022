@@ -107,6 +107,21 @@ typedef struct CAN_message_pcu_voltages_t {
     uint16_t shutdown_circuit_voltage;
 } CAN_msg_pcu_voltages;
 
+class PCU_voltages {
+    public:
+        PCU_voltages();
+        PCU_voltages(uint8_t buf[8]);
+        PCU_voltages(uint16_t GLV_battery_voltage, uint16_t shutdown_circuit_voltage);
+        void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
+        uint16_t get_GLV_battery_voltage();
+        uint16_t get_shutdown_circuit_voltage();
+        void set_GLV_battery_voltage(uint16_t GLV_battery_voltage);
+        void set_shutdown_circuit_voltage(uint16_t shutdown_circuit_voltage);
+    private:
+        CAN_message_pcu_status_t message;
+};
+
 typedef struct CAN_message_tcu_status_t {
   uint8_t state;
   uint8_t btn_start_id;
