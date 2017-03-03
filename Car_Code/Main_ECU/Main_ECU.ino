@@ -224,6 +224,9 @@ bool checkFatalFault() { // returns true if fatal fault found
 }
 
 int sendCanUpdate(){
+    int bufferAvailable = 0;
+
+    // Send out CAN message 1 - PCU_status
     PCU_status curPCU_status = PCU_status();
     msg.id = ID_PCU_STATUS;
     msg.len = 8;
@@ -238,16 +241,12 @@ int sendCanUpdate(){
     curPCU_status.set_discharge_ok_value(shortDischargeOk);
 
     curPCU_status.write(msg.buf);
-    CAN.write(msg);
+    bufferAvailable += CAN.write(msg);
 
     // Send out CAN message 2 - PCU_voltages
     PCU_voltages curPCU_voltages = PCU_voltages();
     msg.id = ID_PCU_VOLTAGES;
     msg.len = 8;
-    memcpy(&msg.buf[0], &shortDischargeOk, sizeof(short));
-    memcpy(&msg.buf[2], &shortOKHS, sizeof(short));
-    memcpy(&msg.buf[4], &shortGLV, sizeof(short));
-    memcpy(&msg.buf[6], &shortShutdown, sizeof(short));
 
     short shortGLV = (short) (GLVbattery * 10);
     short shortShutdown = (short) (shutdownCircuit * 10); // AKA thermtemp
@@ -258,16 +257,5 @@ int sendCanUpdate(){
     curPCU_voltages.write(msg.buf);
     bufferAvailable += CAN.write(msg);
 
-    // TODO: Send CAN status Metrics
-    /*
-    msg.id = 0x51;
-    msg.len = 5;
-    memcpy(&msg.buf[0], &shortTemp, sizeof(short));
-    memcpy(&msg.buf[2], &okhsCheck, sizeof(bool));
-    memcpy(&msg.buf[3], &dischargeCheck, sizeof(bool));
-    memcpy(&msg.buf[4], &state, sizeof(byte));
-
-    int temp2 = CAN.write(msg);
-    */
-    return 1;
+    return bufferAvailable;
 }
