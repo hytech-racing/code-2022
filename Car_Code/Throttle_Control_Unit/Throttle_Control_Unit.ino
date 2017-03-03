@@ -237,20 +237,20 @@ bool checkDeactivateTractiveSystem() {
 }
 
 int sendCANUpdate(){
-    short shortThrottle1 = (short) voltageThrottlePedal1 * 100;
-    short shortThrottle2 = (short) voltageThrottlePedal2 * 100;
-    short shortBrake = (short) voltageBrakePedal * 100;
-    short shortTemp = (short) thermTemp * 100;
-
-    msg.id = ID_TCU_STATUS;
-    msg.len = 8;
-
-    memcpy(&msg.buf[0], &shortThrottle1, sizeof(short));
-    memcpy(&msg.buf[2], &shortThrottle2, sizeof(short));
-    memcpy(&msg.buf[4], &shortBrake, sizeof(short));
-    memcpy(&msg.buf[6], &shortTemp, sizeof(short));
-
-    int temp1 = CAN.write(msg);
+    // short shortThrottle1 = (short) voltageThrottlePedal1 * 100;
+    // short shortThrottle2 = (short) voltageThrottlePedal2 * 100;
+    // short shortBrake = (short) voltageBrakePedal * 100;
+    // short shortTemp = (short) thermTemp * 100;
+    //
+    // msg.id = ID_TCU_STATUS;
+    // msg.len = 8;
+    //
+    // memcpy(&msg.buf[0], &shortThrottle1, sizeof(short));
+    // memcpy(&msg.buf[2], &shortThrottle2, sizeof(short));
+    // memcpy(&msg.buf[4], &shortBrake, sizeof(short));
+    // memcpy(&msg.buf[6], &shortTemp, sizeof(short));
+    //
+    // int temp1 = CAN.write(msg);
 
     byte statuses = state;
 
@@ -265,7 +265,7 @@ int sendCANUpdate(){
 
     int temp2 = CAN.write(msg);
 
-    return temp1 + temp2; // used for error checking?
+    return temp2; // used for error checking?
 
 }
 
