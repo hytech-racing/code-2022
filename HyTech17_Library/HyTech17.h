@@ -120,7 +120,7 @@ class PCU_voltages {
         void set_GLV_battery_voltage(uint16_t GLV_battery_voltage);
         void set_shutdown_circuit_voltage(uint16_t shutdown_circuit_voltage);
     private:
-        CAN_message_pcu_status_t message;
+        CAN_message_pcu_voltages_t message;
 };
 
 typedef struct CAN_message_tcu_status_t {

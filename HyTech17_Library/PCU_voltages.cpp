@@ -37,10 +37,10 @@ uint16_t PCU_voltages::get_shutdown_circuit_voltage() {
   return message.shutdown_circuit_voltage;
 }
 
-void PCU_status::set_GLV_battery_voltage(uint16_t GLV_battery_voltage) {
+void PCU_voltages::set_GLV_battery_voltage(uint16_t GLV_battery_voltage) {
   message.GLV_battery_voltage = GLV_battery_voltage;
 }
 
-void PCU_status::set_shutdown_circuit_voltage(uint16_t shutdown_circuit_voltage) {
+void PCU_voltages::set_shutdown_circuit_voltage(uint16_t shutdown_circuit_voltage) {
   message.shutdown_circuit_voltage = shutdown_circuit_voltage;
 }
