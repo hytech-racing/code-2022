@@ -240,25 +240,23 @@ int sendCanUpdate(){
     curPCU_status.write(msg.buf);
     CAN.write(msg);
 
-    /*
-    //prepare to send the voltages as shorts in the CAN message
-    // TODO: Send CAN status message 2
-    short shortGLV = (short) (GLVbattery * 10);
-    short shortShutdown = (short) (shutdownCircuit * 10);
-    //send the message
-    // TODO: Send CAN Status voltages
-    msg.id = 0x50;
+    // Send out CAN message 2 - PCU_voltages
+    PCU_voltages curPCU_voltages = PCU_voltages();
+    msg.id = ID_PCU_VOLTAGES;
     msg.len = 8;
     memcpy(&msg.buf[0], &shortDischargeOk, sizeof(short));
     memcpy(&msg.buf[2], &shortOKHS, sizeof(short));
     memcpy(&msg.buf[4], &shortGLV, sizeof(short));
     memcpy(&msg.buf[6], &shortShutdown, sizeof(short));
 
-    int temp1 = CAN.write(msg);
-    */
+    short shortGLV = (short) (GLVbattery * 10);
+    short shortShutdown = (short) (shutdownCircuit * 10); // AKA thermtemp
 
+    curPCU_voltages.set_GLV_battery_voltage(shortGLV);
+    curPCU_voltages.set_shutdown_circuit_voltage(shortShutdown);
 
-    short shortTemp = (short) thermTemp * 100;
+    curPCU_voltages.write(msg.buf);
+    bufferAvailable += CAN.write(msg);
 
     // TODO: Send CAN status Metrics
     /*
