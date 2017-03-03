@@ -69,6 +69,8 @@ void setup() {
     pinMode(MC_SWITCH_SSR_PIN, OUTPUT);
 
     startPressed = 0;
+
+    state = PCU_STATE_WAITING_BMS_IMD; // first state
 }
 
 void loop() {
@@ -99,9 +101,6 @@ void loop() {
     }
 
     switch (state) {
-        case GLVinit:
-            state = PCU_STATE_WAITING_BMS_IMD; //going straight to waitIMD until further notice
-            break;
         case PCU_STATE_WAITING_BMS_IMD:
             if (debugFlag)
                 Serial.println("Waiting for IMD/BMS OK...");
@@ -190,7 +189,7 @@ bool readValues() {
 bool checkFatalFault() { // returns true if fatal fault found
     CAN_message_t faultMsg;
     faultMsg.buf[0] = 0;
-    if (state == PCU_STATE_WAITING_DRIVER || state == PCU_STATE_LATCHING || state == drive) {
+    if (state == PCU_STATE_WAITING_DRIVER || state == PCU_STATE_LATCHING || state == PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED) {
       if (OKHS < IMD_High) {
           faultMsg.buf[0] = faultMsg.buf[0] | IMD_FAULT;
       }
