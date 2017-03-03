@@ -110,7 +110,7 @@ void loop() {
 
                     // Once adapted to library, we can change MC enabling to depend on throttle control
                     // status message
-                    digitalWrite(MC_SWITCH_SSR_PIN, HIGH) // enable MC
+                    digitalWrite(MC_SWITCH_SSR_PIN, HIGH); // enable MC
                 }
             }
             break;
@@ -174,8 +174,11 @@ bool readValues() {
     thermValue = analogRead(THERMISTOR_PIN);
     //compute actual temperature with math
     float resistance = (5.0 * SERIESRESISTOR * 1023) / (3.3 * thermValue) - SERIESRESISTOR;
-    if (debugFlag)
-        Serial.println("Resistance: " + resistance);
+    if (debugFlag) {
+        Serial.println("Resistance: ");
+        Serial.print(resistance);
+
+    }
     thermTemp = resistance / THERMISTORNOMINAL;
     thermTemp = log(thermTemp);
     thermTemp /= BCONSTANT;
@@ -221,7 +224,7 @@ bool checkFatalFault() { // returns true if fatal fault found
 }
 
 int sendCanUpdate(){
-    PCU_status curPCU_status = new PCU_status();
+    PCU_status curPCU_status = PCU_status();
     msg.id = ID_PCU_STATUS;
     msg.len = 8;
 
@@ -237,6 +240,7 @@ int sendCanUpdate(){
     curPCU_status.write(msg.buf);
     CAN.write(msg);
 
+    /*
     //prepare to send the voltages as shorts in the CAN message
     // TODO: Send CAN status message 2
     short shortGLV = (short) (GLVbattery * 10);
@@ -251,11 +255,13 @@ int sendCanUpdate(){
     memcpy(&msg.buf[6], &shortShutdown, sizeof(short));
 
     int temp1 = CAN.write(msg);
+    */
 
 
     short shortTemp = (short) thermTemp * 100;
 
     // TODO: Send CAN status Metrics
+    /*
     msg.id = 0x51;
     msg.len = 5;
     memcpy(&msg.buf[0], &shortTemp, sizeof(short));
@@ -264,6 +270,6 @@ int sendCanUpdate(){
     memcpy(&msg.buf[4], &state, sizeof(byte));
 
     int temp2 = CAN.write(msg);
-
-    return temp1 + temp2;
+    */
+    return 1;
 }
