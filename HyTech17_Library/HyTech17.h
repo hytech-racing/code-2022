@@ -124,15 +124,31 @@ class PCU_voltages {
 };
 
 typedef struct CAN_message_tcu_status_t {
-  uint8_t state;
-  uint8_t btn_start_id;
+    bool throttle_implausibility;
+    bool throttle_curve;
+    bool brake_implausibility;
+    bool brake_pedal_active;
 } CAN_msg_tcu_status;
 
 class TCU_status {
   public:
     TCU_status();
     TCU_status(uint8_t buf[8]);
-    TCU_status(uint8_t state, uint8_t btn_start_id);
+    TCU_status(bool throttle_implausibility, bool throttle_curve, bool brake_implausibility, bool brake_pedal_active);
+    void load(uint8_t buf[8]);
+    void write(uint8_t buf[8]);
+    bool get_throttle_implausibility();
+    bool get_throttle_curve();
+    bool get_brake_implausibility();
+    bool get_brake_pedal_active();
+    void set_throttle_implausibility(bool throttle_implausibility);
+    void set_throttle_curve(bool throttle_curve);
+    void set_brake_implausibility(bool brake_implausibility);
+    void set_brake_pedal_active(bool brake_pedal_active);
+  private:
+    CAN_message_tcu_status_t message;
+};
+
     void load(uint8_t buf[8]);
     void write(uint8_t buf[8]);
     uint8_t get_state();

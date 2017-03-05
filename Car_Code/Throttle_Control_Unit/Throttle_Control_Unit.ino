@@ -252,6 +252,13 @@ int sendCANUpdate(){
     //
     // int temp1 = CAN.write(msg);
 
+    // Raw throttle input values
+    // Implausibility status
+    // Throttle curve in use (normal or boost)
+    // Temperature as read by onboard thermistor
+    // Brake System Plausibility Device status (boolean indicating whether a fault has occurred)
+    // Brake Pedal Active (boolean used by Power Control Unit to control brake lights)
+
     byte statuses = state;
 
     if(throttleImplausibility) statuses |= (1<<4);
@@ -270,6 +277,14 @@ int sendCANUpdate(){
 }
 
 void set_state(uint8_t new_state) {
+    // Use if there are special state change cases
+    Serial.println("");
+    Serial.print("Changing state of TCU from: ");
+    Serial.print("\tSTATE ");
+    Serial.print(state);
+    Serial.print("\tto STATE ");
+    Serial.print(new_state);
+    Serial.println();
     if (state == new_state) {
         return; // don't do anything if same state
     } else if (new_state == TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED) {

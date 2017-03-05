@@ -1,6 +1,7 @@
 /*
   TCU_status.cpp - HyTech Throttle Control Unit CAN message: Status
   Created by Nathan Cheek, November 20, 2016.
+  TODO: Make sure functions are updated
  */
 
 #include "HyTech17.h"
