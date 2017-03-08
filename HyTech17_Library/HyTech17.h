@@ -12,6 +12,7 @@
 #define PCU_STATE_LATCHING 3
 #define PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED 4
 #define PCU_STATE_FATAL_FAULT 5
+
 #define TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED 1
 #define TCU_STATE_WAITING_TRACTIVE_SYSTEM 2
 #define TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE 3
@@ -19,6 +20,7 @@
 #define TCU_STATE_ENABLING_INVERTER 5
 #define TCU_STATE_WAITING_READY_TO_DRIVE_SOUND 6
 #define TCU_STATE_READY_TO_DRIVE 7
+
 #define DCU_STATE_INITIAL_STARTUP 1
 #define DCU_STATE_WAITING_TRACTIVE_SYSTEM 2
 #define DCU_STATE_PRESSED_TRACTIVE_SYSTEM 3
@@ -33,12 +35,13 @@
  * CAN ID definitions
  */
 #define ID_PCU_STATUS 0xD0
-#define ID_TCU_STATUS 0xD1
-#define ID_BMS_VOLTAGE 0xD2
-#define ID_BMS_CURRENT 0xD3
-#define ID_BMS_TEMPERATURE 0xD4
-#define ID_BMS_STATUS 0xD5
-#define ID_DCU_STATUS 0xD6
+#define ID_PCU_VOLTAGES 0xD1
+#define ID_TCU_STATUS 0xD2
+#define ID_BMS_VOLTAGE 0xD3
+#define ID_BMS_CURRENT 0xD4
+#define ID_BMS_TEMPERATURE 0xD5
+#define ID_BMS_STATUS 0xD6
+#define ID_DCU_STATUS 0xD7
 #define ID_MC_TEMPERATURES_1 0xA0
 #define ID_MC_TEMPERATURES_2 0xA1
 #define ID_MC_TEMPERATURES_3 0xA2
@@ -72,26 +75,52 @@
  * CAN message structs and classes
  */
 typedef struct CAN_message_pcu_status_t {
-  uint8_t state;
-  bool bms_fault;
-  bool imd_fault;
+    uint8_t state;
+    bool bms_fault;
+    bool imd_fault;
+    uint16_t okhs_value;
+    uint16_t discharge_ok_value;
 } CAN_msg_pcu_status;
 
 class PCU_status {
   public:
     PCU_status();
     PCU_status(uint8_t buf[8]);
-    PCU_status(uint8_t state, bool bms_fault, bool imd_fault);
+    PCU_status(uint8_t state, bool bms_fault, bool imd_fault, uint16_t okhs_value, uint16_t discharge_ok_value);
     void load(uint8_t buf[8]);
     void write(uint8_t buf[8]);
     uint8_t get_state();
     bool get_bms_fault();
     bool get_imd_fault();
+    bool get_okhs_value();
+    bool get_discharge_ok_value();
     void set_state(uint8_t state);
     void set_bms_fault(bool bms_fault);
     void set_imd_fault(bool imd_fault);
+    void set_okhs_value(uint16_t okhs_value);
+    void set_discharge_ok_value(uint16_t discharge_ok_value);
   private:
     CAN_message_pcu_status_t message;
+};
+
+typedef struct CAN_message_pcu_voltages_t {
+    uint16_t GLV_battery_voltage;
+    uint16_t shutdown_circuit_voltage;
+} CAN_msg_pcu_voltages;
+
+class PCU_voltages {
+    public:
+        PCU_voltages();
+        PCU_voltages(uint8_t buf[8]);
+        PCU_voltages(uint16_t GLV_battery_voltage, uint16_t shutdown_circuit_voltage);
+        void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
+        uint16_t get_GLV_battery_voltage();
+        uint16_t get_shutdown_circuit_voltage();
+        void set_GLV_battery_voltage(uint16_t GLV_battery_voltage);
+        void set_shutdown_circuit_voltage(uint16_t shutdown_circuit_voltage);
+    private:
+        CAN_message_pcu_voltages_t message;
 };
 
 typedef struct CAN_message_tcu_status_t {

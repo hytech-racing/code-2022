@@ -50,6 +50,7 @@ Metro updateTimer = Metro(500); // Read in values from pins
 Metro implausibilityTimer = Metro(50); // Used for throttle error check
 Metro throttleTimer = Metro(500); // Used for sending commands to Motor Controller
 Metro tractiveTimeOut = Metro(5000); // Used to check timeout of tractive system activation
+Metro timer_motor_controller_send = Metro(50);
 
 // setup code
 void setup() {
@@ -196,6 +197,20 @@ void loop() {
         case TCU_STATE_READY_TO_DRIVE:
             break;
     }
+
+    /*
+     * Send a message to the Motor Controller over CAN when vehicle is not ready to drive
+     */
+    if (state < TCU_STATE_READY_TO_DRIVE && timer_motor_controller_send.check()) {
+      msg.id = ID_MC_COMMAND_MESSAGE;
+      msg.len = 8;
+      if (state < TCU_STATE_ENABLING_INVERTER) {
+        generate_MC_message(msg.buf, 0, true, false);
+      } else if (state < TCU_STATE_READY_TO_DRIVE) {
+        generate_MC_message(msg.buf, 0, true, true);
+      }
+      CAN.write(msg);
+    }
 }
 
 void readValues() {
@@ -236,21 +251,32 @@ bool checkDeactivateTractiveSystem() {
     }
 }
 
+void generate_MC_message(unsigned char* message, int torque, boolean backwards, boolean enable) {
+  message[0] = torque & 0xFF;
+  message[1] = torque >> 8;
+  message[2] = 0;
+  message[3] = 0;
+  message[4] = char(backwards);
+  message[5] = char(enable);
+  message[6] = 0;
+  message[7] = 0;
+}
+
 int sendCANUpdate(){
-    short shortThrottle1 = (short) voltageThrottlePedal1 * 100;
-    short shortThrottle2 = (short) voltageThrottlePedal2 * 100;
-    short shortBrake = (short) voltageBrakePedal * 100;
-    short shortTemp = (short) thermTemp * 100;
-
-    msg.id = ID_TCU_STATUS;
-    msg.len = 8;
-
-    memcpy(&msg.buf[0], &shortThrottle1, sizeof(short));
-    memcpy(&msg.buf[2], &shortThrottle2, sizeof(short));
-    memcpy(&msg.buf[4], &shortBrake, sizeof(short));
-    memcpy(&msg.buf[6], &shortTemp, sizeof(short));
-
-    int temp1 = CAN.write(msg);
+    // short shortThrottle1 = (short) voltageThrottlePedal1 * 100;
+    // short shortThrottle2 = (short) voltageThrottlePedal2 * 100;
+    // short shortBrake = (short) voltageBrakePedal * 100;
+    // short shortTemp = (short) thermTemp * 100;
+    //
+    // msg.id = ID_TCU_STATUS;
+    // msg.len = 8;
+    //
+    // memcpy(&msg.buf[0], &shortThrottle1, sizeof(short));
+    // memcpy(&msg.buf[2], &shortThrottle2, sizeof(short));
+    // memcpy(&msg.buf[4], &shortBrake, sizeof(short));
+    // memcpy(&msg.buf[6], &shortTemp, sizeof(short));
+    //
+    // int temp1 = CAN.write(msg);
 
     byte statuses = state;
 
@@ -265,7 +291,7 @@ int sendCANUpdate(){
 
     int temp2 = CAN.write(msg);
 
-    return temp1 + temp2; // used for error checking?
+    return temp2; // used for error checking?
 
 }
 
