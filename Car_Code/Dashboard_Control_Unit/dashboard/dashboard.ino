@@ -110,9 +110,6 @@ void loop() {
         case PCU_STATE_LATCHING:
           set_state(DCU_STATE_PRESSED_TRACTIVE_SYSTEM);
           break;
-        case PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
-          set_state(DCU_STATE_WAITING_MC_ENABLE);
-          break;
         case PCU_STATE_FATAL_FAULT:
           set_state(DCU_STATE_FATAL_FAULT);
           break;
@@ -282,11 +279,4 @@ void set_state(uint8_t new_state) {
         digitalWrite(READY_SOUND, LOW);
         Serial.println("RTD sound finished");
     }
-}
-
-void toggleButtonInterrupt {
-
-}
-
-void startButtonInterrupt {
 }
