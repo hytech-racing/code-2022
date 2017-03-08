@@ -14,7 +14,7 @@
 #define MC2_ID 0xA1 
 #define MC3_ID 0xA2 
 #define BMS_ID 0xD4
-//TODO: ports
+#define ID_CCU_STATUS 0x0 //PLACEHOLDER
 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
@@ -142,6 +142,17 @@ void loop() {
     }
 }
 
-int sendCanUpdate() {
+void sendCanUpdate() {
     //TODO write CAN update code
+    CAN_message_t ccu_status_msg;
+    CCU_status curCCU_status = CCU_status();
+    ccu_status_msg.id = ID_CCU_STATUS;
+    ccu_status_msg.len = 1;
+    
+    short shortFlowRate = (short) (flowRate * 10);
+    curCCU_status.set_flow_rate(shortFlowRate);
+    curCCU_status.write(ccu_status_msg.buf);
+
+    CAN.write(ccu_status_msg);
+    
 }

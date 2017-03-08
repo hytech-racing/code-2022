@@ -742,6 +742,7 @@ class CCU_status {
     void load(uint8_t buf[8]);
     uint16_t get_flow_rate();
     void set_flow_rate(uint16_t flow);
+    void write(uint8_t buf[]);
   private:
     CAN_message_ccu_status_t;
 };
