@@ -706,4 +706,19 @@ class MC_read_write_parameter_response {
     CAN_message_mc_read_write_parameter_response_t message;
 };
 
+class CCU_status {
+  public:
+    CCU_status();
+    CCU_status(uint8_t buf[8]);
+    void load(uint8_t buf[8]);
+    uint16_t get_flow_rate();
+    void set_flow_rate(uint16_t flow);
+  private:
+    CAN_message_ccu_status_t;
+};
+
+typedef struct CAN_message_ccu_status_t {
+  uint16_t flow_rate;
+} CAN_message_ccu_status_t;
+
 #endif
