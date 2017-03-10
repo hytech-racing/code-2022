@@ -149,6 +149,19 @@ class TCU_status {
     CAN_message_tcu_status_t message;
 };
 
+typedef struct CAN_message_tcu_readings_t {
+  uint16_t throttle_value_1;
+  uint16_t throttle_value_2;
+  uint16_t brake_value;
+  uint16_t temperature;
+
+} CAN_msg_tcu_readings;
+
+class TCU_readings {
+  public:
+    TCU_readings();
+    TCU_readings(uint8_t buf[8]);
+    TCU_readings(uint16_t throttleValue1, uint16_t throttleValue2, uint16_t brakeValue, uint16_t temperature);
     void load(uint8_t buf[8]);
     void write(uint8_t buf[8]);
     uint8_t get_state();
@@ -156,7 +169,7 @@ class TCU_status {
     void set_state(uint8_t state);
     void set_btn_start_id(uint8_t btn_start_id);
   private:
-    CAN_message_tcu_status_t message;
+    CAN_message_tcu_readings_t message;
 };
 
 typedef struct CAN_message_dcu_status_t {
