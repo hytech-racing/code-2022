@@ -1,4 +1,4 @@
-#include <FlexCan.h> // import teensy library
+#include <FlexCAN.h> // import teensy library
 #include <HyTech17.h>
 #include <Metro.h>
 
@@ -14,7 +14,7 @@
 #define MC2_ID 0xA1 
 #define MC3_ID 0xA2 
 #define BMS_ID 0xD4
-//TODO: ports
+#define ID_CCU_STATUS 0x0 //PLACEHOLDER
 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
@@ -22,7 +22,7 @@ static CAN_message_t msg;
 //flow sensor variables
 int pulses = 0;
 float flowRate = 0.0;
-int milli = 300 //time in milliseconds of each cycle to poll for
+int milli = 300; //time in milliseconds of each cycle to poll for
 Metro pulseTimer = Metro(milli);
 
 // State - use HyTech library
@@ -45,15 +45,15 @@ void setup() {
     Serial.begin(115200); // init serial
 
     //Pins for flow sensor
-    pinMode(D5, INPUT);
-    pinMode(D6, INPUT);
-    pinMode(D7, INPUT);
-    pinMode(D8, INPUT);
-    pinMode(D9, INPUT);
-    pinMode(D10, INPUT);
-    pinMode(D11, INPUT);
-    pinMode(D12, INPUT);
-    pinMode(D13, INPUT);
+    pinMode(5, INPUT);
+    pinMode(6, INPUT);
+    pinMode(7, INPUT);
+    pinMode(8, INPUT);
+    pinMode(9, INPUT);
+    pinMode(10, INPUT);
+    pinMode(11, INPUT);
+    pinMode(12, INPUT);
+    pinMode(13, INPUT);
     pinMode(COUNTER_RESET, OUTPUT);
     pinMode(A1, INPUT);
 
@@ -70,15 +70,15 @@ void setup() {
 void loop() {
     //check the flow sensor if timer is up
     if(pulseTimer.check()) { 
-        int q1 = digitalRead(D5);
-        int q2 = digitalRead(D6);
-        int q3 = digitalRead(D7);
-        int q4 = digitalRead(D8);
-        int q5 = digitalRead(D9);
-        int q6 = digitalRead(D10);
-        int q7 = digitalRead(D11);
-        int q8 = digitalRead(D12);
-        int q9 = digitalRead(D13);
+        int q1 = digitalRead(5);
+        int q2 = digitalRead(6);
+        int q3 = digitalRead(7);
+        int q4 = digitalRead(8);
+        int q5 = digitalRead(9);
+        int q6 = digitalRead(10);
+        int q7 = digitalRead(11);
+        int q8 = digitalRead(12);
+        int q9 = digitalRead(13);
         
         // if a plastic sensor use the following calculation
         // Sensor Frequency (Hz) = 7.5 * Q (Liters/min)
@@ -142,6 +142,17 @@ void loop() {
     }
 }
 
-int sendCanUpdate() {
+void sendCanUpdate() {
     //TODO write CAN update code
+    CAN_message_t ccu_status_msg;
+    CCU_status curCCU_status = CCU_status();
+    ccu_status_msg.id = ID_CCU_STATUS;
+    ccu_status_msg.len = 1;
+    
+    short shortFlowRate = (short) (flowRate * 10);
+    curCCU_status.set_flow_rate(shortFlowRate);
+    curCCU_status.write(ccu_status_msg.buf);
+
+    CAN.write(ccu_status_msg);
+    
 }
