@@ -17,7 +17,7 @@ void CCU_status::load(uint8_t buf[8]) {
   memcpy(&(message.flow_rate), &buf[0], sizeof(int16_t));
 }
 
-int16_t CCU_status::get_flow_rate() {
+uint16_t CCU_status::get_flow_rate() {
   return message.flow_rate;
 }
 

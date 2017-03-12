@@ -81,7 +81,7 @@ void TCU_readings::write(uint8_t buf[8]) {
     memcpy(&buf[0], &(message.throttle_value_1), sizeof(uint16_t));
     memcpy(&buf[2], &(message.throttle_value_2), sizeof(uint16_t));
     memcpy(&buf[4], &(message.brake_value), sizeof(uint16_t));
-    memcpy(&buf[6], &(message.brake_pedal_active), sizeof(uint16_t));
+    memcpy(&buf[6], &(message.temperature), sizeof(uint16_t));
 }
 
 /* Get functions
@@ -105,8 +105,8 @@ uint16_t TCU_readings::get_brake_value() {
     return message.brake_value;
 }
 
-uint16_t TCU_readings::get_brake_pedal_active() {
-    return message.brake_pedal_active;
+uint16_t TCU_readings::get_temperature() {
+    return message.temperature;
 }
 
 /* Set functions
