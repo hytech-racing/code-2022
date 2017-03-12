@@ -266,7 +266,7 @@ void generate_MC_message(unsigned char* message, int torque, boolean backwards, 
 int sendCANUpdate(){
     int bufferAvailable = 0;
 
-    /* Sending TCU_status */
+    /* --------- Sending TCU_status --------- */
     TCU_status curTCU_status = TCU_status();
     msg.id = ID_TCU_STATUS;
     msg.len = 8;
@@ -279,43 +279,25 @@ int sendCANUpdate(){
     curTCU_status.write(msg.buf);
     bufferAvailable += CAN.write(msg);
 
-    // short shortThrottle1 = (short) voltageThrottlePedal1 * 100;
-    // short shortThrottle2 = (short) voltageThrottlePedal2 * 100;
-    // short shortBrake = (short) voltageBrakePedal * 100;
-    // short shortTemp = (short) thermTemp * 100;
-    //
-    // msg.id = ID_TCU_STATUS;
-    // msg.len = 8;
-    //
-    // memcpy(&msg.buf[0], &shortThrottle1, sizeof(short));
-    // memcpy(&msg.buf[2], &shortThrottle2, sizeof(short));
-    // memcpy(&msg.buf[4], &shortBrake, sizeof(short));
-    // memcpy(&msg.buf[6], &shortTemp, sizeof(short));
-    //
-    // int temp1 = CAN.write(msg);
+    /* --------- Sending TCU_readings ------- */
+    TCU_readings curTCU_readings = TCU_readings();
+    msg.id = ID_TCU_READINGS;
+    msg.len = 8;
 
-    // Raw throttle input values
-    // Implausibility status
-    // Throttle curve in use (normal or boost)
-    // Temperature as read by onboard thermistor
-    // Brake System Plausibility Device status (boolean indicating whether a fault has occurred)
-    // Brake Pedal Active (boolean used by Power Control Unit to control brake lights)
+    short shortThrottle1 = (short) voltageThrottlePedal1 * 100;
+    short shortThrottle2 = (short) voltageThrottlePedal2 * 100;
+    short shortBrake = (short) voltageBrakePedal * 100;
+    short shortTemp = (short) thermTemp * 100;
 
-    byte statuses = state;
+    curTCU_readings.set_throttle_value_1(shortThrottle1);
+    curTCU_readings.set_throttle_value_2(shortThrottle2);
+    curTCU_readings.set_brake_value(shortBrake);
+    curTCU_readings.set_temperature(shortTemp);
 
-    if(throttleImplausibility) statuses |= (1<<4);
-    if(throttleCurve) statuses |= (1<<5);
-    if(brakeImplausibility) statuses |= (1<<6);
-    if(brakePedalActive) statuses |= (1<<7);
+    curTCU_readings.write(msg.buf);
+    bufferAvailable += CAN.write(msg);
 
-    msg.id = ID_TCU_STATUS;
-    msg.len = 1;
-    msg.buf[0] = statuses;
-
-    int temp2 = CAN.write(msg);
-
-    return temp2; // used for error checking?
-
+    return bufferAvailable; // used for error checking
 }
 
 void set_state(uint8_t new_state) {
