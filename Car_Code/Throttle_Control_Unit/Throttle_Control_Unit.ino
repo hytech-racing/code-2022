@@ -164,6 +164,7 @@ void loop() {
             // NOTE: there is no timeout for the above state change
             if (brakePedalActive) {
                 // TODO: check Start button on dashboard - code has not been written yet
+                // TODO There is no checking for if brakePedalActive
 
                 // Sending enable torque message
                 set_state(TCU_STATE_ENABLING_INVERTER);
@@ -263,6 +264,21 @@ void generate_MC_message(unsigned char* message, int torque, boolean backwards, 
 }
 
 int sendCANUpdate(){
+    int bufferAvailable = 0;
+
+    /* Sending TCU_status */
+    TCU_status curTCU_status = TCU_status();
+    msg.id = ID_TCU_STATUS;
+    msg.len = 8;
+
+    curTCU_status.set_throttle_implausibility(throttleImplausibility);
+    curTCU_status.set_throttle_curve(throttleCurve);
+    curTCU_status.set_brake_implausibility(brakeImplausibility);
+    curTCU_status.set_brake_pedal_active(brakePedalActive);
+
+    curTCU_status.write(msg.buf);
+    bufferAvailable += CAN.write(msg);
+
     // short shortThrottle1 = (short) voltageThrottlePedal1 * 100;
     // short shortThrottle2 = (short) voltageThrottlePedal2 * 100;
     // short shortBrake = (short) voltageBrakePedal * 100;
