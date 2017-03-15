@@ -40,6 +40,9 @@ MC_temperatures_2 mc2;
 MC_temperatures_3 mc3;
 BMS_temperatures bms;
 
+static CAN_message_t ccu_status_msg;
+CCU_status curCCU_status;
+
 // setup code
 void setup() {
     Serial.begin(115200); // init serial
@@ -144,10 +147,9 @@ void loop() {
 
 void sendCanUpdate() {
     //TODO write CAN update code
-    CAN_message_t ccu_status_msg;
-    CCU_status curCCU_status = CCU_status();
     ccu_status_msg.id = ID_CCU_STATUS;
     ccu_status_msg.len = 1;
+
     
     short shortFlowRate = (short) (flowRate * 10);
     curCCU_status.set_flow_rate(shortFlowRate);
