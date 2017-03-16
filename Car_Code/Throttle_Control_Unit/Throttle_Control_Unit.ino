@@ -32,6 +32,7 @@ bool throttleCurve = false; // false -> normal, true -> boost
 float thermTemp = 0.0; // temperature of onboard thermistor
 bool brakeImplausibility = false; // fault if BSPD signal too low - still to be designed
 bool brakePedalActive = false; // true if brake is considered pressed
+bool startPressed = false;
 
 // FSAE requires that torque be shut off if an implausibility persists for over 100 msec (EV3.5.4).
 bool torqueShutdown = false;
@@ -119,6 +120,11 @@ void loop() {
                     set_state(TCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
                 }
             }
+        } else if (msg.id == ID_DCU_STATUS) {
+            DCU_status dcu_status(msg.buf);
+            if (state == TCU_STATE_TRACTIVE_SYSTEM_ACTIVE && dcu_status.get_btn_press_id()) {
+                startPressed = true;
+            }
         }
     }
 
@@ -163,28 +169,30 @@ void loop() {
             // REVIEW: TCU will check for brake and start button press immediately (no delay?)
             // NOTE: there is no timeout for the above state change
             if (brakePedalActive) {
-                // TODO: check Start button on dashboard - code has not been written yet
+                // check Start button on dashboard - set in CAN message processing
                 // TODO There is no checking for if brakePedalActive
+                if (startPressed) {
+                    // Sending enable torque message
+                    set_state(TCU_STATE_ENABLING_INVERTER);
+                    MC_command_message enableInverterCommand;
+                    enableInverterCommand.set_inverter_enable(true);
+                    uint8_t MC_enable_message[8];
+                    enableInverterCommand.write(MC_enable_message);
 
-                // Sending enable torque message
-                set_state(TCU_STATE_ENABLING_INVERTER);
-                MC_command_message enableInverterCommand;
-                enableInverterCommand.set_inverter_enable(true);
-                uint8_t MC_enable_message[8];
-                enableInverterCommand.write(MC_enable_message);
+                    msg.id = ID_MC_COMMAND_MESSAGE;
+                    msg.len = 8;
+                    memcpy(&msg.buf[0], &MC_enable_message[0], sizeof(uint8_t));
+                    memcpy(&msg.buf[1], &MC_enable_message[1], sizeof(uint8_t));
+                    memcpy(&msg.buf[2], &MC_enable_message[2], sizeof(uint8_t));
+                    memcpy(&msg.buf[3], &MC_enable_message[3], sizeof(uint8_t));
+                    memcpy(&msg.buf[4], &MC_enable_message[4], sizeof(uint8_t));
+                    memcpy(&msg.buf[5], &MC_enable_message[5], sizeof(uint8_t));
+                    memcpy(&msg.buf[6], &MC_enable_message[6], sizeof(uint8_t));
+                    memcpy(&msg.buf[7], &MC_enable_message[7], sizeof(uint8_t));
 
-                msg.id = ID_MC_COMMAND_MESSAGE;
-                msg.len = 8;
-                memcpy(&msg.buf[0], &MC_enable_message[0], sizeof(uint8_t));
-                memcpy(&msg.buf[1], &MC_enable_message[1], sizeof(uint8_t));
-                memcpy(&msg.buf[2], &MC_enable_message[2], sizeof(uint8_t));
-                memcpy(&msg.buf[3], &MC_enable_message[3], sizeof(uint8_t));
-                memcpy(&msg.buf[4], &MC_enable_message[4], sizeof(uint8_t));
-                memcpy(&msg.buf[5], &MC_enable_message[5], sizeof(uint8_t));
-                memcpy(&msg.buf[6], &MC_enable_message[6], sizeof(uint8_t));
-                memcpy(&msg.buf[7], &MC_enable_message[7], sizeof(uint8_t));
-
-                CAN.write(msg);
+                    CAN.write(msg);
+                    startPressed = false;
+                }
             }
             break;
         case TCU_STATE_ENABLING_INVERTER:
