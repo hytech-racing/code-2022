@@ -99,31 +99,18 @@ unsigned long chargeCurrentPeakHighTime;
 bool chargeCurrentConstantHighFlag;
 unsigned long chargeCurrentConstantHighTime;
 
-
-/**
- * Teensy Communication Pin Constants
- */
-#define MOSI_PIN 17
-#define MISO_PIN 16
-#define SPI_CHIP_SELECT_PIN 15
-#define CLOCK_PIN 14
-#define T_WAKE 50
-
 void setup() {
     // put your setup code here, to run once:
     Serial.begin(115200);
-    // SPI.setMOSI(MOSI_PIN);
-    // SPI.setMISO(MISO_PIN);
-    // SPI.setSCK(CLOCK_PIN);
-    // pinMode(SPI_CHIP_SELECT_PIN, OUTPUT);
+    delay(2000);
     // SPI.begin();
-//    pinMode(A0, INPUT);
 
     LTC6804_initialize();
     init_cfg();
 //    can.begin();
     pollVoltage();
     memcpy(cell_delta_voltage, cell_voltages, 2 * TOTAL_IC * 12);
+    Serial.println("Setup Complete!");
 }
 
 /*
@@ -132,10 +119,10 @@ void setup() {
  // NOTE: Implement Coulomb counting to track state of charge of battery.
 void loop() {
     // put your main code here, to run repeatedly:
-    waitForUserInput();
+//    waitForUserInput();
     pollVoltage(); // cell_voltages[] array populated with cell voltages now.
 
-    pollAuxiliaryVoltages();
+//    pollAuxiliaryVoltages();
 //    int thermValue = analogRead(A0);
 //    Serial.print("Thermistor reading: "); Serial.println(thermValue);
 
@@ -250,7 +237,7 @@ void balanceCellsDuringCharging() {
     int16_t minVoltDeltaVoltage = cell_delta_voltage[minVoltageICIndex][minVoltageCellIndex]; // stored in 0.1 mV
     double minTimeFactor = (4000.0 - minVolt) / (cell_delta_voltage[minVoltageICIndex][minVoltageCellIndex] * 0.1);
     uint8_t batteryIndexCounter = 0;
-    uint8_t* batteryBalanceMask = malloc(sizeof(uint8_t) * 12 * TOTAL_IC);
+    uint8_t* batteryBalanceMask = (uint8_t*) malloc(sizeof(uint8_t) * 12 * TOTAL_IC);
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         for (int cell = 0; cell < 12; cell++) {
             double currentTimeFactor = (4000.0 - cell_voltages[ic][cell] * 0.1) / (cell_delta_voltage[ic][cell] * 0.1);
