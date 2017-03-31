@@ -92,8 +92,9 @@ void loop() {
             + q6 * (1<<5) + q7 * (1<<6) + q8 * (1<<7) + q9 * (1<<8);
         Serial.print("pulses: ");
         Serial.println(pulses);
-        float freq = pulses/((float)milli/1000);
+        float freq = pulses/60.0;
         flowRate = freq/7.5;
+        flowRate = flowRate/((float)milli/1000);
         Serial.print("flow rate: ");
         Serial.println(flowRate);
         //TODO send CAN message with the flow rate
