@@ -263,3 +263,4 @@ void set_state(uint8_t new_state) {
         Serial.println("RTD sound finished");
     }
 }
+
