@@ -40,6 +40,9 @@ MC_temperatures_2 mc2;
 MC_temperatures_3 mc3;
 BMS_temperatures bms;
 
+static CAN_message_t ccu_status_msg;
+CCU_status curCCU_status;
+
 // setup code
 void setup() {
     Serial.begin(115200); // init serial
@@ -89,8 +92,9 @@ void loop() {
             + q6 * (1<<5) + q7 * (1<<6) + q8 * (1<<7) + q9 * (1<<8);
         Serial.print("pulses: ");
         Serial.println(pulses);
-        float freq = pulses/((float)milli/1000);
+        float freq = pulses/60.0;
         flowRate = freq/7.5;
+        flowRate = flowRate/((float)milli/1000);
         Serial.print("flow rate: ");
         Serial.println(flowRate);
         //TODO send CAN message with the flow rate
@@ -144,10 +148,9 @@ void loop() {
 
 void sendCanUpdate() {
     //TODO write CAN update code
-    CAN_message_t ccu_status_msg;
-    CCU_status curCCU_status = CCU_status();
     ccu_status_msg.id = ID_CCU_STATUS;
     ccu_status_msg.len = 1;
+
     
     short shortFlowRate = (short) (flowRate * 10);
     curCCU_status.set_flow_rate(shortFlowRate);

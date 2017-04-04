@@ -133,23 +133,6 @@ void loop() {
                 break;
         }
     }
-
-    // Handle motor controller state messages
-    // if (msg.id == ID_MC_INTERNAL_STATES) {
-    //     MC_internal_states mc_internal_states = MC_internal_states(msg.buf);
-    //     // if start button has been pressed and inverter is enabled, play RTD sound
-    //     if (mc_internal_states.get_inverter_enable_state && state == DCU_STATE_PRESSED_MC_ENABLE) {
-    //         set_state(DCU_STATE_PLAYING_RTD);
-    //     }
-    // }
-
-    // TODO: Could be replaced by TCU status messages?
-
-    // // Handle motor controller voltage messages
-    // if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
-    //     MC_voltage_information mc_voltage_information = MC_voltage_information(msg.buf);
-    //
-    // }
   }
 
   // TODO: more state machine stuff possibly?
@@ -280,3 +263,4 @@ void set_state(uint8_t new_state) {
         Serial.println("RTD sound finished");
     }
 }
+
