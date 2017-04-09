@@ -201,7 +201,7 @@ bool checkFatalFault() { // returns true if fatal fault found
     }
 
     while (CAN.read(msg)) {
-        if (msg.id == 0x0001) {
+        if (msg.id == 0x0001) { // Indication on MC fault
             faultMsg.buf[0] = faultMsg.buf[0] | BSPD_FAULT;
         }
     }
