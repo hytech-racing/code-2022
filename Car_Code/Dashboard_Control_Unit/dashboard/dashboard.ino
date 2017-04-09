@@ -37,6 +37,7 @@ unsigned long lastDebounceBOOST = 0;  // the last time the output pin was toggl
 unsigned long lastDebounceSTART = 0;  // the last time the output pin was toggled
 uint8_t btn_start_new = 0;
 bool btn_start_pressed = false;
+bool btn_start_debouncing = false;
 bool led_start_active = false;
 unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
 uint8_t led_start_type = 0;
@@ -69,6 +70,10 @@ void setup() {
     state = DCU_STATE_INITIAL_STARTUP;
     pinMode(LED_BMS, OUTPUT);
     pinMode(LED_IMD, OUTPUT);
+    pinMode(BTN_TOGGLE, INPUT_PULLUP);
+    pinMode(BTN_CYCLE, INPUT_PULLUP);
+    pinMode(BTN_BOOST, INPUT_PULLUP);
+    pinMode(BTN_START, INPUT_PULLUP);
     Serial.begin(115200);
     can.begin();
     timer_can_update.reset();
@@ -263,4 +268,3 @@ void set_state(uint8_t new_state) {
         Serial.println("RTD sound finished");
     }
 }
-

@@ -39,7 +39,7 @@ BMS_status bmsStatusMessage;
 FlexCAN can(500000);
 static CAN_message_t msg;
 long msTimer = 0;
-
+s
 void setup() {
     // adfads
     Serial.begin(115200);
@@ -71,4 +71,3 @@ void loop() {
     Wire.endTransmission();
     i = 0;
 }
-
