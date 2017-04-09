@@ -91,11 +91,10 @@ void loop() {
       }
 
       // Scanning CAN for dashboard state message (start button)
-      // Change values based on what message actually is
-      if (state == PCU_STATE_WAITING_DRIVER && msg.id == ID_PCU_STATUS) {
-        Serial.println(msg.buf[0], BIN);
-        if (msg.buf[0] & 0x10) {
-          startPressed = 1;
+      if (state == PCU_STATE_WAITING_DRIVER && msg.id == ID_DCU_STATUS) {
+        DCU_status dcu_status = DCU_status(msg.buf);
+        if (dcu_status.get_btn_press_id()) {
+            startPressed = 1;
         }
       }
     }
@@ -202,7 +201,7 @@ bool checkFatalFault() { // returns true if fatal fault found
     }
 
     while (CAN.read(msg)) {
-        if (msg.id == 0x0001) {
+        if (msg.id == 0x0001) { // Indication on MC fault
             faultMsg.buf[0] = faultMsg.buf[0] | BSPD_FAULT;
         }
     }
