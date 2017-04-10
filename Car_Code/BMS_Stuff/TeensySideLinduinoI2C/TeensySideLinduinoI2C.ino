@@ -71,4 +71,3 @@ void loop() {
     Wire.endTransmission();
     i = 0;
 }
-
