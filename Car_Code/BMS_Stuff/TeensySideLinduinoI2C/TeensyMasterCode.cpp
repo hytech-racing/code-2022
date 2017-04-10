@@ -30,12 +30,41 @@ bool writeCAN(); // writes status messages for BMS onto CAN
 
 void setup() {
     Serial.begin(115200);
+    delay(1000);
     Wire.begin();
+    delay(1000);
     CAN.begin();
 
     Serial.println("Setup Complete");
 }
 
 void loop() {
-
+    Wire.requestFrom(1, 32);
+    int index = 0;
+    uint8_t buf[8];
+    while (Wire.available() && index < 32) {
+        if (index == 8) {
+            msg.id = ID_BMS_VOLTAGE;
+            msg.buf = buf;
+            msg.len = 8;
+            CAN.write(msg);
+        } else if (index == 16) {
+            msg.id = ID_BMS_CURRENT;
+            msg.buf = buf;
+            msg.len = 8;
+            CAN.write(msg);
+        } else if (index == 24) {
+            msg.id = ID_BMS_TEMPERATURE;
+            msg.buf = buf;
+            msg.len = 8;
+            CAN.write(msg);
+        } else if (index == 32) {
+            msg.id = ID_BMS_STATUS;
+            msg.buf = buf;
+            msg.len = 8;
+            CAN.write(msg);
+        }
+        buf[index % 8] = b;
+        index++;
+    }
 }
