@@ -225,7 +225,7 @@ class I2C_Teensy_BMS_Controller_Message {
     // TODO: Add public functions, accessors, setters, getters, mutators
   private:
     // TODO: Add private member variables
-}
+};
 
 typedef struct CAN_message_bms_voltage_t {
     // integer from 0 to 65536 mapping from 0 to 5v
