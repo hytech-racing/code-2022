@@ -6,11 +6,11 @@
 
 #include <Arduino.h>
 #include <stdint.h>
-#include <SPI.h>
+//#include <SPI.h>
 #include <Wire.h>
 #include "Linduino.h"
 #include "LT_SPI.h"
-#include "LTC6804.h"
+#include "LTC68041.h"
 #include "HyTech17.h"
 
 /************BATTERY CONSTRAINTS AND CONSTANTS**********************/
@@ -31,7 +31,7 @@
 #define DISCHARGE_TEMP_CRITICAL_LOW 15
 
 /********GLOBAL ARRAYS/VARIABLES CONTAINING DATA FROM CHIP**********/
-const uint8_t TOTAL_IC = 1;
+const uint8_t TOTAL_IC = 2;
 uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages. Stores numbers in 0.1 mV units.
 uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
                                      /* Data contained in this array is in this format:
@@ -91,18 +91,17 @@ unsigned long chargeCurrentConstantHighTime;
 
 void setup() {
     // put your setup code here, to run once:
-    Serial.begin(115200);
+    Serial.begin(9600);
     delay(2000);
     // SPI.begin();
-    Wire.begin(1);
-    Wire.onReceive(receiveFromTeensy);
-    Wire.onRequest(requestFromTeensy);
+    Wire.begin();
+    delay(2000);
 
     LTC6804_initialize();
     init_cfg();
 //    can.begin();
-    pollVoltage();
-    memcpy(cell_delta_voltage, cell_voltages, 2 * TOTAL_IC * 12);
+//    pollVoltage();
+//    memcpy(cell_delta_voltage, cell_voltages, 2 * TOTAL_IC * 12);
     Serial.println("Setup Complete!");
 }
 
@@ -111,15 +110,27 @@ void setup() {
  */
  // NOTE: Implement Coulomb counting to track state of charge of battery.
 void loop() {
-    // put your main code here, to run repeatedly:
-//    waitForUserInput();
+//    // put your main code here, to run repeatedly:
+////    waitForUserInput();
     pollVoltage(); // cell_voltages[] array populated with cell voltages now.
-
+//
 //    pollAuxiliaryVoltages();
-//    int thermValue = analogRead(A0);
-//    Serial.print("Thermistor reading: "); Serial.println(thermValue);
-
+////    int thermValue = analogRead(A0);
+////    Serial.print("Thermistor reading: "); Serial.println(thermValue);
+//
     avgMinMaxTotalVoltage(); // min, max, avg, and total volts stored in bmsVoltageMessage object.
+    Wire.beginTransmission(8);
+    uint8_t buf[8];
+    bmsVoltageMessage.write(buf);
+    Wire.write(buf, 8);
+    bmsCurrentMessage.write(buf);
+    Wire.write(buf, 8);
+    bmsTempMessage.write(buf);
+    Wire.write(buf, 8);
+    bmsStatusMessage.write(buf);
+    Wire.write(buf, 8);
+    Wire.endTransmission();
+    delay(100);
 }
 
 /*!***********************************
@@ -174,25 +185,6 @@ void pollAuxiliaryVoltages() {
     delay(100);
     // TODO: Take auxiliary voltage data from thermistor and convert raw analog data into temperature values.
     // TODO: Take auxilliary voltage data from current sensor and convert raw analog data into current values.
-}
-
-void receiveFromTeensy(int howMany) {
-    //
-}
-
-void requestFromTeensy() {
-    // send voltage (8 bytes), current (8 bytes), temp (8 bytes), status (8 bytes)
-    uint8_t buf[8];
-    uint8_t allData[32];
-    bmsVoltageMessage.write(buf);
-    memcpy(&allData[0], &buf[0], 8);
-    bmsCurrentMessage.write(buf);
-    memcpy(&allData[8], &buf[0], 8);
-    bmsTempMessage.write(buf);
-    memcpy(&allData[16], &buf[0], 8);
-    bmsStatusMessage.write(buf);
-    memcpy(&allData[24], &buf[0], 8);
-    Wire.write(allData, 32);
 }
 
 void wakeFromSleepAllChips() {
