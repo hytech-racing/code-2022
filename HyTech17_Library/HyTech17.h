@@ -357,6 +357,22 @@ class BMS_status {
     CAN_message_bms_error_t bmsErrorMessage;
 };
 
+typedef struct CAN_message_charge_status_t {
+    uint8_t charge_command;
+} CAN_message_charge_status_t;
+
+class Charge_status {
+    public:
+        Charge_status();
+        Charge_status(uint8_t buf[]);
+        void load(uint8_t buf[]);
+        void write(uint8_t buf[]);
+        uint8_t getChargeCommand();
+        void setChargeCommand(uint8_t cmd);
+    private:
+        CAN_message_charge_status_t message;
+};
+
 typedef struct CAN_message_mc_temperatures_1_t {
   int16_t module_a_temperature;
   int16_t module_b_temperature;

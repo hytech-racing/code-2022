@@ -59,6 +59,8 @@ void loop () {
             }
             break;
     }
+
+    
     pollForButtonPress();
 }
 
