@@ -69,6 +69,17 @@
 #define ID_MC_READ_WRITE_PARAMETER_RESPONSE 0xC2
 
 /*
+ * I2C BMS ID definitions
+ */
+#define NUM_IC 2;
+#define NUM_CELLS 12;
+#define I2C_WR_CONFIG_REG 0x01
+#define I2C_RD_CONFIG_REG 0x02
+#define I2C_RD_CELL_VOLTAGE 0x03
+#define I2C_RD_AUX_VOLTAGE 0x04
+#define I2C_RD_STATUS_REG 0x05
+
+/*
 
  * A GENERAL_NOTE: the load functions in these classes take a byte array containing data from a CAN read.
  * The data contained in this byte array is used to populate the object.
@@ -207,6 +218,14 @@ public:
     void set_rtds_state(uint8_t rtds_state);
 private:
     CAN_message_dcu_status_t message;
+};
+
+class I2C_Teensy_BMS_Controller_Message {
+  public:
+    I2C_Teensy_BMS_Controller_Message();
+    // TODO: Add public functions, accessors, setters, getters, mutators
+  private:
+    // TODO: Add private member variables
 };
 
 typedef struct CAN_message_bms_voltage_t {
@@ -352,10 +371,25 @@ class BMS_status {
     void setChargeOvertemp(bool flag);
     void setChargeUndertemp(bool flag);
 
+    void clearAllFlags();
+
     void setBMSStatusOK(bool flag);
   private:
     CAN_message_bms_error_t bmsErrorMessage;
 };
+
+class BMSTestModeHandler {
+    public:
+        BMSTestModeHandler();
+        BMSTestModeHandler(unsigned long initialTime);
+        void checkTestMode(unsigned long initialTime, int totalMillivolts, int cell1MilliVolts, int cell2MilliVolts);
+        bool bmsTestModeEntered();
+    private:
+        float prevTotalMillivolts;
+        float prevCell1Millivolts;
+        float prevCell2Millivolts;
+        bool bmsTestModeEntered;
+}
 
 typedef struct CAN_message_charge_status_t {
     uint8_t charge_command;
