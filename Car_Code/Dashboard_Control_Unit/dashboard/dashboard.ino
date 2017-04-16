@@ -213,6 +213,8 @@ void sendCANUpdate(bool startPressed) {
     dcu_status.set_light_active_1(0);
     dcu_status.set_light_active_2(0);
     dcu_status.set_rtds_state(state == DCU_STATE_PLAYING_RTD ? 1 : 0)
+    dcu_status.write(msg);
+    CAN.write(msg);
 }
 
 /*
