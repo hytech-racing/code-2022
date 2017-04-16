@@ -29,10 +29,10 @@ static CAN_message_t msg;
 // bool writeCAN(); // writes status messages for BMS onto CAN
 
 static int runningIndex; // Used for tracking
-uint8_t buf[8];
+uint8_t buf[32];
 
 void setup() {
-    Serial.begin(9600);
+    Serial.begin(115200);
     delay(2000);
     Wire.begin(8);
     delay(2000);
@@ -48,48 +48,42 @@ void loop() {
 }
 
 void receiveEvent(int howMany) {
-    while (Wire.available()) {//&& runningIndex < 14) {
-        Serial.println("Teensy");
-        if (runningIndex % 8 == 0) {
-            memcpy(&(msg.buf[0]), &buf[0], 8 * sizeof(uint8_t));
-        }
-        if (runningIndex == 8) {
-            bmsVoltageMessage.load(buf);
-            msg.id = ID_BMS_VOLTAGE;
-            // msg.buf = buf;
-            msg.len = 8;
-            Serial.print("Average Voltage: ");
-            Serial.println(bmsVoltageMessage.getAverage());
-            Serial.print("Total Voltage: ");
-            Serial.println(bmsVoltageMessage.getTotal());
-//            CAN.write(msg);
-        } else if (runningIndex == 16) {
-            bmsCurrentMessage.load(buf);
-            msg.id = ID_BMS_CURRENT;
-            // msg.buf = buf;
-            msg.len = 8;
-//            CAN.write(msg);
-        } else if (runningIndex == 24) {
-            bmsTempMessage.load(buf);
-            msg.id = ID_BMS_TEMPERATURE;
-            // msg.buf = buf;
-            msg.len = 8;
-//            CAN.write(msg);
-        } else if (runningIndex == 32) {
-            bmsStatusMessage.load(buf);
-            msg.id = ID_BMS_STATUS;
-            // msg.buf = buf;
-            msg.len = 8;
-//            CAN.write(msg);
-        }
-        int tempNum = runningIndex % 32;
-        runningIndex = tempNum;
-
+    while (Wire.available()) {
         byte b = Wire.read();
-        buf[runningIndex % 8] = b;
+        if (runningIndex == 32) {
+            uint8_t singleBuf[8];
+            memcpy(&(singleBuf[0]), &(buf[0]), 8);
+            bmsVoltageMessage.load(singleBuf);
+            memcpy(&(singleBuf[0]), &(buf[8]), 8);
+            bmsCurrentMessage.load(singleBuf);
+            memcpy(&(singleBuf[0]), &(buf[16]), 8);
+            bmsTempMessage.load(singleBuf);
+            memcpy(&(singleBuf[0]), &(buf[24]), 8);
+            bmsStatusMessage.load(singleBuf);
+            runningIndex = 0;
+            Serial.println("Full Message Received");
+            Serial.print("Total Voltage: "); Serial.println(bmsVoltageMessage.getTotal());
+            Serial.print("Average Voltage: "); Serial.println(bmsVoltageMessage.getAverage());
+            bmsTester();
+        }
+        buf[runningIndex] = b;
         runningIndex++;
     }
-    Serial.print("Total Voltage: "); Serial.println(bmsVoltageMessage.getTotal());
-    Serial.print("Average Voltage: "); Serial.println(bmsVoltageMessage.getAverage());
+}
+
+void bmsTester() {
+//    if (!bmsStatusMessage.getBMSStatusOK()) {
+//        Serial.println("FAULT DETECTED!");
+//    } else {
+//        Serial.println("VOLTAGE IN BOUNDS!");
+//    }
+    Serial.print("BMS STATUS: ");
+    Serial.print(bmsStatusMessage.getBMSStatusOK()); Serial.println(".");
+    Serial.print("Over Voltage: ");
+    Serial.print(bmsStatusMessage.getChargeOvervoltage() || bmsStatusMessage.getDischargeOvervoltage());
+    Serial.print(". Max Voltage: "); Serial.println(bmsVoltageMessage.getHigh());
+    Serial.print("Under Voltage: ");
+    Serial.print(bmsStatusMessage.getChargeUndervoltage() || bmsStatusMessage.getDischargeUndervoltage());
+    Serial.print(". Min Voltage: "); Serial.println(bmsVoltageMessage.getLow());
 }
 

@@ -377,6 +377,19 @@ class BMS_status {
     CAN_message_bms_error_t bmsErrorMessage;
 };
 
+class BMSTestModeHandler {
+  public:
+    BMSTestModeHandler();
+    BMSTestModeHandler(unsigned long initialTime);
+    void checkTestMode(unsigned long initialTime, int totalMillivolts, int cell1MilliVolts, int cell2MilliVolts);
+    bool bmsTestModeEntered();
+  private:
+    float prevTotalMillivolts;
+    float prevCell1Millivolts;
+    float prevCell2Millivolts;
+    bool bmsTestModeEntered;
+}
+
 typedef struct CAN_message_mc_temperatures_1_t {
   int16_t module_a_temperature;
   int16_t module_b_temperature;

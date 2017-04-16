@@ -31,8 +31,9 @@
 #define DISCHARGE_TEMP_CRITICAL_LOW 15
 
 /********GLOBAL ARRAYS/VARIABLES CONTAINING DATA FROM CHIP**********/
-const uint8_t TOTAL_IC = 2;
-uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages. Stores numbers in 0.1 mV units.
+const uint8_t TOTAL_IC = 1;
+const uint8_t TOTAL_CELLS = 12;
+uint16_t cell_voltages[TOTAL_IC][TOTAL_CELLS]; // contains 12 battery cell voltages. Stores numbers in 0.1 mV units.
 uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
                                      /* Data contained in this array is in this format:
                                       * Thermistor 1
@@ -40,7 +41,7 @@ uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
                                       * Thermistor 3
                                       * Current Sensor
                                       */
-int16_t cell_delta_voltage[TOTAL_IC][12]; // contains 12 signed dV values in 0.1 mV units
+int16_t cell_delta_voltage[TOTAL_IC][TOTAL_CELLS]; // contains 12 signed dV values in 0.1 mV units
 
 /*!<
   The tx_cfg[][6] stores the LTC6804 configuration data that is going to be written
@@ -78,6 +79,7 @@ BMS_voltages bmsVoltageMessage;
 BMS_currents bmsCurrentMessage;
 BMS_temperatures bmsTempMessage;
 BMS_status bmsStatusMessage;
+bool bmsTestMode;
 int minVoltageICIndex;
 int minVoltageCellIndex;
 bool dischargeCurrentPeakHighFlag;
@@ -91,18 +93,20 @@ unsigned long chargeCurrentConstantHighTime;
 
 void setup() {
     // put your setup code here, to run once:
-    Serial.begin(9600);
+    Serial.begin(115200);
     delay(2000);
-    // SPI.begin();
+//    SPI.begin();
     Wire.begin();
     delay(2000);
 
     LTC6804_initialize();
     init_cfg();
 //    can.begin();
-//    pollVoltage();
+    pollVoltage();
 //    memcpy(cell_delta_voltage, cell_voltages, 2 * TOTAL_IC * 12);
     Serial.println("Setup Complete!");
+    Serial.println("Setup Complete!");
+    bmsTestMode = false;
 }
 
 /*
@@ -111,14 +115,13 @@ void setup() {
  // NOTE: Implement Coulomb counting to track state of charge of battery.
 void loop() {
 //    // put your main code here, to run repeatedly:
-////    waitForUserInput();
+//    waitForUserInput();
     pollVoltage(); // cell_voltages[] array populated with cell voltages now.
+//    balanceCellsDuringCharging();
 //
 //    pollAuxiliaryVoltages();
-////    int thermValue = analogRead(A0);
-////    Serial.print("Thermistor reading: "); Serial.println(thermValue);
-//
     avgMinMaxTotalVoltage(); // min, max, avg, and total volts stored in bmsVoltageMessage object.
+    raiseVoltageFlags();
     Wire.beginTransmission(8);
     uint8_t buf[8];
     bmsVoltageMessage.write(buf);
@@ -147,6 +150,15 @@ void init_cfg()
         tx_cfg[i][4] = 0x00 ;
         tx_cfg[i][5] = 0x00 ;
     }
+//    dischargeAll();
+}
+
+void dischargeAll() {
+    for (int i = 0; i < TOTAL_IC; i++) {
+        tx_cfg[i][4] = 0b11111111;
+        tx_cfg[i][5] = tx_cfg[i][5] | 0b00001111;
+    }
+    wakeFromSleepAllChips();
 }
 
 void pollVoltage() {
@@ -207,7 +219,7 @@ void avgMinMaxTotalVoltage() {
     uint16_t minVolt = cell_voltages[0][0]; // stored in 0.1 mV units
     double avgVolt = 0; // stored as double volts
     for (int ic = 0; ic < TOTAL_IC; ic++) {
-        for (int cell = 0; cell < 12; cell++) {
+        for (int cell = 0; cell < TOTAL_CELLS; cell++) {
             uint16_t currentCell = cell_voltages[ic][cell];
             cell_delta_voltage[ic][cell] = currentCell - cell_delta_voltage[ic][cell];
             if (currentCell > maxVolt) {
@@ -221,7 +233,7 @@ void avgMinMaxTotalVoltage() {
             totalVolts += currentCell * 0.0001;
         }
     }
-    avgVolt = totalVolts / (TOTAL_IC * 12); // stored as double volts
+    avgVolt = totalVolts / (TOTAL_IC * TOTAL_CELLS); // stored as double volts
     bmsVoltageMessage.setAverage(static_cast<uint16_t>(avgVolt * 1000 + 0.5));
     bmsVoltageMessage.setTotal(static_cast<uint16_t>(totalVolts + 0.5));
     minVolt = convertToMillivolts(minVolt);
@@ -241,9 +253,9 @@ void balanceCellsDuringCharging() {
     int16_t minVoltDeltaVoltage = cell_delta_voltage[minVoltageICIndex][minVoltageCellIndex]; // stored in 0.1 mV
     double minTimeFactor = (4000.0 - minVolt) / (cell_delta_voltage[minVoltageICIndex][minVoltageCellIndex] * 0.1);
     uint8_t batteryIndexCounter = 0;
-    uint8_t* batteryBalanceMask = (uint8_t*) malloc(sizeof(uint8_t) * 12 * TOTAL_IC);
+    uint8_t* batteryBalanceMask = (uint8_t*) malloc(sizeof(uint8_t) * TOTAL_CELLS * TOTAL_IC);
     for (int ic = 0; ic < TOTAL_IC; ic++) {
-        for (int cell = 0; cell < 12; cell++) {
+        for (int cell = 0; cell < TOTAL_CELLS; cell++) {
             double currentTimeFactor = (4000.0 - cell_voltages[ic][cell] * 0.1) / (cell_delta_voltage[ic][cell] * 0.1);
             uint8_t val = 0b00000001;
             if (currentTimeFactor < minTimeFactor) {
@@ -276,109 +288,125 @@ void balanceCellsDuringCharging() {
             }
         }
     }
+    wakeFromSleepAllChips();
     LTC6804_wrcfg(TOTAL_IC, tx_cfg);
 }
 
-void raiseVoltageTempCurrentFlags() {
-    float current = bmsCurrentMessage.getCurrent(); // stored in amps
-    if (current < 0) {
-        // when batteries are charging
-        if (bmsVoltageMessage.getLow() < VOLTAGE_LOW_CUTOFF) {
-            bmsStatusMessage.setChargeUndervoltage(true);
-            bmsStatusMessage.setBMSStatusOK(false);
-        }
-
-        if (bmsVoltageMessage.getHigh() > VOLTAGE_HIGH_CUTOFF) {
-            bmsStatusMessage.setChargeOvervoltage(true);
-            bmsStatusMessage.setBMSStatusOK(false);
-        }
-
-        if (current < CHARGE_CURRENT_CONSTANT_HIGH) {
-            if (chargeCurrentConstantHighFlag) {
-                if (millis() - chargeCurrentConstantHighTime > CHARGE_CURRENT_CONSTANT_HIGH_TIME) {
-                    // constant charging current flow has exceeded limit and time
-                    bmsStatusMessage.setChargeOvercurrent(true);
-                    bmsStatusMessage.setBMSStatusOK(false);
-                }
-            } else {
-                chargeCurrentConstantHighFlag = true;
-                chargeCurrentConstantHighTime = millis();
-            }
-        } else {
-            chargeCurrentConstantHighFlag = false;
-        }
-
-        if (current < CHARGE_CURRENT_PEAK_HIGH) {
-            if (chargeCurrentPeakHighFlag) {
-                if (millis() - chargeCurrentPeakHighTime > CHARGE_CURRENT_PEAK_HIGH_TIME) {
-                    // peak charging current flow has exceeded limit and time
-                    bmsStatusMessage.setChargeOvercurrent(true);
-                    bmsStatusMessage.setBMSStatusOK(false);
-                }
-            } else {
-                chargeCurrentPeakHighFlag = true;
-                chargeCurrentConstantHighTime = millis();
-            }
-        } else {
-            chargeCurrentPeakHighFlag = false;
-        }
-
-        if (current > CHARGE_CURRENT_LOW_CUTOFF) {
-            bmsStatusMessage.setChargeUndercurrent(true);
-            bmsStatusMessage.setBMSStatusOK(false);
-        }
-        if (bmsTempMessage.getHighTemp() > CHARGE_TEMP_CRITICAL_HIGH) {
-            bmsStatusMessage.setChargeOvertemp(true);
-            bmsStatusMessage.setBMSStatusOK(false);
-        }
-    } else if (current > 0) {
-        // when batteries are discharging
-        if (bmsVoltageMessage.getLow() < VOLTAGE_LOW_CUTOFF) {
-            bmsStatusMessage.setDischargeUndervoltage(true);
-            bmsStatusMessage.setBMSStatusOK(false);
-        }
-
-        if (bmsVoltageMessage.getHigh() > VOLTAGE_HIGH_CUTOFF) {
-            bmsStatusMessage.setDischargeOvervoltage(true);
-            bmsStatusMessage.setBMSStatusOK(false);
-        }
-
-        if (current > DISCHARGE_CURRENT_CONSTANT_HIGH) {
-            if (dischargeCurrentConstantHighFlag) {
-                if (millis() - dischargeCurrentConstantHighTime > DISCHARGE_CURRENT_CONSTANT_HIGH_TIME) {
-                    // constant discharging current draw has exceeded time and limit
-                    bmsStatusMessage.setDischargeOvercurrent(true);
-                    bmsStatusMessage.setBMSStatusOK(false);
-                }
-            } else {
-                dischargeCurrentConstantHighFlag = true;
-                dischargeCurrentConstantHighTime = millis();
-            }
-        } else {
-            dischargeCurrentConstantHighFlag = false;
-        }
-
-        if (current > DISCHARGE_CURRENT_PEAK_HIGH) {
-            if (dischargeCurrentPeakHighFlag) {
-                if (millis() - dischargeCurrentPeakHighTime > DISCHARGE_CURRENT_PEAK_HIGH_TIME) {
-                    // peak discharging current draw has exceeded time and limit
-                    bmsStatusMessage.setDischargeOvercurrent(true);
-                    bmsStatusMessage.setBMSStatusOK(false);
-                }
-            } else {
-                dischargeCurrentPeakHighFlag = true;
-                dischargeCurrentPeakHighTime = millis();
-            }
-        } else {
-            dischargeCurrentPeakHighFlag = false;
-        }
-
-        if (bmsTempMessage.getHighTemp() > CHARGE_TEMP_CRITICAL_HIGH) {
-            bmsStatusMessage.setDischargeOvertemp(true);
-            bmsStatusMessage.setBMSStatusOK(false);
-        }
+void raiseVoltageFlags() {
+    if (bmsVoltageMessage.getLow() <= VOLTAGE_LOW_CUTOFF) {
+        bmsStatusMessage.setChargeUndervoltage(true);
+        bmsStatusMessage.setDischargeUndervoltage(true);
+        bmsStatusMessage.setBMSStatusOK(false);
+    } else if (bmsVoltageMessage.getHigh() >= VOLTAGE_HIGH_CUTOFF) {
+        bmsStatusMessage.setChargeOvervoltage(true);
+        bmsStatusMessage.setDischargeOvervoltage(true);
+        bmsStatusMessage.setBMSStatusOK(false);
+    } else {
+        bmsStatusMessage.clearAllFlags();
+        bmsStatusMessage.setBMSStatusOK(true);
     }
 }
+
+//void raiseVoltageTempCurrentFlags() {
+//    float current = bmsCurrentMessage.getCurrent(); // stored in amps
+//    if (current < 0) {
+//        // when batteries are charging
+//        if (bmsVoltageMessage.getLow() < VOLTAGE_LOW_CUTOFF) {
+//            bmsStatusMessage.setChargeUndervoltage(true);
+//            bmsStatusMessage.setBMSStatusOK(false);
+//        }
+//
+//        if (bmsVoltageMessage.getHigh() > VOLTAGE_HIGH_CUTOFF) {
+//            bmsStatusMessage.setChargeOvervoltage(true);
+//            bmsStatusMessage.setBMSStatusOK(false);
+//        }
+//
+//        if (current < CHARGE_CURRENT_CONSTANT_HIGH) {
+//            if (chargeCurrentConstantHighFlag) {
+//                if (millis() - chargeCurrentConstantHighTime > CHARGE_CURRENT_CONSTANT_HIGH_TIME) {
+//                    // constant charging current flow has exceeded limit and time
+//                    bmsStatusMessage.setChargeOvercurrent(true);
+//                    bmsStatusMessage.setBMSStatusOK(false);
+//                }
+//            } else {
+//                chargeCurrentConstantHighFlag = true;
+//                chargeCurrentConstantHighTime = millis();
+//            }
+//        } else {
+//            chargeCurrentConstantHighFlag = false;
+//        }
+//
+//        if (current < CHARGE_CURRENT_PEAK_HIGH) {
+//            if (chargeCurrentPeakHighFlag) {
+//                if (millis() - chargeCurrentPeakHighTime > CHARGE_CURRENT_PEAK_HIGH_TIME) {
+//                    // peak charging current flow has exceeded limit and time
+//                    bmsStatusMessage.setChargeOvercurrent(true);
+//                    bmsStatusMessage.setBMSStatusOK(false);
+//                }
+//            } else {
+//                chargeCurrentPeakHighFlag = true;
+//                chargeCurrentConstantHighTime = millis();
+//            }
+//        } else {
+//            chargeCurrentPeakHighFlag = false;
+//        }
+//
+//        if (current > CHARGE_CURRENT_LOW_CUTOFF) {
+//            bmsStatusMessage.setChargeUndercurrent(true);
+//            bmsStatusMessage.setBMSStatusOK(false);
+//        }
+//        if (bmsTempMessage.getHighTemp() > CHARGE_TEMP_CRITICAL_HIGH) {
+//            bmsStatusMessage.setChargeOvertemp(true);
+//            bmsStatusMessage.setBMSStatusOK(false);
+//        }
+//    } else if (current > 0) {
+//        // when batteries are discharging
+//        if (bmsVoltageMessage.getLow() < VOLTAGE_LOW_CUTOFF) {
+//            bmsStatusMessage.setDischargeUndervoltage(true);
+//            bmsStatusMessage.setBMSStatusOK(false);
+//        }
+//
+//        if (bmsVoltageMessage.getHigh() > VOLTAGE_HIGH_CUTOFF) {
+//            bmsStatusMessage.setDischargeOvervoltage(true);
+//            bmsStatusMessage.setBMSStatusOK(false);
+//        }
+//
+//        if (current > DISCHARGE_CURRENT_CONSTANT_HIGH) {
+//            if (dischargeCurrentConstantHighFlag) {
+//                if (millis() - dischargeCurrentConstantHighTime > DISCHARGE_CURRENT_CONSTANT_HIGH_TIME) {
+//                    // constant discharging current draw has exceeded time and limit
+//                    bmsStatusMessage.setDischargeOvercurrent(true);
+//                    bmsStatusMessage.setBMSStatusOK(false);
+//                }
+//            } else {
+//                dischargeCurrentConstantHighFlag = true;
+//                dischargeCurrentConstantHighTime = millis();
+//            }
+//        } else {
+//            dischargeCurrentConstantHighFlag = false;
+//        }
+//
+//        if (current > DISCHARGE_CURRENT_PEAK_HIGH) {
+//            if (dischargeCurrentPeakHighFlag) {
+//                if (millis() - dischargeCurrentPeakHighTime > DISCHARGE_CURRENT_PEAK_HIGH_TIME) {
+//                    // peak discharging current draw has exceeded time and limit
+//                    bmsStatusMessage.setDischargeOvercurrent(true);
+//                    bmsStatusMessage.setBMSStatusOK(false);
+//                }
+//            } else {
+//                dischargeCurrentPeakHighFlag = true;
+//                dischargeCurrentPeakHighTime = millis();
+//            }
+//        } else {
+//            dischargeCurrentPeakHighFlag = false;
+//        }
+//
+//        if (bmsTempMessage.getHighTemp() > CHARGE_TEMP_CRITICAL_HIGH) {
+//            bmsStatusMessage.setDischargeOvertemp(true);
+//            bmsStatusMessage.setBMSStatusOK(false);
+//        }
+//    }
+//}
 
 uint16_t convertToMillivolts(uint16_t v) {
     return (v + 5) / 10;
@@ -388,7 +416,7 @@ void printCells() {
     for (int current_ic = 0; current_ic < TOTAL_IC; current_ic++) {
         Serial.print("IC: ");
         Serial.println(current_ic+1);
-        for (int i = 0; i < 12; i++) {
+        for (int i = 0; i < TOTAL_CELLS; i++) {
             Serial.print("C"); Serial.print(i+1); Serial.print(": ");
             float voltage = cell_voltages[current_ic][i] * 0.0001;
             Serial.println(voltage, 4);
