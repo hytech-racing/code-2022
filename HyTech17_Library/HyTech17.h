@@ -388,8 +388,8 @@ class BMSTestModeHandler {
         float prevTotalMillivolts;
         float prevCell1Millivolts;
         float prevCell2Millivolts;
-        bool bmsTestModeEntered;
-}
+        bool bmsTestMode;
+};
 
 typedef struct CAN_message_charge_status_t {
     uint8_t charge_command;
