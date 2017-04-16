@@ -187,6 +187,11 @@ void BMS_status::setChargeUndertemp(bool flag) {
     bmsErrorMessage.errorFlagsByte2 = bmsErrorMessage.errorFlagsByte2 | val;
 }
 
+void BMS_status::clearAllFlags() {
+    bmsErrorMessage.errorFlagsByte1 = 0;
+    bmsErrorMessage.errorFlagsByte2 = 0;
+}
+
 void BMS_status::setBMSStatusOK(bool flag) {
     if (flag) bmsErrorMessage.BMSStatusOK = 1;
     else bmsErrorMessage.BMSStatusOK = 0;
