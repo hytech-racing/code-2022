@@ -26,7 +26,7 @@ static CAN_message_t msg;
 //
 // bool requestI2C(int configID); // sends I2C request for linduino
 // bool processI2C(); // processes and sends CAN message, called within
-// bool writeCAN(); // writes status messages for BMS onto CAN
+int writeCAN(); // writes status messages for BMS onto CAN
 
 static int runningIndex; // Used for tracking
 uint8_t buf[32];
@@ -69,6 +69,7 @@ void receiveEvent(int howMany) {
         buf[runningIndex] = b;
         runningIndex++;
     }
+    writeCAN();
 }
 
 void bmsTester() {
@@ -87,3 +88,52 @@ void bmsTester() {
     Serial.print(". Min Voltage: "); Serial.println(bmsVoltageMessage.getLow());
 }
 
+int writeCAN() {
+    int bufferAvailable = 0;
+
+    // Send out CAN message 1 - BMS_currents
+    BMS_currents curBMS_currents =  BMS_currents();
+    msg.ID = BMS_currents;
+    msg.len = 8;
+    float testFloat = 0; // TODO Replace with real value
+    CHARGING_STATE testStatus = UNKNOWN; // TODO Replace with real value
+
+    curBMS_currents.setCurrent(testFloat);
+    curBMS_currents.setChargingState(testStatus);
+
+    curBMS_currents.write(msg.buf);
+    bufferAvailable += CAN.write(msg);
+
+    // Send out CAN message 1 - BMS_status
+    BMS_status curBMS_status = BMS_status();
+    msg.ID = BMS_status;
+    msg.len = 3;
+
+    // TODO Replace all following with real value
+
+    curBMS_status.setDischargeOvervoltage(false);
+    curBMS_status.setDischargeUndervoltage(false);
+    curBMS_status.setChargeOvervoltage(false);
+    curBMS_status.setChargeUndervoltage(false);
+
+    curBMS_status.setDischargeOvercurrent(false);
+    curBMS_status.setDischargeUndercurrent(false);
+    curBMS_status.setChargeOvercurrent(false);
+    curBMS_status.setChargeUndercurrent(false);
+
+    curBMS_status.setDischargeOvertemp(false);
+    curBMS_status.setDischargeUndertemp(false);
+    curBMS_status.setChargeOvertemp(false);
+    curBMS_status.setChargeUndertemp(false);
+
+    curBMS_status.setBMSStatusOK(true);
+
+    curBMS_status.write(msg.buf);
+    bufferAvailable += CAN.write(msg);
+
+    // Send out CAN message 1 - BMS_temperatures
+
+    // Send out CAN message 1 - BMS_voltages
+
+    return bufferAvailable;
+}

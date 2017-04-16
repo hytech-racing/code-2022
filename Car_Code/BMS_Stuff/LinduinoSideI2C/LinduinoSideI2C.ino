@@ -35,12 +35,12 @@ const uint8_t TOTAL_IC = 1;
 const uint8_t TOTAL_CELLS = 12;
 uint16_t cell_voltages[TOTAL_IC][TOTAL_CELLS]; // contains 12 battery cell voltages. Stores numbers in 0.1 mV units.
 uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
-                                     /* Data contained in this array is in this format:
-                                      * Thermistor 1
-                                      * Thermistor 2
-                                      * Thermistor 3
-                                      * Current Sensor
-                                      */
+     /* Data contained in this array is in this format:
+      * Thermistor 1
+      * Thermistor 2
+      * Thermistor 3
+      * Current Sensor
+      */
 int16_t cell_delta_voltage[TOTAL_IC][TOTAL_CELLS]; // contains 12 signed dV values in 0.1 mV units
 
 /*!<
