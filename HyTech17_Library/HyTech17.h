@@ -32,7 +32,8 @@
 #define DCU_STATE_FATAL_FAULT 9
 
 #define CHARGE_STATE_NOT_CHARGING 0
-#define CHARGE_STATE_CHARGING 1
+#define CHARGE_STATE_CHARGE_REQUESTED 1
+#define CHARGE_STATE_CHARGING 2
 
 /*
  * CAN ID definitions
@@ -378,17 +379,33 @@ class BMS_status {
 };
 
 class BMSTestModeHandler {
-  public:
-    BMSTestModeHandler();
-    BMSTestModeHandler(unsigned long initialTime);
-    void checkTestMode(unsigned long initialTime, int totalMillivolts, int cell1MilliVolts, int cell2MilliVolts);
-    bool bmsTestModeEntered();
-  private:
-    float prevTotalMillivolts;
-    float prevCell1Millivolts;
-    float prevCell2Millivolts;
-    bool bmsTestModeEntered;
+    public:
+        BMSTestModeHandler();
+        BMSTestModeHandler(unsigned long initialTime);
+        void checkTestMode(unsigned long initialTime, int totalMillivolts, int cell1MilliVolts, int cell2MilliVolts);
+        bool bmsTestModeEntered();
+    private:
+        float prevTotalMillivolts;
+        float prevCell1Millivolts;
+        float prevCell2Millivolts;
+        bool bmsTestModeEntered;
 }
+
+typedef struct CAN_message_charge_status_t {
+    uint8_t charge_command;
+} CAN_message_charge_status_t;
+
+class Charge_status {
+    public:
+        Charge_status();
+        Charge_status(uint8_t buf[]);
+        void load(uint8_t buf[]);
+        void write(uint8_t buf[]);
+        uint8_t getChargeCommand();
+        void setChargeCommand(uint8_t cmd);
+    private:
+        CAN_message_charge_status_t message;
+};
 
 typedef struct CAN_message_mc_temperatures_1_t {
   int16_t module_a_temperature;
