@@ -379,17 +379,17 @@ class BMS_status {
 };
 
 class BMSTestModeHandler {
-    public:
-        BMSTestModeHandler();
-        BMSTestModeHandler(unsigned long initialTime);
-        void checkTestMode(unsigned long initialTime, int totalMillivolts, int cell1MilliVolts, int cell2MilliVolts);
-        bool bmsTestModeEntered();
-    private:
-        float prevTotalMillivolts;
-        float prevCell1Millivolts;
-        float prevCell2Millivolts;
-        bool bmsTestModeEntered;
-}
+  public:
+    BMSTestModeHandler();
+    BMSTestModeHandler(unsigned long initialTime);
+    void checkTestMode(unsigned long initialTime, int totalMillivolts, int cell1MilliVolts, int cell2MilliVolts);
+    bool bmsTestModeEntered();
+  private:
+    float prevTotalMillivolts;
+    float prevCell1Millivolts;
+    float prevCell2Millivolts;
+    bool inTestMode;
+};
 
 typedef struct CAN_message_charge_status_t {
     uint8_t charge_command;

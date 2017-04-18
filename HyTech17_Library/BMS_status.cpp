@@ -7,6 +7,7 @@
 
 BMS_status::BMS_status() {
     bmsErrorMessage = {};
+    setBMSStatusOK(true);
 }
 
 BMS_status::BMS_status(uint8_t buf[]) {

@@ -5,8 +5,8 @@
 
 #include <Arduino.h>
 #include <stdint.h>
-//#include <SPI.h>
 #include <Wire.h>
+#include "mcp_can.h"
 #include "Linduino.h"
 #include "LT_SPI.h"
 #include "LTC68041.h"
@@ -67,8 +67,8 @@ uint8_t rx_cfg[TOTAL_IC][8];
 /**
  * CAN Variables
  */
-//FlexCAN can(500000);
-//static CAN_message_t msg;
+const int CAN_SPI_CS_PIN = 5;
+MCP_CAN CAN(CAN_SPI_CS_PIN);
 long msTimer = 0;
 
 /**
@@ -78,9 +78,10 @@ BMS_voltages bmsVoltageMessage;
 BMS_currents bmsCurrentMessage;
 BMS_temperatures bmsTempMessage;
 BMS_status bmsStatusMessage;
-bool bmsTestMode;
+
 int minVoltageICIndex;
 int minVoltageCellIndex;
+
 bool dischargeCurrentPeakHighFlag;
 unsigned long dischargeCurrentPeakHighTime;
 bool dischargeCurrentConstantHighFlag;
@@ -90,49 +91,54 @@ unsigned long chargeCurrentPeakHighTime;
 bool chargeCurrentConstantHighFlag;
 unsigned long chargeCurrentConstantHighTime;
 
+const int BMS_OK_PIN = 5;
+
 void setup() {
     // put your setup code here, to run once:
+    pinMode(BMS_OK_PIN, OUTPUT);
+    // pinMode(CAN_SPI_CS_PIN, OUTPUT); Not needed, done in mcp_can.cpp
+
+    digitalWrite(CAN_SPI_CS_PIN, HIGH);
+    digitalWrite(BMS_OK_PIN, HIGH);
+
     Serial.begin(115200);
     delay(2000);
-//    SPI.begin();
-    Wire.begin();
-    delay(2000);
+
+    // Check CAN Initialization
+    while (CAN_OK != CAN.begin(CAN_500KBPS)) {
+        Serial.println("CAN BUS Shield init FAIL");
+        Serial.println("Init CAN BUS Shield retrying");
+        delay(100);
+    }
+    Serial.println("CAN BUS Shield init GOOD");
 
     LTC6804_initialize();
     init_cfg();
-//    can.begin();
     pollVoltage();
-//    memcpy(cell_delta_voltage, cell_voltages, 2 * TOTAL_IC * 12);
+    memcpy(cell_delta_voltage, cell_voltages, 2 * TOTAL_IC * TOTAL_CELLS);
     Serial.println("Setup Complete!");
-    Serial.println("Setup Complete!");
-    bmsTestMode = false;
 }
 
+// NOTE: Implement Coulomb counting to track state of charge of battery.
 /*
- * Continuously poll voltages and print them to the Serial Monitor.
+ * Main BMS Control Loop
  */
- // NOTE: Implement Coulomb counting to track state of charge of battery.
 void loop() {
-//    // put your main code here, to run repeatedly:
 //    waitForUserInput();
     pollVoltage(); // cell_voltages[] array populated with cell voltages now.
 //    balanceCellsDuringCharging();
-//
+
 //    pollAuxiliaryVoltages();
     avgMinMaxTotalVoltage(); // min, max, avg, and total volts stored in bmsVoltageMessage object.
     raiseVoltageFlags();
-    Wire.beginTransmission(8);
-    uint8_t buf[8];
-    bmsVoltageMessage.write(buf);
-    Wire.write(buf, 8);
-    bmsCurrentMessage.write(buf);
-    Wire.write(buf, 8);
-    bmsTempMessage.write(buf);
-    Wire.write(buf, 8);
-    bmsStatusMessage.write(buf);
-    Wire.write(buf, 8);
-    Wire.endTransmission();
-    delay(100);
+
+    // write to CAN!
+    writeToCAN();
+
+    // set BMS_OK signal
+    if (!bmsStatusMessage.getBMSStatusOK()) {
+        digitalWrite(BMS_OK_PIN, LOW);
+    }
 }
 
 /*!***********************************
@@ -406,6 +412,41 @@ void raiseVoltageFlags() {
 //        }
 //    }
 //}
+
+void writeToCAN() {
+    digitalWrite(CAN_SPI_CS_PIN, LOW);
+    digitalWrite(10, HIGH);
+    unsigned char msg[8] = {0,0,0,0,0,0,0,0};
+    bmsVoltageMessage.write(msg);
+    if (CAN.sendMsgBuf(ID_BMS_VOLTAGE, 0, 8, msg) == CAN_OK) {
+        Serial.println("CAN bms voltage message sent");
+    } else {
+        Serial.println("CAN bms voltage message failed to send");
+    }
+
+    bmsCurrentMessage.write(msg);
+    if (CAN.sendMsgBuf(ID_BMS_CURRENT, 0, 8, msg) == CAN_OK) {
+        Serial.println("CAN bms current message sent");
+    } else {
+        Serial.println("CAN bms current message failed to send");
+    }
+
+    bmsTempMessage.write(msg);
+    if (CAN.sendMsgBuf(ID_BMS_TEMPERATURE, 0, 8, msg) == CAN_OK) {
+        Serial.println("CAN bms temperature message sent");
+    } else {
+        Serial.println("CAN bms temperature message failed to send");
+    }
+
+    bmsStatusMessage.write(msg);
+    if (CAN.sendMsgBuf(ID_BMS_STATUS, 0, 8, msg) == CAN_OK) {
+        Serial.println("CAN bms status message sent");
+    } else {
+        Serial.println("CAN bms status message failed to send");
+    }
+    digitalWrite(CAN_SPI_CS_PIN, HIGH);
+    digitalWrite(10, HIGH);
+}
 
 uint16_t convertToMillivolts(uint16_t v) {
     return (v + 5) / 10;
