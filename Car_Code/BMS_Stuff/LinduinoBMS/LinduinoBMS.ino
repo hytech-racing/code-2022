@@ -414,37 +414,55 @@ void raiseVoltageFlags() {
 //}
 
 void writeToCAN() {
-    digitalWrite(CAN_SPI_CS_PIN, LOW);
     digitalWrite(10, HIGH);
     unsigned char msg[8] = {0,0,0,0,0,0,0,0};
     bmsVoltageMessage.write(msg);
-    if (CAN.sendMsgBuf(ID_BMS_VOLTAGE, 0, 8, msg) == CAN_OK) {
+    byte CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_VOLTAGE, 0, 8, msg);
+    if (CANsendMsgResult == CAN_OK) {
         Serial.println("CAN bms voltage message sent");
+    } else if (CANsendMsgResult == CAN_GETTXBFTIMEOUT) {
+        Serial.println("CAN bms voltage get tx buffer timeout");
+    } else if (CANsendMsgResult == CAN_SENDMSGTIMEOUT) {
+        Serial.println("CAN bms voltage send message timeout");
     } else {
-        Serial.println("CAN bms voltage message failed to send");
+        Serial.println("CAN bms voltage error unknown");
     }
 
     bmsCurrentMessage.write(msg);
-    if (CAN.sendMsgBuf(ID_BMS_CURRENT, 0, 8, msg) == CAN_OK) {
+    byte CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_CURRENT, 0, 8, msg);
+    if (CANsendMsgResult == CAN_OK) {
         Serial.println("CAN bms current message sent");
+    } else if (CANsendMsgResult == CAN_GETTXBFTIMEOUT) {
+        Serial.println("CAN bms current get tx buffer timeout");
+    } else if (CANsendMsgResult == CAN_SENDMSGTIMEOUT) {
+        Serial.println("CAN bms current send message timeout");
     } else {
-        Serial.println("CAN bms current message failed to send");
+        Serial.println("CAN bms current error unknown");
     }
 
     bmsTempMessage.write(msg);
-    if (CAN.sendMsgBuf(ID_BMS_TEMPERATURE, 0, 8, msg) == CAN_OK) {
+    byte CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_TEMPERATURE, 0, 8, msg);
+    if (CANsendMsgResult == CAN_OK) {
         Serial.println("CAN bms temperature message sent");
+    } else if (CANsendMsgResult == CAN_GETTXBFTIMEOUT) {
+        Serial.println("CAN bms temperature get tx buffer timeout");
+    } else if (CANsendMsgResult == CAN_SENDMSGTIMEOUT) {
+        Serial.println("CAN bms temperature send message timeout");
     } else {
-        Serial.println("CAN bms temperature message failed to send");
+        Serial.println("CAN bms temperature error unknown");
     }
 
     bmsStatusMessage.write(msg);
-    if (CAN.sendMsgBuf(ID_BMS_STATUS, 0, 8, msg) == CAN_OK) {
-        Serial.println("CAN bms status message sent");
+    byte CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_STATUS, 0, 8, msg);
+    if (CANsendMsgResult == CAN_OK) {
+        Serial.println("CAN bms stats message sent");
+    } else if (CANsendMsgResult == CAN_GETTXBFTIMEOUT) {
+        Serial.println("CAN bms status get tx buffer timeout");
+    } else if (CANsendMsgResult == CAN_SENDMSGTIMEOUT) {
+        Serial.println("CAN bms status send message timeout");
     } else {
-        Serial.println("CAN bms status message failed to send");
+        Serial.println("CAN bms status error unknown");
     }
-    digitalWrite(CAN_SPI_CS_PIN, HIGH);
     digitalWrite(10, HIGH);
 }
 
