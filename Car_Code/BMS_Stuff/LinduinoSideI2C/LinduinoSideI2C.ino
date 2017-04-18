@@ -105,7 +105,6 @@ void setup() {
     pollVoltage();
 //    memcpy(cell_delta_voltage, cell_voltages, 2 * TOTAL_IC * 12);
     Serial.println("Setup Complete!");
-    Serial.println("Setup Complete!");
     bmsTestMode = false;
 }
 
