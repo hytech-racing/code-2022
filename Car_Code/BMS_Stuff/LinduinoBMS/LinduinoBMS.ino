@@ -5,7 +5,6 @@
 
 #include <Arduino.h>
 #include <stdint.h>
-#include <Wire.h>
 #include "mcp_can.h"
 #include "Linduino.h"
 #include "LT_SPI.h"
@@ -62,7 +61,7 @@ uint8_t tx_cfg[TOTAL_IC][6]; // data defining how data will be written to daisy 
 |---------------|---------------|---------------|---------------|---------------|---------------|-----------------|----------------|---------------|---------------|-----------|
 |IC1 CFGR0      |IC1 CFGR1      |IC1 CFGR2      |IC1 CFGR3      |IC1 CFGR4      |IC1 CFGR5      |IC1 PEC High     |IC1 PEC Low     |IC2 CFGR0      |IC2 CFGR1      |  .....    |
 */
-uint8_t rx_cfg[TOTAL_IC][8];
+//uint8_t rx_cfg[TOTAL_IC][8];
 
 /**
  * CAN Variables
@@ -82,14 +81,14 @@ BMS_status bmsStatusMessage;
 int minVoltageICIndex;
 int minVoltageCellIndex;
 
-bool dischargeCurrentPeakHighFlag;
-unsigned long dischargeCurrentPeakHighTime;
-bool dischargeCurrentConstantHighFlag;
-unsigned long dischargeCurrentConstantHighTime;
-bool chargeCurrentPeakHighFlag;
-unsigned long chargeCurrentPeakHighTime;
-bool chargeCurrentConstantHighFlag;
-unsigned long chargeCurrentConstantHighTime;
+//bool dischargeCurrentPeakHighFlag;
+//unsigned long dischargeCurrentPeakHighTime;
+//bool dischargeCurrentConstantHighFlag;
+//unsigned long dischargeCurrentConstantHighTime;
+//bool chargeCurrentPeakHighFlag;
+//unsigned long chargeCurrentPeakHighTime;
+//bool chargeCurrentConstantHighFlag;
+//unsigned long chargeCurrentConstantHighTime;
 
 const int BMS_OK_PIN = 5;
 
@@ -97,6 +96,7 @@ void setup() {
     // put your setup code here, to run once:
     pinMode(BMS_OK_PIN, OUTPUT);
     // pinMode(CAN_SPI_CS_PIN, OUTPUT); Not needed, done in mcp_can.cpp
+    checkCANChipSelect();
 
     digitalWrite(CAN_SPI_CS_PIN, HIGH);
     digitalWrite(BMS_OK_PIN, HIGH);
@@ -114,7 +114,10 @@ void setup() {
 
     LTC6804_initialize();
     init_cfg();
+    checkLTCChipSelect();
     pollVoltage();
+    Serial.println("VOLTAGES POLLED.");
+    checkChipSelectStatus();
     memcpy(cell_delta_voltage, cell_voltages, 2 * TOTAL_IC * TOTAL_CELLS);
     Serial.println("Setup Complete!");
 }
@@ -133,12 +136,36 @@ void loop() {
     raiseVoltageFlags();
 
     // write to CAN!
-    writeToCAN();
+     writeToCAN();
+     checkChipSelectStatus();
 
     // set BMS_OK signal
     if (!bmsStatusMessage.getBMSStatusOK()) {
         digitalWrite(BMS_OK_PIN, LOW);
     }
+}
+
+void checkCANChipSelect() {
+    Serial.print("CAN SHIELD CHIP SELECT: ");
+    if (digitalRead(CAN_SPI_CS_PIN) == HIGH) {
+        Serial.println("UNSELECTED.");
+    } else {
+        Serial.println("SELECTED.");
+    }
+}
+
+void checkLTCChipSelect() {
+    Serial.print("LTC CHIP SELECT: ");
+    if (digitalRead(10) == HIGH) {
+        Serial.println("UNSELECTED.");
+    } else {
+        Serial.println("SELECTED.");
+    }
+}
+
+void checkChipSelectStatus() {
+    checkCANChipSelect();
+    checkLTCChipSelect();
 }
 
 /*!***********************************
@@ -429,7 +456,7 @@ void writeToCAN() {
     }
 
     bmsCurrentMessage.write(msg);
-    byte CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_CURRENT, 0, 8, msg);
+    CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_CURRENT, 0, 8, msg);
     if (CANsendMsgResult == CAN_OK) {
         Serial.println("CAN bms current message sent");
     } else if (CANsendMsgResult == CAN_GETTXBFTIMEOUT) {
@@ -441,7 +468,7 @@ void writeToCAN() {
     }
 
     bmsTempMessage.write(msg);
-    byte CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_TEMPERATURE, 0, 8, msg);
+    CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_TEMPERATURE, 0, 8, msg);
     if (CANsendMsgResult == CAN_OK) {
         Serial.println("CAN bms temperature message sent");
     } else if (CANsendMsgResult == CAN_GETTXBFTIMEOUT) {
@@ -453,7 +480,7 @@ void writeToCAN() {
     }
 
     bmsStatusMessage.write(msg);
-    byte CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_STATUS, 0, 8, msg);
+    CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_STATUS, 0, 8, msg);
     if (CANsendMsgResult == CAN_OK) {
         Serial.println("CAN bms stats message sent");
     } else if (CANsendMsgResult == CAN_GETTXBFTIMEOUT) {
