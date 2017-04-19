@@ -800,11 +800,11 @@ byte MCP_CAN::sendMsg()
     do {
         res = mcp2515_getNextFreeTXBuf(&txbuf_n);                       // info = addr.
         uiTimeOut++;
-        Serial.print("Looking for FreeTXBuf Attempt: ");
-        Serial.println(uiTimeOut);
-        if (res == MCP_ALLTXBUSY) {
-            Serial.println("Looking for FreeTXBuf. ALL TX BUSY!");
-        }
+        // Serial.print("Looking for FreeTXBuf Attempt: ");
+        // Serial.println(uiTimeOut);
+        // if (res == MCP_ALLTXBUSY) {
+        //     Serial.println("Looking for FreeTXBuf. ALL TX BUSY!");
+        // }
     } while (res == MCP_ALLTXBUSY && (uiTimeOut < TIMEOUTVALUE));
 
     if(uiTimeOut == TIMEOUTVALUE)
@@ -819,11 +819,11 @@ byte MCP_CAN::sendMsg()
     do {
         res = mcp2515_getNextFreeTXBuf(&txbuf_n);                       // info = addr.
         uiTimeOut++;
-        Serial.print("Looking for FreeTXBuf Attempt: ");
-        Serial.println(uiTimeOut);
-        if (res == MCP_ALLTXBUSY) {
-            Serial.println("Looking for FreeTXBuf. ALL TX BUSY!");
-        }
+        // Serial.print("Looking for FreeTXBuf Attempt: ");
+        // Serial.println(uiTimeOut);
+        // if (res == MCP_ALLTXBUSY) {
+        //     Serial.println("Looking for FreeTXBuf. ALL TX BUSY!");
+        // }
     } while (res == MCP_ALLTXBUSY && (uiTimeOut < TIMEOUTVALUE));
 
     if (uiTimeOut == TIMEOUTVALUE) {
@@ -838,8 +838,8 @@ byte MCP_CAN::sendMsg()
         uiTimeOut++;
         res1= mcp2515_readRegister(txbuf_n-1 /* the ctrl reg is located at txbuf_n-1 */);  // read send buff ctrl reg
         res1 = res1 & MCP_TXB_TXREQ_M;
-        Serial.print("Send Message attempt: ");
-        Serial.println(uiTimeOut);
+        // Serial.print("Send Message attempt: ");
+        // Serial.println(uiTimeOut);
     }while(res1 && (uiTimeOut < TIMEOUTVALUE));
     if(uiTimeOut == TIMEOUTVALUE)                                       // send msg timeout
     {
@@ -869,11 +869,11 @@ byte MCP_CAN::sendMsgBuf(unsigned long id, byte ext, byte rtr, byte len, byte *b
 byte MCP_CAN::sendMsgBuf(unsigned long id, byte ext, byte len, byte *buf)
 {
     byte result = setMsg(id, ext, len, buf);
-    if (result == MCP2515_OK) {
-        Serial.println("internal CAN library setMsg GOOD!");
-    } else {
-        Serial.println("internal CAN library setMsg FAILED!");
-    }
+    // if (result == MCP2515_OK) {
+    //     Serial.println("internal CAN library setMsg GOOD!");
+    // } else {
+    //     Serial.println("internal CAN library setMsg FAILED!");
+    // }
     return sendMsg();
 }
 

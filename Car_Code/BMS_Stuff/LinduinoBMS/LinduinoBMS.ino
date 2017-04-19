@@ -4,10 +4,7 @@
  */
 
 #include <Arduino.h>
-#include <stdint.h>
 #include "mcp_can.h"
-#include "Linduino.h"
-#include "LT_SPI.h"
 #include "LTC68041.h"
 #include "HyTech17.h"
 
@@ -29,7 +26,7 @@
 #define DISCHARGE_TEMP_CRITICAL_LOW 15
 
 /********GLOBAL ARRAYS/VARIABLES CONTAINING DATA FROM CHIP**********/
-const uint8_t TOTAL_IC = 1;
+const uint8_t TOTAL_IC = 9;
 const uint8_t TOTAL_CELLS = 12;
 uint16_t cell_voltages[TOTAL_IC][TOTAL_CELLS]; // contains 12 battery cell voltages. Stores numbers in 0.1 mV units.
 uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
@@ -66,7 +63,7 @@ uint8_t tx_cfg[TOTAL_IC][6]; // data defining how data will be written to daisy 
 /**
  * CAN Variables
  */
-const int CAN_SPI_CS_PIN = 5;
+#define CAN_SPI_CS_PIN 5
 MCP_CAN CAN(CAN_SPI_CS_PIN);
 long msTimer = 0;
 
@@ -96,7 +93,6 @@ void setup() {
     // put your setup code here, to run once:
     pinMode(BMS_OK_PIN, OUTPUT);
     // pinMode(CAN_SPI_CS_PIN, OUTPUT); Not needed, done in mcp_can.cpp
-    checkCANChipSelect();
 
     digitalWrite(CAN_SPI_CS_PIN, HIGH);
     digitalWrite(BMS_OK_PIN, HIGH);
@@ -106,19 +102,16 @@ void setup() {
 
     // Check CAN Initialization
     while (CAN_OK != CAN.begin(CAN_500KBPS)) {
-        Serial.println("CAN BUS Shield init FAIL");
-        Serial.println("Init CAN BUS Shield retrying");
+        Serial.println("Init CAN BUS Shield FAILED. Retrying");
         delay(100);
     }
     Serial.println("CAN BUS Shield init GOOD");
 
     LTC6804_initialize();
     init_cfg();
-    checkLTCChipSelect();
     pollVoltage();
-    Serial.println("VOLTAGES POLLED.");
-    checkChipSelectStatus();
     memcpy(cell_delta_voltage, cell_voltages, 2 * TOTAL_IC * TOTAL_CELLS);
+    bmsCurrentMessage.setChargingState(CHARGING);
     Serial.println("Setup Complete!");
 }
 
@@ -137,35 +130,11 @@ void loop() {
 
     // write to CAN!
      writeToCAN();
-     checkChipSelectStatus();
 
     // set BMS_OK signal
     if (!bmsStatusMessage.getBMSStatusOK()) {
         digitalWrite(BMS_OK_PIN, LOW);
     }
-}
-
-void checkCANChipSelect() {
-    Serial.print("CAN SHIELD CHIP SELECT: ");
-    if (digitalRead(CAN_SPI_CS_PIN) == HIGH) {
-        Serial.println("UNSELECTED.");
-    } else {
-        Serial.println("SELECTED.");
-    }
-}
-
-void checkLTCChipSelect() {
-    Serial.print("LTC CHIP SELECT: ");
-    if (digitalRead(10) == HIGH) {
-        Serial.println("UNSELECTED.");
-    } else {
-        Serial.println("SELECTED.");
-    }
-}
-
-void checkChipSelectStatus() {
-    checkCANChipSelect();
-    checkLTCChipSelect();
 }
 
 /*!***********************************
@@ -285,7 +254,6 @@ void balanceCellsDuringCharging() {
     int16_t minVoltDeltaVoltage = cell_delta_voltage[minVoltageICIndex][minVoltageCellIndex]; // stored in 0.1 mV
     double minTimeFactor = (4000.0 - minVolt) / (cell_delta_voltage[minVoltageICIndex][minVoltageCellIndex] * 0.1);
     uint8_t batteryIndexCounter = 0;
-    uint8_t* batteryBalanceMask = (uint8_t*) malloc(sizeof(uint8_t) * TOTAL_CELLS * TOTAL_IC);
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         for (int cell = 0; cell < TOTAL_CELLS; cell++) {
             double currentTimeFactor = (4000.0 - cell_voltages[ic][cell] * 0.1) / (cell_delta_voltage[ic][cell] * 0.1);
@@ -445,51 +413,57 @@ void writeToCAN() {
     unsigned char msg[8] = {0,0,0,0,0,0,0,0};
     bmsVoltageMessage.write(msg);
     byte CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_VOLTAGE, 0, 8, msg);
-    if (CANsendMsgResult == CAN_OK) {
-        Serial.println("CAN bms voltage message sent");
-    } else if (CANsendMsgResult == CAN_GETTXBFTIMEOUT) {
-        Serial.println("CAN bms voltage get tx buffer timeout");
-    } else if (CANsendMsgResult == CAN_SENDMSGTIMEOUT) {
-        Serial.println("CAN bms voltage send message timeout");
-    } else {
-        Serial.println("CAN bms voltage error unknown");
-    }
+    // if (CANsendMsgResult == CAN_OK) {
+    //     Serial.println("CAN bms voltage message sent");
+    // } else if (CANsendMsgResult == CAN_GETTXBFTIMEOUT) {
+    //     Serial.println("CAN bms voltage get tx buffer timeout");
+    // } else if (CANsendMsgResult == CAN_SENDMSGTIMEOUT) {
+    //     Serial.println("CAN bms voltage send message timeout");
+    // } else {
+    //     Serial.println("CAN bms voltage error unknown");
+    // }
 
+    bmsCurrentMessage.setChargingState(CHARGING);
     bmsCurrentMessage.write(msg);
-    CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_CURRENT, 0, 8, msg);
-    if (CANsendMsgResult == CAN_OK) {
-        Serial.println("CAN bms current message sent");
-    } else if (CANsendMsgResult == CAN_GETTXBFTIMEOUT) {
-        Serial.println("CAN bms current get tx buffer timeout");
-    } else if (CANsendMsgResult == CAN_SENDMSGTIMEOUT) {
-        Serial.println("CAN bms current send message timeout");
-    } else {
-        Serial.println("CAN bms current error unknown");
+    if (bmsCurrentMessage.getChargingState() == CHARGING) {
+        Serial.println("CHARGING");
+    } else if (bmsCurrentMessage.getChargingState() == DISCHARGING) {
+        Serial.println("DISCHARGING");
     }
+    CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_CURRENT, 0, 8, msg);
+    // if (CANsendMsgResult == CAN_OK) {
+    //     Serial.println("CAN bms current message sent");
+    // } else if (CANsendMsgResult == CAN_GETTXBFTIMEOUT) {
+    //     Serial.println("CAN bms current get tx buffer timeout");
+    // } else if (CANsendMsgResult == CAN_SENDMSGTIMEOUT) {
+    //     Serial.println("CAN bms current send message timeout");
+    // } else {
+    //     Serial.println("CAN bms current error unknown");
+    // }
 
     bmsTempMessage.write(msg);
     CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_TEMPERATURE, 0, 8, msg);
-    if (CANsendMsgResult == CAN_OK) {
-        Serial.println("CAN bms temperature message sent");
-    } else if (CANsendMsgResult == CAN_GETTXBFTIMEOUT) {
-        Serial.println("CAN bms temperature get tx buffer timeout");
-    } else if (CANsendMsgResult == CAN_SENDMSGTIMEOUT) {
-        Serial.println("CAN bms temperature send message timeout");
-    } else {
-        Serial.println("CAN bms temperature error unknown");
-    }
+    // if (CANsendMsgResult == CAN_OK) {
+    //     Serial.println("CAN bms temperature message sent");
+    // } else if (CANsendMsgResult == CAN_GETTXBFTIMEOUT) {
+    //     Serial.println("CAN bms temperature get tx buffer timeout");
+    // } else if (CANsendMsgResult == CAN_SENDMSGTIMEOUT) {
+    //     Serial.println("CAN bms temperature send message timeout");
+    // } else {
+    //     Serial.println("CAN bms temperature error unknown");
+    // }
 
     bmsStatusMessage.write(msg);
     CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_STATUS, 0, 8, msg);
-    if (CANsendMsgResult == CAN_OK) {
-        Serial.println("CAN bms stats message sent");
-    } else if (CANsendMsgResult == CAN_GETTXBFTIMEOUT) {
-        Serial.println("CAN bms status get tx buffer timeout");
-    } else if (CANsendMsgResult == CAN_SENDMSGTIMEOUT) {
-        Serial.println("CAN bms status send message timeout");
-    } else {
-        Serial.println("CAN bms status error unknown");
-    }
+    // if (CANsendMsgResult == CAN_OK) {
+    //     Serial.println("CAN bms stats message sent");
+    // } else if (CANsendMsgResult == CAN_GETTXBFTIMEOUT) {
+    //     Serial.println("CAN bms status get tx buffer timeout");
+    // } else if (CANsendMsgResult == CAN_SENDMSGTIMEOUT) {
+    //     Serial.println("CAN bms status send message timeout");
+    // } else {
+    //     Serial.println("CAN bms status error unknown");
+    // }
     digitalWrite(10, HIGH);
 }
 
@@ -523,15 +497,15 @@ void printAux() {
     }
 }
 
-void waitForUserInput() {
-    if (Serial.available()) {
-        while (Serial.available()) {
-            Serial.read();
-        }
-    } // clear buffer
-    Serial.println("Continue?");
-    while (!Serial.available()) {
-        // wait for input
-    }
-    Serial.println();
-}
+// void waitForUserInput() {
+//     if (Serial.available()) {
+//         while (Serial.available()) {
+//             Serial.read();
+//         }
+//     } // clear buffer
+//     Serial.println("Continue?");
+//     while (!Serial.available()) {
+//         // wait for input
+//     }
+//     Serial.println();
+// }
