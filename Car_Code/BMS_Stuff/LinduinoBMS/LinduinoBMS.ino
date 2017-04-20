@@ -4,6 +4,7 @@
  */
 
 #include <Arduino.h>
+#include <math.h>
 #include "mcp_can.h"
 #include "LTC68041.h"
 #include "HyTech17.h"
@@ -26,14 +27,18 @@
 #define DISCHARGE_TEMP_CRITICAL_LOW 15
 
 /********GLOBAL ARRAYS/VARIABLES CONTAINING DATA FROM CHIP**********/
-const uint8_t TOTAL_IC = 9;
-const uint8_t TOTAL_CELLS = 12;
+#define TOTAL_IC 9
+#define TOTAL_CELLS 12
+#define TOTAL_THERMISTORS 4
+#define THERMISTOR_RESISTOR_VALUE 1000
+#define AUX_VOLTAGE_CURRENT_INDEX 5
 uint16_t cell_voltages[TOTAL_IC][TOTAL_CELLS]; // contains 12 battery cell voltages. Stores numbers in 0.1 mV units.
 uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
      /* Data contained in this array is in this format:
       * Thermistor 1
       * Thermistor 2
       * Thermistor 3
+      * Thermistor 4
       * Current Sensor
       */
 int16_t cell_delta_voltage[TOTAL_IC][TOTAL_CELLS]; // contains 12 signed dV values in 0.1 mV units
@@ -50,16 +55,6 @@ int16_t cell_delta_voltage[TOTAL_IC][TOTAL_CELLS]; // contains 12 signed dV valu
 */
 uint8_t tx_cfg[TOTAL_IC][6]; // data defining how data will be written to daisy chain ICs.
 
-/*!<
-  the rx_cfg[][8] array stores the data that is read back from a LTC6804-1 daisy chain.
-  The configuration data for each IC  is stored in blocks of 8 bytes. Below is an table illustrating the array organization:
-
-|rx_config[0][0]|rx_config[0][1]|rx_config[0][2]|rx_config[0][3]|rx_config[0][4]|rx_config[0][5]|rx_config[0][6]  |rx_config[0][7] |rx_config[1][0]|rx_config[1][1]|  .....    |
-|---------------|---------------|---------------|---------------|---------------|---------------|-----------------|----------------|---------------|---------------|-----------|
-|IC1 CFGR0      |IC1 CFGR1      |IC1 CFGR2      |IC1 CFGR3      |IC1 CFGR4      |IC1 CFGR5      |IC1 PEC High     |IC1 PEC Low     |IC2 CFGR0      |IC2 CFGR1      |  .....    |
-*/
-//uint8_t rx_cfg[TOTAL_IC][8];
-
 /**
  * CAN Variables
  */
@@ -70,6 +65,7 @@ long msTimer = 0;
 /**
  * BMS State Variables
  */
+#define BMS_OK_PIN 5
 BMS_voltages bmsVoltageMessage;
 BMS_currents bmsCurrentMessage;
 BMS_temperatures bmsTempMessage;
@@ -86,8 +82,6 @@ int minVoltageCellIndex;
 //unsigned long chargeCurrentPeakHighTime;
 //bool chargeCurrentConstantHighFlag;
 //unsigned long chargeCurrentConstantHighTime;
-
-const int BMS_OK_PIN = 5;
 
 void setup() {
     // put your setup code here, to run once:
@@ -122,14 +116,14 @@ void setup() {
 void loop() {
 //    waitForUserInput();
     pollVoltage(); // cell_voltages[] array populated with cell voltages now.
-//    balanceCellsDuringCharging();
+    balanceCellsDuringCharging();
 
-//    pollAuxiliaryVoltages();
+    pollAuxiliaryVoltages();
     avgMinMaxTotalVoltage(); // min, max, avg, and total volts stored in bmsVoltageMessage object.
     raiseVoltageFlags();
 
     // write to CAN!
-     writeToCAN();
+    writeToCAN();
 
     // set BMS_OK signal
     if (!bmsStatusMessage.getBMSStatusOK()) {
@@ -196,8 +190,65 @@ void pollAuxiliaryVoltages() {
     }
     printAux();
     delay(100);
-    // TODO: Take auxiliary voltage data from thermistor and convert raw analog data into temperature values.
-    // TODO: Take auxilliary voltage data from current sensor and convert raw analog data into current values.
+}
+
+void avgLowHighTemp() {
+    uint16_t avgTemp, lowTemp, highTemp, totalTemp;
+    totalTemp = 0;
+    lowTemp = calculateDegreesCelsius(calculateThermistorResistance(aux_voltages[0][0]));
+    highTemp = lowTemp;
+    for (int ic = 0; ic < TOTAL_IC; ic++) {
+        for (int therm = 0; therm < TOTAL_THERMISTORS; therm++) {
+            uint16_t thermTemp = calculateDegreesCelsius(calculateThermistorResistance(aux_voltages[ic][therm]));
+            if (thermTemp < lowTemp) {
+                lowTemp = thermTemp;
+            }
+            if (thermTemp > highTemp) {
+                highTemp = thermTemp;
+            }
+            totalTemp += thermTemp;
+        }
+    }
+    avgTemp = totalTemp / (TOTAL_IC * TOTAL_THERMISTORS);
+    bmsTempMessage.setLowTemp(lowTemp);
+    bmsTempMessage.setHighTemp(highTemp);
+    bmsTempMessage.setAvgTemp(avgTemp);
+
+    Serial.print("Low Temp: ");
+    Serial.print(lowTemp / 100); Serial.print("."); Serial.println(lowTemp % 100);
+    Serial.print("High Temp: ");
+    Serial.print(highTemp / 100); Serial.print("."); Serial.println(highTemp % 100);
+    Serial.print("Average Temp: ");
+    Serial.print(avgTemp / 100); Serial.print("."); Serial.println(avgTemp % 100);
+}
+
+uint16_t calculateThermistorResistance(uint16_t tempVoltage) {
+    // voltage measured across thermistor is dependent on the resistor in the voltage divider
+    // v = 5 (Rt / (Rt + R1));
+    // Rt*v + R1*v = 5*Rt;
+    // Rt*v - 5*Rt = -R1*v;
+    // Rt = (R1*v) / (5 - v);
+    // all voltage measurements stored in arrays are in 0.1 mV, or 1/10,000 of a volt
+    return (THERMISTOR_RESISTOR_VALUE * tempVoltage) / (50000 - tempVoltage);
+    // resistances stored as 1 ohm units.
+}
+
+uint16_t calculateDegreesCelsius(uint16_t thermistorResistance) {
+    // temperature equation based on resistance is the following
+    // R_inf = R0 * e^(-B / T0);
+    // T = B / ln((R/R0) * e^(B / T0))
+    // T = B / (ln(R/R0) + ln(e^(B / T0)))
+    // T = B / (ln(R/R0) + (B / T0))
+    // B = 3984
+    // R0 = 10000
+    double temp = 3984 / (log((1.0 * thermistorResistance) / 1.0e5) + (3984.0 / 298.15));
+    return (int) ((temp - 273.15) * 100);
+    // temps stored in 0.01 C units
+}
+
+void calculateCurrent() {
+    // TODO: Take auxiliary voltage data from current sensor and convert raw analog data into current values.
+    
 }
 
 void wakeFromSleepAllChips() {
@@ -307,107 +358,6 @@ void raiseVoltageFlags() {
     }
 }
 
-//void raiseVoltageTempCurrentFlags() {
-//    float current = bmsCurrentMessage.getCurrent(); // stored in amps
-//    if (current < 0) {
-//        // when batteries are charging
-//        if (bmsVoltageMessage.getLow() < VOLTAGE_LOW_CUTOFF) {
-//            bmsStatusMessage.setChargeUndervoltage(true);
-//            bmsStatusMessage.setBMSStatusOK(false);
-//        }
-//
-//        if (bmsVoltageMessage.getHigh() > VOLTAGE_HIGH_CUTOFF) {
-//            bmsStatusMessage.setChargeOvervoltage(true);
-//            bmsStatusMessage.setBMSStatusOK(false);
-//        }
-//
-//        if (current < CHARGE_CURRENT_CONSTANT_HIGH) {
-//            if (chargeCurrentConstantHighFlag) {
-//                if (millis() - chargeCurrentConstantHighTime > CHARGE_CURRENT_CONSTANT_HIGH_TIME) {
-//                    // constant charging current flow has exceeded limit and time
-//                    bmsStatusMessage.setChargeOvercurrent(true);
-//                    bmsStatusMessage.setBMSStatusOK(false);
-//                }
-//            } else {
-//                chargeCurrentConstantHighFlag = true;
-//                chargeCurrentConstantHighTime = millis();
-//            }
-//        } else {
-//            chargeCurrentConstantHighFlag = false;
-//        }
-//
-//        if (current < CHARGE_CURRENT_PEAK_HIGH) {
-//            if (chargeCurrentPeakHighFlag) {
-//                if (millis() - chargeCurrentPeakHighTime > CHARGE_CURRENT_PEAK_HIGH_TIME) {
-//                    // peak charging current flow has exceeded limit and time
-//                    bmsStatusMessage.setChargeOvercurrent(true);
-//                    bmsStatusMessage.setBMSStatusOK(false);
-//                }
-//            } else {
-//                chargeCurrentPeakHighFlag = true;
-//                chargeCurrentConstantHighTime = millis();
-//            }
-//        } else {
-//            chargeCurrentPeakHighFlag = false;
-//        }
-//
-//        if (current > CHARGE_CURRENT_LOW_CUTOFF) {
-//            bmsStatusMessage.setChargeUndercurrent(true);
-//            bmsStatusMessage.setBMSStatusOK(false);
-//        }
-//        if (bmsTempMessage.getHighTemp() > CHARGE_TEMP_CRITICAL_HIGH) {
-//            bmsStatusMessage.setChargeOvertemp(true);
-//            bmsStatusMessage.setBMSStatusOK(false);
-//        }
-//    } else if (current > 0) {
-//        // when batteries are discharging
-//        if (bmsVoltageMessage.getLow() < VOLTAGE_LOW_CUTOFF) {
-//            bmsStatusMessage.setDischargeUndervoltage(true);
-//            bmsStatusMessage.setBMSStatusOK(false);
-//        }
-//
-//        if (bmsVoltageMessage.getHigh() > VOLTAGE_HIGH_CUTOFF) {
-//            bmsStatusMessage.setDischargeOvervoltage(true);
-//            bmsStatusMessage.setBMSStatusOK(false);
-//        }
-//
-//        if (current > DISCHARGE_CURRENT_CONSTANT_HIGH) {
-//            if (dischargeCurrentConstantHighFlag) {
-//                if (millis() - dischargeCurrentConstantHighTime > DISCHARGE_CURRENT_CONSTANT_HIGH_TIME) {
-//                    // constant discharging current draw has exceeded time and limit
-//                    bmsStatusMessage.setDischargeOvercurrent(true);
-//                    bmsStatusMessage.setBMSStatusOK(false);
-//                }
-//            } else {
-//                dischargeCurrentConstantHighFlag = true;
-//                dischargeCurrentConstantHighTime = millis();
-//            }
-//        } else {
-//            dischargeCurrentConstantHighFlag = false;
-//        }
-//
-//        if (current > DISCHARGE_CURRENT_PEAK_HIGH) {
-//            if (dischargeCurrentPeakHighFlag) {
-//                if (millis() - dischargeCurrentPeakHighTime > DISCHARGE_CURRENT_PEAK_HIGH_TIME) {
-//                    // peak discharging current draw has exceeded time and limit
-//                    bmsStatusMessage.setDischargeOvercurrent(true);
-//                    bmsStatusMessage.setBMSStatusOK(false);
-//                }
-//            } else {
-//                dischargeCurrentPeakHighFlag = true;
-//                dischargeCurrentPeakHighTime = millis();
-//            }
-//        } else {
-//            dischargeCurrentPeakHighFlag = false;
-//        }
-//
-//        if (bmsTempMessage.getHighTemp() > CHARGE_TEMP_CRITICAL_HIGH) {
-//            bmsStatusMessage.setDischargeOvertemp(true);
-//            bmsStatusMessage.setBMSStatusOK(false);
-//        }
-//    }
-//}
-
 void writeToCAN() {
     digitalWrite(10, HIGH);
     unsigned char msg[8] = {0,0,0,0,0,0,0,0};
@@ -496,16 +446,3 @@ void printAux() {
         Serial.println();
     }
 }
-
-// void waitForUserInput() {
-//     if (Serial.available()) {
-//         while (Serial.available()) {
-//             Serial.read();
-//         }
-//     } // clear buffer
-//     Serial.println("Continue?");
-//     while (!Serial.available()) {
-//         // wait for input
-//     }
-//     Serial.println();
-// }
