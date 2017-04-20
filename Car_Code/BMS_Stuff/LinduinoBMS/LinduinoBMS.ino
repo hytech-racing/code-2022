@@ -21,6 +21,7 @@
 #define CHARGE_CURRENT_LOW_CUTOFF -1.1
 #define CHARGE_CURRENT_PEAK_HIGH_TIME 10
 #define CHARGE_CURRENT_CONSTANT_HIGH_TIME 20
+#define MAX_VAL_CURRENT_SENSE 300
 #define CHARGE_TEMP_CRITICAL_HIGH 44
 #define CHARGE_TEMP_CRITICAL_LOW 0
 #define DISCHARGE_TEMP_CRITICAL_HIGH 60
@@ -29,9 +30,10 @@
 /********GLOBAL ARRAYS/VARIABLES CONTAINING DATA FROM CHIP**********/
 #define TOTAL_IC 9
 #define TOTAL_CELLS 12
-#define TOTAL_THERMISTORS 4
-#define THERMISTOR_RESISTOR_VALUE 1000
-#define AUX_VOLTAGE_CURRENT_INDEX 5
+#define TOTAL_THERMISTORS 4 // TODO: Double check how many thermistors are being used.
+#define THERMISTOR_RESISTOR_VALUE 1000 // TODO: Double check what resistor is used on the resistor divider.
+#define AUX_VOLTAGE_CURRENT_INDEX 5 // TODO: Double check which GPIO pin the current sensor is connected to.
+#define AUX_VOLTAGE_CURRENT_IC 0 // TODO: Double check which IC the current sense is connected to.
 uint16_t cell_voltages[TOTAL_IC][TOTAL_CELLS]; // contains 12 battery cell voltages. Stores numbers in 0.1 mV units.
 uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
      /* Data contained in this array is in this format:
@@ -117,10 +119,11 @@ void loop() {
 //    waitForUserInput();
     pollVoltage(); // cell_voltages[] array populated with cell voltages now.
     balanceCellsDuringCharging();
+    avgMinMaxTotalVoltage(); // stores data in bmsVoltageMessage object.
 
     pollAuxiliaryVoltages();
-    avgMinMaxTotalVoltage(); // min, max, avg, and total volts stored in bmsVoltageMessage object.
-    raiseVoltageFlags();
+    avgLowHighTemp(); // stores data in bmsTempMessage object.
+    calculateCurrent(); // stores data in bmsCurrentMessage object.
 
     // write to CAN!
     writeToCAN();
@@ -214,6 +217,8 @@ void avgLowHighTemp() {
     bmsTempMessage.setHighTemp(highTemp);
     bmsTempMessage.setAvgTemp(avgTemp);
 
+    // TODO: Low and High Temperature Checking
+
     Serial.print("Low Temp: ");
     Serial.print(lowTemp / 100); Serial.print("."); Serial.println(lowTemp % 100);
     Serial.print("High Temp: ");
@@ -241,14 +246,27 @@ uint16_t calculateDegreesCelsius(uint16_t thermistorResistance) {
     // T = B / (ln(R/R0) + (B / T0))
     // B = 3984
     // R0 = 10000
-    double temp = 3984 / (log((1.0 * thermistorResistance) / 1.0e5) + (3984.0 / 298.15));
+    double temp = 3984 / (log((1.0 * thermistorResistance) / 1.0e4) + (3984.0 / 298.15));
     return (int) ((temp - 273.15) * 100);
     // temps stored in 0.01 C units
 }
 
-void calculateCurrent() {
-    // TODO: Take auxiliary voltage data from current sensor and convert raw analog data into current values.
-    
+float calculateCurrent() {
+    // max positive current at 90% of 5V = 4.5V
+    // max negative current in opposite direction at 10% of 5V = 0.5V
+    // 0 current at 50% of 5V = 2.5V
+    // max current sensor reading +/- 300A
+    // current = 300 * (V - 25000) / 20000
+    uint16_t senseVoltage = aux_voltages[AUX_VOLTAGE_CURRENT_IC][AUX_VOLTAGE_CURRENT_INDEX];
+    float current = MAX_VAL_CURRENT_SENSE * (1.0f * senseVoltage - 2.5e4) / 2e4;
+    bmsCurrentMessage.setCurrent(current);
+    if (current < 0) {
+        bmsCurrentMessage.setChargingState(CHARGING);
+    } else if (current > 0) {
+        bmsCurrentMessage.setChargingState(DISCHARGING);
+    }
+    // TODO: Current Error Checking. (Over current, under current)
+    return current;
 }
 
 void wakeFromSleepAllChips() {
@@ -292,6 +310,8 @@ void avgMinMaxTotalVoltage() {
     maxVolt = convertToMillivolts(maxVolt);
     bmsVoltageMessage.setLow(minVolt);
     bmsVoltageMessage.setHigh(maxVolt);
+
+    // TODO: Low and High voltage error checking.
 
     Serial.print("Avg: "); Serial.println(avgVolt, 4);
     Serial.print("Total: "); Serial.println(totalVolts, 4);
@@ -343,35 +363,11 @@ void balanceCellsDuringCharging() {
     LTC6804_wrcfg(TOTAL_IC, tx_cfg);
 }
 
-void raiseVoltageFlags() {
-    if (bmsVoltageMessage.getLow() <= VOLTAGE_LOW_CUTOFF) {
-        bmsStatusMessage.setChargeUndervoltage(true);
-        bmsStatusMessage.setDischargeUndervoltage(true);
-        bmsStatusMessage.setBMSStatusOK(false);
-    } else if (bmsVoltageMessage.getHigh() >= VOLTAGE_HIGH_CUTOFF) {
-        bmsStatusMessage.setChargeOvervoltage(true);
-        bmsStatusMessage.setDischargeOvervoltage(true);
-        bmsStatusMessage.setBMSStatusOK(false);
-    } else {
-        bmsStatusMessage.clearAllFlags();
-        bmsStatusMessage.setBMSStatusOK(true);
-    }
-}
-
 void writeToCAN() {
     digitalWrite(10, HIGH);
     unsigned char msg[8] = {0,0,0,0,0,0,0,0};
     bmsVoltageMessage.write(msg);
     byte CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_VOLTAGE, 0, 8, msg);
-    // if (CANsendMsgResult == CAN_OK) {
-    //     Serial.println("CAN bms voltage message sent");
-    // } else if (CANsendMsgResult == CAN_GETTXBFTIMEOUT) {
-    //     Serial.println("CAN bms voltage get tx buffer timeout");
-    // } else if (CANsendMsgResult == CAN_SENDMSGTIMEOUT) {
-    //     Serial.println("CAN bms voltage send message timeout");
-    // } else {
-    //     Serial.println("CAN bms voltage error unknown");
-    // }
 
     bmsCurrentMessage.setChargingState(CHARGING);
     bmsCurrentMessage.write(msg);
@@ -381,39 +377,12 @@ void writeToCAN() {
         Serial.println("DISCHARGING");
     }
     CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_CURRENT, 0, 8, msg);
-    // if (CANsendMsgResult == CAN_OK) {
-    //     Serial.println("CAN bms current message sent");
-    // } else if (CANsendMsgResult == CAN_GETTXBFTIMEOUT) {
-    //     Serial.println("CAN bms current get tx buffer timeout");
-    // } else if (CANsendMsgResult == CAN_SENDMSGTIMEOUT) {
-    //     Serial.println("CAN bms current send message timeout");
-    // } else {
-    //     Serial.println("CAN bms current error unknown");
-    // }
 
     bmsTempMessage.write(msg);
     CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_TEMPERATURE, 0, 8, msg);
-    // if (CANsendMsgResult == CAN_OK) {
-    //     Serial.println("CAN bms temperature message sent");
-    // } else if (CANsendMsgResult == CAN_GETTXBFTIMEOUT) {
-    //     Serial.println("CAN bms temperature get tx buffer timeout");
-    // } else if (CANsendMsgResult == CAN_SENDMSGTIMEOUT) {
-    //     Serial.println("CAN bms temperature send message timeout");
-    // } else {
-    //     Serial.println("CAN bms temperature error unknown");
-    // }
 
     bmsStatusMessage.write(msg);
     CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_STATUS, 0, 8, msg);
-    // if (CANsendMsgResult == CAN_OK) {
-    //     Serial.println("CAN bms stats message sent");
-    // } else if (CANsendMsgResult == CAN_GETTXBFTIMEOUT) {
-    //     Serial.println("CAN bms status get tx buffer timeout");
-    // } else if (CANsendMsgResult == CAN_SENDMSGTIMEOUT) {
-    //     Serial.println("CAN bms status send message timeout");
-    // } else {
-    //     Serial.println("CAN bms status error unknown");
-    // }
     digitalWrite(10, HIGH);
 }
 
