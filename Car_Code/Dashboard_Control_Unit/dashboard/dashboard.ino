@@ -3,17 +3,14 @@
 #include <Metro.h>
 
 /******* PIN definitions ***********/
-#define BTN_TOGGLE 9
-#define BTN_CYCLE 10
-#define BTN_BOOST 11
-#define BTN_START 12
+#define BTN_TOGGLE A14
+#define BTN_CYCLE A15
+#define BTN_BOOST A16
+#define BTN_START A17
 #define LED_START 7
 #define LED_BMS 6
 #define LED_IMD 5
 #define READY_SOUND 8
-#define PEDAL_SIGNAL_A A3
-#define PEDAL_SIGNAL_B A4
-#define PEDAL_SIGNAL_C A5
 
 /*****Dashboard States and Fault Flags********/
 bool imd_fault;
@@ -30,12 +27,14 @@ Metro timer_led_start_blink_fast = Metro(250);
 Metro timer_led_start_blink_slow = Metro(500);
 Metro timer_inverter_enable = Metro(2000);  // Timeout failed inverter enable
 Metro timer_ready_sound = Metro(2000);      // Time to play RTD sound
+Metro timer_can_update = Metro(500);
 
 unsigned long lastDebounceTOGGLE = 0;  // the last time the output pin was toggled
 unsigned long lastDebounceBOOST = 0;  // the last time the output pin was toggled
 unsigned long lastDebounceSTART = 0;  // the last time the output pin was toggled
 uint8_t btn_start_new = 0;
 bool btn_start_pressed = false;
+bool btn_start_debouncing = false;
 bool led_start_active = false;
 unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
 uint8_t led_start_type = 0;
@@ -68,9 +67,13 @@ void setup() {
     state = DCU_STATE_INITIAL_STARTUP;
     pinMode(LED_BMS, OUTPUT);
     pinMode(LED_IMD, OUTPUT);
+    pinMode(BTN_TOGGLE, INPUT_PULLUP);
+    pinMode(BTN_CYCLE, INPUT_PULLUP);
+    pinMode(BTN_BOOST, INPUT_PULLUP);
+    pinMode(BTN_START, INPUT_PULLUP);
     Serial.begin(115200);
     can.begin();
-
+    timer_can_update.reset();
 }
 
 void loop() {
@@ -107,33 +110,31 @@ void loop() {
           set_state(DCU_STATE_WAITING_TRACTIVE_SYSTEM);
           break;
         case PCU_STATE_LATCHING:
-          set_start_led(0);
           set_state(DCU_STATE_PRESSED_TRACTIVE_SYSTEM);
-          break;
-        case PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
-          set_state(DCU_STATE_WAITING_MC_ENABLE);
           break;
         case PCU_STATE_FATAL_FAULT:
           set_state(DCU_STATE_FATAL_FAULT);
           break;
       }
     }
-    // Handle motor controller state messages
-    if (msg.id == ID_MC_INTERNAL_STATES) {
-        MC_internal_states mc_internal_states = MC_internal_states(msg.buf);
-        // if start button has been pressed and inverter is enabled, play RTD sound
-        if (mc_internal_states.get_inverter_enable_state && state == DCU_STATE_PRESSED_MC_ENABLE) {
-            set_state(DCU_STATE_PLAYING_RTD);
+
+    // Handle TCU broadcast state messages
+    if (msg.id == ID_TCU_STATUS) {
+        TCU_status tcu_status(msg.buf);
+        Serial.print("TCU State: ");
+        Serial.println(tcu_status.get_state());
+        switch (tcu_status.get_state()) {
+            case TCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
+                set_state(DCU_STATE_WAITING_MC_ENABLE);
+                break;
+            case TCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
+                set_state(DCU_STATE_PLAYING_RTD);
+                break;
+            case TCU_STATE_READY_TO_DRIVE:
+                set_state(DCU_STATE_READY_TO_DRIVE);
+                break;
         }
     }
-
-    // TODO: Could be replaced by TCU status messages?
-
-    // // Handle motor controller voltage messages
-    // if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
-    //     MC_voltage_information mc_voltage_information = MC_voltage_information(msg.buf);
-    //
-    // }
   }
 
   // TODO: more state machine stuff possibly?
@@ -163,7 +164,9 @@ void loop() {
         break;
   }
 
-  // TODO: Implement broadcast of state messages
+  if (timer_can_update.check()) {
+      sendCANUpdate(false);
+  }
 
   /*
    * Blink start led
@@ -181,7 +184,7 @@ void loop() {
   pollForButtonPress(); // fix this
 }
 
-void pollForButtonPress {
+void pollForButtonPress() {
   /*
    * Handle start button press and depress
    */
@@ -200,6 +203,18 @@ void pollForButtonPress {
       Serial.println(lastDebounceSTART);
     }
   }
+}
+
+void sendCANUpdate(bool startPressed) {
+    msg.id = ID_DCU_STATUS;
+    msg.len = 8;
+    DCU_status dcu_status = DCU_status();
+    dcu_status.set_btn_press_id(startPressed ? 1 : 0);
+    dcu_status.set_light_active_1(0);
+    dcu_status.set_light_active_2(0);
+    dcu_status.set_rtds_state(state == DCU_STATE_PLAYING_RTD ? 1 : 0)
+    dcu_status.write(msg);
+    CAN.write(msg);
 }
 
 /*
@@ -231,9 +246,24 @@ void set_start_led(uint8_t type) {
   }
 }
 
-void toggleButtonInterrupt {
-
-}
-
-void startButtonInterrupt {
+void set_state(uint8_t new_state) {
+    if (state == new_state)
+        return;
+    state = new_state;
+    if (new_state == DCU_STATE_WAITING_MC_ENABLE || new_state == DCU_STATE_WAITING_TRACTIVE_SYSTEM) {
+        btn_start_new = lastDebounceSTART + 1;
+    }
+    if (new_state == DCU_STATE_PRESSED_MC_ENABLE || new_state == DCU_STATE_PRESSED_TRACTIVE_SYSTEM) {
+        set_start_led(0);
+        sendCANUpdate(true);
+    }
+    if (new_state == DCU_STATE_PLAYING_RTD) {
+        timer_ready_sound.reset();
+        digitalWrite(READY_SOUND, HIGH);
+        Serial.println("Playing RTD sound");
+    }
+    if (new_state == DCU_STATE_READY_TO_DRIVE) {
+        digitalWrite(READY_SOUND, LOW);
+        Serial.println("RTD sound finished");
+    }
 }

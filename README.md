@@ -14,6 +14,9 @@
 4. Clone this repository to your computer
     * SSH: git@github.com:hytech-racing/code-2017.git
     * HTTPS: https://github.com/hytech-racing/code-2017.git
+5. Make sure to refer to and contribute to the repository Wiki whenever you can
+    * This is accessible in the repo toolbar (in between _Projects_ and _Pulse_)
+    * _"In teaching others, we teach ourselves"_
 
 ## Organization
 * `/remote-telemetry` Code relating to remote telemetry

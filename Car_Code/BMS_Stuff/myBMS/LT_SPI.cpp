@@ -112,12 +112,12 @@ void spi_transfer_word(uint8_t cs_pin, uint16_t tx, uint16_t *rx)
   data_tx.w = tx;
 
   output_low(cs_pin);                         //! 1) Pull CS low
-
+  delayMicroseconds(1);
   data_rx.b[1] = SPI.transfer(data_tx.b[1]);  //! 2) Read MSB and send MSB
   data_rx.b[0] = SPI.transfer(data_tx.b[0]);  //! 3) Read LSB and send LSB
 
   *rx = data_rx.w;
-
+  delayMicroseconds(1);
   output_high(cs_pin);                        //! 4) Pull CS high
 }
 
@@ -127,42 +127,44 @@ void spi_transfer_block(uint8_t cs_pin, uint8_t *tx, uint8_t *rx, uint8_t length
   int8_t i;
 
   output_low(cs_pin);                 //! 1) Pull CS low
-
+  delayMicroseconds(1);
   for (i=(length-1);  i >= 0; i--)
     rx[i] = SPI.transfer(tx[i]);    //! 2) Read and send byte array
-
+  delayMicroseconds(1);
   output_high(cs_pin);                //! 3) Pull CS high
 }
 
 // Connect SPI pins to QuikEval connector through the Linduino MUX. This will disconnect I2C.
-void quikeval_SPI_connect()
-{
-  output_high(QUIKEVAL_CS); //! 1) Pull Chip Select High
-
-  //! 2) Enable Main SPI
-  pinMode(QUIKEVAL_MUX_MODE_PIN, OUTPUT);
-  digitalWrite(QUIKEVAL_MUX_MODE_PIN, LOW);
-}
+// void quikeval_SPI_connect()
+// {
+//   output_high(QUIKEVAL_CS); //! 1) Pull Chip Select High
+//
+//   //! 2) Enable Main SPI
+//   pinMode(QUIKEVAL_MUX_MODE_PIN, OUTPUT);
+//   digitalWrite(QUIKEVAL_MUX_MODE_PIN, LOW);
+//}
 
 // Configure the SPI port for 4MHz SCK.
 // This function or spi_enable() must be called
 // before using the other SPI routines.
-void quikeval_SPI_init(void)  // Initializes SPI
-{
-  spi_enable(SPI_CLOCK_DIV16);  //! 1) Configure the spi port for 4MHz SCK
-}
+// void quikeval_SPI_init(void)  // Initializes SPI
+// {
+//   spi_enable(SPI_CLOCK_DIV4);  //! 1) Configure the spi port for 4MHz SCK // CLOCK SPEED CHANGED BY SHRIV
+//}
 
 // Setup the processor for hardware SPI communication.
 // Must be called before using the other SPI routines.
 // Alternatively, call quikeval_SPI_connect(), which automatically
 // calls this function.
-void spi_enable(uint8_t spi_clock_divider) // Configures SCK frequency. Use constant defined in header file.
+void spi_enable() // Configures SCK frequency. Use constant defined in header file.
 {
   //pinMode(SCK, OUTPUT);             //! 1) Setup SCK as output
   //pinMode(MOSI, OUTPUT);            //! 2) Setup MOSI as output
   //pinMode(QUIKEVAL_CS, OUTPUT);     //! 3) Setup CS as output
   SPI.begin();
-  SPI.setClockDivider(spi_clock_divider);
+//  SPI.setDataMode(SPI_MODE3); // added by SHRIV
+  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE3)); // added by SHRIV
+  SPI.endTransaction(); // added by SHRIV
 }
 
 // Disable the SPI hardware port
