@@ -145,6 +145,7 @@ typedef struct CAN_message_tcu_status_t {
     bool throttle_curve;
     bool brake_implausibility;
     bool brake_pedal_active;
+    uint8_t state;
 } CAN_msg_tcu_status;
 
 class TCU_status {
@@ -158,10 +159,12 @@ class TCU_status {
     bool get_throttle_curve();
     bool get_brake_implausibility();
     bool get_brake_pedal_active();
+    uint8_t get_state();
     void set_throttle_implausibility(bool throttle_implausibility);
     void set_throttle_curve(bool throttle_curve);
     void set_brake_implausibility(bool brake_implausibility);
     void set_brake_pedal_active(bool brake_pedal_active);
+    void set_state(uint8_t new_state);
   private:
     CAN_message_tcu_status_t message;
 };

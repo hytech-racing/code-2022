@@ -33,6 +33,7 @@ void loop() {
     This section checks if a message is currently circulating on the bus.
   */
   while (CAN.read(msg)) {
+    Serial.print("RCV ");
     Serial.print(msg.id);
     Serial.print(": ");
     for (unsigned int i = 0; i < msg.len; i++) {

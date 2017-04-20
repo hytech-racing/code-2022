@@ -283,6 +283,7 @@ int sendCANUpdate(){
     curTCU_status.set_throttle_curve(throttleCurve);
     curTCU_status.set_brake_implausibility(brakeImplausibility);
     curTCU_status.set_brake_pedal_active(brakePedalActive);
+    curTCU_status.set_state(state);
 
     curTCU_status.write(msg.buf);
     bufferAvailable += CAN.write(msg);
