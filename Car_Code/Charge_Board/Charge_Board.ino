@@ -40,10 +40,23 @@ void setup() {
 void loop () {
     while (CAN.read(msg)) {
         if (msg.id == ID_BMS_CURRENT) {
-            BMS_currents bms_currents = BMS_currents(msg.buf);
+            BMS_currents bms_currents(msg.buf);
             if (state == CHARGE_STATE_CHARGE_REQUESTED
                 && bms_currents.getChargingState() == CHARGING) {
                 set_state(CHARGE_STATE_CHARGING);
+            }
+            bms_currents.load(msg.buf);
+            if (bms_currents.getChargingState()== CHARGING){
+                Serial.println("BMS entered charge mode.");
+            }
+            else if (bms_currents.getChargingState() == DISCHARGING){
+                Serial.println("BMS in discharging state.");
+            }
+            else if (bms_currents.getChargingState() == UNKNOWN){
+                Serial.println("BMS in unknown state.");
+            }
+            else {
+                Serial.println(bms_currents.getChargingState());
             }
         }
     }
