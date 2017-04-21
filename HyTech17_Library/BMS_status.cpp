@@ -27,23 +27,18 @@ void BMS_status::write(uint8_t buf[]) {
 }
 
 /***************GETTERS*****************/
-bool BMS_status::getDischargeOvervoltage() {
+bool BMS_status::getOvervoltage() {
     uint8_t val = bmsErrorMessage.errorFlagsByte1 & 0b10000000;
     return val > 0;
 }
 
-bool BMS_status::getDischargeUndervoltage() {
+bool BMS_status::getUndervoltage() {
     uint8_t val = bmsErrorMessage.errorFlagsByte1 & 0b01000000;
     return val > 0;
 }
 
-bool BMS_status::getChargeOvervoltage() {
+bool BMS_status::getTotalvoltage() {
     uint8_t val = bmsErrorMessage.errorFlagsByte1 & 0b00100000;
-    return val > 0;
-}
-
-bool BMS_status::getChargeUndervoltage() {
-    uint8_t val = bmsErrorMessage.errorFlagsByte1 & 0b00010000;
     return val > 0;
 }
 
@@ -92,7 +87,7 @@ bool BMS_status::getBMSStatusOK() {
 }
 
 /***************SETTERS*****************/
-void BMS_status::setDischargeOvervoltage(bool flag) {
+void BMS_status::setOvervoltage(bool flag) {
     uint8_t val = 0;
     if (flag) {
         val = 0b10000000;
@@ -100,7 +95,7 @@ void BMS_status::setDischargeOvervoltage(bool flag) {
     bmsErrorMessage.errorFlagsByte1 = bmsErrorMessage.errorFlagsByte1 | val;
 }
 
-void BMS_status::setDischargeUndervoltage(bool flag) {
+void BMS_status::setUndervoltage(bool flag) {
     uint8_t val = 0;
     if (flag) {
         val = 0b01000000;
@@ -108,18 +103,10 @@ void BMS_status::setDischargeUndervoltage(bool flag) {
     bmsErrorMessage.errorFlagsByte1 = bmsErrorMessage.errorFlagsByte1 | val;
 }
 
-void BMS_status::setChargeOvervoltage(bool flag) {
+void BMS_status::setTotalvoltage(bool flag) {
     uint8_t val = 0;
     if (flag) {
         val = 0b00100000;
-    }
-    bmsErrorMessage.errorFlagsByte1 = bmsErrorMessage.errorFlagsByte1 | val;
-}
-
-void BMS_status::setChargeUndervoltage(bool flag) {
-    uint8_t val = 0;
-    if (flag) {
-        val = 0b00010000;
     }
     bmsErrorMessage.errorFlagsByte1 = bmsErrorMessage.errorFlagsByte1 | val;
 }

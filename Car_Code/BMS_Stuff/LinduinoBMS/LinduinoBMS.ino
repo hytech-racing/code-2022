@@ -5,6 +5,7 @@
 
 #include <Arduino.h>
 #include <math.h>
+#include <stdint.h>
 #include "mcp_can.h"
 #include "LTC68041.h"
 #include "HyTech17.h"
@@ -12,6 +13,7 @@
 /************BATTERY CONSTRAINTS AND CONSTANTS**********************/
 #define VOLTAGE_LOW_CUTOFF 3000
 #define VOLTAGE_HIGH_CUTOFF 4000
+#define TOTAL_VOLTAGE_CUTOFF 300
 #define DISCHARGE_CURRENT_CONSTANT_HIGH 220
 #define DISCHARGE_CURRENT_PEAK_HIGH 440
 #define DISCHARGE_CURRENT_PEAK_HIGH_TIME 5
@@ -28,9 +30,9 @@
 #define DISCHARGE_TEMP_CRITICAL_LOW 15
 
 /********GLOBAL ARRAYS/VARIABLES CONTAINING DATA FROM CHIP**********/
-#define TOTAL_IC 9
+#define TOTAL_IC 1
 #define TOTAL_CELLS 12
-#define TOTAL_THERMISTORS 4 // TODO: Double check how many thermistors are being used.
+#define TOTAL_THERMISTORS 3 // TODO: Double check how many thermistors are being used.
 #define THERMISTOR_RESISTOR_VALUE 1000 // TODO: Double check what resistor is used on the resistor divider.
 #define AUX_VOLTAGE_CURRENT_INDEX 5 // TODO: Double check which GPIO pin the current sensor is connected to.
 #define AUX_VOLTAGE_CURRENT_IC 0 // TODO: Double check which IC the current sense is connected to.
@@ -118,7 +120,7 @@ void setup() {
 void loop() {
 //    waitForUserInput();
     pollVoltage(); // cell_voltages[] array populated with cell voltages now.
-    balanceCellsDuringCharging();
+   balanceCellsDuringCharging();
     avgMinMaxTotalVoltage(); // stores data in bmsVoltageMessage object.
 
     pollAuxiliaryVoltages();
@@ -217,7 +219,25 @@ void avgLowHighTemp() {
     bmsTempMessage.setHighTemp(highTemp);
     bmsTempMessage.setAvgTemp(avgTemp);
 
-    // TODO: Low and High Temperature Checking
+    if (bmsCurrentMessage.getChargingState() == 0) { // discharging
+        if (bmsTempMessage.getHighTemp() > DISCHARGE_TEMP_CRITICAL_HIGH) {
+            bmsStatusMessage.setDischargeOvertemp(true);
+            bmsStatusMessage.setBMSStatusOK(false);
+        }
+        if (bmsTempMessage.getLowTemp() < DISCHARGE_TEMP_CRITICAL_LOW) {
+            bmsStatusMessage.setDischargeUndertemp(true);
+            bmsStatusMessage.setBMSStatusOK(false);
+        }
+    } else if (bmsCurrentMessage.getChargingState() == 1) { // charging
+        if (bmsTempMessage.getHighTemp() > CHARGE_TEMP_CRITICAL_HIGH) {
+            bmsStatusMessage.setChargeOvertemp(true);
+            bmsStatusMessage.setBMSStatusOK(false);
+        }
+        if (bmsTempMessage.getLowTemp() < CHARGE_TEMP_CRITICAL_LOW) {
+            bmsStatusMessage.setChargeUndertemp(true);
+            bmsStatusMessage.setBMSStatusOK(false);
+        }
+    }
 
     Serial.print("Low Temp: ");
     Serial.print(lowTemp / 100); Serial.print("."); Serial.println(lowTemp % 100);
@@ -265,7 +285,21 @@ float calculateCurrent() {
     } else if (current > 0) {
         bmsCurrentMessage.setChargingState(DISCHARGING);
     }
-    // TODO: Current Error Checking. (Over current, under current)
+    if (bmsCurrentMessage.getChargingState() == 0) { // discharging
+        if (bmsCurrentMessage.getCurrent() > DISCHARGE_CURRENT_CONSTANT_HIGH) {
+            bmsStatusMessage.setDischargeOvercurrent(true);
+            bmsStatusMessage.setBMSStatusOK(false);
+        }
+    } else if (bmsCurrentMessage.getChargingState() == 1) { // charging
+        if (bmsCurrentMessage.getCurrent() > CHARGE_CURRENT_CONSTANT_HIGH) {
+            bmsStatusMessage.setChargeOvercurrent(true);
+            bmsStatusMessage.setBMSStatusOK(false);
+        }
+        if (bmsCurrentMessage.getCurrent() < CHARGE_CURRENT_LOW_CUTOFF) {
+            bmsStatusMessage.setChargeUndercurrent(true);
+            bmsStatusMessage.setBMSStatusOK(false);
+        }
+    }
     return current;
 }
 
@@ -312,6 +346,9 @@ void avgMinMaxTotalVoltage() {
     bmsVoltageMessage.setHigh(maxVolt);
 
     // TODO: Low and High voltage error checking.
+    if (bmsVoltageMessage.getHigh() > VOLTAGE_HIGH_CUTOFF) {
+        bmsStatusMessage.
+    }
 
     Serial.print("Avg: "); Serial.println(avgVolt, 4);
     Serial.print("Total: "); Serial.println(totalVolts, 4);
@@ -364,18 +401,15 @@ void balanceCellsDuringCharging() {
 }
 
 void writeToCAN() {
+    Serial.println("WRITING TO CAN!");
     digitalWrite(10, HIGH);
     unsigned char msg[8] = {0,0,0,0,0,0,0,0};
     bmsVoltageMessage.write(msg);
     byte CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_VOLTAGE, 0, 8, msg);
 
-    bmsCurrentMessage.setChargingState(CHARGING);
+    bmsCurrentMessage.setChargingState(0b1);
+    bmsCurrentMessage.setCurrent(77.777);
     bmsCurrentMessage.write(msg);
-    if (bmsCurrentMessage.getChargingState() == CHARGING) {
-        Serial.println("CHARGING");
-    } else if (bmsCurrentMessage.getChargingState() == DISCHARGING) {
-        Serial.println("DISCHARGING");
-    }
     CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_CURRENT, 0, 8, msg);
 
     bmsTempMessage.write(msg);
