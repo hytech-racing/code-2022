@@ -32,7 +32,8 @@
 #define DCU_STATE_FATAL_FAULT 9
 
 #define CHARGE_STATE_NOT_CHARGING 0
-#define CHARGE_STATE_CHARGING 1
+#define CHARGE_STATE_CHARGE_REQUESTED 1
+#define CHARGE_STATE_CHARGING 2
 
 /*
  * CAN ID definitions
@@ -66,6 +67,17 @@
 #define ID_MC_COMMAND_MESSAGE 0xC0
 #define ID_MC_READ_WRITE_PARAMETER_COMMAND 0xC1
 #define ID_MC_READ_WRITE_PARAMETER_RESPONSE 0xC2
+
+/*
+ * I2C BMS ID definitions
+ */
+#define NUM_IC 2;
+#define NUM_CELLS 12;
+#define I2C_WR_CONFIG_REG 0x01
+#define I2C_RD_CONFIG_REG 0x02
+#define I2C_RD_CELL_VOLTAGE 0x03
+#define I2C_RD_AUX_VOLTAGE 0x04
+#define I2C_RD_STATUS_REG 0x05
 
 /*
 
@@ -133,6 +145,7 @@ typedef struct CAN_message_tcu_status_t {
     bool throttle_curve;
     bool brake_implausibility;
     bool brake_pedal_active;
+    uint8_t state;
 } CAN_msg_tcu_status;
 
 class TCU_status {
@@ -146,10 +159,12 @@ class TCU_status {
     bool get_throttle_curve();
     bool get_brake_implausibility();
     bool get_brake_pedal_active();
+    uint8_t get_state();
     void set_throttle_implausibility(bool throttle_implausibility);
     void set_throttle_curve(bool throttle_curve);
     void set_brake_implausibility(bool brake_implausibility);
     void set_brake_pedal_active(bool brake_pedal_active);
+    void set_state(uint8_t new_state);
   private:
     CAN_message_tcu_status_t message;
 };
@@ -206,6 +221,14 @@ public:
     void set_rtds_state(uint8_t rtds_state);
 private:
     CAN_message_dcu_status_t message;
+};
+
+class I2C_Teensy_BMS_Controller_Message {
+  public:
+    I2C_Teensy_BMS_Controller_Message();
+    // TODO: Add public functions, accessors, setters, getters, mutators
+  private:
+    // TODO: Add private member variables
 };
 
 typedef struct CAN_message_bms_voltage_t {
@@ -356,6 +379,35 @@ class BMS_status {
     void setBMSStatusOK(bool flag);
   private:
     CAN_message_bms_error_t bmsErrorMessage;
+};
+
+class BMSTestModeHandler {
+    public:
+        BMSTestModeHandler();
+        BMSTestModeHandler(unsigned long initialTime);
+        void checkTestMode(unsigned long initialTime, int totalMillivolts, int cell1MilliVolts, int cell2MilliVolts);
+        bool bmsTestModeEntered();
+    private:
+        float prevTotalMillivolts;
+        float prevCell1Millivolts;
+        float prevCell2Millivolts;
+        bool bmsTestMode;
+};
+
+typedef struct CAN_message_charge_status_t {
+    uint8_t charge_command;
+} CAN_message_charge_status_t;
+
+class Charge_status {
+    public:
+        Charge_status();
+        Charge_status(uint8_t buf[]);
+        void load(uint8_t buf[]);
+        void write(uint8_t buf[]);
+        uint8_t getChargeCommand();
+        void setChargeCommand(uint8_t cmd);
+    private:
+        CAN_message_charge_status_t message;
 };
 
 typedef struct CAN_message_mc_temperatures_1_t {

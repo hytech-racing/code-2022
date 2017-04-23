@@ -34,7 +34,15 @@ void BMS_currents::load(uint8_t buf[]) {
 
 void BMS_currents::write(uint8_t buf[]) {
     memcpy(&buf[0], &(bmsCurrentMessage.current), sizeof(float));
-    memcpy(&buf[4], &(bmsCurrentMessage.chargeState), sizeof(int));
+    int num;
+    if (bmsCurrentMessage.chargeState == DISCHARGING) {
+        num = 0;
+    } else if (bmsCurrentMessage.chargeState == CHARGING) {
+        num = 1;
+    } else if (bmsCurrentMessage.chargeState == UNKNOWN) {
+        num = 2;
+    }
+    memcpy(&buf[4], &num, sizeof(int));
 }
 
 float BMS_currents::getCurrent() {
