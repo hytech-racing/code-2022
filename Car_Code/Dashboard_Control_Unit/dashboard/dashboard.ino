@@ -1,3 +1,6 @@
+#define XB Serial2
+#define baudrate 115200
+
 #include <FlexCAN.h>
 #include <HyTech17.h>
 #include <Metro.h>
@@ -39,6 +42,7 @@ bool led_start_active = false;
 unsigned long debounceDelay = 50;     // the debounce time; increase if the output flickers
 uint8_t led_start_type = 0;
 uint8_t state;
+byte XbeeBuffer[80];
 
 /*************** BUTTON TYPES ****************
  *  Start Button
@@ -71,7 +75,8 @@ void setup() {
     pinMode(BTN_CYCLE, INPUT_PULLUP);
     pinMode(BTN_BOOST, INPUT_PULLUP);
     pinMode(BTN_START, INPUT_PULLUP);
-    Serial.begin(115200);
+    Serial.begin(baudrate);
+    XB.begin(baudrate);
     CAN.begin();
     timer_can_update.reset();
 }
@@ -135,6 +140,24 @@ void loop() {
                 break;
         }
     }
+
+    // Sending Teensy data
+    // NOTE: currently sending all data received on CAN
+    int wr;
+    wr = XB.availableForWrite();
+    if (wr > 1) {
+        // Handling sending message
+        if (true) {
+            Serial.println(msg.id, HEX);
+            Serial.println("Sending messsage to Xbee - PRE");
+
+            memcpy(XbeeBuffer, &msg, sizeof(msg));
+
+            XB.write(XbeeBuffer, sizeof(msg));
+            Serial.println("Sending message to Xbee - COMPLETE");
+        }
+    }
+
   }
 
   // TODO: more state machine stuff possibly?
