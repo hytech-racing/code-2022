@@ -17,9 +17,11 @@ void setup() {
   msg.len = 8;
 }
 
+uint32_t t = 1;
+
 void loop() {
   if (timer_can.check()) { // Send a message on CAN
-    uint32_t t = millis();
+    
     memcpy(msg.buf, &t, sizeof(uint32_t));
     CAN.write(msg);
     Serial.print("Sent 0x");
@@ -30,8 +32,13 @@ void loop() {
       Serial.print(" ");
     }
     Serial.println();
+    delay(1000);
     digitalWrite(13, HIGH);
     timer_light.reset();
+    t += 1;
+    if( t == 10) {
+      t = 1;
+    }
   }
   if (timer_light.check()) { // Turn off LED
     digitalWrite(13, LOW);

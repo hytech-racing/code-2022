@@ -8,10 +8,16 @@ Metro timer_light = Metro(3);
 void setup() {
   Serial.begin(115200); //initialize serial for PC communication
   CAN.begin();
-  delay(200);
+  delay(3000);
+  pinMode(13, OUTPUT);
+  for (unsigned int i = 0; i < 3; i++) {
+    digitalWrite(13,HIGH);
+    delay(250);
+    digitalWrite(13,LOW);
+    delay(250);
+  }
   Serial.println("CAN transceiver initialized");
   Serial.println("CAN TEST RECEIVER");
-  pinMode(13, OUTPUT);
 }
 
 void loop() {
