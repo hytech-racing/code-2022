@@ -3,12 +3,19 @@
 #include <Metro.h>
 
 /******* PIN definitions ***********/
+/**
+ * THIS IS MODIFIED FOR TESTING
+ * SWAP COMMENTS FOR REAL CAR
+ */
 #define BTN_TOGGLE A14
 #define BTN_CYCLE A15
 #define BTN_BOOST A16
-#define BTN_START A17
-#define LED_START 7
-#define LED_BMS 6
+// #define BTN_START A17
+#define BTN_START A7
+//#define LED_START 7
+#define LED_START A9
+//#define LED_BMS 6
+#define LED_BMS A9
 #define LED_IMD 5
 #define READY_SOUND 8
 
@@ -163,6 +170,7 @@ void loop() {
         }
         break;
   }
+
 
   if (timer_can_update.check()) {
       sendCANUpdate(false);
