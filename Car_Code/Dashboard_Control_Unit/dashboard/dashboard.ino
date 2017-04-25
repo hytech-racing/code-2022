@@ -1,14 +1,24 @@
+#define XB Serial2
+#define baudrate 115200
+
 #include <FlexCAN.h>
 #include <HyTech17.h>
 #include <Metro.h>
 
 /******* PIN definitions ***********/
+/**
+ * THIS IS MODIFIED FOR TESTING
+ * SWAP COMMENTS FOR REAL CAR
+ */
 #define BTN_TOGGLE A14
 #define BTN_CYCLE A15
 #define BTN_BOOST A16
-#define BTN_START A17
-#define LED_START 7
-#define LED_BMS 6
+// #define BTN_START A17
+#define BTN_START A7
+//#define LED_START 7
+#define LED_START A9
+//#define LED_BMS 6
+#define LED_BMS A9
 #define LED_IMD 5
 #define READY_SOUND 8
 
@@ -29,15 +39,17 @@ Metro timer_inverter_enable = Metro(2000);  // Timeout failed inverter enable
 Metro timer_ready_sound = Metro(2000);      // Time to play RTD sound
 Metro timer_can_update = Metro(500);
 
-unsigned long lastDebounceTOGGLE = 0;  // the last time the output pin was toggled
-unsigned long lastDebounceBOOST = 0;  // the last time the output pin was toggled
-unsigned long lastDebounceSTART = 0;  // the last time the output pin was toggled
+unsigned long lastDebounceTOGGLE = 0;   // the last time the output pin was toggled
+unsigned long lastDebounceBOOST = 0;  // the last time the output pin was toggled
+unsigned long lastDebounceSTART = 0;  // the last time the output pin was toggled
 uint8_t btn_start_new = 0;
 bool btn_start_pressed = false;
 bool btn_start_debouncing = false;
 bool led_start_active = false;
-unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
+unsigned long debounceDelay = 50;     // the debounce time; increase if the output flickers
 uint8_t led_start_type = 0;
+uint8_t state;
+byte XbeeBuffer[80];
 
 /*************** BUTTON TYPES ****************
  *  Start Button
@@ -50,7 +62,6 @@ int count;
 /**
  * CAN Variables
  */
-FlexCAN can(500000);
 FlexCAN CAN(500000);
 static CAN_message_t msg;
 
@@ -71,8 +82,9 @@ void setup() {
     pinMode(BTN_CYCLE, INPUT_PULLUP);
     pinMode(BTN_BOOST, INPUT_PULLUP);
     pinMode(BTN_START, INPUT_PULLUP);
-    Serial.begin(115200);
-    can.begin();
+    Serial.begin(baudrate);
+    XB.begin(baudrate);
+    CAN.begin();
     timer_can_update.reset();
 }
 
@@ -135,6 +147,24 @@ void loop() {
                 break;
         }
     }
+
+    // Sending Teensy data
+    // NOTE: currently sending all data received on CAN
+    int wr;
+    wr = XB.availableForWrite();
+    if (wr > 1) {
+        // Handling sending message
+        if (true) {
+            Serial.println(msg.id, HEX);
+            Serial.println("Sending messsage to Xbee - PRE");
+
+            memcpy(XbeeBuffer, &msg, sizeof(msg));
+
+            XB.write(XbeeBuffer, sizeof(msg));
+            Serial.println("Sending message to Xbee - COMPLETE");
+        }
+    }
+
   }
 
   // TODO: more state machine stuff possibly?
@@ -163,6 +193,7 @@ void loop() {
         }
         break;
   }
+
 
   if (timer_can_update.check()) {
       sendCANUpdate(false);
@@ -209,11 +240,11 @@ void sendCANUpdate(bool startPressed) {
     msg.id = ID_DCU_STATUS;
     msg.len = 8;
     DCU_status dcu_status = DCU_status();
-    dcu_status.set_btn_press_id(startPressed ? 1 : 0);
+    dcu_status.set_btn_press_id(lastDebounceSTART);
     dcu_status.set_light_active_1(0);
     dcu_status.set_light_active_2(0);
-    dcu_status.set_rtds_state(state == DCU_STATE_PLAYING_RTD ? 1 : 0)
-    dcu_status.write(msg);
+    dcu_status.set_rtds_state(state == DCU_STATE_PLAYING_RTD ? 1 : 0);
+    dcu_status.write(msg.buf);
     CAN.write(msg);
 }
 

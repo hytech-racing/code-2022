@@ -42,6 +42,8 @@ float thermTemp = 0.0; // temperature of onboard thermistor (after calculation)
 int thermValue = 0; //raw value from thermistor
 bool startupDone = false; // true when reached drive state
 uint8_t faultId = 0;
+uint8_t oldBtnId = 0;
+uint8_t expBtnId = 0;
 
 // timer
 Metro CANUpdateTimer = Metro(500); // Used for how often to send state
@@ -93,8 +95,10 @@ void loop() {
       // Scanning CAN for dashboard state message (start button)
       if (state == PCU_STATE_WAITING_DRIVER && msg.id == ID_DCU_STATUS) {
         DCU_status dcu_status = DCU_status(msg.buf);
-        if (dcu_status.get_btn_press_id()) {
-            startPressed = 1;
+        if (oldBtnId != dcu_status.get_btn_press_id()) {
+          Serial.print("Start button pressed ID: ");
+          oldBtnId = dcu_status.get_btn_press_id();
+          Serial.print(oldBtnId);
         }
       }
     }
@@ -106,6 +110,7 @@ void loop() {
             if (DISCHARGE_OK >= BMS_High) { // if BMS is high
                 if (OKHS >= IMD_High) { // if IMD is also high
                     state = PCU_STATE_WAITING_DRIVER; // both BMD and IMD are high, wait for start button press
+                    expBtnId = oldBtnId + 1;
 
                     // Once adapted to library, we can change MC enabling to depend on throttle control
                     // status message
@@ -118,7 +123,7 @@ void loop() {
                 Serial.println("Waiting for start button...");
             /*can message for start button press received*/
 
-            if (startPressed) {
+            if (expBtnId == oldBtnId) {
                 AIRtimer.reset();
                 if (debugFlag)
                     Serial.println("Latching...");
@@ -153,7 +158,7 @@ void loop() {
             break;
         case PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
             if (debugFlag)
-                Serial.println("Drive state");
+                Serial.println("Shutdown Circuit Initialized");
             break;
     }
 
