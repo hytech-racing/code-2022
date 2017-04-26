@@ -266,20 +266,20 @@ enum CHARGING_STATE {
 
 typedef struct CAN_message_bms_current_t {
     float current;
-    CHARGING_STATE chargeState;
+    uint8_t chargeState;
 } CAN_message_bms_current_t;
 
 class BMS_currents {
   public:
     BMS_currents();
     BMS_currents(uint8_t buf[]);
-    BMS_currents(float _current, CHARGING_STATE state);
+    BMS_currents(float _current, uint8_t state);
     void load(uint8_t buf[]);
     void write(uint8_t buf[]);
     float getCurrent();
-    CHARGING_STATE getChargingState();
+    uint8_t getChargingState();
     void setCurrent(float _current);
-    void setChargingState(CHARGING_STATE state);
+    void setChargingState(uint8_t state);
   private:
     CAN_message_bms_current_t bmsCurrentMessage;
 };
