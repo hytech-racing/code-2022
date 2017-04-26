@@ -101,6 +101,14 @@ void loop() {
           Serial.print(oldBtnId);
         }
       }
+
+      if (msg.id == ID_TCU_STATUS) {
+        TCU_status tcu_status = TCU_status(msg.buf);
+        if (tcu_status.get_brake_pedal_active())
+          digitalWrite(BRAKE_LIGHT_PIN, HIGH);
+        else
+          digitalWrite(BRAKE_LIGHT_PIN, LOW);
+      }
     }
 
     switch (state) {
