@@ -16,9 +16,9 @@
 #define BTN_CYCLE A15
 #define BTN_BOOST A16
 // #define BTN_START A17
-#define BTN_START A7
+#define BTN_START 31
 //#define LED_START 7
-#define LED_START A9
+#define LED_START 16
 //#define LED_BMS 6
 #define LED_BMS A9
 #define LED_IMD 5
@@ -93,7 +93,7 @@ void setup() {
     SDCARD.begin(9600);
 
     Serial.print("Initializing SD card...");
-  
+
     // see if the card is present and can be initialized:
     if (!SD.begin(chipSelect)) {
         Serial.println("Card failed, or not present");
