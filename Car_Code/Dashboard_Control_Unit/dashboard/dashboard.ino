@@ -12,9 +12,9 @@
  * THIS IS MODIFIED FOR TESTING
  * SWAP COMMENTS FOR REAL CAR
  */
-#define BTN_TOGGLE A14
-#define BTN_CYCLE A15
-#define BTN_BOOST A16
+// #define BTN_TOGGLE A14
+// #define BTN_CYCLE A15
+#define BTN_ALT A16
 // #define BTN_START A17
 #define BTN_START 31
 //#define LED_START 7
@@ -82,9 +82,9 @@ void setup() {
     state = DCU_STATE_INITIAL_STARTUP;
     pinMode(LED_BMS, OUTPUT);
     pinMode(LED_IMD, OUTPUT);
-    pinMode(BTN_TOGGLE, INPUT_PULLUP);
-    pinMode(BTN_CYCLE, INPUT_PULLUP);
-    pinMode(BTN_BOOST, INPUT_PULLUP);
+    // pinMode(BTN_TOGGLE, INPUT_PULLUP);
+    // pinMode(BTN_CYCLE, INPUT_PULLUP);
+    pinMode(BTN_ALT, INPUT_PULLUP);
     pinMode(BTN_START, INPUT_PULLUP);
     Serial.begin(baudrate);
     XB.begin(baudrate);
