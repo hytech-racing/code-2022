@@ -1,17 +1,26 @@
 #define XB Serial2
+#define SDCARD Serial3
 #define baudrate 115200
 
 #include <FlexCAN.h>
 #include <HyTech17.h>
 #include <Metro.h>
+#include <SD.h>
 
 /******* PIN definitions ***********/
+/**
+ * THIS IS MODIFIED FOR TESTING
+ * SWAP COMMENTS FOR REAL CAR
+ */
 #define BTN_TOGGLE A14
 #define BTN_CYCLE A15
 #define BTN_BOOST A16
-#define BTN_START A17
-#define LED_START 7
-#define LED_BMS 6
+// #define BTN_START A17
+#define BTN_START A7
+//#define LED_START 7
+#define LED_START A9
+//#define LED_BMS 6
+#define LED_BMS A9
 #define LED_IMD 5
 #define READY_SOUND 8
 
@@ -43,6 +52,7 @@ unsigned long debounceDelay = 50;     // the debounce time; increase if the outp
 uint8_t led_start_type = 0;
 uint8_t state;
 byte XbeeBuffer[80];
+const int chipSelect = BUILTIN_SDCARD;
 
 /*************** BUTTON TYPES ****************
  *  Start Button
@@ -57,6 +67,7 @@ int count;
  */
 FlexCAN CAN(500000);
 static CAN_message_t msg;
+File CAN_file;
 
 void setup() {
     // put your setup code here, to run once:
@@ -79,6 +90,17 @@ void setup() {
     XB.begin(baudrate);
     CAN.begin();
     timer_can_update.reset();
+    SDCARD.begin(9600);
+
+    Serial.print("Initializing SD card...");
+  
+    // see if the card is present and can be initialized:
+    if (!SD.begin(chipSelect)) {
+        Serial.println("Card failed, or not present");
+        // don't do anything more:
+        return;
+    }
+    Serial.println("card initialized.");
 }
 
 void loop() {
@@ -156,6 +178,15 @@ void loop() {
             XB.write(XbeeBuffer, sizeof(msg));
             Serial.println("Sending message to Xbee - COMPLETE");
         }
+
+        CAN_file = SD.open("can_bus_data", FILE_WRITE);
+
+        if(CAN_file) {
+            CAN_file.println(XbeeBuffer);
+            CAN_file.close();
+        } else {
+            Serial.println("err with writing to SDcard");
+        }
     }
 
   }
@@ -186,6 +217,7 @@ void loop() {
         }
         break;
   }
+
 
   if (timer_can_update.check()) {
       sendCANUpdate(false);

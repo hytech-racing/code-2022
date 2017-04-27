@@ -95,7 +95,19 @@ void loop() {
       // Scanning CAN for dashboard state message (start button)
       if (state == PCU_STATE_WAITING_DRIVER && msg.id == ID_DCU_STATUS) {
         DCU_status dcu_status = DCU_status(msg.buf);
-        oldBtnId = dcu_status.get_btn_press_id();
+        if (oldBtnId != dcu_status.get_btn_press_id()) {
+          Serial.print("Start button pressed ID: ");
+          oldBtnId = dcu_status.get_btn_press_id();
+          Serial.print(oldBtnId);
+        }
+      }
+
+      if (msg.id == ID_TCU_STATUS) {
+        TCU_status tcu_status = TCU_status(msg.buf);
+        if (tcu_status.get_brake_pedal_active())
+          digitalWrite(BRAKE_LIGHT_PIN, HIGH);
+        else
+          digitalWrite(BRAKE_LIGHT_PIN, LOW);
       }
     }
 
@@ -154,7 +166,7 @@ void loop() {
             break;
         case PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
             if (debugFlag)
-                Serial.println("Drive state");
+                Serial.println("Shutdown Circuit Initialized");
             break;
     }
 

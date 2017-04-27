@@ -221,12 +221,27 @@ void loop() {
       }
       CAN.write(msg);
     }
+    if (state == TCU_STATE_READY_TO_DRIVE && timer_motor_controller_send.check()) {
+        MC_command_message mccm = MC_command_message();
+        int16_t cmd_torque = voltageThrottlePedal1 / 4; // THROTTLE CURVE LOL TODO
+        mccm.set_torque_command(cmd_torque);
+        mccm.set_angular_velocity(0);
+        mccm.set_direction(1);
+        mccm.set_inverter_enable(1);
+        mccm.set_discharge_enable(0);
+        mccm.write(msg.buf);
+        msg.id = ID_MC_COMMAND_MESSAGE;
+        msg.len = 8;
+        CAN.write(msg);
+    }
 }
 
 void readValues() {
     voltageThrottlePedal1 = analogRead(THROTTLE_PORT_1);
     voltageThrottlePedal2 = analogRead(THROTTLE_PORT_2);
     voltageBrakePedal = analogRead(BRAKE_ANALOG_PORT);
+    if (voltageBrakePedal > 100)    // TODO: Fix this once baseline values are determined
+        brakePedalActive = true;
     //TODO: decide/set torque values for input values
 }
 

@@ -42,17 +42,16 @@ void loop () {
         if (msg.id == ID_BMS_CURRENT) {
             BMS_currents bms_currents(msg.buf);
             if (state == CHARGE_STATE_CHARGE_REQUESTED
-                && bms_currents.getChargingState() == CHARGING) {
+                && bms_currents.getChargingState() == 1) {
                 set_state(CHARGE_STATE_CHARGING);
             }
-            bms_currents.load(msg.buf);
-            if (bms_currents.getChargingState()== CHARGING){
+            if (bms_currents.getChargingState() == 1){
                 Serial.println("BMS entered charge mode.");
             }
-            else if (bms_currents.getChargingState() == DISCHARGING){
+            else if (bms_currents.getChargingState() == 0) {
                 Serial.println("BMS in discharging state.");
             }
-            else if (bms_currents.getChargingState() == UNKNOWN){
+            else if (bms_currents.getChargingState() == 2){
                 Serial.println("BMS in unknown state.");
             }
             else {
@@ -99,7 +98,7 @@ void set_state(uint8_t new_state) {
     if (state == new_state)
         return;
     if (new_state == CHARGE_STATE_CHARGING) {
-        //digitalWrite(EXT_LED1_PIN, HIGH);
+        //digitalWrite(EXT_SSEG_3, HIGH);
 
         //SSEG code if we want
         digitalWrite(RELAY_SWITCH_PIN, HIGH);
