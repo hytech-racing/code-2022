@@ -14,15 +14,15 @@
  */
 // #define BTN_TOGGLE A14
 // #define BTN_CYCLE A15
-#define BTN_ALT A16
+#define BTN_ALT 32
 // #define BTN_START A17
-#define BTN_START A7
+#define BTN_START 31
 //#define LED_START 7
-#define LED_START A9
+#define LED_START 16
 //#define LED_BMS 6
-#define LED_BMS A9
-#define LED_IMD 5
-#define READY_SOUND 8
+#define LED_BMS 17
+#define LED_IMD 18
+#define READY_SOUND 20 //or 21, schematic isn't clear
 
 /*****Dashboard States and Fault Flags********/
 bool imd_fault;

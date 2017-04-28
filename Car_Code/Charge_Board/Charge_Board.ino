@@ -61,12 +61,12 @@ void loop () {
     }
     switch(state) {
         case CHARGE_STATE_NOT_CHARGING:
-            if (digitalRead(EXT_BTN1_PIN) == HIGH) {
+            if (digitalRead(EXT_BTN1_PIN) == LOW) {
                 set_state(CHARGE_STATE_CHARGE_REQUESTED);
             }
             break;
         case CHARGE_STATE_CHARGING:
-            if (digitalRead(EXT_BTN1_PIN) == LOW) {
+            if (digitalRead(EXT_BTN1_PIN) == HIGH) {
                 set_state(CHARGE_STATE_NOT_CHARGING);
             }
             break;
