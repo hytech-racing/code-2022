@@ -43,6 +43,8 @@ Metro timer_can_update = Metro(500);
 // Time to check whether to put into charge mode
 Metro timer_charge_mode = Metro(100);
 
+uint8_t charge_status_tracker = 1; // Used to keep track of charge mode changes
+
 unsigned long lastDebounceTOGGLE = 0;   // the last time the output pin was toggled
 unsigned long lastDebounceBOOST = 0;  // the last time the output pin was toggled
 unsigned long lastDebounceSTART = 0;  // the last time the output pin was toggled
@@ -263,21 +265,26 @@ void pollForButtonPress() {
 
     // Checking whether to send charge message
     if (timer_charge_mode.check() == 1) {
-      if (digitalRead(BTN_ALT) == true) {
-          // Handle for button pressed
-      } else {
-          // Handle for button not pressed
-      }
-      // Send charge state CAN message
-      msg.id = ID_CHARGE_STATUS;
-      msg.len = 1;
+        bool BTN_ALT_read_value = digitalRead(BTN_ALT);
+        if (BTN_ALT_read_value != charge_status_tracker) {
+            // Send charge state CAN message
+            msg.id = ID_CHARGE_STATUS;
+            msg.len = 1;
+            Charge_status curCharge_status = Charge_status();
 
-      Charge_status curCharge_status = Charge_status();
-      curCharge_status.setChargeCommand(true);
+            if (BTN_ALT_read_value == false) {
+                // Handle for button pressed
+                curCharge_status.setChargeCommand(true);
+            } else {
+                // Handle for button not pressed
+                curCharge_status.setChargeCommand(false);
+            }
 
-      curCharge_status.write(msg.buf);
-      CAN.write(buf);
-      timer_charge_mode.reset();
+            curCharge_status.write(msg.buf);
+            CAN.write(msg.buf);
+            charge_status_tracker = BTN_ALT_read_value;
+        }
+        timer_charge_mode.reset();
     }
 }
 
