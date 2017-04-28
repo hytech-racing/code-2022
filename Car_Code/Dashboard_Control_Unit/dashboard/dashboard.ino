@@ -40,6 +40,8 @@ Metro timer_led_start_blink_slow = Metro(500);
 Metro timer_inverter_enable = Metro(2000);  // Timeout failed inverter enable
 Metro timer_ready_sound = Metro(2000);      // Time to play RTD sound
 Metro timer_can_update = Metro(500);
+// Time to check whether to put into charge mode
+Metro timer_charge_mode = Metro(100);
 
 unsigned long lastDebounceTOGGLE = 0;   // the last time the output pin was toggled
 unsigned long lastDebounceBOOST = 0;  // the last time the output pin was toggled
@@ -258,6 +260,25 @@ void pollForButtonPress() {
       Serial.println(lastDebounceSTART);
     }
   }
+
+    // Checking whether to send charge message
+    if (timer_charge_mode.check() == 1) {
+      if (digitalRead(BTN_ALT) == true) {
+          // Handle for button pressed
+      } else {
+          // Handle for button not pressed
+      }
+      // Send charge state CAN message
+      msg.id = ID_CHARGE_STATUS;
+      msg.len = 1;
+
+      Charge_status curCharge_status = Charge_status();
+      curCharge_status.setChargeCommand(true);
+
+      curCharge_status.write(msg.buf);
+      CAN.write(buf);
+      timer_charge_mode.reset();
+    }
 }
 
 void sendCANUpdate(bool startPressed) {
