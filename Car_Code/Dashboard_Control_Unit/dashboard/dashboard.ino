@@ -191,7 +191,7 @@ void loop() {
         CAN_file = SD.open("can_bus_data", FILE_WRITE);
 
         if(CAN_file) {
-            CAN_file.println(XbeeBuffer);
+            CAN_file.println((char*) XbeeBuffer);
             CAN_file.close();
         } else {
             Serial.println("err with writing to SDcard");
