@@ -143,6 +143,10 @@ void loop() {
         case PCU_STATE_LATCHING:
           set_state(DCU_STATE_PRESSED_TRACTIVE_SYSTEM);
           break;
+        case PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
+          if (state != DCU_STATE_WAITING_MC_ENABLE)
+            set_start_led(0);
+          break;
         case PCU_STATE_FATAL_FAULT:
           set_state(DCU_STATE_FATAL_FAULT);
           break;
@@ -173,13 +177,13 @@ void loop() {
     wr = XB.availableForWrite();
     if (wr > 1) {
         // Handling sending message
-        if ((msg.id == ID_MC_TEMPERATURES_1) || 
-            (msg.id == ID_MC_TEMPERATURES_3) || 
+        if ((msg.id == ID_MC_TEMPERATURES_1) ||
+            (msg.id == ID_MC_TEMPERATURES_3) ||
             (msg.id == ID_MC_MOTOR_POSITION_INFORMATION) ||
             (msg.id == ID_MC_CURRENT_INFORMATION) ||
-            (msg.id == ID_MC_VOLTAGE_INFORMATION) || 
+            (msg.id == ID_MC_VOLTAGE_INFORMATION) ||
             (msg.id == ID_MC_INTERNAL_STATES) ||
-            (msg.id == ID_MC_FAULT_CODES) || 
+            (msg.id == ID_MC_FAULT_CODES) ||
             (msg.id == ID_MC_TORQUE_TIMER_INFORMATION)) {
             Serial.println(msg.id, HEX);
 
@@ -233,7 +237,7 @@ void loop() {
 
 
   if (timer_can_update.check()) {
-      sendCANUpdate(false);
+      sendCANUpdate();
   }
 
   /*
@@ -269,6 +273,7 @@ void pollForButtonPress() {
       lastDebounceSTART++;
       Serial.print("Start button pressed id ");
       Serial.println(lastDebounceSTART);
+      sendCANUpdate();
     }
   }
 
@@ -290,14 +295,14 @@ void pollForButtonPress() {
             }
 
             curCharge_status.write(msg.buf);
-            CAN.write(msg.buf);
+            CAN.write(msg);
             charge_status_tracker = BTN_ALT_read_value;
         }
         timer_charge_mode.reset();
     }
 }
 
-void sendCANUpdate(bool startPressed) {
+void sendCANUpdate() {
     msg.id = ID_DCU_STATUS;
     msg.len = 8;
     DCU_status dcu_status = DCU_status();
@@ -347,7 +352,7 @@ void set_state(uint8_t new_state) {
     }
     if (new_state == DCU_STATE_PRESSED_MC_ENABLE || new_state == DCU_STATE_PRESSED_TRACTIVE_SYSTEM) {
         set_start_led(0);
-        sendCANUpdate(true);
+        sendCANUpdate();
     }
     if (new_state == DCU_STATE_PLAYING_RTD) {
         timer_ready_sound.reset();
