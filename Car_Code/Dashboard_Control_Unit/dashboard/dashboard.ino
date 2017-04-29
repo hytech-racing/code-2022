@@ -173,14 +173,23 @@ void loop() {
     wr = XB.availableForWrite();
     if (wr > 1) {
         // Handling sending message
-        if (true) {
+        if ((msg.id == ID_MC_TEMPERATURES_1) || 
+            (msg.id == ID_MC_TEMPERATURES_3) || 
+            (msg.id == ID_MC_MOTOR_POSITION_INFORMATION) ||
+            (msg.id == ID_MC_CURRENT_INFORMATION) ||
+            (msg.id == ID_MC_VOLTAGE_INFORMATION) || 
+            (msg.id == ID_MC_INTERNAL_STATES) ||
+            (msg.id == ID_MC_FAULT_CODES) || 
+            (msg.id == ID_MC_TORQUE_TIMER_INFORMATION)) {
             Serial.println(msg.id, HEX);
-            Serial.println("Sending messsage to Xbee - PRE");
 
             memcpy(XbeeBuffer, &msg, sizeof(msg));
 
             XB.write(XbeeBuffer, sizeof(msg));
-            Serial.println("Sending message to Xbee - COMPLETE");
+            digitalWrite(13,HIGH);
+            delay(10);
+            digitalWrite(13,LOW);
+            delay(10);
         }
 
         CAN_file = SD.open("can_bus_data", FILE_WRITE);
