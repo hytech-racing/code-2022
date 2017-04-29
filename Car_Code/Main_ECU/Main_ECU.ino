@@ -17,7 +17,7 @@
 #define SERIESRESISTOR 10000
 
 // Values to check if IMD, BMS high
-#define IMD_High 9
+#define IMD_High 8
 #define BMS_High 3
 
 // Pins
@@ -27,7 +27,7 @@
 #define MC_SWITCH_SSR_PIN 6
 #define BMS_LATCH_SSR_PIN 11
 #define IMD_LATCH_SSR_PIN 10
-#define BRAKE_LIGHT_PIN 13
+#define BRAKE_LIGHT_PIN 12
 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
@@ -49,6 +49,7 @@ uint8_t expBtnId = 0;
 Metro CANUpdateTimer = Metro(500); // Used for how often to send state
 Metro updateTimer = Metro(500); // Read in values from inputs
 Metro AIRtimer = Metro(500);
+Metro debugTimer = Metro(100);
 
 uint8_t state; // state from HyTech Library
 
@@ -82,23 +83,19 @@ void loop() {
      * Handle incoming CAN messages
      */
     while (CAN.read(msg)) {
-      if (msg.id > 0xBF) {
-        Serial.print(msg.id, HEX);
-        Serial.print(": ");
-        for (unsigned int i = 0; i < msg.len; i++) {
-          Serial.print(msg.buf[i], HEX);
-          Serial.print(" ");
-        }
-        Serial.println();
-      }
-
       // Scanning CAN for dashboard state message (start button)
-      if (state == PCU_STATE_WAITING_DRIVER && msg.id == ID_DCU_STATUS) {
-        DCU_status dcu_status = DCU_status(msg.buf);
-        if (oldBtnId != dcu_status.get_btn_press_id()) {
-          Serial.print("Start button pressed ID: ");
-          oldBtnId = dcu_status.get_btn_press_id();
+      if (msg.id == ID_DCU_STATUS) {
+        if (state == PCU_STATE_WAITING_DRIVER) {
+          DCU_status dcu_status = DCU_status(msg.buf);
+          Serial.print("Old button id: ");
           Serial.print(oldBtnId);
+          Serial.print("   New Btn ID: ");
+          Serial.println(dcu_status.get_btn_press_id());
+          if (oldBtnId != dcu_status.get_btn_press_id()) {
+            Serial.print("Start button pressed ID: ");
+            oldBtnId = dcu_status.get_btn_press_id();
+            Serial.print(oldBtnId);
+          }
         }
       }
 
@@ -113,7 +110,7 @@ void loop() {
 
     switch (state) {
         case PCU_STATE_WAITING_BMS_IMD:
-            if (debugFlag)
+            if (debugFlag && debugTimer.check())
                 Serial.println("Waiting for IMD/BMS OK...");
             if (DISCHARGE_OK >= BMS_High) { // if BMS is high
                 if (OKHS >= IMD_High) { // if IMD is also high
@@ -127,8 +124,10 @@ void loop() {
             }
             break;
         case PCU_STATE_WAITING_DRIVER:
-            if (debugFlag)
-                Serial.println("Waiting for start button...");
+            if (debugFlag && debugTimer.check()) {
+                Serial.print("Waiting for start button...   ");
+                Serial.println(oldBtnId);
+            }
             /*can message for start button press received*/
 
             if (expBtnId == oldBtnId) {
@@ -165,7 +164,7 @@ void loop() {
             }
             break;
         case PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
-            if (debugFlag)
+            if (debugFlag && debugTimer.check())
                 Serial.println("Shutdown Circuit Initialized");
             break;
     }
@@ -186,9 +185,9 @@ bool readValues() {
     thermValue = analogRead(THERMISTOR_PIN);
     //compute actual temperature with math
     float resistance = (5.0 * SERIESRESISTOR * 1023) / (3.3 * thermValue) - SERIESRESISTOR;
-    if (debugFlag) {
-        Serial.println("Resistance: ");
-        Serial.print(resistance);
+    if (debugFlag && debugTimer.check()) {
+        Serial.print("Resistance: ");
+        Serial.println(resistance);
 
     }
     thermTemp = resistance / THERMISTORNOMINAL;
@@ -213,11 +212,11 @@ bool checkFatalFault() { // returns true if fatal fault found
       }
     }
 
-    while (CAN.read(msg)) {
-        if (msg.id == 0x0001) { // Indication on MC fault
-            faultMsg.buf[0] = faultMsg.buf[0] | BSPD_FAULT;
-        }
-    }
+//    while (CAN.read(msg)) {
+//        if (msg.id == 0x0001) { // Indication on MC fault
+//            faultMsg.buf[0] = faultMsg.buf[0] | BSPD_FAULT;
+//        }
+//    }
 
 
     if (faultMsg.buf[0] != 0) {
