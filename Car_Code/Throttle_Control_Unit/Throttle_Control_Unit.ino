@@ -32,7 +32,8 @@ bool throttleCurve = false; // false -> normal, true -> boost
 float thermTemp = 0.0; // temperature of onboard thermistor
 bool brakeImplausibility = false; // fault if BSPD signal too low - still to be designed
 bool brakePedalActive = false; // true if brake is considered pressed
-bool startPressed = false;
+uint8_t oldBtnId = 0;
+uint8_t expBtnId = 0;
 
 // FSAE requires that torque be shut off if an implausibility persists for over 100 msec (EV3.5.4).
 bool torqueShutdown = false;
@@ -122,8 +123,8 @@ void loop() {
             }
         } else if (msg.id == ID_DCU_STATUS) {
             DCU_status dcu_status(msg.buf);
-            if (state == TCU_STATE_TRACTIVE_SYSTEM_ACTIVE && dcu_status.get_btn_press_id()) {
-                startPressed = true;
+            if (state == TCU_STATE_TRACTIVE_SYSTEM_ACTIVE) {
+                oldBtnId = dcu_status.get_btn_press_id();
             }
         }
     }
@@ -171,7 +172,7 @@ void loop() {
             if (brakePedalActive) {
                 // check Start button on dashboard - set in CAN message processing
                 // TODO There is no checking for if brakePedalActive
-                if (startPressed) {
+                if (oldBtnId == expBtnId) {
                     // Sending enable torque message
                     set_state(TCU_STATE_ENABLING_INVERTER);
                     MC_command_message enableInverterCommand;
@@ -220,12 +221,27 @@ void loop() {
       }
       CAN.write(msg);
     }
+    if (state == TCU_STATE_READY_TO_DRIVE && timer_motor_controller_send.check()) {
+        MC_command_message mccm = MC_command_message();
+        int16_t cmd_torque = voltageThrottlePedal1 / 4; // THROTTLE CURVE LOL TODO
+        mccm.set_torque_command(cmd_torque);
+        mccm.set_angular_velocity(0);
+        mccm.set_direction(1);
+        mccm.set_inverter_enable(1);
+        mccm.set_discharge_enable(0);
+        mccm.write(msg.buf);
+        msg.id = ID_MC_COMMAND_MESSAGE;
+        msg.len = 8;
+        CAN.write(msg);
+    }
 }
 
 void readValues() {
     voltageThrottlePedal1 = analogRead(THROTTLE_PORT_1);
     voltageThrottlePedal2 = analogRead(THROTTLE_PORT_2);
     voltageBrakePedal = analogRead(BRAKE_ANALOG_PORT);
+    if (voltageBrakePedal > 100)    // TODO: Fix this once baseline values are determined
+        brakePedalActive = true;
     //TODO: decide/set torque values for input values
 }
 
@@ -283,6 +299,7 @@ int sendCANUpdate(){
     curTCU_status.set_throttle_curve(throttleCurve);
     curTCU_status.set_brake_implausibility(brakeImplausibility);
     curTCU_status.set_brake_pedal_active(brakePedalActive);
+    curTCU_status.set_state(state);
 
     curTCU_status.write(msg.buf);
     bufferAvailable += CAN.write(msg);
@@ -321,6 +338,7 @@ void set_state(uint8_t new_state) {
         return; // don't do anything if same state
     } else if (new_state == TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED) {
         // setup() call
+        expBtnId = oldBtnId + 1;
         state = TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED;
     } else {
         switch (state) {
@@ -330,6 +348,7 @@ void set_state(uint8_t new_state) {
                     state = TCU_STATE_ENABLING_INVERTER;
                     break;
                 }
+                break;
             default:
                 uint8_t old_state = state;
                 state = new_state;

@@ -1,28 +1,23 @@
-#define XB Serial2
-#define SDCARD Serial3
-#define baudrate 115200
-
 #include <FlexCAN.h>
 #include <HyTech17.h>
 #include <Metro.h>
-#include <SD.h>
 
 /******* PIN definitions ***********/
 /**
  * THIS IS MODIFIED FOR TESTING
  * SWAP COMMENTS FOR REAL CAR
  */
-// #define BTN_TOGGLE A14
-// #define BTN_CYCLE A15
-#define BTN_ALT 32
+#define BTN_TOGGLE A14
+#define BTN_CYCLE A15
+#define BTN_BOOST A16
 // #define BTN_START A17
-#define BTN_START 31
+#define BTN_START A7
 //#define LED_START 7
-#define LED_START 16
+#define LED_START A9
 //#define LED_BMS 6
-#define LED_BMS 17
-#define LED_IMD 18
-#define READY_SOUND 20 //or 21, schematic isn't clear
+#define LED_BMS A9
+#define LED_IMD 5
+#define READY_SOUND 8
 
 /*****Dashboard States and Fault Flags********/
 bool imd_fault;
@@ -40,10 +35,6 @@ Metro timer_led_start_blink_slow = Metro(500);
 Metro timer_inverter_enable = Metro(2000);  // Timeout failed inverter enable
 Metro timer_ready_sound = Metro(2000);      // Time to play RTD sound
 Metro timer_can_update = Metro(500);
-// Time to check whether to put into charge mode
-Metro timer_charge_mode = Metro(100);
-
-uint8_t charge_status_tracker = 1; // Used to keep track of charge mode changes
 
 unsigned long lastDebounceTOGGLE = 0;   // the last time the output pin was toggled
 unsigned long lastDebounceBOOST = 0;  // the last time the output pin was toggled
@@ -55,8 +46,6 @@ bool led_start_active = false;
 unsigned long debounceDelay = 50;     // the debounce time; increase if the output flickers
 uint8_t led_start_type = 0;
 uint8_t state;
-byte XbeeBuffer[80];
-const int chipSelect = BUILTIN_SDCARD;
 
 /*************** BUTTON TYPES ****************
  *  Start Button
@@ -71,7 +60,6 @@ int count;
  */
 FlexCAN CAN(500000);
 static CAN_message_t msg;
-File CAN_file;
 
 void setup() {
     // put your setup code here, to run once:
@@ -86,25 +74,13 @@ void setup() {
     state = DCU_STATE_INITIAL_STARTUP;
     pinMode(LED_BMS, OUTPUT);
     pinMode(LED_IMD, OUTPUT);
-    // pinMode(BTN_TOGGLE, INPUT_PULLUP);
-    // pinMode(BTN_CYCLE, INPUT_PULLUP);
-    pinMode(BTN_ALT, INPUT_PULLUP);
+    pinMode(BTN_TOGGLE, INPUT_PULLUP);
+    pinMode(BTN_CYCLE, INPUT_PULLUP);
+    pinMode(BTN_BOOST, INPUT_PULLUP);
     pinMode(BTN_START, INPUT_PULLUP);
-    Serial.begin(baudrate);
-    XB.begin(baudrate);
+    Serial.begin(115200);
     CAN.begin();
     timer_can_update.reset();
-    SDCARD.begin(9600);
-
-    Serial.print("Initializing SD card...");
-
-    // see if the card is present and can be initialized:
-    if (!SD.begin(chipSelect)) {
-        Serial.println("Card failed, or not present");
-        // don't do anything more:
-        return;
-    }
-    Serial.println("card initialized.");
 }
 
 void loop() {
@@ -143,6 +119,10 @@ void loop() {
         case PCU_STATE_LATCHING:
           set_state(DCU_STATE_PRESSED_TRACTIVE_SYSTEM);
           break;
+        case PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
+          if (state != DCU_STATE_WAITING_MC_ENABLE)
+            set_start_led(0);
+          break;
         case PCU_STATE_FATAL_FAULT:
           set_state(DCU_STATE_FATAL_FAULT);
           break;
@@ -156,6 +136,7 @@ void loop() {
         Serial.println(tcu_status.get_state());
         switch (tcu_status.get_state()) {
             case TCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
+                set_start_led(2); // fast blink
                 set_state(DCU_STATE_WAITING_MC_ENABLE);
                 break;
             case TCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
@@ -166,42 +147,6 @@ void loop() {
                 break;
         }
     }
-
-    // Sending Teensy data
-    // NOTE: currently sending all data received on CAN
-    int wr;
-    wr = XB.availableForWrite();
-    if (wr > 1) {
-        // Handling sending message
-        if ((msg.id == ID_MC_TEMPERATURES_1) || 
-            (msg.id == ID_MC_TEMPERATURES_3) || 
-            (msg.id == ID_MC_MOTOR_POSITION_INFORMATION) ||
-            (msg.id == ID_MC_CURRENT_INFORMATION) ||
-            (msg.id == ID_MC_VOLTAGE_INFORMATION) || 
-            (msg.id == ID_MC_INTERNAL_STATES) ||
-            (msg.id == ID_MC_FAULT_CODES) || 
-            (msg.id == ID_MC_TORQUE_TIMER_INFORMATION)) {
-            Serial.println(msg.id, HEX);
-
-            memcpy(XbeeBuffer, &msg, sizeof(msg));
-
-            XB.write(XbeeBuffer, sizeof(msg));
-            digitalWrite(13,HIGH);
-            delay(10);
-            digitalWrite(13,LOW);
-            delay(10);
-        }
-
-        CAN_file = SD.open("can_bus_data", FILE_WRITE);
-
-        if(CAN_file) {
-            CAN_file.println((char*) XbeeBuffer);
-            CAN_file.close();
-        } else {
-            Serial.println("err with writing to SDcard");
-        }
-    }
-
   }
 
   // TODO: more state machine stuff possibly?
@@ -233,7 +178,7 @@ void loop() {
 
 
   if (timer_can_update.check()) {
-      sendCANUpdate(false);
+      sendCANUpdate();
   }
 
   /*
@@ -269,35 +214,12 @@ void pollForButtonPress() {
       lastDebounceSTART++;
       Serial.print("Start button pressed id ");
       Serial.println(lastDebounceSTART);
+      sendCANUpdate();
     }
   }
-
-    // Checking whether to send charge message
-    if (timer_charge_mode.check() == 1) {
-        bool BTN_ALT_read_value = digitalRead(BTN_ALT);
-        if (BTN_ALT_read_value != charge_status_tracker) {
-            // Send charge state CAN message
-            msg.id = ID_CHARGE_STATUS;
-            msg.len = 1;
-            Charge_status curCharge_status = Charge_status();
-
-            if (BTN_ALT_read_value == false) {
-                // Handle for button pressed
-                curCharge_status.setChargeCommand(true);
-            } else {
-                // Handle for button not pressed
-                curCharge_status.setChargeCommand(false);
-            }
-
-            curCharge_status.write(msg.buf);
-            CAN.write(msg.buf);
-            charge_status_tracker = BTN_ALT_read_value;
-        }
-        timer_charge_mode.reset();
-    }
 }
 
-void sendCANUpdate(bool startPressed) {
+void sendCANUpdate() {
     msg.id = ID_DCU_STATUS;
     msg.len = 8;
     DCU_status dcu_status = DCU_status();
@@ -347,7 +269,7 @@ void set_state(uint8_t new_state) {
     }
     if (new_state == DCU_STATE_PRESSED_MC_ENABLE || new_state == DCU_STATE_PRESSED_TRACTIVE_SYSTEM) {
         set_start_led(0);
-        sendCANUpdate(true);
+        sendCANUpdate();
     }
     if (new_state == DCU_STATE_PLAYING_RTD) {
         timer_ready_sound.reset();

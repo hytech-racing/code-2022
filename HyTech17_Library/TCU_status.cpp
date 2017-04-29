@@ -74,6 +74,7 @@ void TCU_status::load(uint8_t buf[8]) {
     message.brake_implausibility = booleanByte > 0;
     memcpy(&booleanByte, &buf[3], sizeof(uint8_t));
     message.brake_pedal_active = booleanByte > 0;
+    memcpy(&message.state, &buf[4], sizeof(uint8_t));
 }
 
 /* Write to buffer
@@ -111,6 +112,7 @@ void TCU_status::write(uint8_t buf[8]) {
         booleanByte = 1;
     }
     memcpy(&buf[3], &booleanByte, sizeof(uint8_t));
+    memcpy(&buf[4], &message.state, sizeof(uint8_t));
 }
 
 /* Get functions
@@ -134,6 +136,10 @@ bool TCU_status::get_brake_pedal_active() {
     return message.brake_pedal_active;
 }
 
+uint8_t TCU_status::get_state() {
+    return message.state;
+}
+
 /* Set functions
  *
  * Used to replace values in this CAN_message_t
@@ -155,4 +161,8 @@ void TCU_status::set_brake_implausibility(bool brake_implausibility) {
 
 void TCU_status::set_brake_pedal_active(bool brake_pedal_active) {
     message.brake_pedal_active = brake_pedal_active;
+}
+
+void TCU_status::set_state(uint8_t new_state) {
+    message.state = new_state;
 }

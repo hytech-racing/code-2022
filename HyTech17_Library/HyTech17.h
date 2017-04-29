@@ -134,6 +134,7 @@ typedef struct CAN_message_tcu_status_t {
     bool throttle_curve;
     bool brake_implausibility;
     bool brake_pedal_active;
+    uint8_t state;
 } CAN_msg_tcu_status;
 
 class TCU_status {
@@ -147,10 +148,12 @@ class TCU_status {
     bool get_throttle_curve();
     bool get_brake_implausibility();
     bool get_brake_pedal_active();
+    uint8_t get_state();
     void set_throttle_implausibility(bool throttle_implausibility);
     void set_throttle_curve(bool throttle_curve);
     void set_brake_implausibility(bool brake_implausibility);
     void set_brake_pedal_active(bool brake_pedal_active);
+    void set_state(uint8_t new_state);
   private:
     CAN_message_tcu_status_t message;
 };
@@ -366,6 +369,7 @@ class BMS_status {
 };
 
 class BMSTestModeHandler {
+<<<<<<< HEAD
   public:
     BMSTestModeHandler();
     BMSTestModeHandler(unsigned long initialTime);
@@ -376,6 +380,18 @@ class BMSTestModeHandler {
     float prevCell1Millivolts;
     float prevCell2Millivolts;
     bool inTestMode;
+=======
+    public:
+        BMSTestModeHandler();
+        BMSTestModeHandler(unsigned long initialTime);
+        void checkTestMode(unsigned long initialTime, int totalMillivolts, int cell1MilliVolts, int cell2MilliVolts);
+        bool bmsTestModeEntered();
+    private:
+        float prevTotalMillivolts;
+        float prevCell1Millivolts;
+        float prevCell2Millivolts;
+        bool bmsTestMode;
+>>>>>>> d9b642963cc0a928b22ea8d5587096b350ee95a7
 };
 
 typedef struct CAN_message_charge_status_t {
