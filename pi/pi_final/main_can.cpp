@@ -13,6 +13,7 @@
 
 #include "can_lib.h"
 #include "bt_lib.h"
+#include "../../HyTech17_Library/HyTech17.h"
 
 #define RED_CONSOLE "\033[31;1m"
 #define GREEN_CONSOLE "\033[32;1m"
@@ -54,11 +55,11 @@ std::string base_log_dir = "/home/pi/logs/";
 int main() {
     log_mc.open(base_log_dir + "logs_mc.txt", std::ios::out | std::ios::app);
     log_bms.open(base_log_dir + "logs_bms.txt", std::ios::out | std::ios::app);
-    log_main_ard.open(base_log_dir + "logs_main_arduino.txt",
+    log_main_ard.open(base_log_dir + "logs_pcu.txt",
             std::ios::out | std::ios::app);
-    log_evdc.open(base_log_dir + "logs_evdc.txt",
+    log_evdc.open(base_log_dir + "logs_tcu.txt",
             std::ios::out | std::ios::app);
-    log_rear_ard.open(base_log_dir + "logs_read_arduino.txt",
+    log_rear_ard.open(base_log_dir + "logs_dashboard.txt",
             std::ios::out | std::ios::app);
 
     gettimeofday(&log_mc_prev_time, NULL);
@@ -112,13 +113,17 @@ int process_data_for_sending(uint8_t* bt_data, canframe_t* frame) {
             bt_data[0] = 0;
             memcpy(&bt_data[1], &value, sizeof(value));
             break;
-        case 0x04:
-            // High and Avg Battery Temp (0x04, 0,2)
+        case ID_BMS_TEMPERATURE:
+            // High and Avg Battery Temp (0xDA)
             bt_data[0] = 1;
-            memcpy(&bt_data[1], &frame->data[0], sizeof(uint8_t));
-            memcpy(&bt_data[2], &frame->data[2], sizeof(uint8_t));
+	    BMS_temperatures bms_temperatures(frame->data);
+	    value = bms_temperatures.getHighTemp();
+            memcpy(&bt_data[1], &value, sizeof(uint16_t));
+            value = bms_temperatures.getAvgTemp();
+            memcpy(&bt_data[3], &value, sizeof(uint16_t));
             break;
-        case 0x10:
+        case ID_PCU_STATUS:
+            // Insert PCU status code here
             // Startup State (0x10, 0)
             // Error Messages (0x10, 1)
             bt_data[0] = 2;
