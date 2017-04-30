@@ -14,7 +14,7 @@ public:
     int read();
     int send(uint8_t* data);
     int send(uint8_t* data, uint8_t length);
-    static const int DATA_LENGTH = 4;
+    static const int DATA_LENGTH = 8;
 
 private:
     int sock;
