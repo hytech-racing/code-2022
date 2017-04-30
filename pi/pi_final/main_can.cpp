@@ -108,6 +108,7 @@ int process_data_for_sending(uint8_t* bt_data, canframe_t* frame) {
     bzero(bt_data, BT::DATA_LENGTH);
     switch(frame->can_id) {
         case ID_BMS_TEMPERATURE:
+        {
             // High and Avg Battery Temp (0xDA)
             bt_data[0] = 1;
             BMS_temperatures bms_temperatures(frame->data);
@@ -116,7 +117,9 @@ int process_data_for_sending(uint8_t* bt_data, canframe_t* frame) {
             value = bms_temperatures.getAvgTemp();
             memcpy(&bt_data[3], &value, sizeof(uint16_t));
             break;
+        }
         case ID_PCU_STATUS:
+        {
             // PCU Status (0xD0, 0)
             bt_data[0] = 2;
             PCU_status pcu_status(frame->data);
@@ -124,27 +127,36 @@ int process_data_for_sending(uint8_t* bt_data, canframe_t* frame) {
             bt_data[2] = (pcu_status.get_bms_fault() << 3) | (pcu_status.get_imd_fault() << 2)
                 | (pcu_status.get_okhs_value() << 1) | pcu_status.get_discharge_ok_value();
             break;
+        }
         case ID_PCU_VOLTAGES:
+        {
             // Rear Low Voltage Voltage (0xD1, 2)
             bt_data[0] = 6;
             PCU_voltages pcu_voltages(frame->data);
             value = pcu_voltages.get_GLV_battery_voltage();
             memcpy(&bt_data[1], &value, sizeof(uint16_t));
             break;
+        }
         case ID_TCU_STATUS:
+        {
             // TCU Status (0xD2)
             bt_data[0] = 8;
             TCU_status tcu_status(frame->data);
             bt_data[1] = tcu_status.get_state();
             bt_data[2] = (tcu_status.get_throttle_implausibility() << 3) | (tcu_status.get_throttle_curve() << 2)
                 | (tcu_status.get_brake_implausibility() << 1) | tcu_status.get_brake_pedal_active();
+            break;
+        }
         case 0xA2:
+        {
             // Motor Temp (0xA2, 4-5)
             value = ((frame->data[5] << 8) | frame->data[4]) / 10;
             bt_data[0] = 3;
             memcpy(&bt_data[1], &value, sizeof(value));
             break;
+        }
         case 0xA5:
+        {
             // Speed (0xA5, 2-3)
             // RPM * (16/35) * 5.2 = feet / min
             // * 60/5280 = mph
@@ -155,13 +167,17 @@ int process_data_for_sending(uint8_t* bt_data, canframe_t* frame) {
             bt_data[0] = 4;
             memcpy(&bt_data[1], &value, sizeof(value));
             break;
+        }
         case 0xA6:
+        {
             // Current Draw (0xA6, 6-7)
             value = ((frame->data[7] << 8) | frame->data[6]);
             bt_data[0] = 5;
             memcpy(&bt_data[1], &value, sizeof(value));
             break;
+        }
         case ID_TCU_READINGS:
+        {
             // Pedal Values (0xD3)
             bt_data[0] = 7;
             TCU_readings tcu_readings(frame->data);
@@ -170,6 +186,7 @@ int process_data_for_sending(uint8_t* bt_data, canframe_t* frame) {
             value = tcu_readings.get_brake_value();
             memcpy(&bt_data[3], &value, sizeof(uint16_t));
             break;
+        }
         default:
             return -1;
     }
