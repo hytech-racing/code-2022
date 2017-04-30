@@ -83,7 +83,9 @@ int main() {
         if (can.read(frame) > 0) {
             std::cout << "Error reading message or no message to read" << std::endl;
         } else {
+            frame->can_id = frame->can_id & 0xFF;
             if (0 == process_data_for_sending(bt_buffer, frame)) {
+                print(frame);
                 if (bt.send(bt_buffer) == -1) {
                     std::cout << "Attempting to reconnect" << std::endl;
                     bt.connect();
@@ -195,6 +197,7 @@ int process_data_for_sending(uint8_t* bt_data, canframe_t* frame) {
 
 void print(canframe_t* frame) {
     if (frame && frame->can_dlc > 0) {
+        printf("%x: ", frame->can_id);
         for (uint8_t i = 0; i < frame->can_dlc; ++i) {
             //std::cout << CONSOLE_COLORS[rand() % 4];
             std::cout << (int) frame->data[i] << " ";
