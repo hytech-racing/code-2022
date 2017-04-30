@@ -3,9 +3,9 @@
 #include "HyTech17.h"
 
 //ports
-#define BRAKE_ANALOG_PORT 3 //analog port of brake sensor
-#define THROTTLE_PORT_1 6 //first throttle sensor port
-#define THROTTLE_PORT_2 9 //second throttle sensor port
+#define BRAKE_ANALOG_PORT A2 //analog port of brake sensor
+#define THROTTLE_PORT_1 A0 //first throttle sensor port
+#define THROTTLE_PORT_2 A1 //second throttle sensor port
 // TODO: These values need to be determined from testing
 //constants
 #define MIN_THROTTLE_1 0//compare pedal travel
@@ -50,7 +50,8 @@ uint8_t state;
 Metro CANUpdateTimer = Metro(500); // Used for how often to send state
 Metro updateTimer = Metro(500); // Read in values from pins
 Metro implausibilityTimer = Metro(50); // Used for throttle error check
-Metro throttleTimer = Metro(500); // Used for sending commands to Motor Controller
+Metro debugTimer = Metro(500);
+Metro throttleTimer = Metro(100); // Used for sending commands to Motor Controller
 Metro tractiveTimeOut = Metro(5000); // Used to check timeout of tractive system activation
 Metro timer_motor_controller_send = Metro(50);
 
@@ -62,9 +63,9 @@ void setup() {
     Serial.println("CAN system and serial communication initialized");
     //To detect an open circuit
     //enable the pullup resistor on the Teensy input pin >>>
-    pinMode(BRAKE_ANALOG_PORT, INPUT_PULLUP);
-    pinMode(THROTTLE_PORT_1, INPUT_PULLUP);
-    pinMode(THROTTLE_PORT_2, INPUT_PULLUP);
+    pinMode(BRAKE_ANALOG_PORT, INPUT);
+    pinMode(THROTTLE_PORT_1, INPUT);
+    pinMode(THROTTLE_PORT_2, INPUT);
     //open circuit will show a high signal outside of the working range of the sensor.
     set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
 }
@@ -138,14 +139,10 @@ void loop() {
     if (!checkDeactivateTractiveSystem()) {
         // timer reset if you should not deactivate tractive system
         implausibilityTimer.reset();
-    } else {
-        // Cannot be restarted by driver (EV7.9.3)
-        torqueShutdown = true;
     }
 
     if (CANUpdateTimer.check()){
         sendCANUpdate();
-        CANUpdateTimer.reset();
     }
     switch(state) {
         //TODO: check if reqs are met to move to each state
@@ -192,7 +189,6 @@ void loop() {
                     memcpy(&msg.buf[7], &MC_enable_message[7], sizeof(uint8_t));
 
                     CAN.write(msg);
-                    startPressed = false;
                 }
             }
             break;
@@ -224,7 +220,10 @@ void loop() {
     if (state == TCU_STATE_READY_TO_DRIVE && timer_motor_controller_send.check()) {
         MC_command_message mccm = MC_command_message();
         int16_t cmd_torque = voltageThrottlePedal1 / 4; // THROTTLE CURVE LOL TODO
-        mccm.set_torque_command(cmd_torque);
+        if (!throttleImplausibility && !brakeImplausibility)
+          mccm.set_torque_command(cmd_torque);
+        else
+          mccm.set_torque_command(0);
         mccm.set_angular_velocity(0);
         mccm.set_direction(1);
         mccm.set_inverter_enable(1);
@@ -240,8 +239,18 @@ void readValues() {
     voltageThrottlePedal1 = analogRead(THROTTLE_PORT_1);
     voltageThrottlePedal2 = analogRead(THROTTLE_PORT_2);
     voltageBrakePedal = analogRead(BRAKE_ANALOG_PORT);
-    if (voltageBrakePedal > 100)    // TODO: Fix this once baseline values are determined
+    if (voltageBrakePedal > 300)    // TODO: Fix this once baseline values are determined
         brakePedalActive = true;
+    else
+        brakePedalActive = false;
+    Serial.print("Throttle 1: ");
+    Serial.print(voltageThrottlePedal1);
+    Serial.print("     Throttle 2: ");
+    Serial.print(voltageThrottlePedal2);
+    Serial.print("     Brake: ");
+    Serial.print(voltageBrakePedal);
+    Serial.print(" ");
+    Serial.println(brakePedalActive);
     //TODO: decide/set torque values for input values
 }
 
@@ -249,7 +258,8 @@ bool checkDeactivateTractiveSystem() {
     // Check for errors - AKA implausibility checking
     // Throttle 10% check
     float deviationCheck = ((float) voltageThrottlePedal1) / ((float) voltageThrottlePedal2);
-    if (deviationCheck > 1.10 || (1 / deviationCheck) > 1.10) {
+    int difference = abs(voltageThrottlePedal1 - voltageThrottlePedal2);
+    if (difference > (MAX_THROTTLE_1 - MIN_THROTTLE_1) / 10.0) {
         throttleImplausibility = true;
     } else if (voltageThrottlePedal1 < MIN_THROTTLE_1 || voltageThrottlePedal2 < MIN_THROTTLE_2) {
         // Checks for failure of position sensor wiring
@@ -258,6 +268,8 @@ bool checkDeactivateTractiveSystem() {
     } else if (voltageThrottlePedal1 > MAX_THROTTLE_1 || voltageThrottlePedal2 > MAX_THROTTLE_2) {
         // Check for short to power
         throttleImplausibility = true;
+    } else {
+        throttleImplausibility = false;
     }
 
     // Check brake pedal sensor
@@ -267,9 +279,16 @@ bool checkDeactivateTractiveSystem() {
         // No brake implausibility detected
         brakeImplausibility = false;
     }
+    
 
     // return true if any implausibility present
     if (throttleImplausibility || brakeImplausibility) {
+        if (debugTimer.check()) {
+          Serial.print("IMPLAUSIBILITY -- Throttle: ");
+          Serial.print(throttleImplausibility);
+          Serial.print(" -- Brake: ");
+          Serial.println(brakeImplausibility);
+        }
         return true;
     } else {
         return false;
@@ -327,13 +346,6 @@ int sendCANUpdate(){
 
 void set_state(uint8_t new_state) {
     // Use if there are special state change cases
-    Serial.println("");
-    Serial.print("Changing state of TCU from: ");
-    Serial.print("\tSTATE ");
-    Serial.print(state);
-    Serial.print("\tto STATE ");
-    Serial.print(new_state);
-    Serial.println();
     if (state == new_state) {
         return; // don't do anything if same state
     } else if (new_state == TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED) {
