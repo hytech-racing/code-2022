@@ -109,7 +109,7 @@ void loop() {
             if (state == TCU_STATE_WAITING_TRACTIVE_SYSTEM) {
                 // This code checks (when waiting for tractive system) if the tractive system has turned on
                 if (mc_voltage_information.get_dc_bus_voltage() > 100) {
-                    // Assuming this condition is the way to check if tractive system is on
+                    // Assume this condition is the way to check if tractive system is on
                     set_state(TCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
                     // NOTE: You must assume that for tractive system to turn on, the AIRs will be closed
                 }
