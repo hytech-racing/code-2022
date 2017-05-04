@@ -7,15 +7,14 @@
  * THIS IS MODIFIED FOR TESTING
  * SWAP COMMENTS FOR REAL CAR
  */
-#define BTN_TOGGLE A14
-#define BTN_CYCLE A15
-#define BTN_BOOST A16
+#define BTN_CYCLE A1
+//#define BTN_BOOST A16
 // #define BTN_START A17
-#define BTN_START A7
+#define BTN_START A0
 //#define LED_START 7
-#define LED_START A9
+#define LED_START 7
 //#define LED_BMS 6
-#define LED_BMS A9
+#define LED_BMS 6
 #define LED_IMD 5
 #define READY_SOUND 8
 
@@ -74,9 +73,9 @@ void setup() {
     state = DCU_STATE_INITIAL_STARTUP;
     pinMode(LED_BMS, OUTPUT);
     pinMode(LED_IMD, OUTPUT);
-    pinMode(BTN_TOGGLE, INPUT_PULLUP);
+    pinMode(LED_START, OUTPUT);
+    pinMode(READY_SOUND, OUTPUT);
     pinMode(BTN_CYCLE, INPUT_PULLUP);
-    pinMode(BTN_BOOST, INPUT_PULLUP);
     pinMode(BTN_START, INPUT_PULLUP);
     Serial.begin(115200);
     CAN.begin();
@@ -98,10 +97,16 @@ void loop() {
       if (pcu_status.get_bms_fault()) {
         bms_fault = true;
         digitalWrite(LED_BMS, HIGH);
+      } else {
+        bms_fault = false;
+        digitalWrite(LED_BMS, LOW);
       }
       if (pcu_status.get_imd_fault()) {
         imd_fault = true;
         digitalWrite(LED_IMD, HIGH);
+      } else {
+        imd_fault = false;
+        digitalWrite(LED_IMD, LOW);
       }
       // Set Dashboard internal state based on PCU state
       // If not ready to power up, or ready to drive, start light off
@@ -217,6 +222,11 @@ void pollForButtonPress() {
       sendCANUpdate();
     }
   }
+  if (digitalRead(BTN_CYCLE) == LOW) {
+    digitalWrite(READY_SOUND, HIGH);
+  } else {
+    digitalWrite(READY_SOUND, LOW);
+  }
 }
 
 void sendCANUpdate() {
@@ -260,6 +270,17 @@ void set_start_led(uint8_t type) {
   }
 }
 
+void test_flash() {
+  digitalWrite(LED_BMS, HIGH);
+  digitalWrite(LED_IMD, HIGH);
+  digitalWrite(LED_START, HIGH);
+  digitalWrite(READY_SOUND, HIGH);
+  Serial.print("Button 1: ");
+  Serial.print(digitalRead(BTN_START));
+  Serial.print("  Button 3: ");
+  Serial.println(digitalRead(BTN_CYCLE));
+}
+
 void set_state(uint8_t new_state) {
     if (state == new_state)
         return;
@@ -279,5 +300,8 @@ void set_state(uint8_t new_state) {
     if (new_state == DCU_STATE_READY_TO_DRIVE) {
         digitalWrite(READY_SOUND, LOW);
         Serial.println("RTD sound finished");
+    }
+    if (new_state == DCU_STATE_FATAL_FAULT) {
+      set_start_led(0);
     }
 }

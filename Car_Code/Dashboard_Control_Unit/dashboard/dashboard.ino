@@ -86,6 +86,7 @@ void setup() {
     state = DCU_STATE_INITIAL_STARTUP;
     pinMode(LED_BMS, OUTPUT);
     pinMode(LED_IMD, OUTPUT);
+    pinMode(LED_START, OUTPUT);
     // pinMode(BTN_TOGGLE, INPUT_PULLUP);
     // pinMode(BTN_CYCLE, INPUT_PULLUP);
     pinMode(BTN_ALT, INPUT_PULLUP);
