@@ -17,8 +17,8 @@
 #define SENSE_TEMP A4
 #define SSR_BRAKE_LIGHT 12
 #define SSR_INVERTER 6
-#define SSR_LATCH 10
-#define SSR_SOFTWARE_SHUTOFF 11
+#define SSR_LATCH_BMS 11
+#define SSR_LATCH_IMD 10
 
 /*
  * Timers
@@ -44,8 +44,8 @@ static CAN_message_t msg;
 void setup() {
   pinMode(SSR_BRAKE_LIGHT, OUTPUT);
   pinMode(SSR_INVERTER, OUTPUT);
-  pinMode(SSR_LATCH, OUTPUT);
-  pinMode(SSR_SOFTWARE_SHUTOFF, OUTPUT);
+  pinMode(SSR_LATCH_BMS, OUTPUT);
+  pinMode(SSR_LATCH_IMD, OUTPUT);
 
   Serial.begin(115200);
   CAN.begin();
@@ -150,7 +150,6 @@ void loop() {
   if (bms_faulting && timer_imd_faulting.check()) {
     bms_fault = true;
     set_state(PCU_STATE_FATAL_FAULT);
-    digitalWrite(SSR_SOFTWARE_SHUTOFF, LOW);
     Serial.println("BMS fault detected");
   }
 
@@ -175,7 +174,6 @@ void loop() {
   if (imd_faulting && timer_imd_faulting.check()) {
     imd_fault = true;
     set_state(PCU_STATE_FATAL_FAULT);
-    digitalWrite(SSR_SOFTWARE_SHUTOFF, LOW);
     Serial.println("IMD fault detected");
   }
 }
@@ -193,12 +191,13 @@ void set_state(uint8_t new_state) {
   }
   if (new_state == PCU_STATE_LATCHING) {
     timer_latch.reset();
-    digitalWrite(SSR_LATCH, HIGH);
-    digitalWrite(SSR_SOFTWARE_SHUTOFF, HIGH);
+    digitalWrite(SSR_LATCH_BMS, HIGH);
+    digitalWrite(SSR_LATCH_IMD, HIGH);
     Serial.println("Latching");
   }
   if (new_state == PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED) {
-    digitalWrite(SSR_LATCH, LOW);
+    digitalWrite(SSR_LATCH_BMS, LOW);
+    digitalWrite(SSR_LATCH_IMD, LOW);
   }
 }
 
