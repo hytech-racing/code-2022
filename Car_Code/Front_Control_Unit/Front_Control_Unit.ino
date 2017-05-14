@@ -11,14 +11,17 @@
 /*
  * Pin definitions
  */
+#define BSPD_FAULT A7
 #define BTN_START A4
 #define LED_START 2
 #define LED_BMS 5
+#define LED_BSPD 8
 #define LED_IMD 6
 #define PEDAL_BRAKE A2 //analog port of brake sensor
 #define PEDAL_THROTTLE_1 A0 //first throttle sensor port
 #define PEDAL_THROTTLE_2 A1 //second throttle sensor port
 #define READY_SOUND 7
+#define SOFTWARE_SHUTDOWN_RELAY 12
 
 /*
  * Constants
@@ -68,8 +71,10 @@ FlexCAN CAN(500000);
 static CAN_message_t msg;
 
 void setup() {
+  pinMode(BSPD_FAULT, INPUT);
   pinMode(BTN_START, INPUT_PULLUP);
   pinMode(LED_BMS, OUTPUT);
+  pinMode(LED_BSPD, OUTPUT);
   pinMode(LED_IMD, OUTPUT);
   pinMode(LED_START, OUTPUT);
   // To detect an open circuit on pedal sensors,
@@ -78,6 +83,7 @@ void setup() {
   pinMode(PEDAL_THROTTLE_1, INPUT_PULLUP);
   pinMode(PEDAL_THROTTLE_2, INPUT_PULLUP);
   pinMode(READY_SOUND, OUTPUT);
+  pinMode(SOFTWARE_SHUTDOWN_RELAY, OUTPUT);
 
   Serial.begin(115200); // init serial for PC communication
   CAN.begin();
@@ -85,6 +91,7 @@ void setup() {
   Serial.println("CAN system and serial communication initialized");
 
   set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
+  digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH);
 }
 
 void loop() {
@@ -314,6 +321,11 @@ void loop() {
       Serial.println(btn_start_id);
     }
   }
+
+  /*
+   * Illuminate BSPD fault LED
+   */
+  digitalWrite(LED_BSPD, digitalRead(BSPD_FAULT));
 }
 
 /*
