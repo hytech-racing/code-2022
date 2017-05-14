@@ -44,13 +44,15 @@ TCU_status::TCU_status(uint8_t buf[8]) {
  * Param (bool) - Brake Pedal active/engaged
  *     - Pass in true if brake pedal is considered pressed
  *     - Pass in false if brake pedal is not considerd pressed
+ * Param (uint8_t) - ECU State
  */
 
-TCU_status::TCU_status(bool throttle_implausibility, bool throttle_curve, bool brake_implausibility, bool brake_pedal_active) {
+TCU_status::TCU_status(bool throttle_implausibility, bool throttle_curve, bool brake_implausibility, bool brake_pedal_active, uint8_t state) {
     set_throttle_implausibility(throttle_implausibility);
     set_throttle_curve(throttle_curve);
     set_brake_implausibility(brake_implausibility);
     set_brake_pedal_active(brake_pedal_active);
+    set_state(state);
 }
 
 /* Load from buffer & write to variable instance

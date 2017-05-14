@@ -69,23 +69,12 @@
 #define ID_MC_READ_WRITE_PARAMETER_RESPONSE 0xC2
 
 /*
- * I2C BMS ID definitions
- */
-#define NUM_IC 2;
-#define NUM_CELLS 12;
-#define I2C_WR_CONFIG_REG 0x01
-#define I2C_RD_CONFIG_REG 0x02
-#define I2C_RD_CELL_VOLTAGE 0x03
-#define I2C_RD_AUX_VOLTAGE 0x04
-#define I2C_RD_STATUS_REG 0x05
 
-/*
-
- * A GENERAL_NOTE: the load functions in these classes take a byte array containing data from a CAN read.
- * The data contained in this byte array is used to populate the object.
+ * A GENERAL_NOTE: the load functions in these classes take a byte array containing raw CAN buffer data.
+ * The data contained in this byte array is used to populate the struct.
  *
  * A GENERAL_NOTE: The write functions in these classes take a byte array that is meant to be populated
- * with the data contained in the object. The byte array can then be written to CAN.
+ * with the data contained in the object. The byte array can then be used as the raw CAN buffer.
  */
 
 /*
@@ -152,7 +141,7 @@ class TCU_status {
   public:
     TCU_status();
     TCU_status(uint8_t buf[8]);
-    TCU_status(bool throttle_implausibility, bool throttle_curve, bool brake_implausibility, bool brake_pedal_active);
+    TCU_status(bool throttle_implausibility, bool throttle_curve, bool brake_implausibility, bool brake_pedal_active, uint8_t state);
     void load(uint8_t buf[8]);
     void write(uint8_t buf[8]);
     bool get_throttle_implausibility();
@@ -221,14 +210,6 @@ public:
     void set_rtds_state(uint8_t rtds_state);
 private:
     CAN_message_dcu_status_t message;
-};
-
-class I2C_Teensy_BMS_Controller_Message {
-  public:
-    I2C_Teensy_BMS_Controller_Message();
-    // TODO: Add public functions, accessors, setters, getters, mutators
-  private:
-    // TODO: Add private member variables
 };
 
 typedef struct CAN_message_bms_voltage_t {
