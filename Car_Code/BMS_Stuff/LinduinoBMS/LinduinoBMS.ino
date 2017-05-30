@@ -11,32 +11,30 @@
 #include "HyTech17.h"
 
 /************BATTERY CONSTRAINTS AND CONSTANTS**********************/
-#define VOLTAGE_LOW_CUTOFF 3000
-#define VOLTAGE_HIGH_CUTOFF 4000
-#define TOTAL_VOLTAGE_CUTOFF 300
+#define VOLTAGE_LOW_CUTOFF 2980
+#define VOLTAGE_HIGH_CUTOFF 4210
+#define TOTAL_VOLTAGE_CUTOFF 150
 #define DISCHARGE_CURRENT_CONSTANT_HIGH 220
 #define DISCHARGE_CURRENT_PEAK_HIGH 440
 #define DISCHARGE_CURRENT_PEAK_HIGH_TIME 5
 #define DISCHARGE_CURRENT_CONSTANT_HIGH_TIME 10
-#define CHARGE_CURRENT_CONSTANT_HIGH -220
-#define CHARGE_CURRENT_PEAK_HIGH -330
-#define CHARGE_CURRENT_LOW_CUTOFF -1.1
+#define CHARGE_CURRENT_CONSTANT_HIGH -400
+#define CHARGE_CURRENT_PEAK_HIGH -400
+#define CHARGE_CURRENT_LOW_CUTOFF 1
 #define CHARGE_CURRENT_PEAK_HIGH_TIME 10
 #define CHARGE_CURRENT_CONSTANT_HIGH_TIME 20
 #define MAX_VAL_CURRENT_SENSE 300
-#define CHARGE_TEMP_CRITICAL_HIGH 44
+#define CHARGE_TEMP_CRITICAL_HIGH 4400 // 44.00
 #define CHARGE_TEMP_CRITICAL_LOW 0
-#define DISCHARGE_TEMP_CRITICAL_HIGH 60
-#define DISCHARGE_TEMP_CRITICAL_LOW 15
+#define DISCHARGE_TEMP_CRITICAL_HIGH 6000 // 60.00
+#define DISCHARGE_TEMP_CRITICAL_LOW 1500 // 15.00
 
 /********GLOBAL ARRAYS/VARIABLES CONTAINING DATA FROM CHIP**********/
-#define TOTAL_IC 1
-#define TOTAL_CELLS 12
+#define TOTAL_IC 4
+#define TOTAL_CELLS 9
 #define TOTAL_THERMISTORS 3 // TODO: Double check how many thermistors are being used.
-#define THERMISTOR_RESISTOR_VALUE 1000 // TODO: Double check what resistor is used on the resistor divider.
-#define AUX_VOLTAGE_CURRENT_INDEX 5 // TODO: Double check which GPIO pin the current sensor is connected to.
-#define AUX_VOLTAGE_CURRENT_IC 0 // TODO: Double check which IC the current sense is connected to.
-uint16_t cell_voltages[TOTAL_IC][TOTAL_CELLS]; // contains 12 battery cell voltages. Stores numbers in 0.1 mV units.
+#define THERMISTOR_RESISTOR_VALUE 6700 // TODO: Double check what resistor is used on the resistor divider.
+uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages. Stores numbers in 0.1 mV units.
 uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
      /* Data contained in this array is in this format:
       * Thermistor 1
@@ -45,7 +43,7 @@ uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
       * Thermistor 4
       * Current Sensor
       */
-int16_t cell_delta_voltage[TOTAL_IC][TOTAL_CELLS]; // contains 12 signed dV values in 0.1 mV units
+int16_t cell_delta_voltage[TOTAL_IC][12]; // contains 12 signed dV values in 0.1 mV units
 
 /*!<
   The tx_cfg[][6] stores the LTC6804 configuration data that is going to be written
@@ -69,7 +67,10 @@ long msTimer = 0;
 /**
  * BMS State Variables
  */
-#define BMS_OK_PIN 5
+#define BMS_OK_PIN 3
+#define WATCH_DOG_TIMER 4
+#define CURRENT_SENSE 0
+bool watchDogFlag = true;
 BMS_voltages bmsVoltageMessage;
 BMS_currents bmsCurrentMessage;
 BMS_temperatures bmsTempMessage;
@@ -90,6 +91,7 @@ int minVoltageCellIndex;
 void setup() {
     // put your setup code here, to run once:
     pinMode(BMS_OK_PIN, OUTPUT);
+    pinMode(WATCH_DOG_TIMER, OUTPUT);
     // pinMode(CAN_SPI_CS_PIN, OUTPUT); Not needed, done in mcp_can.cpp
 
     digitalWrite(CAN_SPI_CS_PIN, HIGH);
@@ -117,23 +119,37 @@ void setup() {
 /*
  * Main BMS Control Loop
  */
+
 void loop() {
 //    waitForUserInput();
-    pollVoltage(); // cell_voltages[] array populated with cell voltages now.
-   balanceCellsDuringCharging();
-    avgMinMaxTotalVoltage(); // stores data in bmsVoltageMessage object.
+    byte* incomingMsg = (byte*) malloc(8);
+    byte len = 0;
+    unsigned long id = 0;
+    CAN.readMsgBufID(&id, &len, incomingMsg);
+    if (id == ID_MC_VOLTAGE_INFORMATION) {
+        MC_voltage_information mc_voltage(incomingMsg);
+        if (mc_voltage.get_dc_bus_voltage() > 100) {
+            pollVoltage(); // cell_voltages[] array populated with cell voltages now.
+            //   balanceCellsDuringCharging();
+            avgMinMaxTotalVoltage(); // stores data in bmsVoltageMessage object.
 
-    pollAuxiliaryVoltages();
-    avgLowHighTemp(); // stores data in bmsTempMessage object.
-    calculateCurrent(); // stores data in bmsCurrentMessage object.
+            pollAuxiliaryVoltages();
+            avgLowHighTemp(); // stores data in bmsTempMessage object.
+            calculateCurrent(); // stores data in bmsCurrentMessage object.
 
-    // write to CAN!
-    writeToCAN();
+            // write to CAN!
+            writeToCAN();
 
-    // set BMS_OK signal
-    if (!bmsStatusMessage.getBMSStatusOK()) {
-        digitalWrite(BMS_OK_PIN, LOW);
+            // set BMS_OK signal
+            if (!bmsStatusMessage.getBMSStatusOK()) {
+                digitalWrite(BMS_OK_PIN, LOW);
+                Serial.println("STATUS NOT GOOD!!!!!!!!!!!!!!!");
+            }
+            watchDogFlag = !watchDogFlag; // inverting watchDogFlag
+            // Prevents WATCH_DOG_TIMER timeout
+        }
     }
+    digitalWrite(WATCH_DOG_TIMER, watchDogFlag);
 }
 
 /*!***********************************
@@ -150,6 +166,8 @@ void init_cfg()
         tx_cfg[i][4] = 0x00 ;
         tx_cfg[i][5] = 0x00 ;
     }
+    wakeFromSleepAllChips();
+    LTC6804_wrcfg(TOTAL_IC, tx_cfg);
 //    dischargeAll();
 }
 
@@ -178,8 +196,8 @@ void pollVoltage() {
     if (error == -1) {
         Serial.println("A PEC error was detected in cell voltage data");
     }
-    printCells(); // prints the cell voltages to Serial.
-    delay(100);
+//    printCells(); // prints the cell voltages to Serial.
+    delay(200);
 }
 
 void pollAuxiliaryVoltages() {
@@ -193,18 +211,40 @@ void pollAuxiliaryVoltages() {
     if (error == -1) {
         Serial.println("A PEC error was detected in auxiliary voltage data");
     }
-    printAux();
-    delay(100);
+//    printAux();
+    delay(200);
 }
 
 void avgLowHighTemp() {
-    uint16_t avgTemp, lowTemp, highTemp, totalTemp;
+    double avgTemp, lowTemp, highTemp, totalTemp;
     totalTemp = 0;
-    lowTemp = calculateDegreesCelsius(calculateThermistorResistance(aux_voltages[0][0]));
+    lowTemp = calculateDegreesCelsius(thermistorResistanceGPIO12(aux_voltages[0][0]));
     highTemp = lowTemp;
     for (int ic = 0; ic < TOTAL_IC; ic++) {
-        for (int therm = 0; therm < TOTAL_THERMISTORS; therm++) {
-            uint16_t thermTemp = calculateDegreesCelsius(calculateThermistorResistance(aux_voltages[ic][therm]));
+        if (ic != 2) {
+            Serial.println("Thermistor 1");
+            uint16_t resistance = thermistorResistanceGPIO12(aux_voltages[ic][0]);
+            uint16_t thermTemp = calculateDegreesCelsius(resistance);
+            if (thermTemp < lowTemp) {
+                lowTemp = thermTemp;
+            }
+            if (thermTemp > highTemp) {
+                highTemp = thermTemp;
+            }
+            totalTemp += thermTemp;
+            Serial.println("Thermistor 2");
+            resistance = thermistorResistanceGPIO12(aux_voltages[ic][1]);
+            thermTemp = calculateDegreesCelsius(resistance);
+            if (thermTemp < lowTemp) {
+                lowTemp = thermTemp;
+            }
+            if (thermTemp > highTemp) {
+                highTemp = thermTemp;
+            }
+            totalTemp += thermTemp;
+            Serial.println("Thermistor 3");
+            resistance = thermistorResistanceGPIO12(aux_voltages[ic][2]);
+            thermTemp = calculateDegreesCelsius(resistance);
             if (thermTemp < lowTemp) {
                 lowTemp = thermTemp;
             }
@@ -213,52 +253,82 @@ void avgLowHighTemp() {
             }
             totalTemp += thermTemp;
         }
+        Serial.println("----------------------\n");
     }
-    avgTemp = totalTemp / (TOTAL_IC * TOTAL_THERMISTORS);
-    bmsTempMessage.setLowTemp(lowTemp);
-    bmsTempMessage.setHighTemp(highTemp);
-    bmsTempMessage.setAvgTemp(avgTemp);
+    avgTemp = (uint16_t) (totalTemp / ((3) * TOTAL_THERMISTORS));
+    bmsTempMessage.setLowTemp((uint16_t) lowTemp);
+    bmsTempMessage.setHighTemp((uint16_t) highTemp);
+    bmsTempMessage.setAvgTemp((uint16_t) avgTemp);
 
     if (bmsCurrentMessage.getChargingState() == 0) { // discharging
         if (bmsTempMessage.getHighTemp() > DISCHARGE_TEMP_CRITICAL_HIGH) {
             bmsStatusMessage.setDischargeOvertemp(true);
             bmsStatusMessage.setBMSStatusOK(false);
+            Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
         }
         if (bmsTempMessage.getLowTemp() < DISCHARGE_TEMP_CRITICAL_LOW) {
             bmsStatusMessage.setDischargeUndertemp(true);
             bmsStatusMessage.setBMSStatusOK(false);
+            Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
         }
     } else if (bmsCurrentMessage.getChargingState() == 1) { // charging
         if (bmsTempMessage.getHighTemp() > CHARGE_TEMP_CRITICAL_HIGH) {
             bmsStatusMessage.setChargeOvertemp(true);
             bmsStatusMessage.setBMSStatusOK(false);
+            Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
         }
         if (bmsTempMessage.getLowTemp() < CHARGE_TEMP_CRITICAL_LOW) {
             bmsStatusMessage.setChargeUndertemp(true);
             bmsStatusMessage.setBMSStatusOK(false);
+            Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
         }
     }
 
     Serial.print("Low Temp: ");
-    Serial.print(lowTemp / 100); Serial.print("."); Serial.println(lowTemp % 100);
+    Serial.println(lowTemp / 100);
     Serial.print("High Temp: ");
-    Serial.print(highTemp / 100); Serial.print("."); Serial.println(highTemp % 100);
+    Serial.println(highTemp / 100);
     Serial.print("Average Temp: ");
-    Serial.print(avgTemp / 100); Serial.print("."); Serial.println(avgTemp % 100);
+    Serial.println(avgTemp / 100);
 }
 
-uint16_t calculateThermistorResistance(uint16_t tempVoltage) {
-    // voltage measured across thermistor is dependent on the resistor in the voltage divider
-    // v = 5 (Rt / (Rt + R1));
-    // Rt*v + R1*v = 5*Rt;
-    // Rt*v - 5*Rt = -R1*v;
-    // Rt = (R1*v) / (5 - v);
-    // all voltage measurements stored in arrays are in 0.1 mV, or 1/10,000 of a volt
-    return (THERMISTOR_RESISTOR_VALUE * tempVoltage) / (50000 - tempVoltage);
+uint16_t thermistorResistanceGPIO12(double tempVoltage) {
+    /* voltage measured across thermistor is dependent on the resistor in the voltage divider
+     * v = 5 - 5 (Rt / (Rt + R1));
+     * Rt*v + R1*v = -5*Rt + 5*Rt + 5R1
+     * Rt*v = 5*R1 - R1*v
+     * Rt = (5*R1 - R1*v) / v
+     * all voltage measurements stored in arrays are in 0.1 mV, or 1/10,000 of a volt
+     */
+     double resistance = (50000.0 - tempVoltage) * THERMISTOR_RESISTOR_VALUE / tempVoltage;
+     uint16_t intResistance = (uint16_t) resistance;
+     return intResistance;
     // resistances stored as 1 ohm units.
 }
 
-uint16_t calculateDegreesCelsius(uint16_t thermistorResistance) {
+uint16_t thermistorResistanceGPIO3(double tempVoltage) {
+    /* voltage measured across thermistor is dependent on the resistor in the voltage divider
+     * v = 5 (Rt / (Rt + R1));
+     * Rt*v + R1*v = 5*Rt;
+     * Rt*v - 5*Rt = -R1*v;
+     * Rt = (R1*v) / (5 - v);
+     * all voltage measurements stored in arrays are in 0.1 mV, or 1/10,000 of a volt
+     */
+     /* NEW EQUATION
+      */
+    double resistance = (5e3 * THERMISTOR_RESISTOR_VALUE * tempVoltage) / (1e4 * (50000.0 - tempVoltage) - 5e3 * tempVoltage);
+    return printResistance(resistance);
+    // resistances stored as 1 ohm units.
+}
+
+uint16_t printResistance(double resistance) {
+    Serial.print("RESISTANCE: "); Serial.println(resistance);
+    uint16_t intResistance = (uint16_t) resistance;
+    Serial.print("INT RESISTANCE: "); Serial.println(intResistance);
+    return intResistance;
+}
+
+uint16_t calculateDegreesCelsius(double thermistorResistance) {
     // temperature equation based on resistance is the following
     // R_inf = R0 * e^(-B / T0);
     // T = B / ln((R/R0) * e^(B / T0))
@@ -266,9 +336,11 @@ uint16_t calculateDegreesCelsius(uint16_t thermistorResistance) {
     // T = B / (ln(R/R0) + (B / T0))
     // B = 3984
     // R0 = 10000
-    double temp = 3984 / (log((1.0 * thermistorResistance) / 1.0e4) + (3984.0 / 298.15));
-    return (int) ((temp - 273.15) * 100);
-    // temps stored in 0.01 C units
+    double temp = 3984 / (log(thermistorResistance / 1e4) + (3984.0 / 298.15));
+    temp = temp - 273.15;
+    Serial.println(temp);
+    return (int) (temp * 100);
+    // temps stored in 0.1 C units
 }
 
 float calculateCurrent() {
@@ -277,8 +349,9 @@ float calculateCurrent() {
     // 0 current at 50% of 5V = 2.5V
     // max current sensor reading +/- 300A
     // current = 300 * (V - 25000) / 20000
-    uint16_t senseVoltage = aux_voltages[AUX_VOLTAGE_CURRENT_IC][AUX_VOLTAGE_CURRENT_INDEX];
-    float current = MAX_VAL_CURRENT_SENSE * (1.0f * senseVoltage - 2.5e4) / 2e4;
+    double senseVoltage = analogRead(CURRENT_SENSE) * 5.0 / 1024;
+    float current = (float) MAX_VAL_CURRENT_SENSE * (1.0 * senseVoltage - 2.5) / 2;
+    Serial.print("Current: "); Serial.println(current);
     bmsCurrentMessage.setCurrent(current);
     if (current < 0) {
         bmsCurrentMessage.setChargingState(CHARGING);
@@ -289,15 +362,18 @@ float calculateCurrent() {
         if (bmsCurrentMessage.getCurrent() > DISCHARGE_CURRENT_CONSTANT_HIGH) {
             bmsStatusMessage.setDischargeOvercurrent(true);
             bmsStatusMessage.setBMSStatusOK(false);
+            Serial.println("DISCHARGE CURRENT HIGH FAULT!!!!!!!!!!!!!!!!!!!");
         }
     } else if (bmsCurrentMessage.getChargingState() == 1) { // charging
-        if (bmsCurrentMessage.getCurrent() > CHARGE_CURRENT_CONSTANT_HIGH) {
+        if (bmsCurrentMessage.getCurrent() < CHARGE_CURRENT_CONSTANT_HIGH) {
             bmsStatusMessage.setChargeOvercurrent(true);
             bmsStatusMessage.setBMSStatusOK(false);
+            Serial.println("CHARGE CURRENT HIGH FAULT!!!!!!!!!!!!!!!!!!!");
         }
-        if (bmsCurrentMessage.getCurrent() < CHARGE_CURRENT_LOW_CUTOFF) {
+        if (bmsCurrentMessage.getCurrent() > CHARGE_CURRENT_LOW_CUTOFF) {
             bmsStatusMessage.setChargeUndercurrent(true);
             bmsStatusMessage.setBMSStatusOK(false);
+            Serial.println("CHARGE CURRENT LOW FAULT!!!!!!!!!!!!!!!!!!!");
         }
     }
     return current;
@@ -319,11 +395,11 @@ void wakeFromIdleAllChips() {
 
 void avgMinMaxTotalVoltage() {
     double totalVolts = 0; // stored as double volts
-    uint16_t maxVolt = cell_voltages[0][0]; // stored in 0.1 mV units
-    uint16_t minVolt = cell_voltages[0][0]; // stored in 0.1 mV units
+    uint16_t maxVolt = cell_voltages[0][2]; // stored in 0.1 mV units
+    uint16_t minVolt = cell_voltages[0][2]; // stored in 0.1 mV units
     double avgVolt = 0; // stored as double volts
     for (int ic = 0; ic < TOTAL_IC; ic++) {
-        for (int cell = 0; cell < TOTAL_CELLS; cell++) {
+        for (int cell = 2; cell < 8; cell++) {
             uint16_t currentCell = cell_voltages[ic][cell];
             cell_delta_voltage[ic][cell] = currentCell - cell_delta_voltage[ic][cell];
             if (currentCell > maxVolt) {
@@ -347,7 +423,20 @@ void avgMinMaxTotalVoltage() {
 
     // TODO: Low and High voltage error checking.
     if (bmsVoltageMessage.getHigh() > VOLTAGE_HIGH_CUTOFF) {
-        bmsStatusMessage.
+        bmsStatusMessage.setOvervoltage(true);
+        bmsStatusMessage.setBMSStatusOK(false);
+        Serial.println("VOLTAGE FAULT!!!!!!!!!!!!!!!!!!!");
+    }
+
+    if (bmsVoltageMessage.getLow() < VOLTAGE_LOW_CUTOFF) {
+        bmsStatusMessage.setUndervoltage(true);
+        bmsStatusMessage.setBMSStatusOK(false);
+        Serial.println("VOLTAGE FAULT!!!!!!!!!!!!!!!!!!!");
+    }
+    if (bmsVoltageMessage.getTotal() > TOTAL_VOLTAGE_CUTOFF) {
+        bmsStatusMessage.setTotalvoltage(true);
+        bmsStatusMessage.setBMSStatusOK(false);
+        Serial.println("VOLTAGE FAULT!!!!!!!!!!!!!!!!!!!");
     }
 
     Serial.print("Avg: "); Serial.println(avgVolt, 4);

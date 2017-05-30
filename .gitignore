@@ -1,2 +1,7 @@
 *.vscode
 .DS_Store
+Car_Code/BMS_Stuff/BMS_DC1894/*
+Car_Code/BMS_Stuff/BMS_DC1942/*
+Car_Code/BMS_Stuff/DC590B
+Car_Code/BMS_Stuff/LinduinoBMS/*.h
+Car_Code/BMS_Stuff/LinduinoBMS/*.cpp

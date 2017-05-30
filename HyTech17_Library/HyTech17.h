@@ -332,7 +332,7 @@ class BMS_status {
     /***************GETTERS*****************/
     bool getOvervoltage();
     bool getUndervoltage();
-    bool getTotalVoltage();
+    bool getTotalvoltage();
 
     bool getDischargeOvercurrent();
     bool getDischargeUndercurrent();
@@ -349,7 +349,7 @@ class BMS_status {
     /***************SETTERS*****************/
     void setOvervoltage(bool flag);
     void setUndervoltage(bool flag);
-    void setTotalVoltage(bool flag);
+    void setTotalvoltage(bool flag);
 
     void setDischargeOvercurrent(bool flag);
     void setDischargeUndercurrent(bool flag);
@@ -368,31 +368,31 @@ class BMS_status {
     CAN_message_bms_error_t bmsErrorMessage;
 };
 
-class BMSTestModeHandler {
-<<<<<<< HEAD
-  public:
-    BMSTestModeHandler();
-    BMSTestModeHandler(unsigned long initialTime);
-    void checkTestMode(unsigned long initialTime, int totalMillivolts, int cell1MilliVolts, int cell2MilliVolts);
-    bool bmsTestModeEntered();
-  private:
-    float prevTotalMillivolts;
-    float prevCell1Millivolts;
-    float prevCell2Millivolts;
-    bool inTestMode;
-=======
-    public:
-        BMSTestModeHandler();
-        BMSTestModeHandler(unsigned long initialTime);
-        void checkTestMode(unsigned long initialTime, int totalMillivolts, int cell1MilliVolts, int cell2MilliVolts);
-        bool bmsTestModeEntered();
-    private:
-        float prevTotalMillivolts;
-        float prevCell1Millivolts;
-        float prevCell2Millivolts;
-        bool bmsTestMode;
->>>>>>> d9b642963cc0a928b22ea8d5587096b350ee95a7
-};
+// class BMSTestModeHandler {
+// <<<<<<< HEAD
+//   public:
+//     BMSTestModeHandler();
+//     BMSTestModeHandler(unsigned long initialTime);
+//     void checkTestMode(unsigned long initialTime, int totalMillivolts, int cell1MilliVolts, int cell2MilliVolts);
+//     bool bmsTestModeEntered();
+//   private:
+//     float prevTotalMillivolts;
+//     float prevCell1Millivolts;
+//     float prevCell2Millivolts;
+//     bool inTestMode;
+// =======
+//     public:
+//         BMSTestModeHandler();
+//         BMSTestModeHandler(unsigned long initialTime);
+//         void checkTestMode(unsigned long initialTime, int totalMillivolts, int cell1MilliVolts, int cell2MilliVolts);
+//         bool bmsTestModeEntered();
+//     private:
+//         float prevTotalMillivolts;
+//         float prevCell1Millivolts;
+//         float prevCell2Millivolts;
+//         bool bmsTestMode;
+// >>>>>>> d9b642963cc0a928b22ea8d5587096b350ee95a7
+// };
 
 typedef struct CAN_message_charge_status_t {
     uint8_t charge_command;

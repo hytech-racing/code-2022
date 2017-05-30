@@ -938,7 +938,6 @@ int8_t LTC6804_rdcfg(uint8_t total_ic, //Number of ICs in the system
 void wakeup_idle()
 {
   output_low(LTC6804_CS);
-  delayMicroseconds(2); //Guarantees the isoSPI will be in ready mode
   output_high(LTC6804_CS);
 }
 
@@ -950,7 +949,6 @@ void wakeup_idle()
 void wakeup_sleep()
 {
   output_low(LTC6804_CS);
-  delay(1); // Guarantees the LTC6804 will be in standby
   output_high(LTC6804_CS);
 }
 /*!**********************************************************
@@ -991,7 +989,7 @@ void spi_write_array(uint8_t len, // Option: Number of bytes to be written on th
 					 )
 {
   delayMicroseconds(1);
-  SPI.beginTransaction(SPISettings(800000, MSBFIRST, SPI_MODE0)); // added by SHRIV
+  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0)); // added by SHRIV
   for(uint8_t i = 0; i < len; i++)
   {
      spi_write((int8_t)data[i]);
@@ -1017,7 +1015,7 @@ void spi_write_read(uint8_t tx_Data[],//array of data to be written on SPI port
 					)
 {
   delayMicroseconds(1);
-  SPI.beginTransaction(SPISettings(800000, MSBFIRST, SPI_MODE0)); // added by SHRIV
+  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0)); // added by SHRIV
   for(uint8_t i = 0; i < tx_len; i++)
   {
    spi_write(tx_Data[i]);

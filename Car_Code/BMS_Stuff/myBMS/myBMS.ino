@@ -186,14 +186,14 @@ void pollAuxiliaryVoltages() {
 void wakeFromSleepAllChips() {
     for (int i = 0; i < TOTAL_IC / 3; i++) {
         wakeup_sleep();
-        delay(3);
+//        delay(3);
     }
 }
 
 void wakeFromIdleAllChips() {
     for (int i = 0; i < TOTAL_IC / 3; i++) {
         wakeup_idle();
-        delay(3);
+//        delay(3);
     }
 }
 
