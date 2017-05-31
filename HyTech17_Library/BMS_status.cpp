@@ -37,7 +37,7 @@ bool BMS_status::getUndervoltage() {
     return val > 0;
 }
 
-bool BMS_status::getTotalvoltage() {
+bool BMS_status::getTotalVoltageHigh() {
     uint8_t val = bmsErrorMessage.errorFlagsByte1 & 0b00100000;
     return val > 0;
 }
@@ -47,18 +47,8 @@ bool BMS_status::getDischargeOvercurrent() {
     return val > 0;
 }
 
-bool BMS_status::getDischargeUndercurrent() {
-    uint8_t val = bmsErrorMessage.errorFlagsByte1 & 0b00000100;
-    return val > 0;
-}
-
 bool BMS_status::getChargeOvercurrent() {
     uint8_t val = bmsErrorMessage.errorFlagsByte1 & 0b00000010;
-    return val > 0;
-}
-
-bool BMS_status::getChargeUndercurrent() {
-    uint8_t val = bmsErrorMessage.errorFlagsByte1 & 0b00000001;
     return val > 0;
 }
 
@@ -67,18 +57,8 @@ bool BMS_status::getDischargeOvertemp() {
     return val > 0;
 }
 
-bool BMS_status::getDischargeUndertemp() {
-    uint8_t val = bmsErrorMessage.errorFlagsByte2 & 0b01000000;
-    return val > 0;
-}
-
 bool BMS_status::getChargeOvertemp() {
     uint8_t val = bmsErrorMessage.errorFlagsByte2 & 0b00100000;
-    return val > 0;
-}
-
-bool BMS_status::getChargeUndertemp() {
-    uint8_t val = bmsErrorMessage.errorFlagsByte2 & 0b00010000;
     return val > 0;
 }
 
@@ -91,6 +71,7 @@ void BMS_status::setOvervoltage(bool flag) {
     uint8_t val = 0;
     if (flag) {
         val = 0b10000000;
+        setBMSStatusOK(false);
     }
     bmsErrorMessage.errorFlagsByte1 = bmsErrorMessage.errorFlagsByte1 | val;
 }
@@ -99,14 +80,16 @@ void BMS_status::setUndervoltage(bool flag) {
     uint8_t val = 0;
     if (flag) {
         val = 0b01000000;
+        setBMSStatusOK(false);
     }
     bmsErrorMessage.errorFlagsByte1 = bmsErrorMessage.errorFlagsByte1 | val;
 }
 
-void BMS_status::setTotalvoltage(bool flag) {
+void BMS_status::setTotalVoltageHigh(bool flag) {
     uint8_t val = 0;
     if (flag) {
         val = 0b00100000;
+        setBMSStatusOK(false);
     }
     bmsErrorMessage.errorFlagsByte1 = bmsErrorMessage.errorFlagsByte1 | val;
 }
@@ -115,14 +98,7 @@ void BMS_status::setDischargeOvercurrent(bool flag) {
     uint8_t val = 0;
     if (flag) {
         val = 0b00001000;
-    }
-    bmsErrorMessage.errorFlagsByte1 = bmsErrorMessage.errorFlagsByte1 | val;
-}
-
-void BMS_status::setDischargeUndercurrent(bool flag) {
-    uint8_t val = 0;
-    if (flag) {
-        val = 0b00000100;
+        setBMSStatusOK(false);
     }
     bmsErrorMessage.errorFlagsByte1 = bmsErrorMessage.errorFlagsByte1 | val;
 }
@@ -131,14 +107,7 @@ void BMS_status::setChargeOvercurrent(bool flag) {
     uint8_t val = 0;
     if (flag) {
         val = 0b00000010;
-    }
-    bmsErrorMessage.errorFlagsByte1 = bmsErrorMessage.errorFlagsByte1 | val;
-}
-
-void BMS_status::setChargeUndercurrent(bool flag) {
-    uint8_t val = 0;
-    if (flag) {
-        val = 0b00000001;
+        setBMSStatusOK(false);
     }
     bmsErrorMessage.errorFlagsByte1 = bmsErrorMessage.errorFlagsByte1 | val;
 }
@@ -147,14 +116,7 @@ void BMS_status::setDischargeOvertemp(bool flag) {
     uint8_t val = 0;
     if (flag) {
         val = 0b10000000;
-    }
-    bmsErrorMessage.errorFlagsByte2 = bmsErrorMessage.errorFlagsByte2 | val;
-}
-
-void BMS_status::setDischargeUndertemp(bool flag) {
-    uint8_t val = 0;
-    if (flag) {
-        val = 0b01000000;
+        setBMSStatusOK(false);
     }
     bmsErrorMessage.errorFlagsByte2 = bmsErrorMessage.errorFlagsByte2 | val;
 }
@@ -163,14 +125,7 @@ void BMS_status::setChargeOvertemp(bool flag) {
     uint8_t val = 0;
     if (flag) {
         val = 0b00100000;
-    }
-    bmsErrorMessage.errorFlagsByte2 = bmsErrorMessage.errorFlagsByte2 | val;
-}
-
-void BMS_status::setChargeUndertemp(bool flag) {
-    uint8_t val = 0;
-    if (flag) {
-        val = 0b00010000;
+        setBMSStatusOK(false);
     }
     bmsErrorMessage.errorFlagsByte2 = bmsErrorMessage.errorFlagsByte2 | val;
 }

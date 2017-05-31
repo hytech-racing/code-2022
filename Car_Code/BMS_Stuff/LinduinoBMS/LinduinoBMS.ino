@@ -10,6 +10,22 @@
 #include "LTC68041.h"
 #include "HyTech17.h"
 
+/*
+ * On startup.
+ * 1. GLV boxes latches shutdown circuit closed.
+ * 2. AIR's close.
+ * 3. Voltage flows out of box, and turn on lights.
+ * 4. Any faults (OK_HS, BMS_OK, BSPD) will open shutdown circuit, open AIR's.
+ */
+
+/*
+ * Operating condition notes:
+ * 1. BMS sensors can be powered at all times.
+ * 2. Once linduino gets power from external power lines, give OK_BMS signal.
+ * 3. No need to check DC bus voltage, because all batteries read their true voltages at all times. (They are continuous with each other at all times, due to no relay.)
+ * 4. Once Temps go too high, current goes too high, or cell voltages go too high or too low, drive the BMS_OK signal low.
+ */
+
 /************BATTERY CONSTRAINTS AND CONSTANTS**********************/
 #define VOLTAGE_LOW_CUTOFF 2980
 #define VOLTAGE_HIGH_CUTOFF 4210
@@ -20,14 +36,11 @@
 #define DISCHARGE_CURRENT_CONSTANT_HIGH_TIME 10
 #define CHARGE_CURRENT_CONSTANT_HIGH -400
 #define CHARGE_CURRENT_PEAK_HIGH -400
-#define CHARGE_CURRENT_LOW_CUTOFF 1
 #define CHARGE_CURRENT_PEAK_HIGH_TIME 10
 #define CHARGE_CURRENT_CONSTANT_HIGH_TIME 20
 #define MAX_VAL_CURRENT_SENSE 300
 #define CHARGE_TEMP_CRITICAL_HIGH 4400 // 44.00
-#define CHARGE_TEMP_CRITICAL_LOW 0
 #define DISCHARGE_TEMP_CRITICAL_HIGH 6000 // 60.00
-#define DISCHARGE_TEMP_CRITICAL_LOW 1500 // 15.00
 
 /********GLOBAL ARRAYS/VARIABLES CONTAINING DATA FROM CHIP**********/
 #define TOTAL_IC 4
@@ -40,8 +53,6 @@ uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
       * Thermistor 1
       * Thermistor 2
       * Thermistor 3
-      * Thermistor 4
-      * Current Sensor
       */
 int16_t cell_delta_voltage[TOTAL_IC][12]; // contains 12 signed dV values in 0.1 mV units
 
@@ -122,33 +133,24 @@ void setup() {
 
 void loop() {
 //    waitForUserInput();
-    byte* incomingMsg = (byte*) malloc(8);
-    byte len = 0;
-    unsigned long id = 0;
-    CAN.readMsgBufID(&id, &len, incomingMsg);
-    if (id == ID_MC_VOLTAGE_INFORMATION) {
-        MC_voltage_information mc_voltage(incomingMsg);
-        if (mc_voltage.get_dc_bus_voltage() > 100) {
-            pollVoltage(); // cell_voltages[] array populated with cell voltages now.
-            //   balanceCellsDuringCharging();
-            avgMinMaxTotalVoltage(); // stores data in bmsVoltageMessage object.
+    pollVoltage(); // cell_voltages[] array populated with cell voltages now.
+    //   balanceCellsDuringCharging();
+    process_voltages(); // stores data in bmsVoltageMessage object.
 
-            pollAuxiliaryVoltages();
-            avgLowHighTemp(); // stores data in bmsTempMessage object.
-            calculateCurrent(); // stores data in bmsCurrentMessage object.
+    pollAuxiliaryVoltages();
+    process_temps(); // stores datap in bmsTempMessage object.
+    process_current(); // stores data in bmsCurrentMessage object.
 
-            // write to CAN!
-            writeToCAN();
+    // write to CAN!
+    writeToCAN();
 
-            // set BMS_OK signal
-            if (!bmsStatusMessage.getBMSStatusOK()) {
-                digitalWrite(BMS_OK_PIN, LOW);
-                Serial.println("STATUS NOT GOOD!!!!!!!!!!!!!!!");
-            }
-            watchDogFlag = !watchDogFlag; // inverting watchDogFlag
-            // Prevents WATCH_DOG_TIMER timeout
-        }
+    // set BMS_OK signal
+    if (!bmsStatusMessage.getBMSStatusOK()) {
+        digitalWrite(BMS_OK_PIN, LOW);
+        Serial.println("STATUS NOT GOOD!!!!!!!!!!!!!!!");
     }
+    watchDogFlag = !watchDogFlag; // inverting watchDogFlag
+    // Prevents WATCH_DOG_TIMER timeout
     digitalWrite(WATCH_DOG_TIMER, watchDogFlag);
 }
 
@@ -197,7 +199,7 @@ void pollVoltage() {
         Serial.println("A PEC error was detected in cell voltage data");
     }
 //    printCells(); // prints the cell voltages to Serial.
-    delay(200);
+    delay(200); // TODO: Why 200 milliseconds?
 }
 
 void pollAuxiliaryVoltages() {
@@ -215,7 +217,7 @@ void pollAuxiliaryVoltages() {
     delay(200);
 }
 
-void avgLowHighTemp() {
+void process_temps() {
     double avgTemp, lowTemp, highTemp, totalTemp;
     totalTemp = 0;
     lowTemp = calculateDegreesCelsius(thermistorResistanceGPIO12(aux_voltages[0][0]));
@@ -266,19 +268,9 @@ void avgLowHighTemp() {
             bmsStatusMessage.setBMSStatusOK(false);
             Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
         }
-        if (bmsTempMessage.getLowTemp() < DISCHARGE_TEMP_CRITICAL_LOW) {
-            bmsStatusMessage.setDischargeUndertemp(true);
-            bmsStatusMessage.setBMSStatusOK(false);
-            Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
-        }
     } else if (bmsCurrentMessage.getChargingState() == 1) { // charging
         if (bmsTempMessage.getHighTemp() > CHARGE_TEMP_CRITICAL_HIGH) {
             bmsStatusMessage.setChargeOvertemp(true);
-            bmsStatusMessage.setBMSStatusOK(false);
-            Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
-        }
-        if (bmsTempMessage.getLowTemp() < CHARGE_TEMP_CRITICAL_LOW) {
-            bmsStatusMessage.setChargeUndertemp(true);
             bmsStatusMessage.setBMSStatusOK(false);
             Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
         }
@@ -343,14 +335,14 @@ uint16_t calculateDegreesCelsius(double thermistorResistance) {
     // temps stored in 0.1 C units
 }
 
-float calculateCurrent() {
+float process_current() {
     // max positive current at 90% of 5V = 4.5V
     // max negative current in opposite direction at 10% of 5V = 0.5V
     // 0 current at 50% of 5V = 2.5V
     // max current sensor reading +/- 300A
-    // current = 300 * (V - 25000) / 20000
+    // current = 300 * (V - 2.5v) / 2v
     double senseVoltage = analogRead(CURRENT_SENSE) * 5.0 / 1024;
-    float current = (float) MAX_VAL_CURRENT_SENSE * (1.0 * senseVoltage - 2.5) / 2;
+    float current = (float) MAX_VAL_CURRENT_SENSE * (senseVoltage - 2.5) / 2;
     Serial.print("Current: "); Serial.println(current);
     bmsCurrentMessage.setCurrent(current);
     if (current < 0) {
@@ -361,19 +353,12 @@ float calculateCurrent() {
     if (bmsCurrentMessage.getChargingState() == 0) { // discharging
         if (bmsCurrentMessage.getCurrent() > DISCHARGE_CURRENT_CONSTANT_HIGH) {
             bmsStatusMessage.setDischargeOvercurrent(true);
-            bmsStatusMessage.setBMSStatusOK(false);
             Serial.println("DISCHARGE CURRENT HIGH FAULT!!!!!!!!!!!!!!!!!!!");
         }
     } else if (bmsCurrentMessage.getChargingState() == 1) { // charging
         if (bmsCurrentMessage.getCurrent() < CHARGE_CURRENT_CONSTANT_HIGH) {
             bmsStatusMessage.setChargeOvercurrent(true);
-            bmsStatusMessage.setBMSStatusOK(false);
             Serial.println("CHARGE CURRENT HIGH FAULT!!!!!!!!!!!!!!!!!!!");
-        }
-        if (bmsCurrentMessage.getCurrent() > CHARGE_CURRENT_LOW_CUTOFF) {
-            bmsStatusMessage.setChargeUndercurrent(true);
-            bmsStatusMessage.setBMSStatusOK(false);
-            Serial.println("CHARGE CURRENT LOW FAULT!!!!!!!!!!!!!!!!!!!");
         }
     }
     return current;
@@ -393,13 +378,13 @@ void wakeFromIdleAllChips() {
     }
 }
 
-void avgMinMaxTotalVoltage() {
+void process_voltages() {
     double totalVolts = 0; // stored as double volts
-    uint16_t maxVolt = cell_voltages[0][2]; // stored in 0.1 mV units
-    uint16_t minVolt = cell_voltages[0][2]; // stored in 0.1 mV units
+    uint16_t maxVolt = cell_voltages[0][0]; // stored in 0.1 mV units
+    uint16_t minVolt = cell_voltages[0][0]; // stored in 0.1 mV units
     double avgVolt = 0; // stored as double volts
     for (int ic = 0; ic < TOTAL_IC; ic++) {
-        for (int cell = 2; cell < 8; cell++) {
+        for (int cell = 0; cell < TOTAL_CELLS; cell++) {
             uint16_t currentCell = cell_voltages[ic][cell];
             cell_delta_voltage[ic][cell] = currentCell - cell_delta_voltage[ic][cell];
             if (currentCell > maxVolt) {
@@ -414,28 +399,25 @@ void avgMinMaxTotalVoltage() {
         }
     }
     avgVolt = totalVolts / (TOTAL_IC * TOTAL_CELLS); // stored as double volts
-    bmsVoltageMessage.setAverage(static_cast<uint16_t>(avgVolt * 1000 + 0.5));
-    bmsVoltageMessage.setTotal(static_cast<uint16_t>(totalVolts + 0.5));
-    minVolt = convertToMillivolts(minVolt);
-    maxVolt = convertToMillivolts(maxVolt);
+    bmsVoltageMessage.setAverage(static_cast<uint16_t>(avgVolt * 1000 + 0.5)); // stored in millivolts
+    bmsVoltageMessage.setTotal(static_cast<uint16_t>(totalVolts + 0.5)); // number is in units volts
+    minVolt = (minVolt + 5) / 10;
+    maxVolt = (maxVolt + 5) / 10;
     bmsVoltageMessage.setLow(minVolt);
     bmsVoltageMessage.setHigh(maxVolt);
 
     // TODO: Low and High voltage error checking.
     if (bmsVoltageMessage.getHigh() > VOLTAGE_HIGH_CUTOFF) {
         bmsStatusMessage.setOvervoltage(true);
-        bmsStatusMessage.setBMSStatusOK(false);
         Serial.println("VOLTAGE FAULT!!!!!!!!!!!!!!!!!!!");
     }
 
     if (bmsVoltageMessage.getLow() < VOLTAGE_LOW_CUTOFF) {
         bmsStatusMessage.setUndervoltage(true);
-        bmsStatusMessage.setBMSStatusOK(false);
         Serial.println("VOLTAGE FAULT!!!!!!!!!!!!!!!!!!!");
     }
     if (bmsVoltageMessage.getTotal() > TOTAL_VOLTAGE_CUTOFF) {
-        bmsStatusMessage.setTotalvoltage(true);
-        bmsStatusMessage.setBMSStatusOK(false);
+        bmsStatusMessage.setTotalVoltageHigh(true);
         Serial.println("VOLTAGE FAULT!!!!!!!!!!!!!!!!!!!");
     }
 
@@ -507,10 +489,6 @@ void writeToCAN() {
     bmsStatusMessage.write(msg);
     CANsendMsgResult = CAN.sendMsgBuf(ID_BMS_STATUS, 0, 8, msg);
     digitalWrite(10, HIGH);
-}
-
-uint16_t convertToMillivolts(uint16_t v) {
-    return (v + 5) / 10;
 }
 
 void printCells() {
