@@ -24,9 +24,9 @@
 #define SOFTWARE_SHUTDOWN_RELAY 12
 
 /*
- * Constants
+ * Constant definitions
  */
-// TODO fix these once installed
+// TODO some of these values need to be calibrated once hardware is installed
 #define BRAKE_ACTIVE 300
 #define MIN_THROTTLE_1 0 // compare pedal travel
 #define MAX_THROTTLE_1 1024
@@ -35,6 +35,7 @@
 #define MIN_BRAKE 0
 #define MAX_BRAKE 1024
 #define MAX_TORQUE 600 // Torque in Nm * 10
+#define MIN_HV_VOLTAGE 95 // Used to check if Accumulator is energized
 
 /*
  * Timers
@@ -154,10 +155,10 @@ void loop() {
 
     if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
       MC_voltage_information mc_voltage_information = MC_voltage_information(msg.buf);
-      if (mc_voltage_information.get_dc_bus_voltage() > 100 && state == TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
+      if (mc_voltage_information.get_dc_bus_voltage() >= MIN_HV_VOLTAGE && state == TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
         set_state(TCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
       }
-      if (mc_voltage_information.get_dc_bus_voltage() <= 100 && state > TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
+      if (mc_voltage_information.get_dc_bus_voltage() < MIN_HV_VOLTAGE && state > TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
         set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
       }
     }
@@ -184,7 +185,7 @@ void loop() {
     CAN.write(msg);
 
     // Send Dashboard Control Unit message
-    DCU_status dcu_status = DCU_status(btn_start_id, 0, 0, 0);
+    DCU_status dcu_status = DCU_status(btn_start_id, 0, 0, 0); // Nothing currently relies on the other data, so sending 0s for now
     dcu_status.write(msg.buf);
     msg.id = ID_DCU_STATUS;
     msg.len = sizeof(CAN_message_dcu_status_t);
