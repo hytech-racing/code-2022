@@ -1,0 +1,15 @@
+1. If using the steering wheel phone:
+    Open "Hotspot Control" app
+    Tap "Enable Access Point"
+
+   If using other phone: 
+    Set phone hotspot like this 
+    SSID: hytech-debug
+    Password: hytech2016
+
+
+2. Connect laptop to hytech-debug (or open JuiceSSH on steering wheel phone)
+
+3. ssh pi@192.168.43.43
+
+4. That should do it

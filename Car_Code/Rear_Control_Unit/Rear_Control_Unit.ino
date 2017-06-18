@@ -10,15 +10,21 @@
 /*
  * Pin definitions
  */
-#define SENSE_BMS A0
-#define SENSE_BRAKE A3
-#define SENSE_IMD A1
+#define SENSE_BMS A1
+#define SENSE_IMD A0
 #define SENSE_SHUTDOWN_OUT A2
-#define SENSE_TEMP A4
 #define SSR_BRAKE_LIGHT 12
 #define SSR_INVERTER 6
 #define SSR_LATCH_BMS 11
-#define SSR_LATCH_IMD 10
+#define SSR_LATCH_IMD 8
+
+/*
+ * Constant definitions
+ */
+#define BMS_HIGH 100
+#define BMS_LOW 50
+#define IMD_HIGH 100
+#define IMD_LOW 50
 
 /*
  * Timers
@@ -59,21 +65,20 @@ void loop() {
    * Handle incoming CAN messages
    */
   while (CAN.read(msg)) {
-    if (msg.id == ID_TCU_STATUS) {
-      /*Serial.print(msg.id);
-      Serial.print(": ");
-      for (unsigned int i = 0; i < msg.len; i++) {
-        Serial.print(msg.buf[i]);
-        Serial.print(" ");
-      }
-      Serial.println();*/
-      
-      TCU_status message = TCU_status(msg.buf);
-      if (btn_start_id != message.get_btn_start_id()) {
-        btn_start_id = message.get_btn_start_id();
+    if (msg.id == ID_DCU_STATUS) {      
+      DCU_status message = DCU_status(msg.buf);
+      if (btn_start_id != message.get_btn_press_id()) {
+        btn_start_id = message.get_btn_press_id();
         Serial.print("Start button pressed id ");
         Serial.println(btn_start_id);
       }
+    }
+    if (msg.id == ID_TCU_STATUS) {
+      TCU_status tcu_status = TCU_status(msg.buf);
+      if (tcu_status.get_brake_pedal_active())
+        digitalWrite(SSR_BRAKE_LIGHT, HIGH);
+      else
+        digitalWrite(SSR_BRAKE_LIGHT, LOW);
     }
     /*if (msg.id == ID_MC_COMMAND_MESSAGE) {
       MC_command_message mc_command_message = MC_command_message(msg.buf);
@@ -96,7 +101,7 @@ void loop() {
    * Send state over CAN
    */
   if (timer_state_send.check()) {
-    PCU_status pcu_status(state, bms_fault, imd_fault);
+    PCU_status pcu_status(state, bms_fault, imd_fault, 0, 0); // Nothing external relies on OKHS or discharge_ok voltage so sending 0s for now
     pcu_status.write(msg.buf);
     msg.id = ID_PCU_STATUS;
     msg.len = sizeof(CAN_message_pcu_status_t);
@@ -105,7 +110,7 @@ void loop() {
 
   switch (state) {
     case PCU_STATE_WAITING_BMS_IMD:
-    if (analogRead(SENSE_IMD) > 100 && analogRead(SENSE_BMS) > 100) { // Wait till IMD and BMS signals go high at startup
+    if (analogRead(SENSE_IMD) > IMD_HIGH && analogRead(SENSE_BMS) > BMS_HIGH) { // Wait till IMD and BMS signals go high at startup
       set_state(PCU_STATE_WAITING_DRIVER);
     }
     break;
@@ -132,22 +137,22 @@ void loop() {
   /*
    * Start BMS fault timer if signal drops momentarily
    */
-  /*if (state != PCU_STATE_WAITING_BMS_IMD && analogRead(SENSE_IMD) <= 50) { // TODO imd/bms
+  if (state != PCU_STATE_WAITING_BMS_IMD && analogRead(SENSE_BMS) <= BMS_LOW) { // TODO imd/bms
     bms_faulting = true;
     timer_bms_faulting.reset();
-  }*/
+  }
 
   /*
    * Reset BMS fault condition if signal comes back within timer period
    */
-  if (bms_faulting && analogRead(SENSE_IMD) > 50) { // TODO imd/bms
+  if (bms_faulting && analogRead(SENSE_BMS) > BMS_HIGH) {
     bms_faulting = false;
   }
 
   /*
    * Declare BMS fault if signal still dropped
    */
-  if (bms_faulting && timer_imd_faulting.check()) {
+  if (bms_faulting && timer_bms_faulting.check()) {
     bms_fault = true;
     set_state(PCU_STATE_FATAL_FAULT);
     Serial.println("BMS fault detected");
@@ -156,7 +161,7 @@ void loop() {
   /*
    * Start IMD fault timer if signal drops momentarily
    */
-  if (state != PCU_STATE_WAITING_BMS_IMD && analogRead(SENSE_IMD) <= 50) {
+  if (state != PCU_STATE_WAITING_BMS_IMD && analogRead(SENSE_IMD) <= IMD_LOW) {
     imd_faulting = true;
     timer_imd_faulting.reset();
   }
@@ -164,7 +169,7 @@ void loop() {
   /*
    * Reset IMD fault condition if signal comes back within timer period
    */
-  if (imd_faulting && analogRead(SENSE_IMD) > 50) {
+  if (imd_faulting && analogRead(SENSE_IMD) > IMD_HIGH) {
     imd_faulting = false;
   }
 
