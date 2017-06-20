@@ -9,6 +9,7 @@
 #include "HyTech17.h"
 
 /*
+ * 
  * On startup.
  * 1. GLV boxes latches shutdown circuit closed.
  * 2. AIR's close.
@@ -29,19 +30,13 @@
 #define VOLTAGE_HIGH_CUTOFF 4210
 #define TOTAL_VOLTAGE_CUTOFF 150
 #define DISCHARGE_CURRENT_CONSTANT_HIGH 220
-#define DISCHARGE_CURRENT_PEAK_HIGH 440
-#define DISCHARGE_CURRENT_PEAK_HIGH_TIME 5
-#define DISCHARGE_CURRENT_CONSTANT_HIGH_TIME 10
 #define CHARGE_CURRENT_CONSTANT_HIGH -400
-#define CHARGE_CURRENT_PEAK_HIGH -400
-#define CHARGE_CURRENT_PEAK_HIGH_TIME 10
-#define CHARGE_CURRENT_CONSTANT_HIGH_TIME 20
 #define MAX_VAL_CURRENT_SENSE 300
 #define CHARGE_TEMP_CRITICAL_HIGH 4400 // 44.00
 #define DISCHARGE_TEMP_CRITICAL_HIGH 6000 // 60.00
 
 /********GLOBAL ARRAYS/VARIABLES CONTAINING DATA FROM CHIP**********/
-#define TOTAL_IC 2
+#define TOTAL_IC 4
 #define TOTAL_CELLS 9
 #define TOTAL_THERMISTORS 3 // TODO: Double check how many thermistors are being used.
 #define THERMISTOR_ISTOR_VALUE 6700 // TODO: Double check what istor is used on the istor divider.
@@ -337,6 +332,7 @@ uint16_t thermistorResistanceGPIO12(double tempVoltage) {
      */
      tempVoltage = tempVoltage / 1e4;
      double resistance = 1e6 * (5 - tempVoltage) / (tempVoltage + 100 * tempVoltage - 5);
+     Serial.println(resistance, 2);
      return (uint16_t) resistance;
     // resistances stored as 1 ohm units.
 }
@@ -344,17 +340,25 @@ uint16_t thermistorResistanceGPIO12(double tempVoltage) {
 /*
  * tempVoltage is a double in units volts
  */
-static inline uint16_t thermistorResistanceGPIO3(float tempVoltage) {
+static inline uint16_t thermistorResistanceGPIO3(double tempVoltage) {
     /* voltage measured across thermistor is dependent on the istor in the voltage divider
      * all voltage measurements stored in arrays are in 0.1 mV, or 1/10,000 of a volt
      */
     tempVoltage = tempVoltage / 1e4;
     Serial.println(tempVoltage);
-    float denom = tempVoltage - 1.0;
-    float res = (25000.0 - 5000.0 * denom);
-    float newRes = res / denom;
-    Serial.print("resistance 3"); Serial.println(newRes);
-    return (uint16_t) newRes;
+    double res = 5000.0 * tempVoltage;
+    Serial.print("Step 1: "); Serial.println(res, 2);
+    res = 25000.0 - res;
+    Serial.print("Step 2: "); Serial.println(res, 2);
+    res = res + 5000.0;
+    Serial.print("Step 3: "); Serial.println(res, 2);
+    res = res / (tempVoltage - 1.0);
+    Serial.print("Final Step 4: "); Serial.println(res, 2);
+//    double res = (25000.0 - 5000.0 * tempVoltage + 5000.0) / (tempVoltage - 1.0);
+    Serial.print("resistance 3: "); Serial.println(res, 2);
+    uint16_t small_res = (uint16_t) res;
+    Serial.print("integer resistance 3: "); Serial.println(small_res);
+    return small_res;
     // resistances stored as 1 ohm units.
 }
 
