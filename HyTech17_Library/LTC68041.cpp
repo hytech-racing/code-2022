@@ -86,6 +86,7 @@ void LTC6804_initialize()
 {
   quikeval_SPI_connect();
   spi_enable(SPI_CLOCK_DIV16); // This will set the Linduino to have a 1MHz Clock
+  output_high(LTC6804_CS);
   set_adc(MD_NORMAL,DCP_DISABLED,CELL_CH_ALL,AUX_CH_ALL);
 }
 
@@ -991,10 +992,13 @@ void spi_write_array(uint8_t len, // Option: Number of bytes to be written on th
 					 uint8_t data[] //Array of bytes to be written on the SPI port
 					 )
 {
+  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
   for(uint8_t i = 0; i < len; i++)
   {
-     spi_write((int8_t)data[i]);
+     SPI.transfer(data[i]);
+    //  spi_write((int8_t)data[i]);
   }
+  SPI.endTransaction();
 }
 
 /*!
@@ -1013,15 +1017,22 @@ void spi_write_read(uint8_t tx_Data[],//array of data to be written on SPI port
 					uint8_t rx_len //Option: number of bytes to be read from the SPI port
 					)
 {
-  for(uint8_t i = 0; i < tx_len; i++)
-  {
-   spi_write(tx_Data[i]);
-
+  // for(uint8_t i = 0; i < tx_len; i++)
+  // {
+  //  spi_write(tx_Data[i]);
+  //
+  // }
+  //
+  // for(uint8_t i = 0; i < rx_len; i++)
+  // {
+  //   rx_data[i] = (uint8_t)spi_read(0xFF);
+  // }
+  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
+  for (uint8_t i = 0; i < tx_len; i++) {
+      SPI.transfer(tx_Data[i]);
   }
-
-  for(uint8_t i = 0; i < rx_len; i++)
-  {
-    rx_data[i] = (uint8_t)spi_read(0xFF);
+  for (uint8_t i = 0; i < rx_len; i++) {
+      rx_data[i] = SPI.transfer(0xFF);
   }
-
+  SPI.endTransaction();
 }

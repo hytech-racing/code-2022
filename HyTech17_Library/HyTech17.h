@@ -293,10 +293,10 @@ typedef struct CAN_message_bms_error_t {
     /* Error Flags as bit map:
      * errorFlagsByte1
      * -0- -1- -2- -3- -4- -5- -6- -7-
-     * 0. Discharge overvoltage
-     * 1. Discharge undervoltage
-     * 2. Charge overvoltage
-     * 3. Charge undervoltage
+     * 0. Overvoltage
+     * 1. Undervoltage
+     * 2. Total Voltage
+     * 3.
      * 4. Discharge overcurrent
      * 5. Discharge undercurrent
      * 6. Charge overcurrent
@@ -322,57 +322,42 @@ class BMS_status {
     void load(uint8_t buf[]);
     void write(uint8_t buf[]);
     /***************GETTERS*****************/
-    bool getDischargeOvervoltage();
-    bool getDischargeUndervoltage();
-    bool getChargeOvervoltage();
-    bool getChargeUndervoltage();
+    bool getOvervoltage();
+    bool getUndervoltage();
+    bool getTotalVoltageHigh();
 
     bool getDischargeOvercurrent();
-    bool getDischargeUndercurrent();
+    // bool getDischargeUndercurrent();
     bool getChargeOvercurrent();
-    bool getChargeUndercurrent();
+    // bool getChargeUndercurrent();
 
     bool getDischargeOvertemp();
-    bool getDischargeUndertemp();
+    // bool getDischargeUndertemp();
     bool getChargeOvertemp();
-    bool getChargeUndertemp();
+    // bool getChargeUndertemp();
 
     bool getBMSStatusOK();
 
     /***************SETTERS*****************/
-    void setDischargeOvervoltage(bool flag);
-    void setDischargeUndervoltage(bool flag);
-    void setChargeOvervoltage(bool flag);
-    void setChargeUndervoltage(bool flag);
+    void setOvervoltage(bool flag);
+    void setUndervoltage(bool flag);
+    void setTotalVoltageHigh(bool flag);
 
     void setDischargeOvercurrent(bool flag);
-    void setDischargeUndercurrent(bool flag);
+    // void setDischargeUndercurrent(bool flag);
     void setChargeOvercurrent(bool flag);
-    void setChargeUndercurrent(bool flag);
+    // void setChargeUndercurrent(bool flag);
 
     void setDischargeOvertemp(bool flag);
-    void setDischargeUndertemp(bool flag);
+    // void setDischargeUndertemp(bool flag);
     void setChargeOvertemp(bool flag);
-    void setChargeUndertemp(bool flag);
+    // void setChargeUndertemp(bool flag);
 
     void clearAllFlags();
 
     void setBMSStatusOK(bool flag);
   private:
     CAN_message_bms_error_t bmsErrorMessage;
-};
-
-class BMSTestModeHandler {
-    public:
-        BMSTestModeHandler();
-        BMSTestModeHandler(unsigned long initialTime);
-        void checkTestMode(unsigned long initialTime, int totalMillivolts, int cell1MilliVolts, int cell2MilliVolts);
-        bool bmsTestModeEntered();
-    private:
-        float prevTotalMillivolts;
-        float prevCell1Millivolts;
-        float prevCell2Millivolts;
-        bool bmsTestMode;
 };
 
 typedef struct CAN_message_charge_status_t {
