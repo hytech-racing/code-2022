@@ -285,7 +285,7 @@ bool MC_fault_codes::get_run_hi_reserved4() {
   return (message.run_fault_hi && 0x2000) >> 13;
 }
 
-bool MC_fault_codes::get_run_hi_resolved_not_connected() {
+bool MC_fault_codes::get_run_hi_resolver_not_connected() {
   return (message.run_fault_hi && 0x4000) >> 14;
 }
 

@@ -3,6 +3,7 @@
  * Init 2017-05-13
  * Interface with dashboard lights, buttons, and buzzer.
  * Read pedal sensor values and communicate with motor controller.
+ * Configured for Pedal Box Board rev3
  */
 #include <FlexCAN.h>
 #include "HyTech17.h"
@@ -12,42 +13,45 @@
  * Pin definitions
  */
 #define BSPD_FAULT A7
-#define BTN_START A4
-#define LED_START 2
-#define LED_BMS 5
-#define LED_BSPD 8
-#define LED_IMD 6
+#define BTN_START A5
+#define LED_START 5
+#define LED_BMS 6
+#define LED_BSPD 13
+#define LED_IMD 7
 #define PEDAL_BRAKE A2 //analog port of brake sensor
 #define PEDAL_THROTTLE_1 A0 //first throttle sensor port
 #define PEDAL_THROTTLE_2 A1 //second throttle sensor port
-#define READY_SOUND 7
+#define READY_SOUND 2
 #define SOFTWARE_SHUTDOWN_RELAY 12
 
 /*
  * Constant definitions
  */
 // TODO some of these values need to be calibrated once hardware is installed
-#define BRAKE_ACTIVE 300
-#define MIN_THROTTLE_1 0 // compare pedal travel
-#define MAX_THROTTLE_1 1024
-#define MIN_THROTTLE_2 0
-#define MAX_THROTTLE_2 1024
-#define MIN_BRAKE 0
-#define MAX_BRAKE 1024
-#define MAX_TORQUE 600 // Torque in Nm * 10
-#define MIN_HV_VOLTAGE 95 // Used to check if Accumulator is energized
+#define BRAKE_ACTIVE 282
+#define MIN_THROTTLE_1 463 // compare pedal travel
+#define MAX_THROTTLE_1 246
+#define MIN_THROTTLE_2 93
+#define MAX_THROTTLE_2 306
+#define MIN_BRAKE 242
+#define MAX_BRAKE 306
+#define MAX_TORQUE 60 // Torque in Nm * 10
+#define MIN_HV_VOLTAGE 950 // Used to check if Accumulator is energized
 
 /*
  * Timers
  */
 Metro timer_btn_start = Metro(10);
 Metro timer_debug = Metro(500);
+Metro timer_debug_faults = Metro(500);
+Metro timer_debug_rear_state = Metro(500);
+Metro timer_debug_torque = Metro(500);
 Metro timer_inverter_enable = Metro(2000); // Timeout failed inverter enable
 Metro timer_led_start_blink_fast = Metro(150);
 Metro timer_led_start_blink_slow = Metro(400);
 Metro timer_motor_controller_send = Metro(50);
 Metro timer_ready_sound = Metro(2000); // Time to play RTD sound
-Metro timer_can_update = Metro(500);
+Metro timer_can_update = Metro(100);
 
 /*
  * Global variables
@@ -57,7 +61,7 @@ bool btn_start_debouncing = false;
 uint8_t btn_start_id = 0; // Increments to differentiate separate button presses
 uint8_t btn_start_new = 0;
 bool btn_start_pressed = false;
-bool debug = false;
+bool debug = true;
 bool fsae_brake_pedal_implausibility = false; // FSAE EV2.5
 bool fsae_throttle_pedal_implausibility = false;
 bool led_start_active = false;
@@ -78,13 +82,13 @@ void setup() {
   pinMode(LED_BSPD, OUTPUT);
   pinMode(LED_IMD, OUTPUT);
   pinMode(LED_START, OUTPUT);
-  // To detect an open circuit on pedal sensors,
-  // enable the pullup resistor on the Teensy input pin
-  pinMode(PEDAL_BRAKE, INPUT_PULLUP);
-  pinMode(PEDAL_THROTTLE_1, INPUT_PULLUP);
-  pinMode(PEDAL_THROTTLE_2, INPUT_PULLUP);
+  
+  pinMode(PEDAL_BRAKE, INPUT);
+  pinMode(PEDAL_THROTTLE_1, INPUT);
+  pinMode(PEDAL_THROTTLE_2, INPUT);
   pinMode(READY_SOUND, OUTPUT);
   pinMode(SOFTWARE_SHUTDOWN_RELAY, OUTPUT);
+  pinMode(13, OUTPUT);
 
   Serial.begin(115200); // init serial for PC communication
   CAN.begin();
@@ -93,6 +97,7 @@ void setup() {
 
   set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
   digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH);
+  digitalWrite(13, HIGH); // Used to indicate power
 }
 
 void loop() {
@@ -109,7 +114,7 @@ void loop() {
         digitalWrite(LED_IMD, HIGH);
         Serial.println("IMD Fault detected");
       }
-      if (debug) {
+      if (debug && timer_debug_rear_state.check()) {
         Serial.print("PCU State: ");
         Serial.println(pcu_status.get_state());
       }
@@ -155,12 +160,25 @@ void loop() {
 
     if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
       MC_voltage_information mc_voltage_information = MC_voltage_information(msg.buf);
+      
       if (mc_voltage_information.get_dc_bus_voltage() >= MIN_HV_VOLTAGE && state == TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
         set_state(TCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
       }
       if (mc_voltage_information.get_dc_bus_voltage() < MIN_HV_VOLTAGE && state > TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
         set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
       }
+    }
+
+    if (msg.id == ID_MC_FAULT_CODES && debug && timer_debug_faults.check()) {
+      MC_fault_codes mc_fault_codes = MC_fault_codes(msg.buf);
+      Serial.print("Fault 1: ");
+      Serial.println(mc_fault_codes.get_post_fault_lo());
+      Serial.print("Fault 2: ");
+      Serial.println(mc_fault_codes.get_post_fault_hi());
+      Serial.print("Fault 3: ");
+      Serial.println(mc_fault_codes.get_run_fault_lo());
+      Serial.print("Fault 4: ");
+      Serial.println(mc_fault_codes.get_run_fault_hi());
     }
   }
 
@@ -203,6 +221,8 @@ void loop() {
     if (btn_start_new == btn_start_id) { // Start button has been pressed
       if (brake_pedal_active) { // Required to hold brake pedal to activate motor controller
         set_state(TCU_STATE_ENABLING_INVERTER);
+      } else {
+        btn_start_new = btn_start_id + 1;
       }
     }
     break;
@@ -224,28 +244,36 @@ void loop() {
 
     case TCU_STATE_READY_TO_DRIVE:
     if (timer_motor_controller_send.check()) {
-      MC_command_message mc_command_message = MC_command_message(0, 0, 1, 1, 0, 0);
+      MC_command_message mc_command_message = MC_command_message(0, 0, 0, 1, 0, 0);
       read_values(); // Read new sensor values
 
       // Check for throttle implausibility FSAE EV2.3.10
       fsae_throttle_pedal_implausibility = false;
-      if (value_pedal_throttle_1 < MIN_THROTTLE_1 || value_pedal_throttle_1 > MAX_THROTTLE_1) {
+      /*if (value_pedal_throttle_1 < MIN_THROTTLE_1 || value_pedal_throttle_1 > MAX_THROTTLE_1) {
         fsae_throttle_pedal_implausibility = true;
       }
       if (value_pedal_throttle_2 < MIN_THROTTLE_2 || value_pedal_throttle_2 > MAX_THROTTLE_2) {
         fsae_throttle_pedal_implausibility = true;
-      }
+      }*/
 
       // Calculate torque value
       int calculated_torque = 0;
       if (!fsae_throttle_pedal_implausibility) {
         int torque1 = map(value_pedal_throttle_1, MIN_THROTTLE_1, MAX_THROTTLE_1, 0, MAX_TORQUE);
         int torque2 = map(value_pedal_throttle_2, MIN_THROTTLE_2, MAX_THROTTLE_2, 0, MAX_TORQUE);
-        if (abs(torque1 - torque2) * 100 / MAX_TORQUE > 10) { // Second throttle implausibility check FSAE EV2.3.6
+        /*if (abs(torque1 - torque2) * 100 / MAX_TORQUE > 10) { // Second throttle implausibility check FSAE EV2.3.6
           fsae_throttle_pedal_implausibility = true;
-        } else {
+        } else {*/
           calculated_torque = min(torque1, torque2);
-        }
+          Serial.print("Requested torque: ");
+          Serial.println(calculated_torque);
+          if (calculated_torque > 60) {
+            calculated_torque = 30;
+          }
+          if (calculated_torque < 0) {
+            calculated_torque = 0;
+          }
+        /*}*/
       }
 
       // FSAE EV2.5 APPS / Brake Pedal Plausibility Check
@@ -259,8 +287,7 @@ void loop() {
       if (fsae_brake_pedal_implausibility || fsae_throttle_pedal_implausibility) {
         // Implausibility exists, command 0 torque
         mc_command_message.set_torque_command(0);
-
-        if (debug && timer_debug.check()) {
+        if (debug && timer_debug_torque.check()) {
           Serial.print("IMPLAUSIBILITY -- Throttle: ");
           Serial.print(fsae_throttle_pedal_implausibility);
           Serial.print(" -- Brake: ");
@@ -268,6 +295,10 @@ void loop() {
         }
       } else {
         mc_command_message.set_torque_command(calculated_torque);
+        if (debug && timer_debug_torque.check()) {
+          Serial.print("Calculated Torque: ");
+          Serial.println(calculated_torque);
+        }
       }
 
       mc_command_message.write(msg.buf);
@@ -282,7 +313,7 @@ void loop() {
    * Send a message to the Motor Controller over CAN when vehicle is not ready to drive
    */
   if (state < TCU_STATE_READY_TO_DRIVE && timer_motor_controller_send.check()) {
-    MC_command_message mc_command_message = MC_command_message(0, 0, 1, 0, 0, 0);
+    MC_command_message mc_command_message = MC_command_message(0, 0, 0, 0, 0, 0);
     if (state >= TCU_STATE_ENABLING_INVERTER) {
       mc_command_message.set_inverter_enable(true);
     }
@@ -348,8 +379,10 @@ void read_values() {
       Serial.print(value_pedal_throttle_2);
       Serial.print("     Brake: ");
       Serial.print(value_pedal_brake);
-      Serial.print(" ");
+      Serial.print("     Brake Pedal Active: ");
       Serial.println(brake_pedal_active);
+      Serial.print("State: ");
+      Serial.println(state);
     }
     // TODO calculate temperature
 }
@@ -401,7 +434,7 @@ void set_state(uint8_t new_state) {
   if (new_state == TCU_STATE_ENABLING_INVERTER) {
     set_start_led(1);
     Serial.println("Enabling inverter");
-    MC_command_message mc_command_message = MC_command_message(0, 0, 1, 1, 0, 0);
+    MC_command_message mc_command_message = MC_command_message(0, 0, 0, 1, 0, 0);
     msg.id = 0xC0;
     msg.len = 8;
     for(int i = 0; i < 10; i++) {

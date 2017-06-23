@@ -1,7 +1,8 @@
 /*
- * Nathan Cheek
- * 2016-11-18
+ * HyTech 2017 Vehicle Rear Control Unit
+ * Init 2017-06-02
  * Control Shutdown Circuit initialization.
+ * Configured for Power Board rev3
  */
 #include <FlexCAN.h>
 #include <HyTech17.h>
@@ -10,6 +11,11 @@
 /*
  * Pin definitions
  */
+#define COOL_MOSFET_1 A8
+#define COOL_MOSFET_2 A7
+#define COOL_MOSFET_2 A6
+#define COOL_RELAY_1 A9
+#define COOL_RELAY_2 2
 #define SENSE_BMS A1
 #define SENSE_IMD A0
 #define SENSE_SHUTDOWN_OUT A2
@@ -40,7 +46,8 @@ Metro timer_state_send = Metro(100);
 boolean bms_fault = false;
 boolean bms_faulting = false;
 uint8_t btn_start_id = 0; // increments to differentiate separate button presses
-uint8_t btn_start_new = 0;boolean imd_fault = false;
+uint8_t btn_start_new = 0;
+boolean imd_fault = false;
 boolean imd_faulting = false;
 uint8_t state = PCU_STATE_WAITING_BMS_IMD;
 

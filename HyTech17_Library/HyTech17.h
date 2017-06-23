@@ -671,7 +671,7 @@ class MC_fault_codes {
     bool get_run_hi_reserved2();
     bool get_run_hi_reserved3();
     bool get_run_hi_reserved4();
-    bool get_run_hi_resolved_not_connected();
+    bool get_run_hi_resolver_not_connected();
     bool get_run_hi_inverter_discharge_active();
   private:
     CAN_message_mc_fault_codes_t message;
