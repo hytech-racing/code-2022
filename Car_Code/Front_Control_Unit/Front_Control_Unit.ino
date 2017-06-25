@@ -35,7 +35,7 @@
 #define MAX_THROTTLE_2 306
 #define MIN_BRAKE 242
 #define MAX_BRAKE 306
-#define MAX_TORQUE 60 // Torque in Nm * 10
+#define MAX_TORQUE 800 // Torque in Nm * 10
 #define MIN_HV_VOLTAGE 950 // Used to check if Accumulator is energized
 
 /*
@@ -66,7 +66,7 @@ bool fsae_brake_pedal_implausibility = false; // FSAE EV2.5
 bool fsae_throttle_pedal_implausibility = false;
 bool led_start_active = false;
 uint8_t led_start_type = 0; // 0 for off, 1 for steady, 2 for fast blink, 3 for slow blink
-uint8_t state;
+uint8_t state = TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED;
 double temperature; // Temperature of onboard thermistor
 uint16_t value_pedal_brake = 0;
 uint16_t value_pedal_throttle_1 = 0;
@@ -95,9 +95,13 @@ void setup() {
   delay(100);
   Serial.println("CAN system and serial communication initialized");
 
-  set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
   digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH);
   digitalWrite(13, HIGH); // Used to indicate power
+
+  // Send restart message, so Rear ECU knows to power cycle the inverter (in case of CAN message timeout from TCU to inverter)
+  msg.id = ID_TCU_RESTART;
+  msg.len = 1;
+  CAN.write(msg);
 }
 
 void loop() {
@@ -267,8 +271,8 @@ void loop() {
           calculated_torque = min(torque1, torque2);
           Serial.print("Requested torque: ");
           Serial.println(calculated_torque);
-          if (calculated_torque > 60) {
-            calculated_torque = 30;
+          if (calculated_torque > MAX_TORQUE) {
+            calculated_torque = MAX_TORQUE;
           }
           if (calculated_torque < 0) {
             calculated_torque = 0;

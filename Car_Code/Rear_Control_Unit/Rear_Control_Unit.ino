@@ -13,7 +13,7 @@
  */
 #define COOL_MOSFET_1 A8
 #define COOL_MOSFET_2 A7
-#define COOL_MOSFET_2 A6
+#define COOL_MOSFET_3 A6
 #define COOL_RELAY_1 A9
 #define COOL_RELAY_2 2
 #define SENSE_BMS A1
@@ -39,6 +39,7 @@ Metro timer_bms_faulting = Metro(1000); // At startup the BMS DISCHARGE_OK line 
 Metro timer_imd_faulting = Metro(1000); // At startup the IMD OKHS line drops shortly
 Metro timer_latch = Metro(1000);
 Metro timer_state_send = Metro(100);
+Metro timer_tcu_restart_inverter = Metro(500); // Upon restart of the TCU, power cycle the inverter
 
 /*
  * Global variables
@@ -55,6 +56,7 @@ FlexCAN CAN(500000);
 static CAN_message_t msg;
 
 void setup() {
+  pinMode(COOL_RELAY_2, OUTPUT);
   pinMode(SSR_BRAKE_LIGHT, OUTPUT);
   pinMode(SSR_INVERTER, OUTPUT);
   pinMode(SSR_LATCH_BMS, OUTPUT);
@@ -87,6 +89,13 @@ void loop() {
       else
         digitalWrite(SSR_BRAKE_LIGHT, LOW);
     }
+    if (msg.id == ID_TCU_RESTART) {
+      if (millis() > 1000) { // Ignore restart messages when this microcontroller has also just booted up
+        digitalWrite(SSR_INVERTER, LOW);
+        timer_tcu_restart_inverter.reset();
+        set_state(0);
+      }
+    }
     /*if (msg.id == ID_MC_COMMAND_MESSAGE) {
       MC_command_message mc_command_message = MC_command_message(msg.buf);
       Serial.print("Torque command: ");
@@ -116,6 +125,13 @@ void loop() {
   }
 
   switch (state) {
+    case 0:
+    if (timer_tcu_restart_inverter.check()) {
+      digitalWrite(SSR_INVERTER, HIGH);
+      set_state(PCU_STATE_WAITING_BMS_IMD);
+    }
+    break;
+        
     case PCU_STATE_WAITING_BMS_IMD:
     if (analogRead(SENSE_IMD) > IMD_HIGH && analogRead(SENSE_BMS) > BMS_HIGH) { // Wait till IMD and BMS signals go high at startup
       set_state(PCU_STATE_WAITING_DRIVER);
@@ -210,6 +226,7 @@ void set_state(uint8_t new_state) {
   if (new_state == PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED) {
     digitalWrite(SSR_LATCH_BMS, LOW);
     digitalWrite(SSR_LATCH_IMD, LOW);
+    digitalWrite(COOL_RELAY_2, HIGH);
   }
 }
 
