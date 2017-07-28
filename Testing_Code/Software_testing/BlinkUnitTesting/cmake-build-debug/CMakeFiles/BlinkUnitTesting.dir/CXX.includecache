@@ -1,0 +1,12 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/karvin/Documents/Projects/hytech/code-2017/Testing_Code/Software_testing/BlinkUnitTesting/main.cpp
+iostream
+-
+
