@@ -35,7 +35,7 @@
 #define MAX_THROTTLE_2 306
 #define MIN_BRAKE 242
 #define MAX_BRAKE 306
-#define MAX_TORQUE 800 // Torque in Nm * 10
+#define MAX_TORQUE 1600 // Torque in Nm * 10
 #define MIN_HV_VOLTAGE 950 // Used to check if Accumulator is energized
 
 /*
@@ -162,8 +162,28 @@ void loop() {
       }
     }
 
+    if (msg.id == ID_MC_CURRENT_INFORMATION) {
+      MC_current_information mc_current_information = MC_current_information(msg.buf);
+      if (debug) {
+        Serial.print("DC BUS CURRENT: ");
+        Serial.println(mc_current_information.get_dc_bus_current());
+      }
+    }
+
+    if (msg.id == ID_MC_TORQUE_TIMER_INFORMATION) {
+      MC_torque_timer_information mc_torque_timer_information = MC_torque_timer_information(msg.buf);
+      if (debug) {
+        Serial.print("COMMANDED TORQUE: ");
+        Serial.println(mc_torque_timer_information.get_commanded_torque());
+      }
+    }
+
     if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
       MC_voltage_information mc_voltage_information = MC_voltage_information(msg.buf);
+      if (debug) {
+        Serial.print("DC BUS VOLTAGE: ");
+        Serial.println(mc_voltage_information.get_dc_bus_voltage());
+      }
       
       if (mc_voltage_information.get_dc_bus_voltage() >= MIN_HV_VOLTAGE && state == TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
         set_state(TCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
@@ -175,14 +195,16 @@ void loop() {
 
     if (msg.id == ID_MC_FAULT_CODES && debug && timer_debug_faults.check()) {
       MC_fault_codes mc_fault_codes = MC_fault_codes(msg.buf);
-      Serial.print("Fault 1: ");
-      Serial.println(mc_fault_codes.get_post_fault_lo());
-      Serial.print("Fault 2: ");
-      Serial.println(mc_fault_codes.get_post_fault_hi());
-      Serial.print("Fault 3: ");
-      Serial.println(mc_fault_codes.get_run_fault_lo());
-      Serial.print("Fault 4: ");
-      Serial.println(mc_fault_codes.get_run_fault_hi());
+      if (debug) {
+        Serial.print("POST FAULT LO: ");
+        Serial.println(mc_fault_codes.get_post_fault_lo());
+        Serial.print("POST FAULT HI: ");
+        Serial.println(mc_fault_codes.get_post_fault_hi());
+        Serial.print("RUN FAULT LO: ");
+        Serial.println(mc_fault_codes.get_run_fault_lo());
+        Serial.print("RUN FAULT HI: ");
+        Serial.println(mc_fault_codes.get_run_fault_hi());
+      }
     }
   }
 
@@ -269,7 +291,7 @@ void loop() {
           fsae_throttle_pedal_implausibility = true;
         } else {*/
           calculated_torque = min(torque1, torque2);
-          Serial.print("Requested torque: ");
+          Serial.print("FCU RAW TORQUE: ");
           Serial.println(calculated_torque);
           if (calculated_torque > MAX_TORQUE) {
             calculated_torque = MAX_TORQUE;
@@ -292,7 +314,7 @@ void loop() {
         // Implausibility exists, command 0 torque
         mc_command_message.set_torque_command(0);
         if (debug && timer_debug_torque.check()) {
-          Serial.print("IMPLAUSIBILITY -- Throttle: ");
+          Serial.print("FCU IMPLAUSIBILITY -- Throttle: ");
           Serial.print(fsae_throttle_pedal_implausibility);
           Serial.print(" -- Brake: ");
           Serial.println(fsae_brake_pedal_implausibility);
@@ -300,7 +322,7 @@ void loop() {
       } else {
         mc_command_message.set_torque_command(calculated_torque);
         if (debug && timer_debug_torque.check()) {
-          Serial.print("Calculated Torque: ");
+          Serial.print("FCU REQUESTED TORQUE: ");
           Serial.println(calculated_torque);
         }
       }
@@ -353,7 +375,7 @@ void loop() {
     btn_start_pressed = !btn_start_pressed;
     if (btn_start_pressed) {
       btn_start_id++;
-      Serial.print("Start button pressed id ");
+      Serial.print("FCU Start button pressed id ");
       Serial.println(btn_start_id);
     }
   }
@@ -377,15 +399,15 @@ void read_values() {
       brake_pedal_active = false;
     }
     if (debug && timer_debug.check()) {
-      Serial.print("Throttle 1: ");
-      Serial.print(value_pedal_throttle_1);
-      Serial.print("     Throttle 2: ");
-      Serial.print(value_pedal_throttle_2);
-      Serial.print("     Brake: ");
-      Serial.print(value_pedal_brake);
-      Serial.print("     Brake Pedal Active: ");
+      Serial.print("FCU THROTTLE 1: ");
+      Serial.println(value_pedal_throttle_1);
+      Serial.print("FCU THROTTLE 2: ");
+      Serial.println(value_pedal_throttle_2);
+      Serial.print("FCU BRAKE: ");
+      Serial.println(value_pedal_brake);
+      Serial.print("FCU BRAKE ACT: ");
       Serial.println(brake_pedal_active);
-      Serial.print("State: ");
+      Serial.print("FCU STATE: ");
       Serial.println(state);
     }
     // TODO calculate temperature
@@ -401,7 +423,7 @@ void set_start_led(uint8_t type) {
     if (type == 0) {
       digitalWrite(LED_START, LOW);
       led_start_active = false;
-      Serial.println("Setting Start LED off");
+      Serial.println("FCU Setting Start LED off");
       return;
     }
 
@@ -409,13 +431,13 @@ void set_start_led(uint8_t type) {
     led_start_active = true;
 
     if (type == 1) {
-      Serial.println("Setting Start LED solid on");
+      Serial.println("FCU Setting Start LED solid on");
     } else if (type == 2) {
       timer_led_start_blink_fast.reset();
-      Serial.println("Setting Start LED fast blink");
+      Serial.println("FCU Setting Start LED fast blink");
     } else if (type == 3) {
       timer_led_start_blink_slow.reset();
-      Serial.println("Setting Start LED slow blink");
+      Serial.println("FCU Setting Start LED slow blink");
     }
   }
 }
@@ -437,7 +459,7 @@ void set_state(uint8_t new_state) {
   }
   if (new_state == TCU_STATE_ENABLING_INVERTER) {
     set_start_led(1);
-    Serial.println("Enabling inverter");
+    Serial.println("FCU Enabling inverter");
     MC_command_message mc_command_message = MC_command_message(0, 0, 0, 1, 0, 0);
     msg.id = 0xC0;
     msg.len = 8;
@@ -453,7 +475,7 @@ void set_state(uint8_t new_state) {
       mc_command_message.write(msg.buf); // many more enable commands
       CAN.write(msg);
     }
-    Serial.println("Sent enable command");
+    Serial.println("FCU Sent enable command");
     timer_inverter_enable.reset();
   }
   if (new_state == TCU_STATE_WAITING_READY_TO_DRIVE_SOUND) {

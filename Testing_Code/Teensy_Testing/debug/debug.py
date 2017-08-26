@@ -47,13 +47,17 @@ def main():
     screen.addstr(36,5,'COMMANDED TORQUE: ')
     screen.addstr(37,5,'TORQUE FEEDBACK: ')
     screen.addstr(38,5,'RMS UPTIME: ')
-    screen.addstr(3,55,'THROTTLE CONTROL UNIT')
-    screen.addstr(4,55,'TCU UPTIME: ')
-    screen.addstr(5,55,'TCU STATE: ')
+    screen.addstr(3,55,'FRONT CONTROL UNIT')
+    screen.addstr(4,55,'FCU UPTIME: ')
+    screen.addstr(5,55,'FCU STATE: ')
     screen.addstr(6,55,'START BUTTON ID: ')
-    screen.addstr(3,105,'POWER CONTROL UNIT')
-    screen.addstr(4,105,'PCU UPTIME: ')
-    screen.addstr(5,105,'PCU STATE: ')
+    screen.addstr(7,55,'FCU REQUESTED TORQUE: ')
+    screen.addstr(8,55,'FCU THROTTLE 1: ')
+    screen.addstr(9,55,'FCU THROTTLE 2: ')
+    screen.addstr(10,55,'FCU BRAKE: ')
+    screen.addstr(3,105,'REAR CONTROL UNIT')
+    screen.addstr(4,105,'RCU UPTIME: ')
+    screen.addstr(5,105,'RCU STATE: ')
     screen.addstr(6,105,'BMS FAULT: ')
     screen.addstr(7,105,'IMD FAULT: ')
     curses.wrapper(live)
@@ -179,15 +183,30 @@ def updateScreen(screen, incomingLine):
     if ('RMS UPTIME' in incomingLine):
         clearLine(38,5)
         screen.addstr(38,5,incomingLine)
-    if ('TCU UPTIME' in incomingLine):
+    if ('FCU UPTIME' in incomingLine):
         clearLine(4,55)
         screen.addstr(4,55,incomingLine)
-    if ('TCU STATE' in incomingLine):
+    if ('FCU STATE' in incomingLine):
         clearLine(5,55)
         screen.addstr(5,55,incomingLine)
     if ('START BUTTON ID' in incomingLine):
         clearLine(6,55)
         screen.addstr(6,55,incomingLine)
+    if ('FCU REQUESTED TORQUE' in incomingLine):
+        clearLine(7,55)
+        screen.addstr(7,55,incomingLine)
+    if ('FCU THROTTLE 1' in incomingLine):
+        clearLine(8,55)
+        screen.addstr(8,55,incomingLine)
+    if ('FCU THROTTLE 2' in incomingLine):
+        clearLine(9,55)
+        screen.addstr(9,55,incomingLine)
+    if ('FCU BRAKE' in incomingLine):
+        clearLine(10,55)
+        screen.addstr(10,55,incomingLine)
+    if ('FCU BRAKE ACT' in incomingLine):
+        clearLine(11,55)
+        screen.addstr(11,55,incomingLine)
     if ('PCU UPTIME' in incomingLine):
         clearLine(4,105)
         screen.addstr(4,105,incomingLine)
