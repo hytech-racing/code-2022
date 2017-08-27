@@ -189,7 +189,7 @@ def updateScreen(screen, incomingLine):
     if ('FCU STATE' in incomingLine):
         clearLine(5,55)
         screen.addstr(5,55,incomingLine)
-    if ('START BUTTON ID' in incomingLine):
+    if ('FCU START BUTTON ID' in incomingLine):
         clearLine(6,55)
         screen.addstr(6,55,incomingLine)
     if ('FCU REQUESTED TORQUE' in incomingLine):
@@ -207,19 +207,18 @@ def updateScreen(screen, incomingLine):
     if ('FCU BRAKE ACT' in incomingLine):
         clearLine(11,55)
         screen.addstr(11,55,incomingLine)
-    if ('PCU UPTIME' in incomingLine):
+    if ('RCU UPTIME' in incomingLine):
         clearLine(4,105)
         screen.addstr(4,105,incomingLine)
-    if ('PCU STATE' in incomingLine):
+    if ('RCU STATE' in incomingLine):
         clearLine(5,105)
         screen.addstr(5,105,incomingLine)
-    if ('BMS FAULT' in incomingLine):
+    if ('RCU BMS FAULT' in incomingLine):
         clearLine(6,105)
         screen.addstr(6,105,incomingLine)
-    if ('IMD FAULT' in incomingLine):
+    if ('RCU IMD FAULT' in incomingLine):
         clearLine(7,105)
         screen.addstr(7,105,incomingLine)
-    #todo finish
     screen.refresh()
 
 def clearLine(y, x):
