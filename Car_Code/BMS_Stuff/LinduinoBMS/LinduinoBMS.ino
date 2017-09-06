@@ -96,10 +96,10 @@ void setup() {
     delay(2000);
 
     // Check CAN Initialization
-    while (CAN_OK != CAN.begin(CAN_500KBPS)) {
-        Serial.println("Init CAN BUS Shield FAILED. Retrying");
-        delay(100);
-    }
+    // while (CAN_OK = CAN.begin(CAN_500KBPS)) {
+    //     Serial.println("Init CAN BUS Shield FAILED. Retrying");
+    //     delay(100);
+    // }
     Serial.println("CAN BUS Shield init GOOD");
 
     LTC6804_initialize();
@@ -418,23 +418,23 @@ void wakeFromIdleAllChips() {
 }
 
 void writeToCAN() {
-    Serial.println("WRITING TO CAN!");
-    digitalWrite(10, HIGH);
-    unsigned char msg[8] = {0,0,0,0,0,0,0,0};
-    bmsVoltageMessage.write(msg);
-    byte CANsendMsgresult = CAN.sendMsgBuf(ID_BMS_VOLTAGE, 0, 8, msg);
-
-    bmsCurrentMessage.setChargingState(0b1);
-    bmsCurrentMessage.setCurrent(77.777);
-    bmsCurrentMessage.write(msg);
-    CANsendMsgresult = CAN.sendMsgBuf(ID_BMS_CURRENT, 0, 8, msg);
-
-    bmsTempMessage.write(msg);
-    CANsendMsgresult = CAN.sendMsgBuf(ID_BMS_TEMPERATURE, 0, 8, msg);
-
-    bmsStatusMessage.write(msg);
-    CANsendMsgresult = CAN.sendMsgBuf(ID_BMS_STATUS, 0, 8, msg);
-    digitalWrite(10, HIGH);
+    // Serial.println("WRITING TO CAN!");
+    // digitalWrite(10, HIGH);
+    // unsigned char msg[8] = {0,0,0,0,0,0,0,0};
+    // bmsVoltageMessage.write(msg);
+    // byte CANsendMsgresult = CAN.sendMsgBuf(ID_BMS_VOLTAGE, 0, 8, msg);
+    // 
+    // bmsCurrentMessage.setChargingState(0b1);
+    // bmsCurrentMessage.setCurrent(77.777);
+    // bmsCurrentMessage.write(msg);
+    // CANsendMsgresult = CAN.sendMsgBuf(ID_BMS_CURRENT, 0, 8, msg);
+    // 
+    // bmsTempMessage.write(msg);
+    // CANsendMsgresult = CAN.sendMsgBuf(ID_BMS_TEMPERATURE, 0, 8, msg);
+    // 
+    // bmsStatusMessage.write(msg);
+    // CANsendMsgresult = CAN.sendMsgBuf(ID_BMS_STATUS, 0, 8, msg);
+    // digitalWrite(10, HIGH);
 }
 
 void printCells() {
