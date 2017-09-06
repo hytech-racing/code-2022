@@ -64,7 +64,7 @@ uint8_t tx_cfg[TOTAL_IC][6]; // data defining how data will be written to daisy 
 /**
  * CAN Variables
  */
-#define CAN_SPI_CS_PIN 5
+#define CAN_SPI_CS_PIN 10
 MCP_CAN CAN(CAN_SPI_CS_PIN);
 long msTimer = 0;
 
@@ -87,7 +87,7 @@ void setup() {
     // put your setup code here, to run once:
     pinMode(BMS_OK_PIN, OUTPUT);
     pinMode(WATCH_DOG_TIMER, OUTPUT);
-    // pinMode(CAN_SPI_CS_PIN, OUTPUT); Not needed, done in mcp_can.cpp
+    pinMode(CAN_SPI_CS_PIN, OUTPUT);// Not needed, done in mcp_can.cpp
 
     digitalWrite(CAN_SPI_CS_PIN, HIGH);
     digitalWrite(BMS_OK_PIN, HIGH);
@@ -178,7 +178,7 @@ void poll_cell_voltage() {
     if (error == -1) {
         Serial.println("A PEC error was detected in cell voltage data");
     }
-//    printCells(); // prints the cell voltages to Serial.
+    printCells(); // prints the cell voltages to Serial.
     delay(200); // TODO: Why 200 milliseconds?
 }
 
