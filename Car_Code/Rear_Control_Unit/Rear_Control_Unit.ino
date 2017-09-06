@@ -56,6 +56,7 @@ FlexCAN CAN(500000);
 static CAN_message_t msg;
 
 void setup() {
+  pinMode(COOL_RELAY_1, OUTPUT);
   pinMode(COOL_RELAY_2, OUTPUT);
   pinMode(SSR_BRAKE_LIGHT, OUTPUT);
   pinMode(SSR_INVERTER, OUTPUT);
@@ -67,6 +68,8 @@ void setup() {
   delay(100);
   Serial.println("CAN transceiver initialized");
   digitalWrite(SSR_INVERTER, HIGH);
+  digitalWrite(COOL_RELAY_1, HIGH);
+  digitalWrite(COOL_RELAY_2, HIGH);
 }
 
 void loop() {

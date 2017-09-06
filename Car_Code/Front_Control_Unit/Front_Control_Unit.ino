@@ -36,7 +36,7 @@
 #define MIN_BRAKE 242
 #define MAX_BRAKE 306
 #define MAX_TORQUE 1600 // Torque in Nm * 10
-#define MIN_HV_VOLTAGE 950 // Used to check if Accumulator is energized
+#define MIN_HV_VOLTAGE 500 // Used to check if Accumulator is energized
 
 /*
  * Timers
@@ -234,21 +234,21 @@ void loop() {
       MC_internal_states mc_internal_states = MC_internal_states(msg.buf);
       if (debug && timer_debug_rms_internal_states.check()) {
         Serial.print("VSM STATE: ");
-        Serial.println(mc_torque_timer_information.get_vsm_state());
+        Serial.println(mc_internal_states.get_vsm_state());
         Serial.print("INVERTER STATE: ");
-        Serial.println(mc_torque_timer_information.get_inverter_state());
+        Serial.println(mc_internal_states.get_inverter_state());
         Serial.print("INVERTER RUN MODE: ");
-        Serial.println(mc_torque_timer_information.get_inverter_run_mode());
+        Serial.println(mc_internal_states.get_inverter_run_mode());
         Serial.print("INVERTER ACTIVE DISCHARGE STATE: ");
-        Serial.println(mc_torque_timer_information.get_inverter_active_discharge_state());
+        Serial.println(mc_internal_states.get_inverter_active_discharge_state());
         Serial.print("INVERTER COMMAND MODE: ");
-        Serial.println(mc_torque_timer_information.get_inverter_command_mode());
+        Serial.println(mc_internal_states.get_inverter_command_mode());
         Serial.print("INVERTER ENABLE: ");
-        Serial.println(mc_torque_timer_information.get_inverter_enable_state());
+        Serial.println(mc_internal_states.get_inverter_enable_state());
         Serial.print("INVERTER LOCKOUT: ");
-        Serial.println(mc_torque_timer_information.get_inverter_enable_lockout());
+        Serial.println(mc_internal_states.get_inverter_enable_lockout());
         Serial.print("DIRECTION COMMAND: ");
-        Serial.println(mc_torque_timer_information.get_direction_command());
+        Serial.println(mc_internal_states.get_direction_command());
       }
       if (mc_internal_states.get_inverter_enable_state() && state == TCU_STATE_ENABLING_INVERTER) {
         set_state(TCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
@@ -377,25 +377,24 @@ void loop() {
         fsae_brake_pedal_implausibility = false; // Clear implausibility
       }
       if (brake_pedal_active && calculated_torque > (MAX_TORQUE / 4)) {
-        fsae_brake_pedal_implausibility = true;
+        //fsae_brake_pedal_implausibility = true;
       }
 
       if (fsae_brake_pedal_implausibility || fsae_throttle_pedal_implausibility) {
         // Implausibility exists, command 0 torque
-        mc_command_message.set_torque_command(0);
-        if (debug && timer_debug_torque.check()) {
-          Serial.print("FCU IMPLAUSIBILITY -- Throttle: ");
-          Serial.print(fsae_throttle_pedal_implausibility);
-          Serial.print(" -- Brake: ");
-          Serial.println(fsae_brake_pedal_implausibility);
-        }
-      } else {
-        mc_command_message.set_torque_command(calculated_torque);
-        if (debug && timer_debug_torque.check()) {
-          Serial.print("FCU REQUESTED TORQUE: ");
-          Serial.println(calculated_torque);
-        }
+        calculated_torque = 0;
       }
+      
+      if (debug && timer_debug_torque.check()) {
+        Serial.print("FCU REQUESTED TORQUE: ");
+        Serial.println(calculated_torque);
+        Serial.print("FCU IMPLAUS THROTTLE: ");
+        Serial.println(fsae_throttle_pedal_implausibility);
+        Serial.print("FCU IMPLAUS BRAKE: ");
+        Serial.println(fsae_brake_pedal_implausibility);
+      }
+      
+      mc_command_message.set_torque_command(calculated_torque);
 
       mc_command_message.write(msg.buf);
       msg.id = ID_MC_COMMAND_MESSAGE;
@@ -469,11 +468,11 @@ void read_values() {
       brake_pedal_active = false;
     }
     if (debug && timer_debug.check()) {
-      Serial.print("FCU THROTTLE 1: ");
+      Serial.print("FCU PEDAL THROTTLE 1: ");
       Serial.println(value_pedal_throttle_1);
-      Serial.print("FCU THROTTLE 2: ");
+      Serial.print("FCU PEDAL THROTTLE 2: ");
       Serial.println(value_pedal_throttle_2);
-      Serial.print("FCU BRAKE: ");
+      Serial.print("FCU PEDAL BRAKE: ");
       Serial.println(value_pedal_brake);
       Serial.print("FCU BRAKE ACT: ");
       Serial.println(brake_pedal_active);
