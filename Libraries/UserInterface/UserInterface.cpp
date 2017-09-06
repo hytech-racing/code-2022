@@ -6,7 +6,7 @@ UserInterface routines are used to read and write user data through the Arduino'
 serial interface.
 
 Copyright (c) 2013, Linear Technology Corp.(LTC)
-All rights reserved.  
+All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:

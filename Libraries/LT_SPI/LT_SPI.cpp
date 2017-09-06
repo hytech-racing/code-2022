@@ -32,8 +32,8 @@ SPI2X  SPR1  SPR0  Frequency  Uno_Frequency
 @endverbatim
 
 REVISION HISTORY
-$Revision: 3659 $
-$Date: 2015-07-01 10:19:20 -0700 (Wed, 01 Jul 2015) $
+$Revision: 6237 $
+$Date: 2016-12-20 15:09:16 -0800 (Tue, 20 Dec 2016) $
 
 Copyright (c) 2013, Linear Technology Corp.(LTC)
 All rights reserved.
@@ -69,7 +69,10 @@ http://store.arduino.cc , and consider a purchase that will help fund their
 ongoing work.
 */
 
+//! @ingroup Linduino
+//! @{
 //! @defgroup LT_SPI LT_SPI: Routines to communicate with ATmega328P's hardware SPI port.
+//! @}
 
 /*! @file
     @ingroup LT_SPI
@@ -87,9 +90,9 @@ ongoing work.
 void spi_transfer_byte(uint8_t cs_pin, uint8_t tx, uint8_t *rx)
 {
   output_low(cs_pin);                 //! 1) Pull CS low
-  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
+
   *rx = SPI.transfer(tx);             //! 2) Read byte and send byte
-  SPI.endTransaction();
+
   output_high(cs_pin);                //! 3) Pull CS high
 }
 
@@ -112,12 +115,12 @@ void spi_transfer_word(uint8_t cs_pin, uint16_t tx, uint16_t *rx)
   data_tx.w = tx;
 
   output_low(cs_pin);                         //! 1) Pull CS low
-  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
+
   data_rx.b[1] = SPI.transfer(data_tx.b[1]);  //! 2) Read MSB and send MSB
   data_rx.b[0] = SPI.transfer(data_tx.b[0]);  //! 3) Read LSB and send LSB
 
   *rx = data_rx.w;
-  SPI.endTransaction();
+
   output_high(cs_pin);                        //! 4) Pull CS high
 }
 
@@ -127,10 +130,10 @@ void spi_transfer_block(uint8_t cs_pin, uint8_t *tx, uint8_t *rx, uint8_t length
   int8_t i;
 
   output_low(cs_pin);                 //! 1) Pull CS low
-  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
+
   for (i=(length-1);  i >= 0; i--)
     rx[i] = SPI.transfer(tx[i]);    //! 2) Read and send byte array
-  SPI.endTransaction();
+
   output_high(cs_pin);                //! 3) Pull CS high
 }
 
@@ -161,10 +164,8 @@ void spi_enable(uint8_t spi_clock_divider) // Configures SCK frequency. Use cons
   //pinMode(SCK, OUTPUT);             //! 1) Setup SCK as output
   //pinMode(MOSI, OUTPUT);            //! 2) Setup MOSI as output
   //pinMode(QUIKEVAL_CS, OUTPUT);     //! 3) Setup CS as output
-  // SPI.begin();
-//  SPI.setClockDivider(spi_clock_divider);
-  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
-  SPI.endTransaction();
+  SPI.begin();
+  SPI.setClockDivider(spi_clock_divider);
 }
 
 // Disable the SPI hardware port
@@ -174,20 +175,20 @@ void spi_disable()
 }
 
 // Write a data byte using the SPI hardware
-// void spi_write(int8_t  data)  // Byte to be written to SPI port
-// {
-//   SPDR = data;                  //! 1) Start the SPI transfer
-//   while (!(SPSR & _BV(SPIF)));  //! 2) Wait until transfer complete
-// }
+void spi_write(int8_t  data)  // Byte to be written to SPI port
+{
+  SPDR = data;                  //! 1) Start the SPI transfer
+  while (!(SPSR & _BV(SPIF)));  //! 2) Wait until transfer complete
+}
 
 // Read and write a data byte using the SPI hardware
 // Returns the data byte read
-// int8_t spi_read(int8_t  data) //!The data byte to be written
-// {
-//   SPDR = data;                  //! 1) Start the SPI transfer
-//   while (!(SPSR & _BV(SPIF)));  //! 2) Wait until transfer complete
-//   return SPDR;                  //! 3) Return the data read
-// }
+int8_t spi_read(int8_t  data) //!The data byte to be written
+{
+  SPDR = data;                  //! 1) Start the SPI transfer
+  while (!(SPSR & _BV(SPIF)));  //! 2) Wait until transfer complete
+  return SPDR;                  //! 3) Return the data read
+}
 
 // Below are implementations of spi_read, etc. that do not use the
 // Arduino SPI library.  To use these functions, uncomment them and comment out

@@ -5,8 +5,8 @@ Linduino.h
 This file contains the hardware definitions for the Linduino.
 
 REVISION HISTORY
-$Revision: 4637 $
-$Date: 2016-01-29 10:04:59 -0800 (Fri, 29 Jan 2016) $
+$Revision: 6237 $
+$Date: 2016-12-20 15:09:16 -0800 (Tue, 20 Dec 2016) $
 
 Copyright (c) 2013, Linear Technology Corp.(LTC)
 All rights reserved.
@@ -41,8 +41,6 @@ to the open-source community.  Please, visit http://www.arduino.cc and
 http://store.arduino.cc , and consider a purchase that will help fund their
 ongoing work.
 */
-
-//! @defgroup Linduino Linduino: Linear Technology Arduino-Compatible Demonstration Board
 
 /*! @file
     @ingroup Linduino
