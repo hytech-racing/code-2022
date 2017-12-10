@@ -18,11 +18,15 @@
 #define LED_BMS 6
 #define LED_BSPD 13
 #define LED_IMD 7
-#define PEDAL_BRAKE A2 //analog port of brake sensor
-#define PEDAL_THROTTLE_1 A0 //first throttle sensor port
-#define PEDAL_THROTTLE_2 A1 //second throttle sensor port
 #define READY_SOUND 2
 #define SOFTWARE_SHUTDOWN_RELAY 12
+#define SPI_DOUT 0
+#define SPI_DIN 1
+#define SPI_CS A0
+#define SPI_SCK 13
+#define ADC_ACCEL_1_CHANNEL 0
+#define ADC_ACCEL_2_CHANNEL 1
+#define ADC_BRAKE_CHANNEL 2
 
 /*
  * Constant definitions
@@ -90,9 +94,10 @@ void setup() {
   pinMode(LED_IMD, OUTPUT);
   pinMode(LED_START, OUTPUT);
   
-  pinMode(PEDAL_BRAKE, INPUT);
-  pinMode(PEDAL_THROTTLE_1, INPUT);
-  pinMode(PEDAL_THROTTLE_2, INPUT);
+  pinMode(SPI_DIN, INPUT);
+  pinMode(SPI_DOUT, OUTPUT);
+  pinMode(SPI_CS, OUTPUT);
+  pinMode(SPI_SCK, OUTPUT);
   pinMode(READY_SOUND, OUTPUT);
   pinMode(SOFTWARE_SHUTDOWN_RELAY, OUTPUT);
   pinMode(13, OUTPUT);
@@ -459,9 +464,9 @@ void loop() {
  * Read values of sensors
  */
 void read_values() {
-    value_pedal_throttle_1 = analogRead(PEDAL_THROTTLE_1);
-    value_pedal_throttle_2 = analogRead(PEDAL_THROTTLE_2);
-    value_pedal_brake = analogRead(PEDAL_BRAKE);
+    value_pedal_throttle_1 = read_adc(ADC_ACCEL_1_CHANNEL);
+    value_pedal_throttle_2 = read_adc(ADC_ACCEL_2_CHANNEL);
+    value_pedal_brake = read_adc(ADC_BRAKE_CHANNEL);
     if (value_pedal_brake >= BRAKE_ACTIVE) {
       brake_pedal_active = true;
     } else {
@@ -558,4 +563,38 @@ void set_state(uint8_t new_state) {
     Serial.println("RTDS deactivated");
     Serial.println("Ready to drive");
   }
+}
+
+// Credit to Arduino Playground
+// https://playground.arduino.cc/Code/MCP3208
+int read_adc(int channel) {
+  int adcvalue = 0;
+  byte commandbits = B11000000; //command bits - start, mode, chn (3), dont care (3)
+
+  //allow channel selection
+  commandbits|=((channel)<<3);
+
+  digitalWrite(SPI_CS, LOW); //Select adc
+  // setup bits to be written
+  for (int i=7; i>=3; i--){
+    digitalWrite(SPI_DOUT, commandbits&1<<i);
+    //cycle clock
+    digitalWrite(SPI_SCK, HIGH);
+    digitalWrite(SPI_SCK, LOW);    
+  }
+
+  digitalWrite(SPI_SCK, HIGH);    //ignores 2 null bits
+  digitalWrite(SPI_SCK, LOW);
+  digitalWrite(SPI_SCK, HIGH);  
+  digitalWrite(SPI_SCK, LOW);
+
+  //read bits from adc
+  for (int i=11; i>=0; i--){
+    adcvalue+=digitalRead(SPI_DIN)<<i;
+    //cycle clock
+    digitalWrite(SPI_SCK, HIGH);
+    digitalWrite(SPI_SCK, LOW);
+  }
+  digitalWrite(SPI_CS, HIGH); //turn off device
+  return adcvalue;
 }
