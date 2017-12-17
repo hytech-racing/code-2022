@@ -115,9 +115,10 @@ void setup() {
     Serial.begin(115200); // Init serial for PC communication
     if (ENABLE_CAN) {
         CAN.begin();
+        Serial.println("CAN communication initialized");
     }
     delay(100);
-    Serial.println("CAN system and serial communication initialized");
+    Serial.println("Serial communication initialized");
 
     digitalWrite(BMS_OK, HIGH);
     digitalWrite(WATCHDOG, watchdog_high);
@@ -352,7 +353,7 @@ void process_voltages() {
     int minCell = 0;
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         for (int cell = 0; cell < TOTAL_CELLS; cell++) {
-            if ((ic != 0 || cell != 4) && (ic != 1 || cell != 7)&&!ignore_cell[ic][cell]) {
+            if (!ignore_cell[ic][cell]) {
                 uint16_t currentCell = cell_voltages[ic][cell];
                 cell_delta_voltage[ic][cell] = currentCell - cell_delta_voltage[ic][cell];
                 if (currentCell > maxVolt) {
