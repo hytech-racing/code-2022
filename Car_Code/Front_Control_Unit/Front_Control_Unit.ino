@@ -3,7 +3,7 @@
  * Init 2017-05-13
  * Interface with dashboard lights, buttons, and buzzer.
  * Read pedal sensor values and communicate with motor controller.
- * Configured for Pedal Box Board rev3
+ * Configured for Pedal Box Board rev5
  */
 #include <FlexCAN.h>
 #include "HyTech17.h"
