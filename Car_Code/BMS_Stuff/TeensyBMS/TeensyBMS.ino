@@ -26,6 +26,7 @@
  */
 Metro timer_can_update = Metro(100);
 Metro timer_debug = Metro(500);
+Metro timer_process_cells = Metro(1000);
 Metro timer_watchdog_timer = Metro(250);
 
 /*
@@ -125,11 +126,11 @@ void setup() {
 
     LTC6804_initialize();
     init_cfg();
-    poll_cell_voltage();                                                                                                                                  
+    poll_cell_voltage();
     memcpy(cell_delta_voltage, cell_voltages, 2 * TOTAL_IC * TOTAL_CELLS);
     bms_status.set_state(BMS_STATE_CHARGING);
     Serial.println("Setup Complete!");
-    
+
     // DEBUG Code for testing cell packs
     /*ignore_cell[0][3] = true;
     ignore_cell[0][4] = true;
@@ -149,29 +150,33 @@ void loop() {
                 // lines set out for changing BMS variables TODO
                 Serial.println("Reading BMS");
             }
-        }    
+        }
     }*/
-    // poll_cell_voltage(); No need to print this twice
-    process_voltages(); // polls controller, and sto data in bms_voltages object.
-    //bms_voltages.set_low(37408); // DEBUG Remove before final code
-    balance_cells();
-    process_temps(); // store data in bms_temperatures object.
-    //process_current(); // sto data in bms_status object.
-    
-    if (!bms_status.get_error_flags()) { // set BMS_OK signal
+    if (timer_process_cells.check()) {
+        Serial.print("\n\nECU uptime: ");
+        Serial.println(millis()/1000);
+        // poll_cell_voltage(); No need to print this twice
+        process_voltages(); // polls controller, and store data in bms_voltages object.
+        //bms_voltages.set_low(37408); // DEBUG Remove before final code
+        balance_cells();
+        //process_temps(); // store data in bms_temperatures object.
+        //process_current(); // store data in bms_status object.
+    }
+
+    if (bms_status.get_error_flags()) { // set BMS_OK signal
         Serial.println("STATUS NOT GOOD!!!!!!!!!!!!!!!");
         digitalWrite(BMS_OK, LOW);
     }
 
     /*
-    wakeFromSleepAllChips();
+    wakeup_sleep();
     tx_cfg[0][1] = 0b01010010;
     tx_cfg[0][2] = 0b10000111;
     tx_cfg[0][3] = 0b10100010;
-    LTC6804_wrcfg(TOTAL_IC, tx_cfg);*/
-    wakeFromIdleAllChips();
-    delay(10);
+    LTC6804_wrcfg(TOTAL_IC, tx_cfg);
     wakeup_idle();
+    delay(10);
+    wakeup_idle();*/
 
     /*
     uint8_t data[1][8];
@@ -227,15 +232,14 @@ void init_cfg()
     for(int i = 0; i < TOTAL_IC; i++)
     {
         tx_cfg[i][0] = 0xFE;
-        tx_cfg[i][1] = 0x52 ;
-        tx_cfg[i][2] = 0x87 ;
-        tx_cfg[i][3] = 0xA2 ;
-        tx_cfg[i][4] = 0x00 ;
-        tx_cfg[i][5] = 0x00 ;
+        tx_cfg[i][1] = 0x52; // TODO why do values 1-3 differ from default Linear code?
+        tx_cfg[i][2] = 0x87;
+        tx_cfg[i][3] = 0xA2;
+        tx_cfg[i][4] = 0x00;
+        tx_cfg[i][5] = 0x00;
     }
-    wakeFromSleepAllChips();
+    wakeup_sleep();
     LTC6804_wrcfg(TOTAL_IC, tx_cfg);
-    // dischargeAll();
 }
 
 void discharge_cell(int ic, int cell) {
@@ -260,16 +264,16 @@ void discharge_cell(int ic, int cell, bool setDischarge) {
         }
     }
     LTC6804_wrcfg(TOTAL_IC, tx_cfg);
-    wakeFromSleepAllChips();
+    wakeup_sleep();
 }
 
-void dischargeAll() {
+void discharge_all() {
     for (int i = 0; i < TOTAL_IC; i++) {
         tx_cfg[i][4] = 0b11111111;
         tx_cfg[i][5] = tx_cfg[i][5] | 0b00001111;
     }
     LTC6804_wrcfg(TOTAL_IC, tx_cfg);
-    wakeFromSleepAllChips();
+    wakeup_sleep();
 }
 
 void stop_discharge_cell(int ic, int cell)
@@ -278,15 +282,14 @@ void stop_discharge_cell(int ic, int cell)
     discharge_cell(ic, cell, false);
 }
 
-void stop_dischargeAll() {
+void stop_discharge_all() {
     for (int i = 0; i < TOTAL_IC; i++) {
         tx_cfg[i][4] = 0b0;
         tx_cfg[i][5] = 0b0;
     }
     LTC6804_wrcfg(TOTAL_IC, tx_cfg);
-    wakeFromSleepAllChips();
+    wakeup_sleep();
 }
-
 
 void balance_cells () {
   if (bms_voltages.get_low() > voltage_cutoff_low)
@@ -316,10 +319,11 @@ void balance_cells () {
   else
   {
       Serial.println("Not Balancing!");
-      stop_dischargeAll();
+      stop_discharge_all();
       //make sure none of the cells are discharging
   }
 }
+
 void poll_cell_voltage() {
     Serial.println("Polling Voltages...");
     /*
@@ -327,18 +331,12 @@ void poll_cell_voltage() {
      * wakeup_sleep wakes up the LTC6804 from sleep state
      * wakeup_idle wakes up the isoSPI port.
      */
-    wakeFromSleepAllChips();
-    LTC6804_wrcfg(TOTAL_IC, tx_cfg);
-    wakeFromIdleAllChips();
-    LTC6804_adcv();
-    delay(10);
-    wakeup_idle();
+    wakeup_sleep();
     uint8_t error = LTC6804_rdcv(0, TOTAL_IC, cell_voltages); // asks chip to read voltages and store in given array.
     if (error == -1) {
         Serial.println("A PEC error was detected in cell voltage data");
     }
-    printCells(); // prints the cell voltages to Serial.
-    delay(200); // TODO: Why 200 milliseconds?
+    print_cells(); // prints the cell voltages to Serial.
 }
 
 void process_voltages() {
@@ -381,7 +379,7 @@ void process_voltages() {
     bms_status.set_overvoltage(false); // RESET these values, then check below if they should be set again
     bms_status.set_undervoltage(false);
     bms_status.set_total_voltage_high(false);
-    
+
     if (bms_voltages.get_high() > voltage_cutoff_high*10) {
         bms_status.set_overvoltage(true);
         Serial.println("VOLTAGE FAULT!!!!!!!!!!!!!!!!!!!");
@@ -407,9 +405,9 @@ void process_voltages() {
 }
 
 void poll_aux_voltage() {
-    wakeFromSleepAllChips();
+    wakeup_sleep();
     LTC6804_wrcfg(TOTAL_IC, tx_cfg);
-    wakeFromIdleAllChips();
+    wakeup_idle();
     LTC6804_adax();
     delay(10);
     wakeup_idle();
@@ -417,7 +415,7 @@ void poll_aux_voltage() {
     if (error == -1) {
         Serial.println("A PEC error was detected in auxiliary voltage data");
     }
-//    printAux();
+//    print_aux();
     delay(200);
 }
 
@@ -570,20 +568,6 @@ float process_current() {
     return current;
 }
 
-void wakeFromSleepAllChips() {
-    for (int i = 0; i < TOTAL_IC / 3; i++) {
-        wakeup_sleep();
-//        delay(3);
-    }
-}
-
-void wakeFromIdleAllChips() {
-    for (int i = 0; i < TOTAL_IC / 3; i++) {
-        wakeup_idle();
-//        delay(3);
-    }
-}
-
 int updateConstraints(uint8_t address, short value) {
     switch(address) {
         case 0: // voltage_cutoff_low
@@ -619,7 +603,7 @@ int updateConstraints(uint8_t address, short value) {
     return 0;
 }
 
-void printCells() {
+void print_cells() {
     for (int current_ic = 0; current_ic < TOTAL_IC; current_ic++) {
         Serial.print("IC: ");
         Serial.println(current_ic+1);
@@ -642,7 +626,7 @@ void printCells() {
     }
 }
 
-void printAux() {
+void print_aux() {
     for (int current_ic = 0; current_ic < TOTAL_IC; current_ic++) {
         Serial.print("IC: ");
         Serial.println(current_ic + 1);
