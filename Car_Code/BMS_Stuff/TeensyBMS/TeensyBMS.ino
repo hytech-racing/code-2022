@@ -74,7 +74,7 @@ int16_t cell_delta_voltage[TOTAL_IC][TOTAL_CELLS]; // keep track of which cells 
 int16_t ignore_cell[TOTAL_IC][TOTAL_CELLS]; //cells to be ignored for Balance testing
 
 /*!<
-  The tx_cfg[][6] sto the LTC6804 configuration data that is going to be written
+  The tx_cfg[][6] store the LTC6804 configuration data that is going to be written
   to the LTC6804 ICs on the daisy chain. The LTC6804 configuration data that will be
   written should be stored in blocks of 6 bytes. The array should have the following format:
 
@@ -333,7 +333,7 @@ void poll_cell_voltage() {
     LTC6804_adcv();
     delay(10);
     wakeup_idle();
-    uint8_t error = LTC6804_rdcv(0, TOTAL_IC, cell_voltages); // asks chip to read voltages and sto in given array.
+    uint8_t error = LTC6804_rdcv(0, TOTAL_IC, cell_voltages); // asks chip to read voltages and store in given array.
     if (error == -1) {
         Serial.println("A PEC error was detected in cell voltage data");
     }
