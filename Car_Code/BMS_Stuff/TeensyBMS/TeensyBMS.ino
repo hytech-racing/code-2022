@@ -492,37 +492,37 @@ void process_temps() { // TODO make work with signed int8_t CAN message (yes tem
 }
 
 /*
- * tempVoltage is a double in unit 0.1mV
+ * Calculate thermistor resistance if connected to GPIO1 or GPIO2, given temp_voltage in 0.1mV units
  */
-uint16_t thermistorResistanceGPIO12(double tempVoltage) {
+uint16_t thermistor_resistance_gpio12(double temp_voltage) { // TODO check this math
     /* voltage measured across thermistor is dependent on the resistor in the voltage divider
      * all voltage measurements stored in arrays are in 0.1 mV, or 1/10,000 of a volt
      */
-     tempVoltage = tempVoltage / 1e4;
-     double resistance = 1e6 * (5 - tempVoltage) / (tempVoltage + 100 * tempVoltage - 5);
+     temp_voltage = temp_voltage / 1e4;
+     double resistance = 1e6 * (5 - temp_voltage) / (temp_voltage + 100 * temp_voltage - 5);
      Serial.println(resistance, 2);
      return (uint16_t) resistance;
     // resistances stored as 1 ohm units.
 }
 
 /*
- * tempVoltage is a double in units volts
+ * Calculate thermistor resistance if connected to GPIO3, given temp_voltage in 0.1mV units
  */
-static inline uint16_t thermistorResistanceGPIO3(double tempVoltage) {
+uint16_t thermistor_resistance_gpio3(double temp_voltage) { // TODO check this math
     /* voltage measured across thermistor is dependent on the resistor in the voltage divider
      * all voltage measurements stored in arrays are in 0.1 mV, or 1/10,000 of a volt
      */
-    tempVoltage = tempVoltage / 1e4;
-    Serial.println(tempVoltage);
-    double res = 5000.0 * tempVoltage;
+    temp_voltage = temp_voltage / 1e4;
+    Serial.println(temp_voltage);
+    double res = 5000.0 * temp_voltage;
     Serial.print("Step 1: "); Serial.println(res, 2);
     res = 25000.0 - res;
     Serial.print("Step 2: "); Serial.println(res, 2);
     res = res + 5000.0;
     Serial.print("Step 3: "); Serial.println(res, 2);
-    res = res / (tempVoltage - 1.0);
+    res = res / (temp_voltage - 1.0);
     Serial.print("Final Step 4: "); Serial.println(res, 2);
-//    double res = (25000.0 - 5000.0 * tempVoltage + 5000.0) / (tempVoltage - 1.0);
+//    double res = (25000.0 - 5000.0 * temp_voltage + 5000.0) / (temp_voltage - 1.0);
     Serial.print("resistance 3: "); Serial.println(res, 2);
     uint16_t small_res = (uint16_t) res;
     Serial.print("integer resistance 3: "); Serial.println(small_res);
@@ -530,19 +530,22 @@ static inline uint16_t thermistorResistanceGPIO3(double tempVoltage) {
     // resistances stored as 1 ohm units.
 }
 
-uint16_t calculateDegreesCelsius(double thermistorResistance) {
-    // temperature equation based on resistance is the following
-    // R_inf = R0 * e^(-B / T0);
-    // T = B / ln((R/R0) * e^(B / T0))
-    // T = B / (ln(R/R0) + ln(e^(B / T0)))
-    // T = B / (ln(R/R0) + (B / T0))
-    // B = 3984
-    // R0 = 10000
-    double temp = 3984 / (log(thermistorResistance / 1e4) + (3984.0 / 298.15));
-    temp = temp - 273.15;
-    Serial.println(temp);
-    return (int) (temp * 100);
-    // temps stored in 0.1 C units
+/*
+ * Calculate thermistor temperature in 0.1C units, given thermistor resistance in ohms
+ */
+int16_t calculate_degrees_celsius(double thermistor_resistance) {
+    /*
+     * Temperature equation (in Kelvin) based on resistance is the following:
+     * 1/T = 1/T0 + (1/B) * ln(R/R0)
+     * T = 1/(1/T0 + (1/B) * ln(R/R0))
+     * 
+     * T0 = 298.15 (25C in Kelvin)
+     * B = 3984 (Specific to our thermistors)
+     * R = thermistor_resistance (calculated resistance of thermistor)
+     * R0 = 10000 (Resistance of thermistor at 25C)
+     */
+    double temperature = 1/((1 / (double)298.15) + (1 / (double)3984) * (double)log(thermistor_resistance / 10000)) - (double)273.15;
+    return (int16_t) (temperature * 100); // temps stored in 0.1 C units
 }
 
 float process_current() {
@@ -573,7 +576,10 @@ float process_current() {
     return current;
 }
 
-int updateConstraints(uint8_t address, short value) {
+/*
+ * Update maximum and minimum allowed voltage, current, temperature, etc.
+ */
+int update_constraints(uint8_t address, short value) {
     switch(address) {
         case 0: // voltage_cutoff_low
             voltage_cutoff_low = value;
