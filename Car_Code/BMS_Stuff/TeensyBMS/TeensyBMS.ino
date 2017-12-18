@@ -40,7 +40,6 @@
 /*
  * Constant definitions
  */
-
 #define TOTAL_IC 4
 #define TOTAL_CELLS 9
 #define TOTAL_THERMISTORS 3
@@ -145,6 +144,16 @@ void setup() {
  */
 void loop() {
     while (CAN.read(msg)) {
+        if (msg.id == ID_BMS_TEMPERATURES) { // Used temporarily while we have an external temperature monitor ECU
+            bms_temperatures.load(msg.buf);
+            bms_status.set_discharge_overtemp(false);  // RESET these values, then check below if they should be set again
+            bms_status.set_charge_overtemp(false);
+            if (bms_status.get_state() == BMS_STATE_DISCHARGING && bms_temperatures.get_high_temperature() > discharge_temp_critical_high) {
+                bms_status.set_discharge_overtemp(true);
+            } else if (bms_status.get_state() >= BMS_STATE_CHARGING && bms_temperatures.get_high_temperature() > charge_temp_critical_high) {
+                bms_status.set_charge_overtemp(true);
+            }
+        }
         if (msg.id == ID_CCU_STATUS) { // TODO - currently the BMS doesn't actually need to know the CCU status, could be a future feature
             CCU_status ccu_status = CCU_status(msg.buf);
             if (ccu_status.get_charger_enabled()) {
@@ -170,11 +179,11 @@ void loop() {
         balance_cells();
         //process_temps(); // store data in bms_temperatures object.
         //process_current(); // store data in bms_status object.
-    }
 
-    if (bms_status.get_error_flags()) { // BMS error - drive BMS_OK signal low
-        Serial.println("STATUS NOT GOOD!!!!!!!!!!!!!!!");
-        digitalWrite(BMS_OK, LOW);
+        if (bms_status.get_error_flags()) { // BMS error - drive BMS_OK signal low
+            Serial.println("STATUS NOT GOOD!!!!!!!!!!!!!!!");
+            digitalWrite(BMS_OK, LOW);
+        }
     }
 
     /*
@@ -204,7 +213,7 @@ void loop() {
         msg.len = sizeof(CAN_message_bms_voltages_t);
         CAN.write(msg);
 
-        msg.id = ID_BMS_SEGMENT_TEMPERATURES;
+        msg.id = ID_BMS_SEGMENT_VOLTAGES;
         msg.len = sizeof(CAN_message_bms_segment_voltages_t);
         for (int i = 0; i < TOTAL_SEGMENTS; i++) {
             bms_segment_voltages[i].write(msg.buf);
@@ -415,7 +424,7 @@ void poll_aux_voltage() {
     delay(200);
 }
 
-void process_temps() {
+void process_temps() { // TODO make work with signed int8_t CAN message (yes temperatures can be negative)
     double avgTemp, lowTemp, highTemp, totalTemp;
     poll_aux_voltage();
     totalTemp = 0;

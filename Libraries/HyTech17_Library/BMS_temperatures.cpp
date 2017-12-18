@@ -13,7 +13,7 @@ BMS_temperatures::BMS_temperatures(uint8_t buf[]) {
     load(buf);
 }
 
-BMS_temperatures::BMS_temperatures(uint16_t average_temperature, uint16_t low_temperature, uint16_t high_temperature) {
+BMS_temperatures::BMS_temperatures(int16_t average_temperature, int16_t low_temperature, int16_t high_temperature) {
     set_average_temperature(average_temperature);
     set_low_temperature(low_temperature);
     set_high_temperature(high_temperature);
@@ -21,37 +21,37 @@ BMS_temperatures::BMS_temperatures(uint16_t average_temperature, uint16_t low_te
 
 void BMS_temperatures::load(uint8_t buf[]) {
     message = {};
-    memcpy(&(message.average_temperature), &buf[0], sizeof(uint16_t));
-    memcpy(&(message.low_temperature), &buf[2], sizeof(uint16_t));
-    memcpy(&(message.high_temperature), &buf[4], sizeof(uint16_t));
+    memcpy(&(message.average_temperature), &buf[0], sizeof(int16_t));
+    memcpy(&(message.low_temperature), &buf[2], sizeof(int16_t));
+    memcpy(&(message.high_temperature), &buf[4], sizeof(int16_t));
 }
 
 void BMS_temperatures::write(uint8_t buf[]) {
-    memcpy(&buf[0], &(message.average_temperature), sizeof(uint16_t));
-    memcpy(&buf[2], &(message.low_temperature), sizeof(uint16_t));
-    memcpy(&buf[4], &(message.high_temperature), sizeof(uint16_t));
+    memcpy(&buf[0], &(message.average_temperature), sizeof(int16_t));
+    memcpy(&buf[2], &(message.low_temperature), sizeof(int16_t));
+    memcpy(&buf[4], &(message.high_temperature), sizeof(int16_t));
 }
 
-uint16_t BMS_temperatures::get_average_temperature() {
+int16_t BMS_temperatures::get_average_temperature() {
     return message.average_temperature;
 }
 
-uint16_t BMS_temperatures::get_low_temperature() {
+int16_t BMS_temperatures::get_low_temperature() {
     return message.low_temperature;
 }
 
-uint16_t BMS_temperatures::get_high_temperature() {
+int16_t BMS_temperatures::get_high_temperature() {
     return message.high_temperature;
 }
 
-void BMS_temperatures::set_average_temperature(uint16_t average_temperature) {
+void BMS_temperatures::set_average_temperature(int16_t average_temperature) {
     message.average_temperature = average_temperature;
 }
 
-void BMS_temperatures::set_low_temperature(uint16_t low_temperature) {
+void BMS_temperatures::set_low_temperature(int16_t low_temperature) {
     message.low_temperature = low_temperature;
 }
 
-void BMS_temperatures::set_high_temperature(uint16_t high_temperature) {
+void BMS_temperatures::set_high_temperature(int16_t high_temperature) {
     message.high_temperature = high_temperature;
 }

@@ -50,8 +50,8 @@
 #define ID_TCU_READINGS 0xD3
 #define ID_TCU_RESTART 0xD4
 #define ID_BMS_VOLTAGES 0xD8
-#define ID_BMS_TEMPERATURES 0xD9
-#define ID_BMS_SEGMENT_TEMPERATURES 0xDA
+#define ID_BMS_SEGMENT_VOLTAGES 0xD9
+#define ID_BMS_TEMPERATURES 0xDA
 #define ID_BMS_STATUS 0xDB
 #define ID_DCU_STATUS 0xDC
 #define ID_CCU_STATUS 0xDD
@@ -271,24 +271,24 @@ class BMS_segment_voltages {
 };
 
 typedef struct CAN_message_bms_temperatures_t {
-    uint16_t average_temperature;
-    uint16_t low_temperature;
-    uint16_t high_temperature;
+    int16_t average_temperature;
+    int16_t low_temperature;
+    int16_t high_temperature;
 } CAN_message_bms_temperatures_t;
 
 class BMS_temperatures {
     public:
         BMS_temperatures();
         BMS_temperatures(uint8_t buf[]);
-        BMS_temperatures(uint16_t average_temperature, uint16_t low_temperature, uint16_t high_temperature);
+        BMS_temperatures(int16_t average_temperature, int16_t low_temperature, int16_t high_temperature);
         void load(uint8_t buf[]);
         void write(uint8_t buf[]);
-        uint16_t get_average_temperature();
-        uint16_t get_low_temperature();
-        uint16_t get_high_temperature();
-        void set_average_temperature(uint16_t average_temperature);
-        void set_low_temperature(uint16_t low_temperature);
-        void set_high_temperature(uint16_t high_temperature);
+        int16_t get_average_temperature();
+        int16_t get_low_temperature();
+        int16_t get_high_temperature();
+        void set_average_temperature(int16_t average_temperature);
+        void set_low_temperature(int16_t low_temperature);
+        void set_high_temperature(int16_t high_temperature);
     private:
         CAN_message_bms_temperatures_t message;
 };
