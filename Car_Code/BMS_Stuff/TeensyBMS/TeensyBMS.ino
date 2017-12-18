@@ -5,6 +5,22 @@
  * Monitors cell voltages and temperatures, sends BMS_OK signal to close Shutdown Circuit
  */
 
+/*
+ * Shutdown circuit notes:
+ * 1. GLV control system latches shutdown circuit closed.
+ * 2. AIR's close.
+ * 3. High voltage is available to the motor controller, TSAL is lit.
+ * 4. Any faults (IMD OKHS, BMS_OK, BSPD) will open shutdown circuit, opening AIR's.
+ */
+
+/*
+ * Operation notes:
+ * 1. BMS sensors can be powered at all times.
+ * 2. Once Teensy gets power from external power lines, give BMS_OK signal.
+ * 3. No need to check DC bus voltage, because all batteries read their true voltages at all times. (They are continuous with each other at all times, due to no relay.)
+ * 4. Once temperatures go too high, current goes too high, or cell voltages go too high or too low, drive the BMS_OK signal low.
+ */
+
 #include <Arduino.h>
 #include <FlexCAN.h>
 #include "HyTech17.h"
@@ -22,6 +38,16 @@
 #define WATCHDOG A0
 
 /*
+ * Constant definitions
+ */
+
+#define TOTAL_IC 4 // DEBUG: We have temporarily overwritten this value
+#define TOTAL_CELLS 9
+#define TOTAL_THERMISTORS 3 // TODO: Double check how many thermistors are being used.
+#define TOTAL_SEGMENTS 2
+#define THERMISTOR_RESISTOR_VALUE 6700 // TODO: Double check what resistor is used on the resistor divider.
+
+/*
  * Timers
  */
 Metro timer_can_update = Metro(100);
@@ -30,23 +56,8 @@ Metro timer_process_cells = Metro(1000);
 Metro timer_watchdog_timer = Metro(250);
 
 /*
- * 
- * On startup.
- * 1. GLV boxes latches shutdown circuit closed.
- * 2. AIR's close.
- * 3. Voltage flows out of box, and turn on lights.
- * 4. Any faults (OK_HS, BMS_OK, BSPD) will open shutdown circuit, open AIR's.
+ * Global variables
  */
-
-/*
- * Operating condition notes:
- * 1. BMS sensors can be powered at all times.
- * 2. Once linduino gets power from external power lines, give OK_BMS signal.
- * 3. No need to check DC bus voltage, because all batteries read their true voltages at all times. (They are continuous with each other at all times, due to no relay.)
- * 4. Once Temps go too high, current goes too high, or cell voltages go too high or too low, drive the BMS_OK signal low.
- */
-
-/************BATTERY CONSTRAINTS AND CONSTANTS**********************/
 short voltage_cutoff_low = 2980;
 short voltage_cutoff_high = 4210;
 short total_voltage_cutoff = 150;
@@ -57,13 +68,6 @@ short charge_temp_critical_high = 4400;// 44.00
 short discharge_temp_critical_high = 6000; // 60.00
 short voltage_difference_threshold = 500; //100 mV, 0.1V
 
-#define ENABLE_CAN false // use this definition to enable or disable CAN
-/********GLOBAL ARRAYS/VARIABLES CONTAINING DATA FROM CHIP**********/
-#define TOTAL_IC 4 // DEBUG: We have temporarily overwritten this value
-#define TOTAL_CELLS 9
-#define TOTAL_THERMISTORS 3 // TODO: Double check how many thermistors are being used.
-#define TOTAL_SEGMENTS 2
-#define THERMISTOR_RESISTOR_VALUE 6700 // TODO: Double check what resistor is used on the resistor divider.
 uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages. Numbers are stored in 0.1 mV units.
 uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
      /* Data contained in this array is in this format:
@@ -111,15 +115,11 @@ void setup() {
     pinMode(BMS_OK, OUTPUT);
     pinMode(WATCHDOG, OUTPUT);
     pinMode(10,OUTPUT); // Chip select pin
-    digitalWrite(BMS_OK, HIGH);
 
     Serial.begin(115200); // Init serial for PC communication
-    if (ENABLE_CAN) {
-        CAN.begin();
-        Serial.println("CAN communication initialized");
-    }
+    CAN.begin(); // Init CAN for vehicle communication
     delay(100);
-    Serial.println("Serial communication initialized");
+    Serial.println("CAN system and serial communication initialized");
 
     digitalWrite(BMS_OK, HIGH);
     digitalWrite(WATCHDOG, watchdog_high);
@@ -144,17 +144,26 @@ void setup() {
  * Main BMS Control Loop
  */
 void loop() {
-    /*if (ENABLE_CAN) {
-        while (CAN.read(msg)) {
-            if (msg.id == NULL) { // TODO replace with approate definition
-                // lines set out for changing BMS variables TODO
-                Serial.println("Reading BMS");
+    while (CAN.read(msg)) {
+        if (msg.id == ID_CCU_STATUS) { // TODO - currently the BMS doesn't actually need to know the CCU status, could be a future feature
+            CCU_status ccu_status = CCU_status(msg.buf);
+            if (ccu_status.get_charger_enabled()) {
+                Serial.println("Charger enabled");
+            } else {
+                Serial.println("Charger NOT enabled");
             }
         }
-    }*/
+    }
+
     if (timer_process_cells.check()) {
-        Serial.print("\n\nECU uptime: ");
-        Serial.println(millis()/1000);
+        Serial.print("\n\nECU uptime: "); // Send ECU uptime
+        Serial.print(millis()/1000);
+        Serial.print(" seconds (");
+        Serial.print(millis()/1000/60);
+        Serial.print(" minutes, ");
+        Serial.print(millis()/1000 % 60);
+        Serial.println(" seconds)");
+        
         // poll_cell_voltage(); No need to print this twice
         process_voltages(); // polls controller, and store data in bms_voltages object.
         //bms_voltages.set_low(37408); // DEBUG Remove before final code
@@ -163,20 +172,10 @@ void loop() {
         //process_current(); // store data in bms_status object.
     }
 
-    if (bms_status.get_error_flags()) { // set BMS_OK signal
+    if (bms_status.get_error_flags()) { // BMS error - drive BMS_OK signal low
         Serial.println("STATUS NOT GOOD!!!!!!!!!!!!!!!");
         digitalWrite(BMS_OK, LOW);
     }
-
-    /*
-    wakeup_sleep();
-    tx_cfg[0][1] = 0b01010010;
-    tx_cfg[0][2] = 0b10000111;
-    tx_cfg[0][3] = 0b10100010;
-    LTC6804_wrcfg(TOTAL_IC, tx_cfg);
-    wakeup_idle();
-    delay(10);
-    wakeup_idle();*/
 
     /*
     uint8_t data[1][8];
@@ -194,7 +193,7 @@ void loop() {
     delay(2000);
     */
 
-    if (ENABLE_CAN && timer_can_update.check()) {
+    if (timer_can_update.check()) {
         bms_status.write(msg.buf);
         msg.id = ID_BMS_STATUS;
         msg.len = sizeof(CAN_message_bms_status_t);
@@ -224,13 +223,11 @@ void loop() {
     }
 }
 
-/*!***********************************
- \brief Initializes the configuration array
- **************************************/
-void init_cfg()
-{
-    for(int i = 0; i < TOTAL_IC; i++)
-    {
+/*
+ * Initialize the configuration array and write configuration to ICs
+ */
+void init_cfg() {
+    for(int i = 0; i < TOTAL_IC; i++) {
         tx_cfg[i][0] = 0xFE;
         tx_cfg[i][1] = 0x52; // TODO why do values 1-3 differ from default Linear code?
         tx_cfg[i][2] = 0x87;
@@ -276,8 +273,7 @@ void discharge_all() {
     wakeup_sleep();
 }
 
-void stop_discharge_cell(int ic, int cell)
-{
+void stop_discharge_cell(int ic, int cell) {
     cell_discharging[ic][cell] = false;
     discharge_cell(ic, cell, false);
 }
@@ -490,7 +486,7 @@ void process_temps() {
  * tempVoltage is a double in unit 0.1mV
  */
 uint16_t thermistorResistanceGPIO12(double tempVoltage) {
-    /* voltage measured across thermistor is dependent on the istor in the voltage divider
+    /* voltage measured across thermistor is dependent on the resistor in the voltage divider
      * all voltage measurements stored in arrays are in 0.1 mV, or 1/10,000 of a volt
      */
      tempVoltage = tempVoltage / 1e4;
@@ -504,7 +500,7 @@ uint16_t thermistorResistanceGPIO12(double tempVoltage) {
  * tempVoltage is a double in units volts
  */
 static inline uint16_t thermistorResistanceGPIO3(double tempVoltage) {
-    /* voltage measured across thermistor is dependent on the istor in the voltage divider
+    /* voltage measured across thermistor is dependent on the resistor in the voltage divider
      * all voltage measurements stored in arrays are in 0.1 mV, or 1/10,000 of a volt
      */
     tempVoltage = tempVoltage / 1e4;

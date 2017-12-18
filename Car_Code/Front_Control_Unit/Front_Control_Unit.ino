@@ -102,8 +102,8 @@ void setup() {
   pinMode(SOFTWARE_SHUTDOWN_RELAY, OUTPUT);
   pinMode(13, OUTPUT);
 
-  Serial.begin(115200); // init serial for PC communication
-  CAN.begin();
+  Serial.begin(115200); // Init serial for PC communication
+  CAN.begin(); // Init CAN for vehicle communication
   delay(100);
   Serial.println("CAN system and serial communication initialized");
 
