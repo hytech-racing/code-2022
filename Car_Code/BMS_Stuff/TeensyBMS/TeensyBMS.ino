@@ -24,6 +24,7 @@
 #include <Arduino.h>
 #include <FlexCAN.h>
 #include "HyTech17.h"
+#include "LT_SPI.h"
 #include "LTC68041.h"
 #include <Metro.h>
 
@@ -123,8 +124,8 @@ void setup() {
     digitalWrite(BMS_OK, HIGH);
     digitalWrite(WATCHDOG, watchdog_high);
 
-    LTC6804_initialize();
-    init_cfg();
+    initialize(); // Call our modified initialize function instead of the default Linear function
+    init_cfg(); // Initialize and write configuration registers to LTC6804 chips
     poll_cell_voltage();
     memcpy(cell_delta_voltage, cell_voltages, 2 * TOTAL_IC * TOTAL_CELLS);
     bms_status.set_state(BMS_STATE_CHARGING);
@@ -233,19 +234,30 @@ void loop() {
 }
 
 /*
+ * Initialize communication with LTC6804 chips. Based off of LTC6804_initialize()
+ * Changes: Sets ADC mode to MD_FILTERED
+ */
+void initialize() {
+    quikeval_SPI_connect();
+    spi_enable(SPI_CLOCK_DIV16); // Sets 1MHz Clock
+    set_adc(MD_FILTERED,DCP_DISABLED,CELL_CH_ALL,AUX_CH_ALL); // TODO Change CELL_CH_ALL and AUX_CH_ALL so we don't read all GPIOs and cells
+}
+
+/*
  * Initialize the configuration array and write configuration to ICs
+ * See LTC6804 Datasheet Page 51 for tables of register definitions
  */
 void init_cfg() {
     for(int i = 0; i < TOTAL_IC; i++) {
-        tx_cfg[i][0] = 0xFE;
-        tx_cfg[i][1] = 0x52; // TODO why do values 1-3 differ from default Linear code?
+        tx_cfg[i][0] = 0xFE; // 11111110 - All GPIOs enabled, Reference Remains Powered Up Until Watchdog Timeout, ADCOPT 0 allows us to use filtered ADC mode // TODO maybe we can speed things up by disabling some GPIOs
+        tx_cfg[i][1] = 0x52; // TODO why do bytes 1-3 differ from default Linear code?
         tx_cfg[i][2] = 0x87;
         tx_cfg[i][3] = 0xA2;
         tx_cfg[i][4] = 0x00;
         tx_cfg[i][5] = 0x00;
     }
     wakeup_sleep();
-    LTC6804_wrcfg(TOTAL_IC, tx_cfg);
+    LTC6804_wrcfg(TOTAL_IC, tx_cfg); // Write configuration to ICs
 }
 
 void discharge_cell(int ic, int cell) {
@@ -296,36 +308,28 @@ void stop_discharge_all() {
     wakeup_sleep();
 }
 
-void balance_cells () {
+void balance_cells() {
   if (bms_voltages.get_low() > voltage_cutoff_low)
   { 
-      for (int ic = 0; ic < TOTAL_IC; ic++)
-      { // for IC
-          for (int cell = 0; cell < TOTAL_CELLS; cell++)
-          { // for Cell
-              if (!ignore_cell[ic][cell])
-              {
+      for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
+          for (int cell = 0; cell < TOTAL_CELLS; cell++) { // Loop through cells
+              if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
                   uint16_t cell_voltage = cell_voltages[ic][cell]; // current cell voltage in mV
-                  if (cell_discharging[ic][cell])
-                  {
-                      if (cell_voltage < bms_voltages.get_low() + voltage_difference_threshold - 6)
-                      {
+                  if (cell_discharging[ic][cell]) {
+                      if (cell_voltage < bms_voltages.get_low() + voltage_difference_threshold - 6) {
                           stop_discharge_cell(ic, cell);
                       }
                   }
-                  else if (cell_voltage > bms_voltages.get_low() + voltage_difference_threshold)
-                      {
+                  else if (cell_voltage > bms_voltages.get_low() + voltage_difference_threshold) {
                           discharge_cell(ic, cell);
                   }
               }
           }
       }
   }
-  else
-  {
+  else {
       Serial.println("Not Balancing!");
-      stop_discharge_all();
-      //make sure none of the cells are discharging
+      stop_discharge_all(); // Make sure none of the cells are discharging
   }
 }
 
@@ -337,11 +341,14 @@ void poll_cell_voltage() {
      * wakeup_idle wakes up the isoSPI port.
      */
     wakeup_sleep();
+    LTC6804_adcv(); // Start cell ADC conversion
+    delay(205); // Need to wait at least 201.317ms due to filtered sampling mode (26Hz) - See LTC6804 Datasheet Table 5
+    wakeup_sleep();
     uint8_t error = LTC6804_rdcv(0, TOTAL_IC, cell_voltages); // asks chip to read voltages and store in given array.
     if (error == -1) {
         Serial.println("A PEC error was detected in cell voltage data");
     }
-    print_cells(); // prints the cell voltages to Serial.
+    print_cells(); // Print the cell voltages to Serial.
 }
 
 void process_voltages() {
@@ -411,10 +418,10 @@ void process_voltages() {
 
 void poll_aux_voltage() {
     wakeup_sleep();
-    LTC6804_wrcfg(TOTAL_IC, tx_cfg);
+    LTC6804_wrcfg(TOTAL_IC, tx_cfg); // TODO probably remove this
     wakeup_idle();
-    LTC6804_adax();
-    delay(10);
+    LTC6804_adax(); // Start GPIO ADC conversion
+    delay(205); // Need to wait at least 201.317ms due to filtered sampling mode (26Hz) - See LTC6804 Datasheet Table 7
     wakeup_idle();
     uint8_t error = LTC6804_rdaux(0, TOTAL_IC, aux_voltages);
     if (error == -1) {
@@ -428,12 +435,12 @@ void process_temps() { // TODO make work with signed int8_t CAN message (yes tem
     double avgTemp, lowTemp, highTemp, totalTemp;
     poll_aux_voltage();
     totalTemp = 0;
-    lowTemp = calculateDegreesCelsius(thermistorResistanceGPIO12(aux_voltages[0][0]));
+    lowTemp = calculate_degrees_celsius(thermistor_resistance_gpio12(aux_voltages[0][0]));
     highTemp = lowTemp;
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         Serial.println("Thermistor 1");
-        uint16_t resistance = thermistorResistanceGPIO12(aux_voltages[ic][0]);
-        uint16_t thermTemp = calculateDegreesCelsius(resistance);
+        uint16_t resistance = thermistor_resistance_gpio12(aux_voltages[ic][0]);
+        uint16_t thermTemp = calculate_degrees_celsius(resistance);
         if (thermTemp < lowTemp) {
             lowTemp = thermTemp;
         }
@@ -442,8 +449,8 @@ void process_temps() { // TODO make work with signed int8_t CAN message (yes tem
         }
         totalTemp += thermTemp;
         Serial.println("Thermistor 2");
-        resistance = thermistorResistanceGPIO12(aux_voltages[ic][1]);
-        thermTemp = calculateDegreesCelsius(resistance);
+        resistance = thermistor_resistance_gpio12(aux_voltages[ic][1]);
+        thermTemp = calculate_degrees_celsius(resistance);
         if (thermTemp < lowTemp) {
             lowTemp = thermTemp;
         }
@@ -452,8 +459,8 @@ void process_temps() { // TODO make work with signed int8_t CAN message (yes tem
         }
         totalTemp += thermTemp;
         Serial.println("Thermistor 3");
-        resistance = thermistorResistanceGPIO3(aux_voltages[ic][2]);
-        thermTemp = calculateDegreesCelsius(resistance);
+        resistance = thermistor_resistance_gpio3(aux_voltages[ic][2]);
+        thermTemp = calculate_degrees_celsius(resistance);
         if (thermTemp < lowTemp) {
             lowTemp = thermTemp;
         }
