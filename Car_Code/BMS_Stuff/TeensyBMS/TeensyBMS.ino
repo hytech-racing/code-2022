@@ -41,9 +41,9 @@
  * Constant definitions
  */
 
-#define TOTAL_IC 4 // DEBUG: We have temporarily overwritten this value
+#define TOTAL_IC 4
 #define TOTAL_CELLS 9
-#define TOTAL_THERMISTORS 3 // TODO: Double check how many thermistors are being used.
+#define TOTAL_THERMISTORS 3
 #define TOTAL_SEGMENTS 2
 #define THERMISTOR_RESISTOR_VALUE 6700 // TODO: Double check what resistor is used on the resistor divider.
 
@@ -163,7 +163,7 @@ void loop() {
         Serial.print(" minutes, ");
         Serial.print(millis()/1000 % 60);
         Serial.println(" seconds)");
-        
+
         // poll_cell_voltage(); No need to print this twice
         process_voltages(); // polls controller, and store data in bms_voltages object.
         //bms_voltages.set_low(37408); // DEBUG Remove before final code

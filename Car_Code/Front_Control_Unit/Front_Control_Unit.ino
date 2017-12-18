@@ -12,6 +12,13 @@
 /*
  * Pin definitions
  */
+#define ADC_ACCEL_1_CHANNEL 0
+#define ADC_ACCEL_2_CHANNEL 1
+#define ADC_BRAKE_CHANNEL 2
+#define ADC_SPI_CS A0
+#define ADC_SPI_DIN 0
+#define ADC_SPI_DOUT 1
+#define ADC_SPI_SCK 13
 #define BSPD_FAULT A7
 #define BTN_START A5
 #define LED_START 5
@@ -20,27 +27,20 @@
 #define LED_IMD 7
 #define READY_SOUND 2
 #define SOFTWARE_SHUTDOWN_RELAY 12
-#define SPI_DOUT 0
-#define SPI_DIN 1
-#define SPI_CS A0
-#define SPI_SCK 13
-#define ADC_ACCEL_1_CHANNEL 0
-#define ADC_ACCEL_2_CHANNEL 1
-#define ADC_BRAKE_CHANNEL 2
 
 /*
  * Constant definitions
  */
 // TODO some of these values need to be calibrated once hardware is installed
-#define BRAKE_ACTIVE 282
-#define MIN_THROTTLE_1 463 // compare pedal travel
-#define MAX_THROTTLE_1 246
-#define MIN_THROTTLE_2 93
-#define MAX_THROTTLE_2 306
-#define MIN_BRAKE 242
-#define MAX_BRAKE 306
+#define BRAKE_ACTIVE 1600
+#define MIN_THROTTLE_1 2394 // compare pedal travel
+#define MAX_THROTTLE_1 1020
+#define MIN_THROTTLE_2 372
+#define MAX_THROTTLE_2 1372
+#define MIN_BRAKE 1510
+#define MAX_BRAKE 1684
 #define MAX_TORQUE 1600 // Torque in Nm * 10
-#define MIN_HV_VOLTAGE 500 // Used to check if Accumulator is energized
+#define MIN_HV_VOLTAGE 500 // Volts in V * 0.1 - Used to check if Accumulator is energized
 
 /*
  * Timers
@@ -87,20 +87,17 @@ FlexCAN CAN(500000);
 static CAN_message_t msg;
 
 void setup() {
-  pinMode(BSPD_FAULT, INPUT);
+  pinMode(ADC_SPI_CS, OUTPUT);
+  pinMode(ADC_SPI_DIN, INPUT);
+  pinMode(ADC_SPI_DOUT, OUTPUT);
+  pinMode(ADC_SPI_SCK, OUTPUT);  pinMode(BSPD_FAULT, INPUT);
   pinMode(BTN_START, INPUT_PULLUP);
   pinMode(LED_BMS, OUTPUT);
   pinMode(LED_BSPD, OUTPUT);
   pinMode(LED_IMD, OUTPUT);
   pinMode(LED_START, OUTPUT);
-  
-  pinMode(SPI_DIN, INPUT);
-  pinMode(SPI_DOUT, OUTPUT);
-  pinMode(SPI_CS, OUTPUT);
-  pinMode(SPI_SCK, OUTPUT);
   pinMode(READY_SOUND, OUTPUT);
   pinMode(SOFTWARE_SHUTDOWN_RELAY, OUTPUT);
-  pinMode(13, OUTPUT);
 
   Serial.begin(115200); // Init serial for PC communication
   CAN.begin(); // Init CAN for vehicle communication
@@ -108,7 +105,6 @@ void setup() {
   Serial.println("CAN system and serial communication initialized");
 
   digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH);
-  digitalWrite(13, HIGH); // Used to indicate power
 
   // Send restart message, so Rear ECU knows to power cycle the inverter (in case of CAN message timeout from TCU to inverter)
   msg.id = ID_TCU_RESTART;
@@ -574,27 +570,27 @@ int read_adc(int channel) {
   //allow channel selection
   commandbits|=((channel)<<3);
 
-  digitalWrite(SPI_CS, LOW); //Select adc
+  digitalWrite(ADC_SPI_CS, LOW); //Select adc
   // setup bits to be written
   for (int i=7; i>=3; i--){
-    digitalWrite(SPI_DOUT, commandbits&1<<i);
+    digitalWrite(ADC_SPI_DOUT, commandbits&1<<i);
     //cycle clock
-    digitalWrite(SPI_SCK, HIGH);
-    digitalWrite(SPI_SCK, LOW);    
+    digitalWrite(ADC_SPI_SCK, HIGH);
+    digitalWrite(ADC_SPI_SCK, LOW);    
   }
 
-  digitalWrite(SPI_SCK, HIGH);    //ignores 2 null bits
-  digitalWrite(SPI_SCK, LOW);
-  digitalWrite(SPI_SCK, HIGH);  
-  digitalWrite(SPI_SCK, LOW);
+  digitalWrite(ADC_SPI_SCK, HIGH);    //ignores 2 null bits
+  digitalWrite(ADC_SPI_SCK, LOW);
+  digitalWrite(ADC_SPI_SCK, HIGH);  
+  digitalWrite(ADC_SPI_SCK, LOW);
 
   //read bits from adc
   for (int i=11; i>=0; i--){
-    adcvalue+=digitalRead(SPI_DIN)<<i;
+    adcvalue+=digitalRead(ADC_SPI_DIN)<<i;
     //cycle clock
-    digitalWrite(SPI_SCK, HIGH);
-    digitalWrite(SPI_SCK, LOW);
+    digitalWrite(ADC_SPI_SCK, HIGH);
+    digitalWrite(ADC_SPI_SCK, LOW);
   }
-  digitalWrite(SPI_CS, HIGH); //turn off device
+  digitalWrite(ADC_SPI_CS, HIGH); //turn off device
   return adcvalue;
 }
