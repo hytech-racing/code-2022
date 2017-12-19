@@ -16,13 +16,13 @@ BMS_status::BMS_status(uint8_t buf[]) {
 void BMS_status::load(uint8_t buf[]) {
     memcpy(&(message.state), &buf[0], sizeof(uint8_t));
     memcpy(&(message.error_flags), &buf[1], sizeof(uint8_t));
-    memcpy(&(message.current), &buf[2], sizeof(uint16_t));
+    memcpy(&(message.current), &buf[2], sizeof(int16_t));
 }
 
 void BMS_status::write(uint8_t buf[]) {
     memcpy(&buf[0], &(message.state), sizeof(uint8_t));
     memcpy(&buf[1], &(message.error_flags), sizeof(uint8_t));
-    memcpy(&buf[2], &(message.current), sizeof(uint16_t));
+    memcpy(&buf[2], &(message.current), sizeof(int16_t));
 }
 
 uint8_t BMS_status::get_state() {
@@ -61,7 +61,7 @@ bool BMS_status::get_charge_overtemp() {
     return (message.error_flags & 0x40) >> 6;
 }
 
-uint16_t BMS_status::get_current() {
+int16_t BMS_status::get_current() {
     return message.current;
 }
 
@@ -101,6 +101,6 @@ void BMS_status::set_charge_overtemp(bool charge_overtemp) {
     message.error_flags = (message.error_flags & 0xBF) | (charge_overtemp & 0x40);
 }
 
-void BMS_status::set_current(uint16_t current) {
+void BMS_status::set_current(int16_t current) {
     message.current = current;
 }

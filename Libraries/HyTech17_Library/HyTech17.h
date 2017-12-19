@@ -296,7 +296,7 @@ class BMS_temperatures {
 typedef struct CAN_message_bms_status_t {
 	uint8_t state;
     uint8_t error_flags;
-    uint16_t current;
+    int16_t current;
 } CAN_message_bms_status_t;
 
 class BMS_status {
@@ -314,7 +314,7 @@ class BMS_status {
         bool get_charge_overcurrent();
         bool get_discharge_overtemp();
         bool get_charge_overtemp();
-        uint16_t get_current();
+        int16_t get_current();
 
         void set_state(uint8_t state);
         void set_error_flags(uint8_t error_flags);
@@ -325,7 +325,7 @@ class BMS_status {
         void set_charge_overcurrent(bool flag);
         void set_discharge_overtemp(bool flag);
         void set_charge_overtemp(bool flag);
-        void set_current(uint16_t current);
+        void set_current(int16_t current);
     private:
         CAN_message_bms_status_t message;
 };

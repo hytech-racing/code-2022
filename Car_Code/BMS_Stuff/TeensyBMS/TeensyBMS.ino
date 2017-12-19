@@ -41,6 +41,7 @@
 #define BMS_OK A8
 #define CURRENT_SENSE A3
 #define LED_STATUS 7
+#define LTC6820_CS 10
 #define TEMP_SENSE_1 A9
 #define TEMP_SENSE_2 A2
 #define WATCHDOG A0
@@ -68,12 +69,11 @@ Metro timer_watchdog_timer = Metro(250);
 short voltage_cutoff_low = 2980;
 short voltage_cutoff_high = 4210;
 short total_voltage_cutoff = 150;
-short discharge_current_constant_high = 220;
-short charge_current_constant_high = -400;
-short max_val_current_sense = 300;
-short charge_temp_critical_high = 4400;// 44.00
-short discharge_temp_critical_high = 6000; // 60.00
-short voltage_difference_threshold = 500; //100 mV, 0.1V
+short discharge_current_constant_high = 22000; // 220.00A
+short charge_current_constant_high = -4000; // 40.00A
+short charge_temp_critical_high = 4400; // 44.00C
+short discharge_temp_critical_high = 6000; // 60.00C
+short voltage_difference_threshold = 500; // 5.00V
 
 uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages. Numbers are stored in 0.1 mV units.
 uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
@@ -120,8 +120,12 @@ bool cell_discharging[TOTAL_IC][12];
 
 void setup() {
     pinMode(BMS_OK, OUTPUT);
+    pinMode(CURRENT_SENSE, INPUT);
+    pinMode(LED_STATUS, OUTPUT);
+    pinMode(LTC6820_CS,OUTPUT);
+    pinMode(TEMP_SENSE_1,INPUT);
+    pinMode(TEMP_SENSE_2,INPUT);
     pinMode(WATCHDOG, OUTPUT);
-    pinMode(10,OUTPUT); // Chip select pin
 
     Serial.begin(115200); // Init serial for PC communication
     CAN.begin(); // Init CAN for vehicle communication
@@ -180,6 +184,7 @@ void loop() {
         balance_cells();
         //process_temps(); // store data in bms_temperatures object.
         //process_current(); // store data in bms_status object.
+        process_current_test();
 
         if (bms_status.get_error_flags()) { // BMS error - drive BMS_OK signal low
             Serial.println("STATUS NOT GOOD!!!!!!!!!!!!!!!");
@@ -547,32 +552,41 @@ int16_t calculate_degrees_celsius(double thermistor_resistance) {
     return (int16_t) (temperature * 100); // temps stored in 0.1 C units
 }
 
-float process_current() {
-    // max positive current at 90% of 5V = 4.5V
-    // max negative current in opposite direction at 10% of 5V = 0.5V
-    // 0 current at 50% of 5V = 2.5V
-    // max current sensor reading +/- 300A
-    // current = 300 * (V - 2.5v) / 2v
-    double senseVoltage = analogRead(CURRENT_SENSE) * 5.0 / 1024;
-    float current = (float) max_val_current_sense * (senseVoltage - 2.5) / 2;
-    Serial.print("Current: "); Serial.println(current);
-    bms_status.set_current(current); // TODO convert number to uint16_t correctly
+void process_current() {
+    /*
+     * Current sensor: ISB-300-A-604
+     * Maximum positive current (300A) corresponds to 4.5V signal
+     * Maximum negative current (-300A) corresponds to 0.5V signal
+     * 0A current corresponds to 2.5V signal
+     * 
+     * Resistor divider configuration (R1 = 1e3, R2=2e3):
+     * 0V signal corresponds to analogRead == 0
+     * 5V signal corresponds to analogRead == 1023
+     * 
+     * voltage = analogRead() * 5 / 1023
+     * current = (voltage - 2.5) * 300 / 2
+     */
+    double voltage = analogRead(CURRENT_SENSE) / (double) 204.6;
+    double current = (voltage - 2.5) * (double) 150;
+    Serial.print("Current: ");
+    Serial.print(current, 2);
+    Serial.println("A");
+    bms_status.set_current((int16_t)(current * 100));
     bms_status.set_charge_overcurrent(false); // RESET these values, then check below if they should be set again
-    bms_status.set_discharge_overcurrent(true);
+    bms_status.set_discharge_overcurrent(false);
     if (current < 0) {
         bms_status.set_state(BMS_STATE_CHARGING);
-        if (bms_status.get_current() < charge_current_constant_high) { // TODO make sure number gets converted properly
+        if (bms_status.get_current() < charge_current_constant_high) {
             bms_status.set_charge_overcurrent(true);
             Serial.println("CHARGE CURRENT HIGH FAULT!!!!!!!!!!!!!!!!!!!");
         }
     } else if (current > 0) {
         bms_status.set_state(BMS_STATE_DISCHARGING);
-        if (bms_status.get_current() > discharge_current_constant_high) { // TODO make sure number gets converted properly
+        if (bms_status.get_current() > discharge_current_constant_high) {
             bms_status.set_discharge_overcurrent(true);
             Serial.println("DISCHARGE CURRENT HIGH FAULT!!!!!!!!!!!!!!!!!!!");
         }
     }
-    return current;
 }
 
 /*
