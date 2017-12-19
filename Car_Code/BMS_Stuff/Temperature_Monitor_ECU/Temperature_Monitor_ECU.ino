@@ -88,15 +88,14 @@ void read_temperatures() {
     int16_t average_temperature = 0;
 
     for (int i = 0; i < NUM_THERMISTORS; i++) {
-        double raw_temperature = raw_temperatures[i] / 204.6; // 0-5
-        double resistance = (5 * 10000 / raw_temperature) - 10000;
-        double temperature = 1/((1 / (double)298.15) + (1 / (double)3984) * (double)log(resistance / 10000)) - (double)273.15;
+        double voltage = raw_temperatures[i] / (double) 310; // 0-1023 -> 0-3.3V
+        double resistance = (3.3 * 10000 / voltage) - 10000;
+        double temperature = 1 / ((1 / (double) 298.15) + (1 / (double) 3984) * (double) log(resistance / 10000)) - (double) 273.15;
         int16_t actual_temperature = temperature * 100;
 
         Serial.print(i);
         Serial.print(": ");
-        Serial.print(temperature);
-        //Serial.print(actual_temperature/(float)100, 2);
+        Serial.print(temperature, 2);
         Serial.println(" C");
 
         if (actual_temperature > bms_temperatures.get_high_temperature() || i == 0) {
@@ -111,13 +110,13 @@ void read_temperatures() {
     bms_temperatures.set_average_temperature(average_temperature);
 
     Serial.print("\nAverage temperature: ");
-    Serial.print(average_temperature/(double)100, 2);
+    Serial.print(average_temperature / (double) 100, 2);
     Serial.println(" C");
     Serial.print("Low temperature: ");
-    Serial.print(bms_temperatures.get_low_temperature()/(double)100, 2);
+    Serial.print(bms_temperatures.get_low_temperature() / (double) 100, 2);
     Serial.println(" C");
     Serial.print("High temperature: ");
-    Serial.print(bms_temperatures.get_high_temperature()/(double)100, 2);
+    Serial.print(bms_temperatures.get_high_temperature() / (double) 100, 2);
     Serial.println(" C\n\n\n");
 }
 
@@ -126,10 +125,10 @@ void read_temperatures() {
  */
 void print_uptime() {
     Serial.print("\n\nECU uptime: ");
-    Serial.print(millis()/1000);
+    Serial.print(millis() / 1000);
     Serial.print(" seconds (");
-    Serial.print(millis()/1000/60);
+    Serial.print(millis() / 1000 / 60);
     Serial.print(" minutes, ");
-    Serial.print(millis()/1000 % 60);
+    Serial.print(millis() / 1000 % 60);
     Serial.println(" seconds)");
 }

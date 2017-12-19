@@ -547,7 +547,7 @@ int16_t calculate_degrees_celsius(double thermistor_resistance) {
      * R = thermistor_resistance (calculated resistance of thermistor)
      * R0 = 10000 (Resistance of thermistor at 25C)
      */
-    double temperature = 1/((1 / (double)298.15) + (1 / (double)3984) * (double)log(thermistor_resistance / 10000)) - (double)273.15;
+    double temperature = 1 / ((1 / (double) 298.15) + (1 / (double) 3984) * (double)log(thermistor_resistance / 10000)) - (double) 273.15;
     return (int16_t) (temperature * 100); // temps stored in 0.1 C units
 }
 
@@ -570,7 +570,7 @@ void process_current() {
     Serial.print("Current: ");
     Serial.print(current, 2);
     Serial.println("A");
-    bms_status.set_current((int16_t)(current * 100));
+    bms_status.set_current((int16_t) (current * 100));
     bms_status.set_charge_overcurrent(false); // RESET these values, then check below if they should be set again
     bms_status.set_discharge_overcurrent(false);
     if (current < 0) {
@@ -664,10 +664,10 @@ void print_aux() {
  */
 void print_uptime() {
     Serial.print("\n\nECU uptime: ");
-    Serial.print(millis()/1000);
+    Serial.print(millis() / 1000);
     Serial.print(" seconds (");
-    Serial.print(millis()/1000/60);
+    Serial.print(millis() / 1000 / 60);
     Serial.print(" minutes, ");
-    Serial.print(millis()/1000 % 60);
+    Serial.print(millis() / 1000 % 60);
     Serial.println(" seconds)");
 }
