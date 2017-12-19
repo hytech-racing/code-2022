@@ -184,7 +184,6 @@ void loop() {
         balance_cells();
         //process_temps(); // store data in bms_temperatures object.
         //process_current(); // store data in bms_status object.
-        process_current_test();
 
         if (bms_status.get_error_flags()) { // BMS error - drive BMS_OK signal low
             Serial.println("STATUS NOT GOOD!!!!!!!!!!!!!!!");
@@ -609,16 +608,13 @@ int update_constraints(uint8_t address, short value) {
         case 4: // charge_current_constant_high
             charge_current_constant_high = value;
             break;
-        case 5: // max_val_current_sense
-            max_val_current_sense = value;
-            break;
-        case 6: // charge_temp_critical_high
+        case 5: // charge_temp_critical_high
             charge_temp_critical_high = value;
             break;
-        case 7: // discharge_temp_critical_high
+        case 6: // discharge_temp_critical_high
             discharge_temp_critical_high = value;
             break;
-        case 8: // voltage_difference_threshold
+        case 7: // voltage_difference_threshold
             voltage_difference_threshold = value;
             break;
         default:
