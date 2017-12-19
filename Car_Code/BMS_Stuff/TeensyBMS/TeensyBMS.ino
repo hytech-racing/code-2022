@@ -177,13 +177,13 @@ void loop() {
     }
 
     if (timer_process_cells.check()) {
-        print_uptime();
         // poll_cell_voltage(); No need to print this twice
         process_voltages(); // polls controller, and store data in bms_voltages object.
         //bms_voltages.set_low(37408); // DEBUG Remove before final code
         balance_cells();
         //process_temps(); // store data in bms_temperatures object.
         process_current(); // store data in bms_status object.
+        print_uptime();
 
         if (bms_status.get_error_flags()) { // BMS error - drive BMS_OK signal low
             Serial.println("STATUS NOT GOOD!!!!!!!!!!!!!!!");
@@ -337,7 +337,7 @@ void balance_cells() {
 }
 
 void poll_cell_voltage() {
-    Serial.println("Polling Voltages...");
+    //Serial.println("Polling Voltages...");
     wakeup_sleep(); // Wake up LTC6804 ADC core
     LTC6804_adcv(); // Start cell ADC conversion
     delay(205); // Need to wait at least 201.317ms due to filtered sampling mode (26Hz) - See LTC6804 Datasheet Table 5
@@ -408,10 +408,10 @@ void process_voltages() {
         Serial.println("VOLTAGE FAULT!!!!!!!!!!!!!!!!!!!");
     }
 
-    Serial.print("Avg: "); Serial.println(avgVolt, 4);
+    Serial.print("Average: "); Serial.println(avgVolt, 4);
     Serial.print("Total: "); Serial.println(totalVolts, 4);
-    Serial.print("Min: "); Serial.println(minVolt);
-    Serial.print("Max: "); Serial.println(maxVolt);
+    Serial.print("Min: "); Serial.println(minVolt / (double) 1e4, 4);
+    Serial.print("Max: "); Serial.println(maxVolt / (double) 1e4, 4);
 }
 
 void poll_aux_voltage() {
@@ -576,7 +576,7 @@ void process_current() {
     double current = (voltage - 2.5) * (double) 150;
     Serial.print("\nCurrent Sensor: ");
     Serial.print(current, 2);
-    Serial.println("A\n");
+    Serial.println("A");
     bms_status.set_current((int16_t) (current * 100));
     bms_status.set_charge_overcurrent(false); // RESET these values, then check below if they should be set again
     bms_status.set_discharge_overcurrent(false);
@@ -670,11 +670,11 @@ void print_aux() {
  * Print ECU uptime
  */
 void print_uptime() {
-    Serial.print("\n\nECU uptime: ");
+    Serial.print("\nECU uptime: ");
     Serial.print(millis() / 1000);
     Serial.print(" seconds (");
     Serial.print(millis() / 1000 / 60);
     Serial.print(" minutes, ");
     Serial.print(millis() / 1000 % 60);
-    Serial.println(" seconds)");
+    Serial.println(" seconds)\n");
 }
