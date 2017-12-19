@@ -183,7 +183,7 @@ void loop() {
         //bms_voltages.set_low(37408); // DEBUG Remove before final code
         balance_cells();
         //process_temps(); // store data in bms_temperatures object.
-        //process_current(); // store data in bms_status object.
+        process_current(); // store data in bms_status object.
 
         if (bms_status.get_error_flags()) { // BMS error - drive BMS_OK signal low
             Serial.println("STATUS NOT GOOD!!!!!!!!!!!!!!!");
@@ -566,10 +566,17 @@ void process_current() {
      * current = (voltage - 2.5) * 300 / 2
      */
     double voltage = analogRead(CURRENT_SENSE) / (double) 204.6;
+    /*
+     * Resistor divider compensation (TODO fix this in hardware by not using resistor dividers)
+     * Sensor output @0A: 2.53V/5V=.506
+     * Teensy input @0A: 1.698V/3.3V=.51454
+     * Ratio: .506/.51454=.9834
+     */
+    voltage *= .9834;
     double current = (voltage - 2.5) * (double) 150;
-    Serial.print("Current: ");
+    Serial.print("\nCurrent Sensor: ");
     Serial.print(current, 2);
-    Serial.println("A");
+    Serial.println("A\n");
     bms_status.set_current((int16_t) (current * 100));
     bms_status.set_charge_overcurrent(false); // RESET these values, then check below if they should be set again
     bms_status.set_discharge_overcurrent(false);
