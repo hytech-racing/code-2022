@@ -21,6 +21,13 @@
  * 4. Once temperatures go too high, current goes too high, or cell voltages go too high or too low, drive the BMS_OK signal low.
  */
 
+/*
+ * LTC6804 state / communication notes:
+ * The operation of the LTC6804 is divided into two separate sections: the core circuit and the isoSPI circuit. Both sections have an independent set of operating states, as well as a shutdown timeout. See LTC6804 Datasheet Page 20.
+ * When sending an ADC conversion or diagnostic command, wake up the core circuit by calling wakeup_sleep()
+ * When sending any other command (such as reading or writing registers), wake up the isoSPI circuit by calling wakeup_idle().
+ */
+
 #include <Arduino.h>
 #include <FlexCAN.h>
 #include "HyTech17.h"
@@ -166,14 +173,7 @@ void loop() {
     }
 
     if (timer_process_cells.check()) {
-        Serial.print("\n\nECU uptime: "); // Send ECU uptime
-        Serial.print(millis()/1000);
-        Serial.print(" seconds (");
-        Serial.print(millis()/1000/60);
-        Serial.print(" minutes, ");
-        Serial.print(millis()/1000 % 60);
-        Serial.println(" seconds)");
-
+        print_uptime();
         // poll_cell_voltage(); No need to print this twice
         process_voltages(); // polls controller, and store data in bms_voltages object.
         //bms_voltages.set_low(37408); // DEBUG Remove before final code
@@ -256,7 +256,7 @@ void init_cfg() {
         tx_cfg[i][4] = 0x00;
         tx_cfg[i][5] = 0x00;
     }
-    wakeup_sleep();
+    wakeup_idle(); // Wake up isoSPI
     LTC6804_wrcfg(TOTAL_IC, tx_cfg); // Write configuration to ICs
 }
 
@@ -281,8 +281,8 @@ void discharge_cell(int ic, int cell, bool setDischarge) {
             }
         }
     }
+    wakeup_idle();
     LTC6804_wrcfg(TOTAL_IC, tx_cfg);
-    wakeup_sleep();
 }
 
 void discharge_all() {
@@ -290,8 +290,8 @@ void discharge_all() {
         tx_cfg[i][4] = 0b11111111;
         tx_cfg[i][5] = tx_cfg[i][5] | 0b00001111;
     }
+    wakeup_idle();
     LTC6804_wrcfg(TOTAL_IC, tx_cfg);
-    wakeup_sleep();
 }
 
 void stop_discharge_cell(int ic, int cell) {
@@ -304,13 +304,12 @@ void stop_discharge_all() {
         tx_cfg[i][4] = 0b0;
         tx_cfg[i][5] = 0b0;
     }
+    wakeup_idle();
     LTC6804_wrcfg(TOTAL_IC, tx_cfg);
-    wakeup_sleep();
 }
 
 void balance_cells() {
-  if (bms_voltages.get_low() > voltage_cutoff_low)
-  { 
+  if (bms_voltages.get_low() > voltage_cutoff_low) {
       for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
           for (int cell = 0; cell < TOTAL_CELLS; cell++) { // Loop through cells
               if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
@@ -335,16 +334,11 @@ void balance_cells() {
 
 void poll_cell_voltage() {
     Serial.println("Polling Voltages...");
-    /*
-     * Difference between wakeup_sleep and wakeup_idle
-     * wakeup_sleep wakes up the LTC6804 from sleep state
-     * wakeup_idle wakes up the isoSPI port.
-     */
-    wakeup_sleep();
+    wakeup_sleep(); // Wake up LTC6804 ADC core
     LTC6804_adcv(); // Start cell ADC conversion
     delay(205); // Need to wait at least 201.317ms due to filtered sampling mode (26Hz) - See LTC6804 Datasheet Table 5
     wakeup_sleep();
-    uint8_t error = LTC6804_rdcv(0, TOTAL_IC, cell_voltages); // asks chip to read voltages and store in given array.
+    uint8_t error = LTC6804_rdcv(0, TOTAL_IC, cell_voltages); // Reads voltages from ADC registers and stores in cell_voltages.
     if (error == -1) {
         Serial.println("A PEC error was detected in cell voltage data");
     }
@@ -418,16 +412,14 @@ void process_voltages() {
 
 void poll_aux_voltage() {
     wakeup_sleep();
-    LTC6804_wrcfg(TOTAL_IC, tx_cfg); // TODO probably remove this
-    wakeup_idle();
     LTC6804_adax(); // Start GPIO ADC conversion
     delay(205); // Need to wait at least 201.317ms due to filtered sampling mode (26Hz) - See LTC6804 Datasheet Table 7
-    wakeup_idle();
+    wakeup_sleep();
     uint8_t error = LTC6804_rdaux(0, TOTAL_IC, aux_voltages);
     if (error == -1) {
         Serial.println("A PEC error was detected in auxiliary voltage data");
     }
-//    print_aux();
+    // print_aux();
     delay(200);
 }
 
@@ -655,4 +647,17 @@ void print_aux() {
         }
         Serial.println();
     }
+}
+
+/*
+ * Print ECU uptime
+ */
+void print_uptime() {
+    Serial.print("\n\nECU uptime: ");
+    Serial.print(millis()/1000);
+    Serial.print(" seconds (");
+    Serial.print(millis()/1000/60);
+    Serial.print(" minutes, ");
+    Serial.print(millis()/1000 % 60);
+    Serial.println(" seconds)");
 }

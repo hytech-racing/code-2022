@@ -63,14 +63,7 @@ void setup() {
 
 void loop() {
     if (timer_can_update.check()) {
-        Serial.print("\n\nECU uptime: "); // Send ECU uptime
-        Serial.print(millis()/1000);
-        Serial.print(" seconds (");
-        Serial.print(millis()/1000/60);
-        Serial.print(" minutes, ");
-        Serial.print(millis()/1000 % 60);
-        Serial.println(" seconds)");
-
+        print_uptime();
         read_temperatures();
 
         bms_temperatures.write(msg.buf);
@@ -126,4 +119,17 @@ void read_temperatures() {
     Serial.print("High temperature: ");
     Serial.print(bms_temperatures.get_high_temperature()/(double)100, 2);
     Serial.println(" C\n\n\n");
+}
+
+/*
+ * Print ECU uptime
+ */
+void print_uptime() {
+    Serial.print("\n\nECU uptime: ");
+    Serial.print(millis()/1000);
+    Serial.print(" seconds (");
+    Serial.print(millis()/1000/60);
+    Serial.print(" minutes, ");
+    Serial.print(millis()/1000 % 60);
+    Serial.println(" seconds)");
 }
