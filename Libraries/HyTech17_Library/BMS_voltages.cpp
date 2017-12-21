@@ -6,73 +6,69 @@
 #include "HyTech17.h"
 
 BMS_voltages::BMS_voltages() {
-    bmsVoltageMessage = {};
+    message = {};
 }
 
-/*
- * [b0 b1 b2 b3 b4 b5 b6 b7]
- * [avg avg low low high high - -]
- */
 BMS_voltages::BMS_voltages(uint8_t buf[]) {
     load(buf);
 }
 
-BMS_voltages::BMS_voltages(uint16_t avg, uint16_t low, uint16_t high, uint16_t total) {
-    bmsVoltageMessage = {};
-    bmsVoltageMessage.avgVoltage = avg;
-    bmsVoltageMessage.lowVoltage = low;
-    bmsVoltageMessage.highVoltage = high;
-    bmsVoltageMessage.totalVoltage = total;
+BMS_voltages::BMS_voltages(uint16_t average_voltage, uint16_t low_voltage, uint16_t high_voltage, uint16_t total_voltage) {
+    message = {};
+    message.average_voltage = average_voltage;
+    message.low_voltage = low_voltage;
+    message.high_voltage = high_voltage;
+    message.total_voltage = total_voltage;
 }
 
 /*
  * Populate this object using the data stored in the specified byte array.
  */
 void BMS_voltages::load(uint8_t buf[]) {
-    memcpy(&(bmsVoltageMessage.avgVoltage), &buf[0], sizeof(uint16_t));
-    memcpy(&(bmsVoltageMessage.lowVoltage), &buf[2], sizeof(uint16_t));
-    memcpy(&(bmsVoltageMessage.highVoltage), &buf[4], sizeof(uint16_t));
-    memcpy(&(bmsVoltageMessage.totalVoltage), &buf[6], sizeof(uint16_t));
+    memcpy(&(message.average_voltage), &buf[0], sizeof(uint16_t));
+    memcpy(&(message.low_voltage), &buf[2], sizeof(uint16_t));
+    memcpy(&(message.high_voltage), &buf[4], sizeof(uint16_t));
+    memcpy(&(message.total_voltage), &buf[6], sizeof(uint16_t));
 }
 
 /*
  * Populates the specified byte array using the data stored in this object.
  */
 void BMS_voltages::write(uint8_t buf[]) {
-    memcpy(&buf[0], &bmsVoltageMessage.avgVoltage, sizeof(uint16_t));
-    memcpy(&buf[2], &bmsVoltageMessage.lowVoltage, sizeof(uint16_t));
-    memcpy(&buf[4], &bmsVoltageMessage.highVoltage, sizeof(uint16_t));
-    memcpy(&buf[6], &bmsVoltageMessage.totalVoltage, sizeof(uint16_t));
+    memcpy(&buf[0], &(message.average_voltage), sizeof(uint16_t));
+    memcpy(&buf[2], &(message.low_voltage), sizeof(uint16_t));
+    memcpy(&buf[4], &(message.high_voltage), sizeof(uint16_t));
+    memcpy(&buf[6], &(message.total_voltage), sizeof(uint16_t));
 }
 
-uint16_t BMS_voltages::getAverage() {
-    return bmsVoltageMessage.avgVoltage;
+uint16_t BMS_voltages::get_average() {
+    return message.average_voltage;
 }
 
-uint16_t BMS_voltages::getLow() {
-    return bmsVoltageMessage.lowVoltage;
+uint16_t BMS_voltages::get_low() {
+    return message.low_voltage;
 }
 
-uint16_t BMS_voltages::getHigh() {
-    return bmsVoltageMessage.highVoltage;
+uint16_t BMS_voltages::get_high() {
+    return message.high_voltage;
 }
 
-uint16_t BMS_voltages::getTotal() {
-    return bmsVoltageMessage.totalVoltage;
+uint16_t BMS_voltages::get_total() {
+    return message.total_voltage;
 }
 
-void BMS_voltages::setAverage(uint16_t avg) {
-    bmsVoltageMessage.avgVoltage = avg;
+void BMS_voltages::set_average(uint16_t average_voltage) {
+    message.average_voltage = average_voltage;
 }
 
-void BMS_voltages::setLow(uint16_t low) {
-    bmsVoltageMessage.lowVoltage = low;
+void BMS_voltages::set_low(uint16_t low_voltage) {
+    message.low_voltage = low_voltage;
 }
 
-void BMS_voltages::setHigh(uint16_t high) {
-    bmsVoltageMessage.highVoltage = high;
+void BMS_voltages::set_high(uint16_t high_voltage) {
+    message.high_voltage = high_voltage;
 }
 
-void BMS_voltages::setTotal(uint16_t total) {
-    bmsVoltageMessage.totalVoltage = total;
+void BMS_voltages::set_total(uint16_t total_voltage) {
+    message.total_voltage = total_voltage;
 }
