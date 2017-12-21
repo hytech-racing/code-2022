@@ -308,10 +308,10 @@ void loop() {
             BMS_status bms_status = BMS_status(msg.buf);
             Serial.print("BMS STATE: ");
             Serial.println(bms_status.get_state());
-            Serial.print("BMS ERROR FLAGS: ");
-            Serial.println(bms_status.get_error_flags());
+            Serial.print("BMS ERROR FLAGS: 0x");
+            Serial.println(bms_status.get_error_flags(), HEX);
             Serial.print("BMS CURRENT: ");
-            Serial.println(bms_status.get_current());
+            Serial.println(bms_status.get_current() / (double) 100, 2);
         }
     }
 

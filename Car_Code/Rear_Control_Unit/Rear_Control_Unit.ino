@@ -390,10 +390,10 @@ void send_xbee() {
             BMS_status bms_status = BMS_status(msg.buf);
             XB.print("BMS STATE: ");
             XB.println(bms_status.get_state());
-            XB.print("BMS ERROR FLAGS: ");
-            XB.println(bms_status.get_error_flags());
+            XB.print("BMS ERROR FLAGS: 0x");
+            XB.println(bms_status.get_error_flags(), HEX);
             XB.print("BMS CURRENT: ");
-            XB.println(bms_status.get_current());
+            XB.println(bms_status.get_current() / (double) 100, 2);
         }
 
         if (msg.id == ID_TCU_STATUS && timer_debug_tcu_status.check()) {
