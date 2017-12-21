@@ -33,13 +33,14 @@
 /*
  * Timers
  */
-Metro timer_can_update = Metro(500);
+Metro timer_can_update = Metro(1000);
 
 /*
  * Global variables
  */
 int16_t raw_temperatures[NUM_THERMISTORS];
 BMS_temperatures bms_temperatures;
+BMS_detailed_temperatures bms_detailed_temperatures[4];
 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
@@ -70,6 +71,13 @@ void loop() {
         msg.id = ID_BMS_TEMPERATURES;
         msg.len = sizeof(CAN_message_bms_temperatures_t);
         CAN.write(msg);
+
+        msg.id = ID_BMS_DETAILED_TEMPERATURES;
+        msg.len = sizeof(CAN_message_bms_detailed_temperatures_t);
+        for (int i = 0; i < 4; i++) {
+            bms_detailed_temperatures[i].write(msg.buf);
+            CAN.write(msg);
+        }
     }
 }
 
@@ -98,6 +106,8 @@ void read_temperatures() {
         Serial.print(temperature, 2);
         Serial.println(" C");
 
+        bms_detailed_temperatures[i / 3].set_temperature(i % 3, actual_temperature); // Populate CAN message struct
+
         if (actual_temperature > bms_temperatures.get_high_temperature() || i == 0) {
             bms_temperatures.set_high_temperature(actual_temperature);
         }
@@ -110,7 +120,7 @@ void read_temperatures() {
     bms_temperatures.set_average_temperature(average_temperature);
 
     Serial.print("\nAverage temperature: ");
-    Serial.print(average_temperature / (double) 100, 2);
+    Serial.print(bms_temperatures.get_average_temperature() / (double) 100, 2);
     Serial.println(" C");
     Serial.print("Low temperature: ");
     Serial.print(bms_temperatures.get_low_temperature() / (double) 100, 2);
