@@ -278,6 +278,26 @@ void loop() {
             Serial.print("RMS UPTIME: ");
             Serial.println(mc_torque_timer_information.get_power_on_timer());
         }
+
+        if (msg.id == ID_BMS_TEMPERATURES && timer_debug_bms_temperatures.check()) {
+            BMS_temperatures bms_temperatures = BMS_temperatures(msg.buf);
+            Serial.print("BMS AVERAGE TEMPERATURE: ");
+            Serial.println(bms_temperatures.get_average_temperature());
+            Serial.print("BMS LOW TEMPERATURE: ");
+            Serial.println(bms_temperatures.get_low_temperature());
+            Serial.print("BMS HIGH TEMPERATURE: ");
+            Serial.println(bms_temperatures.get_high_temperature());
+        }
+
+        if (msg.id == ID_BMS_STATUS && timer_debug_bms_status.check()) {
+            BMS_status bms_status = BMS_status(msg.buf);
+            Serial.print("BMS STATE: ");
+            Serial.println(bms_status.get_state());
+            Serial.print("BMS ERROR FLAGS: ");
+            Serial.println(bms_status.get_error_flags());
+            Serial.print("BMS CURRENT: ");
+            Serial.println(bms_status.get_current());
+        }
     }
 
     /*
