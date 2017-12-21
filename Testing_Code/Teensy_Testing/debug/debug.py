@@ -9,8 +9,8 @@ def main():
         quit()
     global screen
     screen = curses.initscr()
-    screen.border(0)
-    screen.addstr(0,5,'HYTECH RACING 2016 VEHICLE SERIAL DEBUGGER')
+    screen.border('#', '#', '#', '#', 0, 0, 0, 0)
+    screen.addstr(0,5,'HYTECH RACING 2018 VEHICLE SERIAL DEBUGGER')
     screen.addstr(3,5,'RMS INVERTER')
     screen.addstr(4,5,'MODULE A TEMP: ')
     screen.addstr(5,5,'MODULE B TEMP: ')

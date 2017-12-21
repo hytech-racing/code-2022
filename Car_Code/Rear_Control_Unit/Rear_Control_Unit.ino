@@ -38,9 +38,9 @@
  * Timers
  */
 Metro timer_bms_faulting = Metro(1000); // At startup the BMS DISCHARGE_OK line drops shortly
-Metro timer_debug_bms_status = Metro(2000);
-Metro timer_debug_bms_temperatures = Metro(2000);
-Metro timer_debug_bms_voltages = Metro(2000);
+Metro timer_debug_bms_status = Metro(1000);
+Metro timer_debug_bms_temperatures = Metro(1000);
+Metro timer_debug_bms_voltages = Metro(1000);
 Metro timer_debug_rms_current_information = Metro(2000);
 Metro timer_debug_rms_fault_codes = Metro(2000);
 Metro timer_debug_rms_internal_states = Metro(2000);
@@ -265,25 +265,25 @@ void send_xbee() {
     if (msg.id == ID_MC_TEMPERATURES_1 && timer_debug_rms_temperatures_1.check()) {
             MC_temperatures_1 mc_temperatures_1 = MC_temperatures_1(msg.buf);
             XB.print("MODULE A TEMP: ");
-            XB.println(mc_temperatures_1.get_module_a_temperature());
+            XB.println(mc_temperatures_1.get_module_a_temperature() / (double) 10, 1);
             XB.print("MODULE B TEMP: ");
-            XB.println(mc_temperatures_1.get_module_b_temperature());
+            XB.println(mc_temperatures_1.get_module_b_temperature() / (double) 10, 1);
             XB.print("MODULE C TEMP: ");
-            XB.println(mc_temperatures_1.get_module_c_temperature());
+            XB.println(mc_temperatures_1.get_module_c_temperature() / (double) 10, 1);
             XB.print("GATE DRIVER BOARD TEMP: ");
-            XB.println(mc_temperatures_1.get_gate_driver_board_temperature());
+            XB.println(mc_temperatures_1.get_gate_driver_board_temperature() / (double) 10, 1);
         }
 
         if (msg.id ==ID_MC_TEMPERATURES_3 && timer_debug_rms_temperatures_3.check()) {
             MC_temperatures_3 mc_temperatures_3 = MC_temperatures_3(msg.buf);
-            XB.print("RTD 4 TEMP: ");
-            XB.println(mc_temperatures_3.get_rtd_4_temperature());
-            XB.print("RTD 5 TEMP: ");
-            XB.println(mc_temperatures_3.get_rtd_5_temperature());
+            //XB.print("RTD 4 TEMP: ");
+            //XB.println(mc_temperatures_3.get_rtd_4_temperature());
+            //XB.print("RTD 5 TEMP: ");
+            //XB.println(mc_temperatures_3.get_rtd_5_temperature());
             XB.print("MOTOR TEMP: ");
-            XB.println(mc_temperatures_3.get_motor_temperature());
+            XB.println(mc_temperatures_3.get_motor_temperature() / (double) 10, 1);
             XB.print("TORQUE SHUDDER: ");
-            XB.println(mc_temperatures_3.get_torque_shudder());
+            XB.println(mc_temperatures_3.get_torque_shudder() / (double) 10, 1);
         }
 
         if (msg.id == ID_MC_MOTOR_POSITION_INFORMATION && timer_debug_rms_motor_position_information.check()) {
@@ -301,25 +301,25 @@ void send_xbee() {
         if (msg.id == ID_MC_CURRENT_INFORMATION && timer_debug_rms_current_information.check()) {
             MC_current_information mc_current_information = MC_current_information(msg.buf);
             XB.print("PHASE A CURRENT: ");
-            XB.println(mc_current_information.get_phase_a_current());
+            XB.println(mc_current_information.get_phase_a_current() / (double) 10, 1);
             XB.print("PHASE B CURRENT: ");
-            XB.println(mc_current_information.get_phase_b_current());
+            XB.println(mc_current_information.get_phase_b_current() / (double) 10, 1);
             XB.print("PHASE C CURRENT: ");
-            XB.println(mc_current_information.get_phase_c_current());
+            XB.println(mc_current_information.get_phase_c_current() / (double) 10, 1);
             XB.print("DC BUS CURRENT: ");
-            XB.println(mc_current_information.get_dc_bus_current());
+            XB.println(mc_current_information.get_dc_bus_current() / (double) 10, 1);
         }
 
         if (msg.id == ID_MC_VOLTAGE_INFORMATION && timer_debug_rms_voltage_information.check()) {
             MC_voltage_information mc_voltage_information = MC_voltage_information(msg.buf);
             XB.print("DC BUS VOLTAGE: ");
-            XB.println(mc_voltage_information.get_dc_bus_voltage());
+            XB.println(mc_voltage_information.get_dc_bus_voltage() / (double) 10, 1);
             XB.print("OUTPUT VOLTAGE: ");
-            XB.println(mc_voltage_information.get_output_voltage());
+            XB.println(mc_voltage_information.get_output_voltage() / (double) 10, 1);
             XB.print("PHASE AB VOLTAGE: ");
-            XB.println(mc_voltage_information.get_phase_ab_voltage());
+            XB.println(mc_voltage_information.get_phase_ab_voltage() / (double) 10, 1);
             XB.print("PHASE BC VOLTAGE: ");
-            XB.println(mc_voltage_information.get_phase_bc_voltage());
+            XB.println(mc_voltage_information.get_phase_bc_voltage() / (double) 10, 1);
         }
 
         if (msg.id == ID_MC_INTERNAL_STATES && timer_debug_rms_internal_states.check()) {
@@ -344,24 +344,24 @@ void send_xbee() {
 
         if (msg.id == ID_MC_FAULT_CODES && timer_debug_rms_fault_codes.check()) {
             MC_fault_codes mc_fault_codes = MC_fault_codes(msg.buf);
-            XB.print("POST FAULT LO: ");
-            XB.println(mc_fault_codes.get_post_fault_lo());
-            XB.print("POST FAULT HI: ");
-            XB.println(mc_fault_codes.get_post_fault_hi());
-            XB.print("RUN FAULT LO: ");
-            XB.println(mc_fault_codes.get_run_fault_lo());
-            XB.print("RUN FAULT HI: ");
-            XB.println(mc_fault_codes.get_run_fault_hi());
+            XB.print("POST FAULT LO: 0x");
+            XB.println(mc_fault_codes.get_post_fault_lo(), HEX);
+            XB.print("POST FAULT HI: 0x");
+            XB.println(mc_fault_codes.get_post_fault_hi(), HEX);
+            XB.print("RUN FAULT LO: 0x");
+            XB.println(mc_fault_codes.get_run_fault_lo(), HEX);
+            XB.print("RUN FAULT HI: 0x");
+            XB.println(mc_fault_codes.get_run_fault_hi(), HEX);
         }
 
         if (msg.id == ID_MC_TORQUE_TIMER_INFORMATION && timer_debug_rms_torque_timer_information.check()) {
             MC_torque_timer_information mc_torque_timer_information = MC_torque_timer_information(msg.buf);
             XB.print("COMMANDED TORQUE: ");
-            XB.println(mc_torque_timer_information.get_commanded_torque());
+            XB.println(mc_torque_timer_information.get_commanded_torque() / (double) 10, 1);
             XB.print("TORQUE FEEDBACK: ");
             XB.println(mc_torque_timer_information.get_torque_feedback());
             XB.print("RMS UPTIME: ");
-            XB.println(mc_torque_timer_information.get_power_on_timer());
+            XB.println(mc_torque_timer_information.get_power_on_timer() * .003, 0);
         }
 
         if (msg.id == ID_BMS_VOLTAGES && timer_debug_bms_voltages.check()) {
