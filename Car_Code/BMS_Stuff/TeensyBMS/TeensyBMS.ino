@@ -112,7 +112,7 @@ static CAN_message_t msg;
  * BMS State Variables
  */
 //BMS_detailed_temperatures bms_detailed_temperatures[TOTAL_SEGMENTS]; // TODO write individual temperatures here for CAN bus
-BMS_detailed_voltages bms_detailed_voltages[TOTAL_SEGMENTS][3]; // TODO write individual voltages here for CAN bus
+BMS_detailed_voltages bms_detailed_voltages[TOTAL_SEGMENTS][3];
 BMS_status bms_status;
 BMS_temperatures bms_temperatures;
 BMS_voltages bms_voltages;
@@ -417,7 +417,7 @@ void process_voltages() {
 
     if (bms_voltages.get_high() > voltage_cutoff_high*10) {
         if (first_fault_overvoltage) {
-            bms_status.set_overvoltage(true);
+            bms_status.set_overvoltage(true); // TODO may need to comment this out for now when driving due to 65535 errors
         }
         first_fault_overvoltage = true;
         Serial.println("VOLTAGE FAULT!!!!!!!!!!!!!!!!!!!");
@@ -441,7 +441,7 @@ void process_voltages() {
 
     if (bms_voltages.get_total() > total_voltage_cutoff) {
         if (first_fault_total_voltage_high) {
-            bms_status.set_total_voltage_high(true);
+            bms_status.set_total_voltage_high(true); // TODO may need to comment this out for now when driving due to 65535 errors
         }
         first_fault_total_voltage_high = true;
         Serial.println("VOLTAGE FAULT!!!!!!!!!!!!!!!!!!!");
