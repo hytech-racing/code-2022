@@ -1,6 +1,6 @@
 /*
- * CCU_status.cpp - Charger Control Unit status message
- * Created by Ryan Gallaway
+ CCU_status.cpp - Charger Control Unit status message
+ Created by Ryan Gallaway
  */
 #include "HyTech17.h"
 

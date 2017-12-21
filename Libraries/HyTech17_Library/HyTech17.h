@@ -49,9 +49,10 @@
 #define ID_TCU_STATUS 0xD2
 #define ID_TCU_READINGS 0xD3
 #define ID_TCU_RESTART 0xD4
-#define ID_BMS_VOLTAGES 0xD8
-#define ID_BMS_SEGMENT_VOLTAGES 0xD9
-#define ID_BMS_TEMPERATURES 0xDA
+#define ID_BMS_VOLTAGES 0xD7
+#define ID_BMS_DETAILED_VOLTAGES 0xD8
+#define ID_BMS_TEMPERATURES 0xD9
+#define ID_BMS_DETAILED_TEMPERATURES 0xDA
 #define ID_BMS_STATUS 0xDB
 #define ID_DCU_STATUS 0xDC
 #define ID_CCU_STATUS 0xDD
@@ -192,32 +193,6 @@ class TCU_readings {
         CAN_message_tcu_readings_t message;
 };
 
-typedef struct CAN_message_dcu_status_t {
-    uint8_t btn_press_id;
-    uint8_t light_active_1;
-    uint8_t light_active_2;
-    uint8_t rtds_state; // ready to drive sound state
-} CAN_message_dcu_status;
-
-class DCU_status {
-    public:
-        DCU_status();
-        DCU_status(uint8_t buf[8]);
-        DCU_status(uint8_t btn_press_id, uint8_t light_active_1, uint8_t light_active_2, uint8_t rtds_state);
-        void load(uint8_t buf[8]);
-        void write(uint8_t buf[8]);
-        uint8_t get_btn_press_id();
-        uint8_t get_light_active_1();
-        uint8_t get_light_active_2();
-        uint8_t get_rtds_state();
-        void set_btn_press_id(uint8_t btn_press_id);
-        void set_light_active_1(uint8_t light_active_1);
-        void set_light_active_2(uint8_t light_active_2);
-        void set_rtds_state(uint8_t rtds_state);
-    private:
-        CAN_message_dcu_status_t message;
-};
-
 typedef struct CAN_message_bms_voltages_t {
     uint16_t average_voltage;
     uint16_t low_voltage;
@@ -244,30 +219,34 @@ class BMS_voltages {
         CAN_message_bms_voltages_t message;
 };
 
-typedef struct CAN_message_bms_segment_voltages_t {
-	uint8_t segment_id;
-	uint16_t voltages_set_1;
-	uint16_t voltages_set_2;
-	uint16_t voltages_set_3;
-} CAN_message_bms_segment_voltages_t;
+typedef struct CAN_message_bms_detailed_voltages_t {
+	uint8_t ic_id_group_id;
+    uint16_t voltage_0;
+    uint16_t voltage_1;
+    uint16_t voltage_2;
+} CAN_message_bms_detailed_voltages_t;
 
-class BMS_segment_voltages {
+class BMS_detailed_voltages {
     public:
-        BMS_segment_voltages();
-        BMS_segment_voltages(uint8_t buf[]);
-        BMS_segment_voltages(uint8_t segment_id, uint16_t voltages_set_1, uint16_t voltages_set_2, uint16_t voltages_set_3);
+        BMS_detailed_voltages();
+        BMS_detailed_voltages(uint8_t buf[]);
+        BMS_detailed_voltages(uint8_t ic_id, uint8_t group_id, uint16_t voltage_0, uint16_t voltage_1, uint16_t voltage_2);
         void load(uint8_t buf[]);
         void write(uint8_t buf[]);
-        uint8_t get_segment_id();
-        uint16_t get_voltages_set_1();
-        uint16_t get_voltages_set_2();
-        uint16_t get_voltages_set_3();
-        void set_segment_id(uint8_t segment_id);
-        void set_voltages_set_1(uint16_t voltages_set_1);
-        void set_voltages_set_2(uint16_t voltages_set_2);
-        void set_voltages_set_3(uint16_t voltages_set_3);
+        uint8_t get_ic_id();
+        uint8_t get_group_id();
+        uint16_t get_voltage_0();
+        uint16_t get_voltage_1();
+        uint16_t get_voltage_2();
+        uint16_t get_voltage(uint8_t voltage_id);
+        void set_ic_id(uint8_t ic_id);
+        void set_group_id(uint8_t group_id);
+        void set_voltage_0(uint16_t voltage_0);
+        void set_voltage_1(uint16_t voltage_1);
+        void set_voltage_2(uint16_t voltage_2);
+        void set_voltage(uint8_t voltage_id, uint16_t voltage);
     private:
-        CAN_message_bms_segment_voltages_t message;
+        CAN_message_bms_detailed_voltages_t message;
 };
 
 typedef struct CAN_message_bms_temperatures_t {
@@ -293,6 +272,34 @@ class BMS_temperatures {
         CAN_message_bms_temperatures_t message;
 };
 
+typedef struct CAN_message_bms_detailed_temperatures_t {
+	uint8_t ic_id;
+    uint16_t temperature_0;
+    uint16_t temperature_1;
+    uint16_t temperature_2;
+} CAN_message_bms_detailed_temperatures_t;
+
+class BMS_detailed_temperatures {
+    public:
+        BMS_detailed_temperatures();
+        BMS_detailed_temperatures(uint8_t buf[]);
+        BMS_detailed_temperatures(uint8_t ic_id, uint16_t temperature_0, uint16_t temperature_1, uint16_t temperature_2);
+        void load(uint8_t buf[]);
+        void write(uint8_t buf[]);
+        uint8_t get_ic_id();
+        uint16_t get_temperature_0();
+        uint16_t get_temperature_1();
+        uint16_t get_temperature_2();
+        uint16_t get_temperature(uint8_t temperature_id);
+        void set_ic_id(uint8_t ic_id);
+        void set_temperature_0(uint16_t temperature_0);
+        void set_temperature_1(uint16_t temperature_1);
+        void set_temperature_2(uint16_t temperature_2);
+        void set_temperature(uint8_t temperature_id, uint16_t temperature);
+    private:
+        CAN_message_bms_detailed_temperatures_t message;
+};
+
 typedef struct CAN_message_bms_status_t {
 	uint8_t state;
     uint8_t error_flags;
@@ -314,6 +321,7 @@ class BMS_status {
         bool get_charge_overcurrent();
         bool get_discharge_overtemp();
         bool get_charge_overtemp();
+        bool get_undertemp();
         int16_t get_current();
 
         void set_state(uint8_t state);
@@ -322,12 +330,39 @@ class BMS_status {
         void set_undervoltage(bool undervoltage);
         void set_total_voltage_high(bool total_voltage_high);
         void set_discharge_overcurrent(bool discharge_overcurrent);
-        void set_charge_overcurrent(bool flag);
-        void set_discharge_overtemp(bool flag);
-        void set_charge_overtemp(bool flag);
+        void set_charge_overcurrent(bool charge_overcurrent);
+        void set_discharge_overtemp(bool discharge_overtemp);
+        void set_charge_overtemp(bool charge_overtemp);
+        void set_undertemp(bool undertemp);
         void set_current(int16_t current);
     private:
         CAN_message_bms_status_t message;
+};
+
+typedef struct CAN_message_dcu_status_t {
+    uint8_t btn_press_id;
+    uint8_t light_active_1;
+    uint8_t light_active_2;
+    uint8_t rtds_state; // ready to drive sound state
+} CAN_message_dcu_status;
+
+class DCU_status {
+    public:
+        DCU_status();
+        DCU_status(uint8_t buf[8]);
+        DCU_status(uint8_t btn_press_id, uint8_t light_active_1, uint8_t light_active_2, uint8_t rtds_state);
+        void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
+        uint8_t get_btn_press_id();
+        uint8_t get_light_active_1();
+        uint8_t get_light_active_2();
+        uint8_t get_rtds_state();
+        void set_btn_press_id(uint8_t btn_press_id);
+        void set_light_active_1(uint8_t light_active_1);
+        void set_light_active_2(uint8_t light_active_2);
+        void set_rtds_state(uint8_t rtds_state);
+    private:
+        CAN_message_dcu_status_t message;
 };
 
 typedef struct CAN_message_ccu_status_t {
