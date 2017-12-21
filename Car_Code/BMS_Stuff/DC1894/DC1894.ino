@@ -223,12 +223,14 @@ void run_command(uint32_t cmd)
 
     case 1:
       wakeup_idle();
+      delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54
       LTC6804_wrcfg(TOTAL_IC,tx_cfg);
       print_config();
       break;
 
     case 2:
-      wakeup_sleep();
+      wakeup_idle();
+      delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54
       error = LTC6804_rdcfg(TOTAL_IC,rx_cfg);
       if (error == -1)
       {
@@ -246,7 +248,8 @@ void run_command(uint32_t cmd)
       break;
 
     case 4:
-      wakeup_sleep();
+      wakeup_idle();
+      delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54
       error = LTC6804_rdcv(0, TOTAL_IC,cell_codes); // Set to read back all cell voltage registers
       if (error == -1)
       {
@@ -264,7 +267,8 @@ void run_command(uint32_t cmd)
       break;
 
     case 6:
-      wakeup_sleep();
+      wakeup_idle();
+      delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54
       error = LTC6804_rdaux(0,TOTAL_IC,aux_codes); // Set to read back all aux registers
       if (error == -1)
       {
@@ -286,7 +290,8 @@ void run_command(uint32_t cmd)
         wakeup_sleep();
         LTC6804_adcv();
         delay(10);
-        wakeup_sleep();
+        wakeup_idle();
+        delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54
         error = LTC6804_rdcv(0, TOTAL_IC,cell_codes);
         if (error == -1)
         {

@@ -53,7 +53,7 @@
 #define TOTAL_CELLS 9
 #define TOTAL_THERMISTORS 3
 #define TOTAL_SEGMENTS 2
-#define THERMISTOR_RESISTOR_VALUE 6700 // TODO: Double check what resistor is used on the resistor divider.
+#define THERMISTOR_RESISTOR_VALUE 10000
 
 /*
  * Timers
@@ -67,13 +67,18 @@ Metro timer_watchdog_timer = Metro(250);
  * Global variables
  */
 short voltage_cutoff_low = 2980;
-short voltage_cutoff_high = 4210;
+short voltage_cutoff_high = 4200;
 short total_voltage_cutoff = 150;
 short discharge_current_constant_high = 22000; // 220.00A
-short charge_current_constant_high = -4000; // 40.00A
+short charge_current_constant_high = -10000; // 100.00A // TODO take into account max charge allowed for regen, 100A is NOT NOMINALLY ALLOWED!
 short charge_temp_critical_high = 4400; // 44.00C
 short discharge_temp_critical_high = 6000; // 60.00C
+short temp_critical_low = 0; // 0C
 short voltage_difference_threshold = 500; // 5.00V
+
+bool first_fault_overvoltage = false; // Wait for 2 voltage faults in a row before shutting off BMS
+bool first_fault_undervoltage = false;
+bool first_fault_total_voltage_high = false;
 
 uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages. Numbers are stored in 0.1 mV units.
 uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
@@ -106,7 +111,8 @@ static CAN_message_t msg;
 /**
  * BMS State Variables
  */
-BMS_segment_voltages bms_segment_voltages[TOTAL_SEGMENTS]; // TODO write individual temperatures here for CAN bus
+//BMS_detailed_temperatures bms_detailed_temperatures[TOTAL_SEGMENTS]; // TODO write individual temperatures here for CAN bus
+BMS_detailed_voltages bms_detailed_voltages[TOTAL_SEGMENTS][3]; // TODO write individual voltages here for CAN bus
 BMS_status bms_status;
 BMS_temperatures bms_temperatures;
 BMS_voltages bms_voltages;
@@ -158,12 +164,18 @@ void loop() {
     while (CAN.read(msg)) {
         if (msg.id == ID_BMS_TEMPERATURES) { // Used temporarily while we have an external temperature monitor ECU
             bms_temperatures.load(msg.buf);
-            bms_status.set_discharge_overtemp(false);  // RESET these values, then check below if they should be set again
-            bms_status.set_charge_overtemp(false);
+            //bms_status.set_discharge_overtemp(false);  // RESET these values, then check below if they should be set again
+            //bms_status.set_charge_overtemp(false);
+            //bms_status.set_undertemp(false);
             if (bms_status.get_state() == BMS_STATE_DISCHARGING && bms_temperatures.get_high_temperature() > discharge_temp_critical_high) {
                 bms_status.set_discharge_overtemp(true);
+                Serial.println("Discharge overtemperature fault!");
             } else if (bms_status.get_state() >= BMS_STATE_CHARGING && bms_temperatures.get_high_temperature() > charge_temp_critical_high) {
                 bms_status.set_charge_overtemp(true);
+                Serial.println("Charge overtemperature fault!");
+            } else if (bms_temperatures.get_low_temperature() < temp_critical_low) {
+                bms_status.set_undertemp(true);
+                Serial.println("Undertemperature fault!");
             }
         }
         if (msg.id == ID_CCU_STATUS) { // TODO - currently the BMS doesn't actually need to know the CCU status, could be a future feature
@@ -184,9 +196,12 @@ void loop() {
         //process_temps(); // store data in bms_temperatures object.
         process_current(); // store data in bms_status object.
         print_uptime();
+        print_temperatures();
 
         if (bms_status.get_error_flags()) { // BMS error - drive BMS_OK signal low
             Serial.println("STATUS NOT GOOD!!!!!!!!!!!!!!!");
+            Serial.print("Error code: 0x");
+            Serial.println(bms_status.get_error_flags(), HEX);
             digitalWrite(BMS_OK, LOW);
         }
     }
@@ -218,17 +233,19 @@ void loop() {
         msg.len = sizeof(CAN_message_bms_voltages_t);
         CAN.write(msg);
 
-        msg.id = ID_BMS_SEGMENT_VOLTAGES;
-        msg.len = sizeof(CAN_message_bms_segment_voltages_t);
+        msg.id = ID_BMS_DETAILED_VOLTAGES;
+        msg.len = sizeof(CAN_message_bms_detailed_voltages_t);
         for (int i = 0; i < TOTAL_SEGMENTS; i++) {
-            bms_segment_voltages[i].write(msg.buf);
-            CAN.write(msg);
+            for (int j = 0; j < 3; j++) {
+                bms_detailed_voltages[i][j].write(msg.buf);
+                CAN.write(msg);
+            }
         }
 
-        bms_temperatures.write(msg.buf);
+        /*bms_temperatures.write(msg.buf);
         msg.id = ID_BMS_TEMPERATURES;
         msg.len = sizeof(CAN_message_bms_temperatures_t);
-        CAN.write(msg);
+        CAN.write(msg);*/
     }
 
     if (timer_watchdog_timer.check()) { // Send alternating keepalive signal to watchdog timer
@@ -239,12 +256,11 @@ void loop() {
 
 /*
  * Initialize communication with LTC6804 chips. Based off of LTC6804_initialize()
- * Changes: Sets ADC mode to MD_FILTERED
+ * Changes: Doesn't call quikeval_SPI_connect(), Sets ADC mode to MD_FILTERED
  */
 void initialize() {
-    quikeval_SPI_connect();
     spi_enable(SPI_CLOCK_DIV16); // Sets 1MHz Clock
-    set_adc(MD_FILTERED,DCP_DISABLED,CELL_CH_ALL,AUX_CH_ALL); // TODO Change CELL_CH_ALL and AUX_CH_ALL so we don't read all GPIOs and cells
+    set_adc(MD_FILTERED,DCP_DISABLED,CELL_CH_ALL,AUX_CH_ALL); // Sets global variables used in ADC commands // TODO Change CELL_CH_ALL and AUX_CH_ALL so we don't read all GPIOs and cells
 }
 
 /*
@@ -252,15 +268,18 @@ void initialize() {
  * See LTC6804 Datasheet Page 51 for tables of register definitions
  */
 void init_cfg() {
-    for(int i = 0; i < TOTAL_IC; i++) {
+    for (int i = 0; i < TOTAL_IC; i++) {
         tx_cfg[i][0] = 0xFE; // 11111110 - All GPIOs enabled, Reference Remains Powered Up Until Watchdog Timeout, ADCOPT 0 allows us to use filtered ADC mode // TODO maybe we can speed things up by disabling some GPIOs
-        tx_cfg[i][1] = 0x52; // TODO why do bytes 1-3 differ from default Linear code?
-        tx_cfg[i][2] = 0x87;
-        tx_cfg[i][3] = 0xA2;
+        tx_cfg[i][1] = 0x00;
+        tx_cfg[i][2] = 0x00;
+        tx_cfg[i][3] = 0x00;
         tx_cfg[i][4] = 0x00;
         tx_cfg[i][5] = 0x00;
     }
+    cfg_set_overvoltage_comparison_voltage(voltage_cutoff_high * 10); // Calculate overvoltage comparison register values
+    cfg_set_undervoltage_comparison_voltage(voltage_cutoff_low * 10); // Calculate undervoltage comparison register values
     wakeup_idle(); // Wake up isoSPI
+    delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54
     LTC6804_wrcfg(TOTAL_IC, tx_cfg); // Write configuration to ICs
 }
 
@@ -272,20 +291,21 @@ void discharge_cell(int ic, int cell) {
 void discharge_cell(int ic, int cell, bool setDischarge) {
     if (ic < TOTAL_IC && cell < TOTAL_CELLS) {
         if (cell < 8) {
-            if(setDischarge){
+            if(setDischarge) {
                 tx_cfg[ic][4] = tx_cfg[ic][4] | (0b1 << cell); 
-            }else{
+            } else {
                 tx_cfg[ic][4] = tx_cfg[ic][4] & ~(0b1 << cell ); 
             }
         } else {
-            if(setDischarge){
+            if (setDischarge) {
                 tx_cfg[ic][5] = tx_cfg[ic][5] | (0b1 << (cell - 8)); 
-            }else{
+            } else {
                 tx_cfg[ic][5] = tx_cfg[ic][5] & ~(0b1 << (cell - 8)); 
             }
         }
     }
     wakeup_idle();
+    //delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54
     LTC6804_wrcfg(TOTAL_IC, tx_cfg);
 }
 
@@ -295,6 +315,7 @@ void discharge_all() {
         tx_cfg[i][5] = tx_cfg[i][5] | 0b00001111;
     }
     wakeup_idle();
+    //delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54
     LTC6804_wrcfg(TOTAL_IC, tx_cfg);
 }
 
@@ -309,6 +330,7 @@ void stop_discharge_all() {
         tx_cfg[i][5] = 0b0;
     }
     wakeup_idle();
+    //delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54
     LTC6804_wrcfg(TOTAL_IC, tx_cfg);
 }
 
@@ -340,8 +362,10 @@ void poll_cell_voltage() {
     //Serial.println("Polling Voltages...");
     wakeup_sleep(); // Wake up LTC6804 ADC core
     LTC6804_adcv(); // Start cell ADC conversion
-    delay(205); // Need to wait at least 201.317ms due to filtered sampling mode (26Hz) - See LTC6804 Datasheet Table 5
-    wakeup_sleep();
+    delay(205); // Need to wait at least 201.317ms for conversion to finish, due to filtered sampling mode (26Hz) - See LTC6804 Datasheet Table 5
+    //wakeup_sleep(); // TODO testing since every once in a while we still get 6.5535 issue with below 2 lines
+    wakeup_idle(); // Wake up isoSPI
+    delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54
     uint8_t error = LTC6804_rdcv(0, TOTAL_IC, cell_voltages); // Reads voltages from ADC registers and stores in cell_voltages.
     if (error == -1) {
         Serial.println("A PEC error was detected in cell voltage data");
@@ -361,6 +385,7 @@ void process_voltages() {
     int minCell = 0;
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         for (int cell = 0; cell < TOTAL_CELLS; cell++) {
+            bms_detailed_voltages[ic][cell / 3].set_voltage(cell % 3, cell_voltages[ic][cell]); // Populate CAN message struct
             if (!ignore_cell[ic][cell]) {
                 uint16_t currentCell = cell_voltages[ic][cell];
                 cell_delta_voltage[ic][cell] = currentCell - cell_delta_voltage[ic][cell];
@@ -386,25 +411,39 @@ void process_voltages() {
 
     // TODO: Low and High voltage error checking.
 
-    bms_status.set_overvoltage(false); // RESET these values, then check below if they should be set again
-    bms_status.set_undervoltage(false);
-    bms_status.set_total_voltage_high(false);
+    //bms_status.set_overvoltage(false); // RESET these values, then check below if they should be set again
+    //bms_status.set_undervoltage(false);
+    //bms_status.set_total_voltage_high(false);
 
     if (bms_voltages.get_high() > voltage_cutoff_high*10) {
-        bms_status.set_overvoltage(true);
+        if (first_fault_overvoltage) {
+            bms_status.set_overvoltage(true);
+        }
+        first_fault_overvoltage = true;
         Serial.println("VOLTAGE FAULT!!!!!!!!!!!!!!!!!!!");
         Serial.print("max IC: "); Serial.println(maxIC);
         Serial.print("max Cell: "); Serial.println(maxCell); Serial.println();
+    } else {
+        first_fault_overvoltage = false;
     }
 
     if (bms_voltages.get_low() < voltage_cutoff_low) {
-        bms_status.set_undervoltage(true);
+        if (first_fault_undervoltage) {
+            bms_status.set_undervoltage(true);
+        }
+        first_fault_undervoltage = true;
         Serial.println("VOLTAGE FAULT!!!!!!!!!!!!!!!!!!!");
         Serial.print("min IC: "); Serial.println(minIC);
         Serial.print("min Cell: "); Serial.println(minCell); Serial.println();
+    } else {
+        first_fault_undervoltage = false;
     }
+
     if (bms_voltages.get_total() > total_voltage_cutoff) {
-        bms_status.set_total_voltage_high(true);
+        if (first_fault_total_voltage_high) {
+            bms_status.set_total_voltage_high(true);
+        }
+        first_fault_total_voltage_high = true;
         Serial.println("VOLTAGE FAULT!!!!!!!!!!!!!!!!!!!");
     }
 
@@ -416,9 +455,11 @@ void process_voltages() {
 
 void poll_aux_voltage() {
     wakeup_sleep();
+    //delayMicroseconds(200) // TODO try this if we are still having intermittent 6.5535 issues, maybe the last ADC isn't being given enough time to wake up
     LTC6804_adax(); // Start GPIO ADC conversion
-    delay(205); // Need to wait at least 201.317ms due to filtered sampling mode (26Hz) - See LTC6804 Datasheet Table 7
-    wakeup_sleep();
+    delay(205); // Need to wait at least 201.317ms for conversion to finish, due to filtered sampling mode (26Hz) - See LTC6804 Datasheet Table 5
+    wakeup_idle(); // Wake up isoSPI
+    delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54
     uint8_t error = LTC6804_rdaux(0, TOTAL_IC, aux_voltages);
     if (error == -1) {
         Serial.println("A PEC error was detected in auxiliary voltage data");
@@ -471,8 +512,8 @@ void process_temps() { // TODO make work with signed int8_t CAN message (yes tem
     bms_temperatures.set_high_temperature((uint16_t) highTemp);
     bms_temperatures.set_average_temperature((uint16_t) avgTemp);
 
-    bms_status.set_discharge_overtemp(false); // RESET these values, then check below if they should be set again
-    bms_status.set_charge_overtemp(false);
+    //bms_status.set_discharge_overtemp(false); // RESET these values, then check below if they should be set again
+    //bms_status.set_charge_overtemp(false);
 
     if (bms_status.get_state() == BMS_STATE_DISCHARGING) { // Discharging
         if (bms_temperatures.get_high_temperature() > discharge_temp_critical_high) {
@@ -578,8 +619,8 @@ void process_current() {
     Serial.print(current, 2);
     Serial.println("A");
     bms_status.set_current((int16_t) (current * 100));
-    bms_status.set_charge_overcurrent(false); // RESET these values, then check below if they should be set again
-    bms_status.set_discharge_overcurrent(false);
+    //bms_status.set_charge_overcurrent(false); // RESET these values, then check below if they should be set again
+    //bms_status.set_discharge_overcurrent(false);
     if (current < 0) {
         bms_status.set_state(BMS_STATE_CHARGING);
         if (bms_status.get_current() < charge_current_constant_high) {
@@ -666,6 +707,18 @@ void print_aux() {
     }
 }
 
+void print_temperatures() {
+    Serial.print("\nAverage temperature: ");
+    Serial.print(bms_temperatures.get_average_temperature() / (double) 100, 2);
+    Serial.println(" C");
+    Serial.print("Low temperature: ");
+    Serial.print(bms_temperatures.get_low_temperature() / (double) 100, 2);
+    Serial.println(" C");
+    Serial.print("High temperature: ");
+    Serial.print(bms_temperatures.get_high_temperature() / (double) 100, 2);
+    Serial.println(" C\n");
+}
+
 /*
  * Print ECU uptime
  */
@@ -677,4 +730,31 @@ void print_uptime() {
     Serial.print(" minutes, ");
     Serial.print(millis() / 1000 % 60);
     Serial.println(" seconds)\n");
+}
+
+/*
+ * Set VOV in configuration registers
+ * Voltage is in 100 uV increments
+ * See LTC6804 datasheet pages 25 and 53
+ */
+void cfg_set_overvoltage_comparison_voltage(uint16_t voltage) {
+    voltage /= 16;
+    for (int i = 0; i < TOTAL_IC; i++) {
+        tx_cfg[i][2] = (tx_cfg[i][2] & 0x0F) | ((voltage && 0x00F) << 8);
+        tx_cfg[i][3] = (voltage && 0xFF0) >> 4;
+    }
+}
+
+/*
+ * Set VUV in configuration registers
+ * Voltage is in 100 uV increments
+ * See LTC6804 datasheet pages 25 and 53
+ */
+void cfg_set_undervoltage_comparison_voltage(uint16_t voltage) {
+    voltage /= 16;
+    voltage -= 10000;
+    for (int i = 0; i < TOTAL_IC; i++) {
+        tx_cfg[i][1] = voltage && 0x0FF;
+        tx_cfg[i][2] = (tx_cfg[i][2] & 0xF0) | ((voltage && 0xF00) >> 8);
+    }
 }
