@@ -48,6 +48,9 @@
 Metro timer_btn_start = Metro(10);
 Metro timer_debug = Metro(500);
 Metro timer_debug_rear_state = Metro(500);
+Metro timer_debug_bms_status = Metro(500);
+Metro timer_debug_bms_temperatures = Metro(500);
+Metro timer_debug_bms_voltages = Metro(500);
 Metro timer_debug_rms_current_information = Metro(500);
 Metro timer_debug_rms_fault_codes = Metro(500);
 Metro timer_debug_rms_internal_states = Metro(500);
@@ -279,7 +282,19 @@ void loop() {
             Serial.println(mc_torque_timer_information.get_power_on_timer());
         }
 
-        if (msg.id == ID_BMS_TEMPERATURES && timer_debug_bms_temperatures.check()) {
+        if (msg.id == ID_BMS_VOLTAGES && debug && timer_debug_bms_voltages.check()) {
+            BMS_voltages bms_voltages = BMS_voltages(msg.buf);
+            Serial.print("BMS VOLTAGE AVERAGE: ");
+            Serial.println(bms_voltages.get_average() / (double) 1000, 4);
+            Serial.print("BMS VOLTAGE LOW: ");
+            Serial.println(bms_voltages.get_low() / (double) 10000, 4);
+            Serial.print("BMS VOLTAGE HIGH: ");
+            Serial.println(bms_voltages.get_high() / (double) 10000, 4);
+            Serial.print("BMS VOLTAGE TOTAL: ");
+            Serial.println(bms_voltages.get_total());
+        }
+
+        if (msg.id == ID_BMS_TEMPERATURES && debug && timer_debug_bms_temperatures.check()) {
             BMS_temperatures bms_temperatures = BMS_temperatures(msg.buf);
             Serial.print("BMS AVERAGE TEMPERATURE: ");
             Serial.println(bms_temperatures.get_average_temperature());
@@ -289,7 +304,7 @@ void loop() {
             Serial.println(bms_temperatures.get_high_temperature());
         }
 
-        if (msg.id == ID_BMS_STATUS && timer_debug_bms_status.check()) {
+        if (msg.id == ID_BMS_STATUS && debug && timer_debug_bms_status.check()) {
             BMS_status bms_status = BMS_status(msg.buf);
             Serial.print("BMS STATE: ");
             Serial.println(bms_status.get_state());
