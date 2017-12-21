@@ -93,7 +93,7 @@ void read_temperatures() {
     raw_temperatures[8] = analogRead(SEG1_C3);
     raw_temperatures[9] = analogRead(SEG1_C4);
 
-    int16_t average_temperature = 0;
+    int32_t average_temperature = 0;
 
     for (int i = 0; i < NUM_THERMISTORS; i++) {
         double voltage = raw_temperatures[i] / (double) 310; // 0-1023 -> 0-3.3V
