@@ -1,7 +1,8 @@
 /*
- CCU_status.cpp - Charger Control Unit status message
- Created by Ryan Gallaway
+ * CCU_status.cpp - CAN message parser: Charger Control Unit status message
+ * Created by Nathan Cheek, December 17, 2017.
  */
+
 #include "HyTech17.h"
 
 CCU_status::CCU_status() {

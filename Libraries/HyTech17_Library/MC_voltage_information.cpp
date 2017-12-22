@@ -1,6 +1,6 @@
 /*
-  MC_voltage_information.cpp - RMS Inverter CAN message: Voltage Information
-  Created by Nathan Cheek, November 20, 2016.
+ * MC_voltage_information.cpp - CAN message parser: RMS Motor Controller voltage information message
+ * Created by Nathan Cheek, November 20, 2016.
  */
 
 #include "HyTech17.h"
@@ -22,17 +22,17 @@ void MC_voltage_information::load(uint8_t buf[8]) {
 }
 
 int16_t MC_voltage_information::get_dc_bus_voltage() {
-  return message.dc_bus_voltage;
+    return message.dc_bus_voltage;
 }
 
 int16_t MC_voltage_information::get_output_voltage() {
-  return message.output_voltage;
+    return message.output_voltage;
 }
 
 int16_t MC_voltage_information::get_phase_ab_voltage() {
-  return message.phase_ab_voltage;
+    return message.phase_ab_voltage;
 }
 
 int16_t MC_voltage_information::get_phase_bc_voltage() {
-  return message.phase_bc_voltage;
+    return message.phase_bc_voltage;
 }

@@ -1,5 +1,5 @@
 /*
- * BMS_detailed_voltages.cpp - BMS detailed voltages message
+ * BMS_detailed_voltages.cpp - CAN message parser: Battery Management System detailed voltages message
  * Created by Nathan Cheek, December 20, 2017.
  */
 

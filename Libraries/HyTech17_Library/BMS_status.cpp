@@ -1,5 +1,5 @@
 /*
- * BMS_status.cpp - BMS status messaging handler
+ * BMS_status.cpp - CAN message parser: Battery Management System status message
  * Created by Shrivathsav Seshan, Feb 16, 2017.
  */
 

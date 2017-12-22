@@ -1,32 +1,32 @@
 /*
-  TCU_readings.cpp - HyTech Throttle Control Unit CAN message: Readings
-  Created by Charith (Karvin) Dassanayake, March 10, 2017.
+ * FCU_readings.cpp - CAN message parser: Front Control Unit readings message
+ * Created by Charith (Karvin) Dassanayake, March 10, 2017.
  */
 
 #include "HyTech17.h"
 
-/*  Blank Constructor for TCU_readings
+/*  Blank Constructor for FCU_readings
  *
- * Used to initialize instance of TCU_readings with no data
+ * Used to initialize instance of FCU_readings with no data
  */
 
-TCU_readings::TCU_readings() {
+FCU_readings::FCU_readings() {
     message = {};
 }
 
-/* Constructor for TCU_readings using a buffer
+/* Constructor for FCU_readings using a buffer
  *
- * Used to initialize instance of TCU_readings with data
+ * Used to initialize instance of FCU_readings with data
  * that's in an 8xbyte array (typically msg.buf)
  *
  * Param - Pass in buffer you are trying to initialize data from
  */
 
-TCU_readings::TCU_readings(uint8_t buf[8]) {
+FCU_readings::FCU_readings(uint8_t buf[8]) {
   load(buf);
 }
 
-/* Constructor for TCU_readings
+/* Constructor for FCU_readings
  *
  * Used to copy data from msg variable in
  * microcontroller code to instance variable
@@ -43,7 +43,7 @@ TCU_readings::TCU_readings(uint8_t buf[8]) {
  *     - REVIEW since code not written a this point (Celsius?)
  */
 
-TCU_readings::TCU_readings(uint16_t throttle_value_1, uint16_t throttle_value_2, uint16_t brake_value, uint16_t temperature) {
+FCU_readings::FCU_readings(uint16_t throttle_value_1, uint16_t throttle_value_2, uint16_t brake_value, uint16_t temperature) {
     set_throttle_value_1(throttle_value_1);
     set_throttle_value_2(throttle_value_2);
     set_brake_value(brake_value);
@@ -56,10 +56,10 @@ TCU_readings::TCU_readings(uint16_t throttle_value_1, uint16_t throttle_value_2,
  * microcontroller code to instance variable
  *
  * Param - Pass in buffer you are trying to read from
- * Example: curTCU_readings.load(msg.buf);
+ * Example: curFCU_readings.load(msg.buf);
  */
 
-void TCU_readings::load(uint8_t buf[8]) {
+void FCU_readings::load(uint8_t buf[8]) {
     message = {};
 
     memcpy(&(message.throttle_value_1), &buf[0], sizeof(uint16_t));
@@ -74,10 +74,10 @@ void TCU_readings::load(uint8_t buf[8]) {
  * to msg variable in microcontroller code
  *
  * Param - Pass in buffer you are trying to modify
- * Example: curTCU_readings.write(msg.buf);
+ * Example: curFCU_readings.write(msg.buf);
  */
 
-void TCU_readings::write(uint8_t buf[8]) {
+void FCU_readings::write(uint8_t buf[8]) {
     memcpy(&buf[0], &(message.throttle_value_1), sizeof(uint16_t));
     memcpy(&buf[2], &(message.throttle_value_2), sizeof(uint16_t));
     memcpy(&buf[4], &(message.brake_value), sizeof(uint16_t));
@@ -89,23 +89,23 @@ void TCU_readings::write(uint8_t buf[8]) {
  * Used to retrieve values stored in this CAN_message_t
  */
 
-uint16_t TCU_readings::get_throttle_value_1() {
+uint16_t FCU_readings::get_throttle_value_1() {
     return message.throttle_value_1;
 }
 
-uint16_t TCU_readings::get_throttle_value_2() {
+uint16_t FCU_readings::get_throttle_value_2() {
     return message.throttle_value_2;
 }
 
-uint16_t TCU_readings::get_throttle_value_avg() {
+uint16_t FCU_readings::get_throttle_value_avg() {
     return (message.throttle_value_1 + message.throttle_value_2) / 2;
 }
 
-uint16_t TCU_readings::get_brake_value() {
+uint16_t FCU_readings::get_brake_value() {
     return message.brake_value;
 }
 
-uint16_t TCU_readings::get_temperature() {
+uint16_t FCU_readings::get_temperature() {
     return message.temperature;
 }
 
@@ -116,18 +116,18 @@ uint16_t TCU_readings::get_temperature() {
  * Param (uint16_t) - Variable to replace old data
  */
 
-void TCU_readings::set_throttle_value_1(uint16_t throttle_value_1) {
+void FCU_readings::set_throttle_value_1(uint16_t throttle_value_1) {
     message.throttle_value_1 = throttle_value_1;
 }
 
-void TCU_readings::set_throttle_value_2(uint16_t throttle_value_2) {
+void FCU_readings::set_throttle_value_2(uint16_t throttle_value_2) {
     message.throttle_value_2 = throttle_value_2;
 }
 
-void TCU_readings::set_brake_value(uint16_t brake_value) {
+void FCU_readings::set_brake_value(uint16_t brake_value) {
     message.brake_value = brake_value;
 }
 
-void TCU_readings::set_temperature(uint16_t temperature) {
+void FCU_readings::set_temperature(uint16_t temperature) {
     message.temperature = temperature;
 }
