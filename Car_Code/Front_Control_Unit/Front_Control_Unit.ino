@@ -3,7 +3,7 @@
  * Init 2017-05-13
  * Interface with dashboard lights, buttons, and buzzer.
  * Read pedal sensor values and communicate with motor controller.
- * Configured for Pedal Box Board rev5
+ * Configured for Front ECU Board rev5
  */
 #include <FlexCAN.h>
 #include "HyTech17.h"
@@ -80,7 +80,7 @@ bool fsae_brake_pedal_implausibility = false; // FSAE EV2.5
 bool fsae_throttle_pedal_implausibility = false;
 bool led_start_active = false;
 uint8_t led_start_type = 0; // 0 for off, 1 for steady, 2 for fast blink, 3 for slow blink
-uint8_t state = TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED;
+uint8_t state = FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED;
 double temperature; // Temperature of onboard thermistor
 uint16_t value_pedal_brake = 0;
 uint16_t value_pedal_throttle_1 = 0;
@@ -110,59 +110,59 @@ void setup() {
 
     digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH);
 
-    // Send restart message, so Rear ECU knows to power cycle the inverter (in case of CAN message timeout from TCU to inverter)
-    msg.id = ID_TCU_RESTART;
+    // Send restart message, so RCU knows to power cycle the inverter (in case of CAN message timeout from FCU to inverter)
+    msg.id = ID_FCU_RESTART;
     msg.len = 1;
     CAN.write(msg);
 }
 
 void loop() {
     while (CAN.read(msg)) {
-        // Handle PCU (power board) status messages
-        if (msg.id == ID_PCU_STATUS) {
-            // Load message into PCU_status object
-            PCU_status pcu_status(msg.buf);
-            if (pcu_status.get_bms_fault()) {
+        // Handle RCU status messages
+        if (msg.id == ID_RCU_STATUS) {
+            // Load message into RCU_status object
+            RCU_status rcu_status(msg.buf);
+            if (!rcu_status.get_bms_ok_high()) { // TODO make sure this doesn't happen at startup
                 digitalWrite(LED_BMS, HIGH);
                 Serial.println("RCU BMS FAULT: detected");
             }
-            if (pcu_status.get_imd_fault()) {
+            if (!rcu_status.get_imd_okhs_high()) { // TODO make sure this doesn't happen at startup
                 digitalWrite(LED_IMD, HIGH);
                 Serial.println("RCU IMD FAULT: detected");
             }
             if (debug && timer_debug_rear_state.check()) {
                 Serial.print("RCU STATE: ");
-                Serial.println(pcu_status.get_state());
+                Serial.println(rcu_status.get_state());
             }
 
-            // Set internal state based on PCU state
+            // Set internal state based on RCU state
             // If initializing, start light off
             // If waiting for driver press, flash start light slow
-            switch (pcu_status.get_state()) {
-                case PCU_STATE_WAITING_BMS_IMD:
+            switch (rcu_status.get_state()) {
+                case RCU_STATE_WAITING_BMS_IMD:
                 set_start_led(0);
-                set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
+                set_state(FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
                 break;
 
-                case PCU_STATE_WAITING_DRIVER:
+                case RCU_STATE_WAITING_DRIVER:
                 set_start_led(3); // Slow blink
-                set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
+                set_state(FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
                 break;
 
-                case PCU_STATE_LATCHING:
+                case RCU_STATE_LATCHING:
                 set_start_led(0);
-                set_state(TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
+                set_state(FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
                 break;
 
-                case PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
-                if (state < TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
-                    set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
+                case RCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
+                if (state < FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
+                    set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
                 }
                 break;
 
-                case PCU_STATE_FATAL_FAULT:
+                case RCU_STATE_FATAL_FAULT:
                 set_start_led(0);
-                set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
+                set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
                 break;
             }
         }
@@ -227,11 +227,11 @@ void loop() {
                 Serial.print("PHASE BC VOLTAGE: ");
                 Serial.println(mc_voltage_information.get_phase_bc_voltage());
             }
-            if (mc_voltage_information.get_dc_bus_voltage() >= MIN_HV_VOLTAGE && state == TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
-                set_state(TCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
+            if (mc_voltage_information.get_dc_bus_voltage() >= MIN_HV_VOLTAGE && state == FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
+                set_state(FCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
             }
-            if (mc_voltage_information.get_dc_bus_voltage() < MIN_HV_VOLTAGE && state > TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
-                set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
+            if (mc_voltage_information.get_dc_bus_voltage() < MIN_HV_VOLTAGE && state > FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
+                set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
             }
         }
 
@@ -255,8 +255,8 @@ void loop() {
                 Serial.print("DIRECTION COMMAND: ");
                 Serial.println(mc_internal_states.get_direction_command());
             }
-            if (mc_internal_states.get_inverter_enable_state() && state == TCU_STATE_ENABLING_INVERTER) {
-                set_state(TCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
+            if (mc_internal_states.get_inverter_enable_state() && state == FCU_STATE_ENABLING_INVERTER) {
+                set_state(FCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
             }
         }
 
@@ -319,27 +319,25 @@ void loop() {
      * Send state over CAN
      */
     if (timer_can_update.check()) {
-        // Send Throttle Control Unit message
-        TCU_status tcu_status = TCU_status(fsae_throttle_pedal_implausibility,
-            0, fsae_brake_pedal_implausibility, brake_pedal_active, state);
-        tcu_status.write(msg.buf);
-        msg.id = ID_TCU_STATUS;
-        msg.len = sizeof(CAN_message_tcu_status_t);
+        // Send Front Control Unit message
+        FCU_status fcu_status = FCU_status();
+        fcu_status.set_state(state);
+        fcu_status.set_accelerator_implausibility(fsae_throttle_pedal_implausibility);
+        fcu_status.set_accelerator_boost_mode(0);
+        fcu_status.set_brake_implausibility(fsae_brake_pedal_implausibility);
+        fcu_status.set_brake_pedal_active(brake_pedal_active);
+        fcu_status.set_start_button_press_id(btn_start_id);
+        fcu_status.write(msg.buf);
+        msg.id = ID_FCU_STATUS;
+        msg.len = sizeof(CAN_message_fcu_status_t);
         CAN.write(msg);
 
-        // Send second Throttle Control Unit message
+        // Send second Front Control Unit message
         read_values(); // Calculate new values to send
-        TCU_readings tcu_readings = TCU_readings(value_pedal_throttle_1, value_pedal_throttle_2, value_pedal_brake, temperature);
-        tcu_readings.write(msg.buf);
-        msg.id = ID_TCU_READINGS;
-        msg.len = sizeof(CAN_message_tcu_readings_t);
-        CAN.write(msg);
-
-        // Send Dashboard Control Unit message
-        DCU_status dcu_status = DCU_status(btn_start_id, 0, 0, 0); // Nothing currently relies on the other data, so sending 0s for now
-        dcu_status.write(msg.buf);
-        msg.id = ID_DCU_STATUS;
-        msg.len = sizeof(CAN_message_dcu_status_t);
+        FCU_readings fcu_readings = FCU_readings(value_pedal_throttle_1, value_pedal_throttle_2, value_pedal_brake, temperature);
+        fcu_readings.write(msg.buf);
+        msg.id = ID_FCU_READINGS;
+        msg.len = sizeof(CAN_message_fcu_readings_t);
         CAN.write(msg);
     }
 
@@ -347,35 +345,35 @@ void loop() {
      * State machine
      */
     switch (state) {
-        case TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED:
+        case FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED:
         break;
 
-        case TCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
+        case FCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
         if (btn_start_new == btn_start_id) { // Start button has been pressed
             if (brake_pedal_active) { // Required to hold brake pedal to activate motor controller
-                set_state(TCU_STATE_ENABLING_INVERTER);
+                set_state(FCU_STATE_ENABLING_INVERTER);
             } else {
                 btn_start_new = btn_start_id + 1;
             }
         }
         break;
 
-        case TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE:
+        case FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE:
         break;
 
-        case TCU_STATE_ENABLING_INVERTER:
+        case FCU_STATE_ENABLING_INVERTER:
         if (timer_inverter_enable.check()) { // Inverter enable timeout
-            set_state(TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
+            set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
         }
         break;
 
-        case TCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
+        case FCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
         if (timer_ready_sound.check()) { // RTDS has sounded
-            set_state(TCU_STATE_READY_TO_DRIVE);
+            set_state(FCU_STATE_READY_TO_DRIVE);
         }
         break;
 
-        case TCU_STATE_READY_TO_DRIVE:
+        case FCU_STATE_READY_TO_DRIVE:
         if (timer_motor_controller_send.check()) {
             MC_command_message mc_command_message = MC_command_message(0, 0, 0, 1, 0, 0);
             read_values(); // Read new sensor values
@@ -444,9 +442,9 @@ void loop() {
     /*
      * Send a message to the Motor Controller over CAN when vehicle is not ready to drive
      */
-    if (state < TCU_STATE_READY_TO_DRIVE && timer_motor_controller_send.check()) {
+    if (state < FCU_STATE_READY_TO_DRIVE && timer_motor_controller_send.check()) {
         MC_command_message mc_command_message = MC_command_message(0, 0, 0, 0, 0, 0);
-        if (state >= TCU_STATE_ENABLING_INVERTER) {
+        if (state >= FCU_STATE_ENABLING_INVERTER) {
             mc_command_message.set_inverter_enable(true);
         }
         mc_command_message.write(msg.buf);
@@ -556,14 +554,14 @@ void set_state(uint8_t new_state) {
         return;
     }
     state = new_state;
-    if (new_state == TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
+    if (new_state == FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
         set_start_led(0);
     }
-    if (new_state == TCU_STATE_TRACTIVE_SYSTEM_ACTIVE) {
+    if (new_state == FCU_STATE_TRACTIVE_SYSTEM_ACTIVE) {
         set_start_led(2);
         btn_start_new = btn_start_id + 1;
     }
-    if (new_state == TCU_STATE_ENABLING_INVERTER) {
+    if (new_state == FCU_STATE_ENABLING_INVERTER) {
         set_start_led(1);
         Serial.println("FCU Enabling inverter");
         MC_command_message mc_command_message = MC_command_message(0, 0, 0, 1, 0, 0);
@@ -584,13 +582,13 @@ void set_state(uint8_t new_state) {
         Serial.println("FCU Sent enable command");
         timer_inverter_enable.reset();
     }
-    if (new_state == TCU_STATE_WAITING_READY_TO_DRIVE_SOUND) {
+    if (new_state == FCU_STATE_WAITING_READY_TO_DRIVE_SOUND) {
         timer_ready_sound.reset();
         digitalWrite(READY_SOUND, HIGH);
         Serial.println("Inverter enabled");
         Serial.println("RTDS enabled");
     }
-    if (new_state == TCU_STATE_READY_TO_DRIVE) {
+    if (new_state == FCU_STATE_READY_TO_DRIVE) {
         digitalWrite(READY_SOUND, LOW);
         Serial.println("RTDS deactivated");
         Serial.println("Ready to drive");
