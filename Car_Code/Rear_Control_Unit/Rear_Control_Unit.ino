@@ -54,7 +54,6 @@ Metro timer_imd_faulting = Metro(1000); // At startup the IMD_OKHS line drops sh
 Metro timer_latch = Metro(1000);
 Metro timer_state_send = Metro(100);
 Metro timer_fcu_restart_inverter = Metro(500); // Upon restart of the FCU, power cycle the inverter
-Metro timer_xbee_send = Metro(1000);
 
 /*
  * Global variables
@@ -114,21 +113,6 @@ void loop() {
                 set_state(0);
             }
         }
-        /*if (msg.id == ID_MC_COMMAND_MESSAGE) {
-        MC_command_message mc_command_message = MC_command_message(msg.buf);
-        Serial.print("Torque command: ");
-        Serial.println(mc_command_message.get_torque_command());
-        Serial.print("Angular velocity: ");
-        Serial.println(mc_command_message.get_angular_velocity());
-        Serial.print("Direction: ");
-        Serial.println(mc_command_message.get_direction());
-        Serial.print("Inverter enable: ");
-        Serial.println(mc_command_message.get_inverter_enable());
-        Serial.print("Discharge enable: ");
-        Serial.println(mc_command_message.get_discharge_enable());
-        Serial.print("Commanded torque limit: ");
-        Serial.println(mc_command_message.get_commanded_torque_limit());
-        }*/
         send_xbee();
     }
 
@@ -155,6 +139,9 @@ void loop() {
         XB.println(rcu_status.get_state());
     }
 
+    /*
+     * State machine
+     */
     switch (state) {
         case 0:
         if (timer_fcu_restart_inverter.check()) {
@@ -276,7 +263,7 @@ void send_xbee() {
 
         if (msg.id ==ID_MC_TEMPERATURES_3 && timer_debug_rms_temperatures_3.check()) {
             MC_temperatures_3 mc_temperatures_3 = MC_temperatures_3(msg.buf);
-            //XB.print("RTD 4 TEMP: ");
+            //XB.print("RTD 4 TEMP: "); // These aren't needed since we aren't using RTDs
             //XB.println(mc_temperatures_3.get_rtd_4_temperature());
             //XB.print("RTD 5 TEMP: ");
             //XB.println(mc_temperatures_3.get_rtd_5_temperature());
@@ -403,4 +390,20 @@ void send_xbee() {
             XB.print("FCU STATE: ");
             XB.println(fcu_status.get_state());
         }
+
+        /*if (msg.id == ID_MC_COMMAND_MESSAGE) { // TODO bring this code up to date with the debug.py system
+        MC_command_message mc_command_message = MC_command_message(msg.buf);
+        Serial.print("Torque command: ");
+        Serial.println(mc_command_message.get_torque_command());
+        Serial.print("Angular velocity: ");
+        Serial.println(mc_command_message.get_angular_velocity());
+        Serial.print("Direction: ");
+        Serial.println(mc_command_message.get_direction());
+        Serial.print("Inverter enable: ");
+        Serial.println(mc_command_message.get_inverter_enable());
+        Serial.print("Discharge enable: ");
+        Serial.println(mc_command_message.get_discharge_enable());
+        Serial.print("Commanded torque limit: ");
+        Serial.println(mc_command_message.get_commanded_torque_limit());
+        }*/
 }
