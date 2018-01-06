@@ -33,12 +33,12 @@
  */
 // TODO some of these values need to be calibrated once hardware is installed
 #define BRAKE_ACTIVE 1600
-#define MIN_THROTTLE_1 2394 // compare pedal travel
-#define MAX_THROTTLE_1 1020
-#define MIN_THROTTLE_2 372
-#define MAX_THROTTLE_2 1372
-#define MIN_BRAKE 1510
-#define MAX_BRAKE 1684
+#define MIN_ACCELERATOR_PEDAL_1 2394 // compare pedal travel
+#define MAX_ACCELERATOR_PEDAL_1 1020
+#define MIN_ACCELERATOR_PEDAL_2 372
+#define MAX_ACCELERATOR_PEDAL_2 1372
+#define MIN_BRAKE_PEDAL 1510
+#define MAX_BRAKE_PEDAL 1684
 #define MAX_TORQUE 1600 // Torque in Nm * 10
 #define MIN_HV_VOLTAGE 500 // Volts in V * 0.1 - Used to check if Accumulator is energized
 
@@ -225,18 +225,18 @@ void loop() {
 
             // Check for accelerator implausibility FSAE EV2.3.10
             fcu_status.set_accelerator_implausibility(false);
-            /*if (fcu_readings.get_throttle_value_1() < MIN_THROTTLE_1 || fcu_readings.get_throttle_value_1() > MAX_THROTTLE_1) {
+            /*if (fcu_readings.get_accelerator_pedal_raw_1() < MIN_ACCELERATOR_PEDAL_1 || fcu_readings.get_accelerator_pedal_raw_1() > MAX_ACCELERATOR_PEDAL_1) {
                 fcu_status.set_accelerator_implausibility(true);
             }
-            if (fcu_readings.get_throttle_value_2() < MIN_THROTTLE_2 || fcu_readings.get_throttle_value_2() > MAX_THROTTLE_2) {
+            if (fcu_readings.get_accelerator_pedal_raw_2() < MIN_ACCELERATOR_PEDAL_2 || fcu_readings.get_accelerator_pedal_raw_2() > MAX_ACCELERATOR_PEDAL_2) {
                 fcu_status.set_accelerator_implausibility(true);
             }*/
 
             // Calculate torque value
             int calculated_torque = 0;
             if (!fcu_status.get_accelerator_implausibility()) {
-                int torque1 = map(fcu_readings.get_throttle_value_1(), MIN_THROTTLE_1, MAX_THROTTLE_1, 0, MAX_TORQUE);
-                int torque2 = map(fcu_readings.get_throttle_value_2(), MIN_THROTTLE_2, MAX_THROTTLE_2, 0, MAX_TORQUE);
+                int torque1 = map(fcu_readings.get_accelerator_pedal_raw_1(), MIN_ACCELERATOR_PEDAL_1, MAX_ACCELERATOR_PEDAL_1, 0, MAX_TORQUE);
+                int torque2 = map(fcu_readings.get_accelerator_pedal_raw_2(), MIN_ACCELERATOR_PEDAL_2, MAX_ACCELERATOR_PEDAL_2, 0, MAX_TORQUE);
                 /*if (abs(torque1 - torque2) * 100 / MAX_TORQUE > 10) { // Second accelerator implausibility check FSAE EV2.3.6
                 fcu_status.set_accelerator_implausibility(true);
                 } else {*/
@@ -341,21 +341,21 @@ void loop() {
  * Read values of sensors
  */
 void read_values() {
-    fcu_readings.set_throttle_value_1(read_adc(ADC_ACCEL_1_CHANNEL));
-    fcu_readings.set_throttle_value_2(read_adc(ADC_ACCEL_2_CHANNEL));
-    fcu_readings.set_brake_value(read_adc(ADC_BRAKE_CHANNEL));
-    if (fcu_readings.get_brake_value() >= BRAKE_ACTIVE) {
+    fcu_readings.set_accelerator_pedal_raw_1(read_adc(ADC_ACCEL_1_CHANNEL));
+    fcu_readings.set_accelerator_pedal_raw_2(read_adc(ADC_ACCEL_2_CHANNEL));
+    fcu_readings.set_brake_pedal_raw(read_adc(ADC_BRAKE_CHANNEL));
+    if (fcu_readings.get_brake_pedal_raw() >= BRAKE_ACTIVE) {
         fcu_status.set_brake_pedal_active(true);
     } else {
         fcu_status.set_brake_pedal_active(false);
     }
     if (debug && timer_debug.check()) {
         Serial.print("FCU PEDAL THROTTLE 1: ");
-        Serial.println(fcu_readings.get_throttle_value_1());
+        Serial.println(fcu_readings.get_accelerator_pedal_raw_1());
         Serial.print("FCU PEDAL THROTTLE 2: ");
-        Serial.println(fcu_readings.get_throttle_value_2());
+        Serial.println(fcu_readings.get_accelerator_pedal_raw_2());
         Serial.print("FCU PEDAL BRAKE: ");
-        Serial.println(fcu_readings.get_brake_value());
+        Serial.println(fcu_readings.get_brake_pedal_raw());
         Serial.print("FCU BRAKE ACT: ");
         Serial.println(fcu_status.get_brake_pedal_active());
         Serial.print("FCU STATE: ");
