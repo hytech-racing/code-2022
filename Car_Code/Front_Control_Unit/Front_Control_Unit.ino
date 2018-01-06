@@ -70,21 +70,16 @@ Metro timer_can_update = Metro(100);
 /*
  * Global variables
  */
-bool brake_pedal_active = false; // True if brake is considered pressed
+FCU_status fcu_status;
+FCU_readings fcu_readings;
+
 bool btn_start_debouncing = false;
 uint8_t btn_start_id = 0; // Increments to differentiate separate button presses
 uint8_t btn_start_new = 0;
 bool btn_start_pressed = false;
 bool debug = true;
-bool fsae_brake_pedal_implausibility = false; // FSAE EV2.5
-bool fsae_throttle_pedal_implausibility = false;
 bool led_start_active = false;
 uint8_t led_start_type = 0; // 0 for off, 1 for steady, 2 for fast blink, 3 for slow blink
-uint8_t state = FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED;
-double temperature; // Temperature of onboard thermistor
-uint16_t value_pedal_brake = 0;
-uint16_t value_pedal_throttle_1 = 0;
-uint16_t value_pedal_throttle_2 = 0;
 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
@@ -109,6 +104,7 @@ void setup() {
     Serial.println("CAN system and serial communication initialized");
 
     digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH);
+    fcu_status.set_state(FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
 
     // Send restart message, so RCU knows to power cycle the inverter (in case of CAN message timeout from FCU to inverter)
     msg.id = ID_FCU_RESTART;
@@ -155,7 +151,7 @@ void loop() {
                 break;
 
                 case RCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
-                if (state < FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
+                if (fcu_status.get_state() < FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
                     set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
                 }
                 break;
@@ -227,10 +223,10 @@ void loop() {
                 Serial.print("PHASE BC VOLTAGE: ");
                 Serial.println(mc_voltage_information.get_phase_bc_voltage());
             }
-            if (mc_voltage_information.get_dc_bus_voltage() >= MIN_HV_VOLTAGE && state == FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
+            if (mc_voltage_information.get_dc_bus_voltage() >= MIN_HV_VOLTAGE && fcu_status.get_state() == FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
                 set_state(FCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
             }
-            if (mc_voltage_information.get_dc_bus_voltage() < MIN_HV_VOLTAGE && state > FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
+            if (mc_voltage_information.get_dc_bus_voltage() < MIN_HV_VOLTAGE && fcu_status.get_state() > FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
                 set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
             }
         }
@@ -255,7 +251,7 @@ void loop() {
                 Serial.print("DIRECTION COMMAND: ");
                 Serial.println(mc_internal_states.get_direction_command());
             }
-            if (mc_internal_states.get_inverter_enable_state() && state == FCU_STATE_ENABLING_INVERTER) {
+            if (mc_internal_states.get_inverter_enable_state() && fcu_status.get_state() == FCU_STATE_ENABLING_INVERTER) {
                 set_state(FCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
             }
         }
@@ -320,12 +316,7 @@ void loop() {
      */
     if (timer_can_update.check()) {
         // Send Front Control Unit message
-        FCU_status fcu_status = FCU_status();
-        fcu_status.set_state(state);
-        fcu_status.set_accelerator_implausibility(fsae_throttle_pedal_implausibility);
         fcu_status.set_accelerator_boost_mode(0);
-        fcu_status.set_brake_implausibility(fsae_brake_pedal_implausibility);
-        fcu_status.set_brake_pedal_active(brake_pedal_active);
         fcu_status.set_start_button_press_id(btn_start_id);
         fcu_status.write(msg.buf);
         msg.id = ID_FCU_STATUS;
@@ -334,7 +325,6 @@ void loop() {
 
         // Send second Front Control Unit message
         read_values(); // Calculate new values to send
-        FCU_readings fcu_readings = FCU_readings(value_pedal_throttle_1, value_pedal_throttle_2, value_pedal_brake, temperature);
         fcu_readings.write(msg.buf);
         msg.id = ID_FCU_READINGS;
         msg.len = sizeof(CAN_message_fcu_readings_t);
@@ -344,13 +334,13 @@ void loop() {
     /*
      * State machine
      */
-    switch (state) {
+    switch (fcu_status.get_state()) {
         case FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED:
         break;
 
         case FCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
         if (btn_start_new == btn_start_id) { // Start button has been pressed
-            if (brake_pedal_active) { // Required to hold brake pedal to activate motor controller
+            if (fcu_status.get_brake_pedal_active()) { // Required to hold brake pedal to activate motor controller
                 set_state(FCU_STATE_ENABLING_INVERTER);
             } else {
                 btn_start_new = btn_start_id + 1;
@@ -378,22 +368,22 @@ void loop() {
             MC_command_message mc_command_message = MC_command_message(0, 0, 0, 1, 0, 0);
             read_values(); // Read new sensor values
 
-            // Check for throttle implausibility FSAE EV2.3.10
-            fsae_throttle_pedal_implausibility = false;
-            /*if (value_pedal_throttle_1 < MIN_THROTTLE_1 || value_pedal_throttle_1 > MAX_THROTTLE_1) {
-                fsae_throttle_pedal_implausibility = true;
+            // Check for accelerator implausibility FSAE EV2.3.10
+            fcu_status.set_accelerator_implausibility(false);
+            /*if (fcu_readings.get_throttle_value_1() < MIN_THROTTLE_1 || fcu_readings.get_throttle_value_1() > MAX_THROTTLE_1) {
+                fcu_status.set_accelerator_implausibility(true);
             }
-            if (value_pedal_throttle_2 < MIN_THROTTLE_2 || value_pedal_throttle_2 > MAX_THROTTLE_2) {
-                fsae_throttle_pedal_implausibility = true;
+            if (fcu_readings.get_throttle_value_2() < MIN_THROTTLE_2 || fcu_readings.get_throttle_value_2() > MAX_THROTTLE_2) {
+                fcu_status.set_accelerator_implausibility(true);
             }*/
 
             // Calculate torque value
             int calculated_torque = 0;
-            if (!fsae_throttle_pedal_implausibility) {
-                int torque1 = map(value_pedal_throttle_1, MIN_THROTTLE_1, MAX_THROTTLE_1, 0, MAX_TORQUE);
-                int torque2 = map(value_pedal_throttle_2, MIN_THROTTLE_2, MAX_THROTTLE_2, 0, MAX_TORQUE);
-                /*if (abs(torque1 - torque2) * 100 / MAX_TORQUE > 10) { // Second throttle implausibility check FSAE EV2.3.6
-                fsae_throttle_pedal_implausibility = true;
+            if (!fcu_status.get_accelerator_implausibility()) {
+                int torque1 = map(fcu_readings.get_throttle_value_1(), MIN_THROTTLE_1, MAX_THROTTLE_1, 0, MAX_TORQUE);
+                int torque2 = map(fcu_readings.get_throttle_value_2(), MIN_THROTTLE_2, MAX_THROTTLE_2, 0, MAX_TORQUE);
+                /*if (abs(torque1 - torque2) * 100 / MAX_TORQUE > 10) { // Second accelerator implausibility check FSAE EV2.3.6
+                fcu_status.set_accelerator_implausibility(true);
                 } else {*/
                 calculated_torque = min(torque1, torque2);
                 Serial.print("FCU RAW TORQUE: ");
@@ -408,14 +398,14 @@ void loop() {
             }
 
             // FSAE EV2.5 APPS / Brake Pedal Plausibility Check
-            if (fsae_brake_pedal_implausibility && !brake_pedal_active && calculated_torque <= (MAX_TORQUE / 4)) {
-                fsae_brake_pedal_implausibility = false; // Clear implausibility
+            if (fcu_status.get_brake_implausibility() && !fcu_status.get_brake_pedal_active() && calculated_torque <= (MAX_TORQUE / 4)) {
+                fcu_status.set_brake_implausibility(false); // Clear implausibility
             }
-            if (brake_pedal_active && calculated_torque > (MAX_TORQUE / 4)) {
-                //fsae_brake_pedal_implausibility = true;
+            if (fcu_status.get_brake_pedal_active() && calculated_torque > (MAX_TORQUE / 4)) {
+                //fcu_status.set_brake_implausibility(true);
             }
 
-            if (fsae_brake_pedal_implausibility || fsae_throttle_pedal_implausibility) {
+            if (fcu_status.get_brake_implausibility() || fcu_status.get_accelerator_implausibility()) {
                 // Implausibility exists, command 0 torque
                 calculated_torque = 0;
             }
@@ -424,9 +414,9 @@ void loop() {
                 Serial.print("FCU REQUESTED TORQUE: ");
                 Serial.println(calculated_torque);
                 Serial.print("FCU IMPLAUS THROTTLE: ");
-                Serial.println(fsae_throttle_pedal_implausibility);
+                Serial.println(fcu_status.get_accelerator_implausibility());
                 Serial.print("FCU IMPLAUS BRAKE: ");
-                Serial.println(fsae_brake_pedal_implausibility);
+                Serial.println(fcu_status.get_brake_implausibility());
             }
             
             mc_command_message.set_torque_command(calculated_torque);
@@ -442,9 +432,9 @@ void loop() {
     /*
      * Send a message to the Motor Controller over CAN when vehicle is not ready to drive
      */
-    if (state < FCU_STATE_READY_TO_DRIVE && timer_motor_controller_send.check()) {
+    if (fcu_status.get_state() < FCU_STATE_READY_TO_DRIVE && timer_motor_controller_send.check()) {
         MC_command_message mc_command_message = MC_command_message(0, 0, 0, 0, 0, 0);
-        if (state >= FCU_STATE_ENABLING_INVERTER) {
+        if (fcu_status.get_state() >= FCU_STATE_ENABLING_INVERTER) {
             mc_command_message.set_inverter_enable(true);
         }
         mc_command_message.write(msg.buf);
@@ -494,25 +484,25 @@ void loop() {
  * Read values of sensors
  */
 void read_values() {
-    value_pedal_throttle_1 = read_adc(ADC_ACCEL_1_CHANNEL);
-    value_pedal_throttle_2 = read_adc(ADC_ACCEL_2_CHANNEL);
-    value_pedal_brake = read_adc(ADC_BRAKE_CHANNEL);
-    if (value_pedal_brake >= BRAKE_ACTIVE) {
-        brake_pedal_active = true;
+    fcu_readings.set_throttle_value_1(read_adc(ADC_ACCEL_1_CHANNEL));
+    fcu_readings.set_throttle_value_2(read_adc(ADC_ACCEL_2_CHANNEL));
+    fcu_readings.set_brake_value(read_adc(ADC_BRAKE_CHANNEL));
+    if (fcu_readings.get_brake_value() >= BRAKE_ACTIVE) {
+        fcu_status.set_brake_pedal_active(true);
     } else {
-        brake_pedal_active = false;
+        fcu_status.set_brake_pedal_active(false);
     }
     if (debug && timer_debug.check()) {
         Serial.print("FCU PEDAL THROTTLE 1: ");
-        Serial.println(value_pedal_throttle_1);
+        Serial.println(fcu_readings.get_throttle_value_1());
         Serial.print("FCU PEDAL THROTTLE 2: ");
-        Serial.println(value_pedal_throttle_2);
+        Serial.println(fcu_readings.get_throttle_value_2());
         Serial.print("FCU PEDAL BRAKE: ");
-        Serial.println(value_pedal_brake);
+        Serial.println(fcu_readings.get_brake_value());
         Serial.print("FCU BRAKE ACT: ");
-        Serial.println(brake_pedal_active);
+        Serial.println(fcu_status.get_brake_pedal_active());
         Serial.print("FCU STATE: ");
-        Serial.println(state);
+        Serial.println(fcu_status.get_state());
     }
     // TODO calculate temperature
 }
@@ -550,10 +540,10 @@ void set_start_led(uint8_t type) {
  * Handle changes in state
  */
 void set_state(uint8_t new_state) {
-    if (state == new_state) {
+    if (fcu_status.get_state() == new_state) {
         return;
     }
-    state = new_state;
+    fcu_status.set_state(new_state);
     if (new_state == FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
         set_start_led(0);
     }
