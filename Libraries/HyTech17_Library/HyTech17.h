@@ -142,24 +142,24 @@ typedef struct CAN_message_fcu_readings_t {
 	uint16_t accelerator_pedal_raw_1;
 	uint16_t accelerator_pedal_raw_2;
 	uint16_t brake_pedal_raw;
-	uint16_t temperature;
+	int16_t temperature;
 } CAN_msg_fcu_readings;
 
 class FCU_readings {
     public:
         FCU_readings();
         FCU_readings(uint8_t buf[8]);
-        FCU_readings(uint16_t accelerator_pedal_raw_1, uint16_t accelerator_pedal_raw_2, uint16_t brake_pedal_raw, uint16_t temperature);
+        FCU_readings(uint16_t accelerator_pedal_raw_1, uint16_t accelerator_pedal_raw_2, uint16_t brake_pedal_raw, int16_t temperature);
         void load(uint8_t buf[8]);
         void write(uint8_t buf[8]);
         uint16_t get_accelerator_pedal_raw_1();
         uint16_t get_accelerator_pedal_raw_2();
         uint16_t get_brake_pedal_raw();
-        uint16_t get_temperature();
+        int16_t get_temperature();
         void set_accelerator_pedal_raw_1(uint16_t accelerator_pedal_raw_1);
         void set_accelerator_pedal_raw_2(uint16_t accelerator_pedal_raw_2);
         void set_brake_pedal_raw(uint16_t brake_pedal_raw);
-        void set_temperature(uint16_t temperature);
+        void set_temperature(int16_t temperature);
     private:
         CAN_message_fcu_readings_t message;
 };
@@ -245,28 +245,28 @@ class BMS_temperatures {
 
 typedef struct CAN_message_bms_detailed_temperatures_t {
 	uint8_t ic_id;
-    uint16_t temperature_0;
-    uint16_t temperature_1;
-    uint16_t temperature_2;
+    int16_t temperature_0;
+    int16_t temperature_1;
+    int16_t temperature_2;
 } CAN_message_bms_detailed_temperatures_t;
 
 class BMS_detailed_temperatures {
     public:
         BMS_detailed_temperatures();
         BMS_detailed_temperatures(uint8_t buf[]);
-        BMS_detailed_temperatures(uint8_t ic_id, uint16_t temperature_0, uint16_t temperature_1, uint16_t temperature_2);
+        BMS_detailed_temperatures(uint8_t ic_id, int16_t temperature_0, int16_t temperature_1, int16_t temperature_2);
         void load(uint8_t buf[]);
         void write(uint8_t buf[]);
         uint8_t get_ic_id();
-        uint16_t get_temperature_0();
-        uint16_t get_temperature_1();
-        uint16_t get_temperature_2();
-        uint16_t get_temperature(uint8_t temperature_id);
+        int16_t get_temperature_0();
+        int16_t get_temperature_1();
+        int16_t get_temperature_2();
+        int16_t get_temperature(uint8_t temperature_id);
         void set_ic_id(uint8_t ic_id);
-        void set_temperature_0(uint16_t temperature_0);
-        void set_temperature_1(uint16_t temperature_1);
-        void set_temperature_2(uint16_t temperature_2);
-        void set_temperature(uint8_t temperature_id, uint16_t temperature);
+        void set_temperature_0(int16_t temperature_0);
+        void set_temperature_1(int16_t temperature_1);
+        void set_temperature_2(int16_t temperature_2);
+        void set_temperature(uint8_t temperature_id, int16_t temperature);
     private:
         CAN_message_bms_detailed_temperatures_t message;
 };

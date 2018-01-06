@@ -37,11 +37,11 @@ FCU_readings::FCU_readings(uint8_t buf[8]) {
  *     - Raw voltage readings from accelerator pedal sensor 2
  * Param (uint16_t) - Brake Pedal Raw Value
  *     - Raw voltage readings from brake pedal sensor
- * Param (uint16_t) - Temperature reading from temperature sensor
- *     - Temperature calculated in Celsius * .01
+ * Param (int16_t) - Temperature reading from temperature sensor
+ *     - Temperature calculated in Celsius * 0.1
  */
 
-FCU_readings::FCU_readings(uint16_t accelerator_pedal_raw_1, uint16_t accelerator_pedal_raw_2, uint16_t brake_pedal_raw, uint16_t temperature) {
+FCU_readings::FCU_readings(uint16_t accelerator_pedal_raw_1, uint16_t accelerator_pedal_raw_2, uint16_t brake_pedal_raw, int16_t temperature) {
     set_accelerator_pedal_raw_1(accelerator_pedal_raw_1);
     set_accelerator_pedal_raw_2(accelerator_pedal_raw_2);
     set_brake_pedal_raw(brake_pedal_raw);
@@ -63,7 +63,7 @@ void FCU_readings::load(uint8_t buf[8]) {
     memcpy(&(message.accelerator_pedal_raw_1), &buf[0], sizeof(uint16_t));
     memcpy(&(message.accelerator_pedal_raw_2), &buf[2], sizeof(uint16_t));
     memcpy(&(message.brake_pedal_raw), &buf[4], sizeof(uint16_t));
-    memcpy(&(message.temperature), &buf[6], sizeof(uint16_t));
+    memcpy(&(message.temperature), &buf[6], sizeof(int16_t));
 }
 
 /* Write to buffer
@@ -79,7 +79,7 @@ void FCU_readings::write(uint8_t buf[8]) {
     memcpy(&buf[0], &(message.accelerator_pedal_raw_1), sizeof(uint16_t));
     memcpy(&buf[2], &(message.accelerator_pedal_raw_2), sizeof(uint16_t));
     memcpy(&buf[4], &(message.brake_pedal_raw), sizeof(uint16_t));
-    memcpy(&buf[6], &(message.temperature), sizeof(uint16_t));
+    memcpy(&buf[6], &(message.temperature), sizeof(int16_t));
 }
 
 /* Get functions
@@ -99,7 +99,7 @@ uint16_t FCU_readings::get_brake_pedal_raw() {
     return message.brake_pedal_raw;
 }
 
-uint16_t FCU_readings::get_temperature() {
+int16_t FCU_readings::get_temperature() {
     return message.temperature;
 }
 
@@ -122,6 +122,6 @@ void FCU_readings::set_brake_pedal_raw(uint16_t brake_pedal_raw) {
     message.brake_pedal_raw = brake_pedal_raw;
 }
 
-void FCU_readings::set_temperature(uint16_t temperature) {
+void FCU_readings::set_temperature(int16_t temperature) {
     message.temperature = temperature;
 }
