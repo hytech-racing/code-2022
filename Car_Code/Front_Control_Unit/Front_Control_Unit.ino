@@ -168,10 +168,6 @@ void loop() {
         // Send Front Control Unit message
         fcu_status.set_accelerator_boost_mode(0);
         fcu_status.write(msg.buf);
-        Serial.print("Brake pedal ");
-        Serial.println(fcu_status.get_brake_pedal_active());
-        Serial.print("button ");
-        Serial.println(fcu_status.get_start_button_press_id());
         msg.id = ID_FCU_STATUS;
         msg.len = sizeof(CAN_message_fcu_status_t);
         CAN.write(msg);

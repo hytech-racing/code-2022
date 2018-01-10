@@ -58,13 +58,12 @@ Metro timer_fcu_restart_inverter = Metro(500); // Upon restart of the FCU, power
 /*
  * Global variables
  */
-boolean bms_fault = false;
+RCU_status rcu_status;
+
 boolean bms_faulting = false;
 uint8_t btn_start_id = 0; // increments to differentiate separate button presses
 uint8_t btn_start_new = 0;
-boolean imd_fault = false;
 boolean imd_faulting = false;
-uint8_t state = RCU_STATE_WAITING_BMS_IMD;
 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
@@ -82,9 +81,13 @@ void setup() {
     XB.begin(115200);
     delay(100);
     Serial.println("CAN system, serial communication, and XBee initialized");
+
     digitalWrite(SSR_INVERTER, HIGH);
     digitalWrite(COOL_RELAY_1, HIGH);
     digitalWrite(COOL_RELAY_2, HIGH);
+    set_state(RCU_STATE_WAITING_BMS_IMD);
+    rcu_status.set_bms_ok_high(true);
+    rcu_status.set_imd_okhs_high(true);
 }
 
 void loop() {
@@ -120,10 +123,6 @@ void loop() {
      * Send state over CAN and XBee
      */
     if (timer_state_send.check()) {
-        RCU_status rcu_status;
-        rcu_status.set_state(state);
-        rcu_status.set_bms_ok_high(!bms_fault);
-        rcu_status.set_imd_okhs_high(!imd_fault);
         rcu_status.write(msg.buf);
         msg.id = ID_RCU_STATUS;
         msg.len = sizeof(CAN_message_rcu_status_t);
@@ -142,7 +141,7 @@ void loop() {
     /*
      * State machine
      */
-    switch (state) {
+    switch (rcu_status.get_state()) {
         case 0:
         if (timer_fcu_restart_inverter.check()) {
             digitalWrite(SSR_INVERTER, HIGH);
@@ -178,7 +177,7 @@ void loop() {
     /*
      * Start BMS fault timer if signal drops momentarily
      */
-    if (state != RCU_STATE_WAITING_BMS_IMD && analogRead(SENSE_BMS) <= BMS_LOW) { // TODO imd/bms
+    if (rcu_status.get_state() != RCU_STATE_WAITING_BMS_IMD && analogRead(SENSE_BMS) <= BMS_LOW) { // TODO imd/bms
         bms_faulting = true;
         timer_bms_faulting.reset();
     }
@@ -194,7 +193,7 @@ void loop() {
      * Declare BMS fault if signal still dropped
      */
     if (bms_faulting && timer_bms_faulting.check()) {
-        bms_fault = true;
+        rcu_status.set_bms_ok_high(false);
         set_state(RCU_STATE_FATAL_FAULT);
         Serial.println("BMS fault detected");
     }
@@ -202,7 +201,7 @@ void loop() {
     /*
      * Start IMD fault timer if signal drops momentarily
      */
-    if (state != RCU_STATE_WAITING_BMS_IMD && analogRead(SENSE_IMD) <= IMD_LOW) {
+    if (rcu_status.get_state() != RCU_STATE_WAITING_BMS_IMD && analogRead(SENSE_IMD) <= IMD_LOW) {
         imd_faulting = true;
         timer_imd_faulting.reset();
     }
@@ -218,7 +217,7 @@ void loop() {
      * Declare IMD fault if signal still dropped
      */
     if (imd_faulting && timer_imd_faulting.check()) {
-        imd_fault = true;
+        rcu_status.set_imd_okhs_high(false);
         set_state(RCU_STATE_FATAL_FAULT);
         Serial.println("IMD fault detected");
     }
@@ -228,10 +227,10 @@ void loop() {
  * Handle changes in state
  */
 void set_state(uint8_t new_state) {
-    if (state == new_state) {
+    if (rcu_status.get_state() == new_state) {
         return;
     }
-    state = new_state;
+    rcu_status.set_state(new_state);
     if (new_state == RCU_STATE_WAITING_DRIVER) {
         btn_start_new = btn_start_id + 1;
     }
