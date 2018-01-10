@@ -28,8 +28,8 @@ void FCU_status::load(uint8_t buf[8]) {
 
 void FCU_status::write(uint8_t buf[8]) {
     memcpy(&buf[0], &(message.state), sizeof(uint8_t));
-    memcpy(&buf[0], &(message.flags), sizeof(uint8_t));
-    memcpy(&buf[0], &(message.start_button_press_id), sizeof(uint8_t));
+    memcpy(&buf[1], &(message.flags), sizeof(uint8_t));
+    memcpy(&buf[2], &(message.start_button_press_id), sizeof(uint8_t));
 }
 
 uint8_t FCU_status::get_state() {

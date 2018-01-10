@@ -19,11 +19,9 @@
 #define ADC_SPI_DIN 0
 #define ADC_SPI_DOUT 1
 #define ADC_SPI_SCK 13
-#define BSPD_FAULT A7
 #define BTN_START A5
 #define LED_START 5
 #define LED_BMS 6
-#define LED_BSPD 13
 #define LED_IMD 7
 #define READY_SOUND 2
 #define SOFTWARE_SHUTDOWN_RELAY 12
@@ -63,7 +61,6 @@ FCU_status fcu_status;
 FCU_readings fcu_readings;
 
 bool btn_start_debouncing = false;
-uint8_t btn_start_id = 0; // Increments to differentiate separate button presses
 uint8_t btn_start_new = 0;
 bool btn_start_pressed = false;
 bool debug = true;
@@ -78,10 +75,8 @@ void setup() {
     pinMode(ADC_SPI_DIN, INPUT);
     pinMode(ADC_SPI_DOUT, OUTPUT);
     pinMode(ADC_SPI_SCK, OUTPUT);
-    pinMode(BSPD_FAULT, INPUT);
     pinMode(BTN_START, INPUT_PULLUP);
     pinMode(LED_BMS, OUTPUT);
-    pinMode(LED_BSPD, OUTPUT);
     pinMode(LED_IMD, OUTPUT);
     pinMode(LED_START, OUTPUT);
     pinMode(READY_SOUND, OUTPUT);
@@ -93,7 +88,7 @@ void setup() {
     Serial.println("CAN system and serial communication initialized");
 
     digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH);
-    fcu_status.set_state(FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
+    set_state(FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
 
     // Send restart message, so RCU knows to power cycle the inverter (in case of CAN message timeout from FCU to inverter)
     msg.id = ID_FCU_RESTART;
@@ -172,8 +167,11 @@ void loop() {
     if (timer_can_update.check()) {
         // Send Front Control Unit message
         fcu_status.set_accelerator_boost_mode(0);
-        fcu_status.set_start_button_press_id(btn_start_id);
         fcu_status.write(msg.buf);
+        Serial.print("Brake pedal ");
+        Serial.println(fcu_status.get_brake_pedal_active());
+        Serial.print("button ");
+        Serial.println(fcu_status.get_start_button_press_id());
         msg.id = ID_FCU_STATUS;
         msg.len = sizeof(CAN_message_fcu_status_t);
         CAN.write(msg);
@@ -194,11 +192,11 @@ void loop() {
         break;
 
         case FCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
-        if (btn_start_new == btn_start_id) { // Start button has been pressed
+        if (btn_start_new == fcu_status.get_start_button_press_id()) { // Start button has been pressed
             if (fcu_status.get_brake_pedal_active()) { // Required to hold brake pedal to activate motor controller
                 set_state(FCU_STATE_ENABLING_INVERTER);
             } else {
-                btn_start_new = btn_start_id + 1;
+                btn_start_new = fcu_status.get_start_button_press_id() + 1;
             }
         }
         break;
@@ -325,16 +323,11 @@ void loop() {
     if (btn_start_debouncing && timer_btn_start.check()) { // Debounce period finishes without value returning
         btn_start_pressed = !btn_start_pressed;
         if (btn_start_pressed) {
-            btn_start_id++;
+            fcu_status.set_start_button_press_id(fcu_status.get_start_button_press_id() + 1);
             Serial.print("FCU START BUTTON ID: ");
-            Serial.println(btn_start_id);
+            Serial.println(fcu_status.get_start_button_press_id());
         }
     }
-
-    /*
-     * Illuminate BSPD fault LED
-     */
-    digitalWrite(LED_BSPD, digitalRead(BSPD_FAULT));
 }
 
 /*
@@ -406,7 +399,7 @@ void set_state(uint8_t new_state) {
     }
     if (new_state == FCU_STATE_TRACTIVE_SYSTEM_ACTIVE) {
         set_start_led(2);
-        btn_start_new = btn_start_id + 1;
+        btn_start_new = fcu_status.get_start_button_press_id() + 1;
     }
     if (new_state == FCU_STATE_ENABLING_INVERTER) {
         set_start_led(1);
