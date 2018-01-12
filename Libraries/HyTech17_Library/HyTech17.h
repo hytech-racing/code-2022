@@ -5,56 +5,43 @@
 #include <stdint.h>
 
 /*
- * ECU state definitions
+ * ECU state definitions // TODO make these enums?
  */
-#define PCU_STATE_WAITING_BMS_IMD 1
-#define PCU_STATE_WAITING_DRIVER 2
-#define PCU_STATE_LATCHING 3
-#define PCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED 4
-#define PCU_STATE_FATAL_FAULT 5
+#define RCU_STATE_WAITING_BMS_IMD 1
+#define RCU_STATE_WAITING_DRIVER 2
+#define RCU_STATE_LATCHING 3
+#define RCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED 4
+#define RCU_STATE_FATAL_FAULT 5
 
-#define TCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED 1
-#define TCU_STATE_WAITING_TRACTIVE_SYSTEM 2
-#define TCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE 3
-#define TCU_STATE_TRACTIVE_SYSTEM_ACTIVE 4
-#define TCU_STATE_ENABLING_INVERTER 5
-#define TCU_STATE_WAITING_READY_TO_DRIVE_SOUND 6
-#define TCU_STATE_READY_TO_DRIVE 7
+#define FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED 1
+#define FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE 2
+#define FCU_STATE_TRACTIVE_SYSTEM_ACTIVE 3
+#define FCU_STATE_ENABLING_INVERTER 4
+#define FCU_STATE_WAITING_READY_TO_DRIVE_SOUND 5
+#define FCU_STATE_READY_TO_DRIVE 6
 
-#define DCU_STATE_INITIAL_STARTUP 1
-#define DCU_STATE_WAITING_TRACTIVE_SYSTEM 2
-#define DCU_STATE_PRESSED_TRACTIVE_SYSTEM 3
-#define DCU_STATE_WAITING_MC_ENABLE 4
-#define DCU_STATE_PRESSED_MC_ENABLE 5
-#define DCU_STATE_PLAYING_RTD 6
-#define DCU_STATE_READY_TO_DRIVE 7
-#define DCU_STATE_TS_INACTIVE 8
-#define DCU_STATE_FATAL_FAULT 9
+#define BMS_STATE_DISCHARGING 1
+#define BMS_STATE_CHARGING 2
+#define BMS_STATE_BALANCING_CHARGE_ENABLE 3
+#define BMS_STATE_BALANCING_CHARGE_DISABLE 4
+#define BMS_STATE_ERROR 5
 
-#define CHARGE_STATE_NOT_CHARGING 0
-#define CHARGE_STATE_CHARGE_REQUESTED 1
-#define CHARGE_STATE_CHARGING 2
-
-#define BMS_STATE_DISCHARGING 0
-#define BMS_STATE_CHARGING 1
-#define BMS_STATE_BALANCING_CHARGE_ENABLE 2
-#define BMS_STATE_BALANCING_CHARGE_DISABLE 3
-#define BMS_STATE_ERROR 4
+#define CCU_STATE_NOT_CHARGING 1
+#define CCU_STATE_CHARGE_REQUESTED 2
+#define CCU_STATE_CHARGING 3
 
 /*
  * CAN ID definitions
  */
-#define ID_PCU_STATUS 0xD0
-#define ID_PCU_VOLTAGES 0xD1
-#define ID_TCU_STATUS 0xD2
-#define ID_TCU_READINGS 0xD3
-#define ID_TCU_RESTART 0xD4
+#define ID_RCU_STATUS 0xD0
+#define ID_FCU_STATUS 0xD2
+#define ID_FCU_READINGS 0xD3
+#define ID_FCU_RESTART 0xD4
 #define ID_BMS_VOLTAGES 0xD7
 #define ID_BMS_DETAILED_VOLTAGES 0xD8
 #define ID_BMS_TEMPERATURES 0xD9
 #define ID_BMS_DETAILED_TEMPERATURES 0xDA
 #define ID_BMS_STATUS 0xDB
-#define ID_DCU_STATUS 0xDC
 #define ID_CCU_STATUS 0xDD
 #define ID_MC_TEMPERATURES_1 0xA0
 #define ID_MC_TEMPERATURES_2 0xA1
@@ -88,109 +75,92 @@
 /*
  * CAN message structs and classes
  */
-typedef struct CAN_message_pcu_status_t {
+typedef struct CAN_message_rcu_status_t {
     uint8_t state;
-    bool bms_fault;
-    bool imd_fault;
-    uint16_t okhs_value;
-    uint16_t discharge_ok_value;
-} CAN_msg_pcu_status;
+    uint8_t flags;
+    uint16_t glv_battery_voltage;
+} CAN_msg_rcu_status;
 
-class PCU_status {
+class RCU_status {
     public:
-        PCU_status();
-        PCU_status(uint8_t buf[8]);
-        PCU_status(uint8_t state, bool bms_fault, bool imd_fault, uint16_t okhs_value, uint16_t discharge_ok_value);
+        RCU_status();
+        RCU_status(uint8_t buf[8]);
+        RCU_status(uint8_t state, uint8_t flags, uint16_t glv_battery_voltage);
         void load(uint8_t buf[8]);
         void write(uint8_t buf[8]);
         uint8_t get_state();
-        bool get_bms_fault();
-        bool get_imd_fault();
-        bool get_okhs_value();
-        bool get_discharge_ok_value();
+        uint8_t get_flags();
+        bool get_bms_ok_high();
+        bool get_imd_okhs_high();
+        bool get_bms_imd_latched();
+        bool get_inverter_powered();
+        uint16_t get_glv_battery_voltage();
         void set_state(uint8_t state);
-        void set_bms_fault(bool bms_fault);
-        void set_imd_fault(bool imd_fault);
-        void set_okhs_value(uint16_t okhs_value);
-        void set_discharge_ok_value(uint16_t discharge_ok_value);
+        void set_flags(uint8_t flags);
+        void set_bms_ok_high(bool bms_ok_high);
+        void set_imd_okhs_high(bool imd_okhs_high);
+        void set_bms_imd_latched(bool bms_imd_latched);
+        void set_inverter_powered(bool inverter_powered);
+        void set_glv_battery_voltage(uint16_t glv_battery_voltage);
     private:
-        CAN_message_pcu_status_t message;
+        CAN_message_rcu_status_t message;
 };
 
-typedef struct CAN_message_pcu_voltages_t {
-    uint16_t GLV_battery_voltage;
-    uint16_t shutdown_circuit_voltage;
-} CAN_msg_pcu_voltages;
-
-class PCU_voltages {
-    public:
-        PCU_voltages();
-        PCU_voltages(uint8_t buf[8]);
-        PCU_voltages(uint16_t GLV_battery_voltage, uint16_t shutdown_circuit_voltage);
-        void load(uint8_t buf[8]);
-        void write(uint8_t buf[8]);
-        uint16_t get_GLV_battery_voltage();
-        uint16_t get_shutdown_circuit_voltage();
-        void set_GLV_battery_voltage(uint16_t GLV_battery_voltage);
-        void set_shutdown_circuit_voltage(uint16_t shutdown_circuit_voltage);
-    private:
-        CAN_message_pcu_voltages_t message;
-};
-
-typedef struct CAN_message_tcu_status_t {
-    bool throttle_implausibility;
-    bool throttle_curve;
-    bool brake_implausibility;
-    bool brake_pedal_active;
+typedef struct CAN_message_fcu_status_t {
     uint8_t state;
-} CAN_msg_tcu_status;
+    uint8_t flags;
+    uint8_t start_button_press_id;
+} CAN_msg_fcu_status;
 
-class TCU_status {
+class FCU_status {
     public:
-        TCU_status();
-        TCU_status(uint8_t buf[8]);
-        TCU_status(bool throttle_implausibility, bool throttle_curve, bool brake_implausibility, bool brake_pedal_active, uint8_t state);
+        FCU_status();
+        FCU_status(uint8_t buf[8]);
+        FCU_status(uint8_t state, uint8_t flags, uint8_t start_button_press_id);
         void load(uint8_t buf[8]);
         void write(uint8_t buf[8]);
-        bool get_throttle_implausibility();
-        bool get_throttle_curve();
+        uint8_t get_state();
+        uint8_t get_flags();
+        bool get_accelerator_implausibility();
+        bool get_accelerator_boost_mode();
         bool get_brake_implausibility();
         bool get_brake_pedal_active();
-        uint8_t get_state();
-        void set_throttle_implausibility(bool throttle_implausibility);
-        void set_throttle_curve(bool throttle_curve);
+        uint8_t get_start_button_press_id();
+        void set_state(uint8_t state);
+        void set_flags(uint8_t flags);
+        void set_accelerator_implausibility(bool accelerator_implausibility);
+        void set_accelerator_boost_mode(bool accelerator_boost_mode);
         void set_brake_implausibility(bool brake_implausibility);
         void set_brake_pedal_active(bool brake_pedal_active);
-        void set_state(uint8_t new_state);
+        void set_start_button_press_id(uint8_t start_button_press_id);
     private:
-        CAN_message_tcu_status_t message;
+        CAN_message_fcu_status_t message;
 };
 
-typedef struct CAN_message_tcu_readings_t {
-	uint16_t throttle_value_1;
-	uint16_t throttle_value_2;
-	uint16_t brake_value;
-	uint16_t temperature;
-} CAN_msg_tcu_readings;
+typedef struct CAN_message_fcu_readings_t {
+	uint16_t accelerator_pedal_raw_1;
+	uint16_t accelerator_pedal_raw_2;
+	uint16_t brake_pedal_raw;
+	int16_t temperature;
+} CAN_msg_fcu_readings;
 
-class TCU_readings {
+class FCU_readings {
     public:
-        TCU_readings();
-        TCU_readings(uint8_t buf[8]);
-        TCU_readings(uint16_t throttle_value_1, uint16_t throttle_value_2, uint16_t brake_value, uint16_t temperature);
+        FCU_readings();
+        FCU_readings(uint8_t buf[8]);
+        FCU_readings(uint16_t accelerator_pedal_raw_1, uint16_t accelerator_pedal_raw_2, uint16_t brake_pedal_raw, int16_t temperature);
         void load(uint8_t buf[8]);
         void write(uint8_t buf[8]);
-        uint16_t get_throttle_value_1();
-        uint16_t get_throttle_value_2();
-        uint16_t get_throttle_value_avg();
-        uint16_t get_brake_value();
-        uint16_t get_temperature();
-        void set_throttle_value_1(uint16_t throttle_value_1);
-        void set_throttle_value_2(uint16_t throttle_value_2);
-        void set_brake_value(uint16_t brake_value);
-        void set_temperature(uint16_t temperature);
+        uint16_t get_accelerator_pedal_raw_1();
+        uint16_t get_accelerator_pedal_raw_2();
+        uint16_t get_brake_pedal_raw();
+        int16_t get_temperature();
+        void set_accelerator_pedal_raw_1(uint16_t accelerator_pedal_raw_1);
+        void set_accelerator_pedal_raw_2(uint16_t accelerator_pedal_raw_2);
+        void set_brake_pedal_raw(uint16_t brake_pedal_raw);
+        void set_temperature(int16_t temperature);
     private:
-        CAN_message_tcu_readings_t message;
+        CAN_message_fcu_readings_t message;
 };
 
 typedef struct CAN_message_bms_voltages_t {
@@ -274,28 +244,28 @@ class BMS_temperatures {
 
 typedef struct CAN_message_bms_detailed_temperatures_t {
 	uint8_t ic_id;
-    uint16_t temperature_0;
-    uint16_t temperature_1;
-    uint16_t temperature_2;
+    int16_t temperature_0;
+    int16_t temperature_1;
+    int16_t temperature_2;
 } CAN_message_bms_detailed_temperatures_t;
 
 class BMS_detailed_temperatures {
     public:
         BMS_detailed_temperatures();
         BMS_detailed_temperatures(uint8_t buf[]);
-        BMS_detailed_temperatures(uint8_t ic_id, uint16_t temperature_0, uint16_t temperature_1, uint16_t temperature_2);
+        BMS_detailed_temperatures(uint8_t ic_id, int16_t temperature_0, int16_t temperature_1, int16_t temperature_2);
         void load(uint8_t buf[]);
         void write(uint8_t buf[]);
         uint8_t get_ic_id();
-        uint16_t get_temperature_0();
-        uint16_t get_temperature_1();
-        uint16_t get_temperature_2();
-        uint16_t get_temperature(uint8_t temperature_id);
+        int16_t get_temperature_0();
+        int16_t get_temperature_1();
+        int16_t get_temperature_2();
+        int16_t get_temperature(uint8_t temperature_id);
         void set_ic_id(uint8_t ic_id);
-        void set_temperature_0(uint16_t temperature_0);
-        void set_temperature_1(uint16_t temperature_1);
-        void set_temperature_2(uint16_t temperature_2);
-        void set_temperature(uint8_t temperature_id, uint16_t temperature);
+        void set_temperature_0(int16_t temperature_0);
+        void set_temperature_1(int16_t temperature_1);
+        void set_temperature_2(int16_t temperature_2);
+        void set_temperature(uint8_t temperature_id, int16_t temperature);
     private:
         CAN_message_bms_detailed_temperatures_t message;
 };
@@ -337,32 +307,6 @@ class BMS_status {
         void set_current(int16_t current);
     private:
         CAN_message_bms_status_t message;
-};
-
-typedef struct CAN_message_dcu_status_t {
-    uint8_t btn_press_id;
-    uint8_t light_active_1;
-    uint8_t light_active_2;
-    uint8_t rtds_state; // ready to drive sound state
-} CAN_message_dcu_status;
-
-class DCU_status {
-    public:
-        DCU_status();
-        DCU_status(uint8_t buf[8]);
-        DCU_status(uint8_t btn_press_id, uint8_t light_active_1, uint8_t light_active_2, uint8_t rtds_state);
-        void load(uint8_t buf[8]);
-        void write(uint8_t buf[8]);
-        uint8_t get_btn_press_id();
-        uint8_t get_light_active_1();
-        uint8_t get_light_active_2();
-        uint8_t get_rtds_state();
-        void set_btn_press_id(uint8_t btn_press_id);
-        void set_light_active_1(uint8_t light_active_1);
-        void set_light_active_2(uint8_t light_active_2);
-        void set_rtds_state(uint8_t rtds_state);
-    private:
-        CAN_message_dcu_status_t message;
 };
 
 typedef struct CAN_message_ccu_status_t {
@@ -477,15 +421,14 @@ class MC_digital_input_status {
         MC_digital_input_status();
         MC_digital_input_status(uint8_t buf[]);
         void load(uint8_t buf[]);
-        void loadByteIntoBooleanStruct(int* index, uint8_t buf[], bool* structVariable);
-        bool digital_input_1();
-        bool digital_input_2();
-        bool digital_input_3();
-        bool digital_input_4();
-        bool digital_input_5();
-        bool digital_input_6();
-        bool digital_input_7();
-        bool digital_input_8();
+        bool get_digital_input_1();
+        bool get_digital_input_2();
+        bool get_digital_input_3();
+        bool get_digital_input_4();
+        bool get_digital_input_5();
+        bool get_digital_input_6();
+        bool get_digital_input_7();
+        bool get_digital_input_8();
     private:
         CAN_message_mc_digital_input_status_t message;
 };
@@ -760,22 +703,22 @@ typedef struct CAN_message_mc_read_write_parameter_command_t {
     uint16_t parameter_address;
     bool rw_command;
     uint8_t reserved1;
-    uint8_t data[4];
+    uint32_t data;
 } CAN_message_mc_read_write_parameter_command_t;
 
 class MC_read_write_parameter_command {
     public:
         MC_read_write_parameter_command();
         MC_read_write_parameter_command(uint8_t buf[8]);
-        MC_read_write_parameter_command(uint16_t parameter_address, bool rw_command, uint8_t data[]);
+        MC_read_write_parameter_command(uint16_t parameter_address, bool rw_command, uint32_t data);
         void load(uint8_t buf[8]);
         void write(uint8_t buf[8]);
         uint16_t get_parameter_address();
         bool get_rw_command();
-        uint8_t* get_data();
+        uint32_t get_data();
         void set_parameter_address(uint16_t parameter_address);
         void set_rw_command(bool rw_command);
-        void set_data(uint8_t data[]);
+        void set_data(uint32_t data);
     private:
         CAN_message_mc_read_write_parameter_command_t message;
 };
@@ -784,7 +727,7 @@ typedef struct CAN_message_mc_read_write_parameter_response_t {
     uint16_t parameter_address;
     bool write_success;
     uint8_t reserved1;
-    uint8_t data[4];
+    uint32_t data;
 } CAN_message_mc_read_write_parameter_response_t;
 
 class MC_read_write_parameter_response {
@@ -794,7 +737,7 @@ class MC_read_write_parameter_response {
         void load(uint8_t buf[8]);
         uint16_t get_parameter_address();
         bool get_write_success();
-        uint8_t* get_data();
+        uint32_t get_data();
     private:
         CAN_message_mc_read_write_parameter_response_t message;
 };

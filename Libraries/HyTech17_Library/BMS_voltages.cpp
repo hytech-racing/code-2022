@@ -1,6 +1,6 @@
 /*
-  BMS_voltages.cpp - BMS voltage messaging handler
-  Created by Shrivathsav Seshan, January 10, 2017.
+ * BMS_voltages.cpp - CAN message parser: Battery Management System voltages message
+ * Created by Shrivathsav Seshan, January 10, 2017.
  */
 
 #include "HyTech17.h"

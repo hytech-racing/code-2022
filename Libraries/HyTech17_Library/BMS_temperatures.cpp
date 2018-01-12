@@ -1,6 +1,6 @@
 /*
-  BMS_temperatures.cpp - BMS temperature messaging handler
-  Created by Shrivathsav Seshan, February 7, 2017.
+ * BMS_temperatures.cpp - CAN message parser: Battery Management System temperatures message
+ * Created by Shrivathsav Seshan, February 7, 2017.
  */
 
 #include "HyTech17.h"
