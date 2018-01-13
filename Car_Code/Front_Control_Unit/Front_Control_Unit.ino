@@ -88,7 +88,7 @@ void setup() {
     Serial.println("CAN system and serial communication initialized");
 
     digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH);
-    set_state(FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
+    set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
 
     // Send restart message, so RCU knows to power cycle the inverter (in case of CAN message timeout from FCU to inverter)
     msg.id = ID_FCU_RESTART;
@@ -109,37 +109,6 @@ void loop() {
             if (!rcu_status.get_imd_okhs_high()) { // TODO make sure this doesn't happen at startup
                 digitalWrite(LED_IMD, HIGH);
                 Serial.println("RCU IMD FAULT: detected");
-            }
-
-            // Set internal state based on RCU state
-            // If initializing, start light off
-            // If waiting for driver press, flash start light slow
-            switch (rcu_status.get_state()) {
-                case RCU_STATE_WAITING_BMS_IMD:
-                set_start_led(0);
-                set_state(FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
-                break;
-
-                case RCU_STATE_WAITING_DRIVER:
-                set_start_led(3); // Slow blink
-                set_state(FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
-                break;
-
-                case RCU_STATE_LATCHING:
-                set_start_led(0);
-                set_state(FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
-                break;
-
-                case RCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
-                if (fcu_status.get_state() == FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED) {
-                    set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
-                }
-                break;
-
-                case RCU_STATE_FATAL_FAULT:
-                set_start_led(0);
-                set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
-                break;
             }
         }
 
@@ -184,9 +153,6 @@ void loop() {
      * State machine
      */
     switch (fcu_status.get_state()) {
-        case FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED:
-        break;
-
         case FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE:
         break;
 
