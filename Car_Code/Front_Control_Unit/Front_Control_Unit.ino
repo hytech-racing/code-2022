@@ -131,7 +131,7 @@ void loop() {
                 break;
 
                 case RCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
-                if (fcu_status.get_state() < FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
+                if (fcu_status.get_state() == FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED) {
                     set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
                 }
                 break;
@@ -187,6 +187,9 @@ void loop() {
         case FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED:
         break;
 
+        case FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE:
+        break;
+
         case FCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
         if (btn_start_new == fcu_status.get_start_button_press_id()) { // Start button has been pressed
             if (fcu_status.get_brake_pedal_active()) { // Required to hold brake pedal to activate motor controller
@@ -195,9 +198,6 @@ void loop() {
                 btn_start_new = fcu_status.get_start_button_press_id() + 1;
             }
         }
-        break;
-
-        case FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE:
         break;
 
         case FCU_STATE_ENABLING_INVERTER:
