@@ -30,16 +30,14 @@
 /*
  * Constant definitions
  */
-#define BMS_HIGH 100
-#define BMS_LOW 50
-#define IMD_HIGH 100
-#define IMD_LOW 50
+#define BMS_HIGH 134 // ~3V on BMS_OK line
+#define IMD_HIGH 134 // ~3V on OKHS line
 #define SHUTDOWN_OUT_HIGH 350 // ~8V on SHUTDOWN_C line
 
 /*
  * Timers
  */
-Metro timer_bms_faulting = Metro(1000); // At startup the BMS_OK line drops shortly
+Metro timer_bms_print_fault = Metro(500);
 Metro timer_debug_bms_status = Metro(1000);
 Metro timer_debug_bms_temperatures = Metro(1000);
 Metro timer_debug_bms_voltages = Metro(1000);
@@ -52,8 +50,7 @@ Metro timer_debug_rms_temperatures_3 = Metro(2000);
 Metro timer_debug_rms_torque_timer_information = Metro(2000);
 Metro timer_debug_rms_voltage_information = Metro(2000);
 Metro timer_debug_fcu_status = Metro(2000);
-Metro timer_imd_faulting = Metro(1000); // At startup the IMD_OKHS line drops shortly
-Metro timer_latch = Metro(1000);
+Metro timer_imd_print_fault = Metro(500);
 Metro timer_status_send = Metro(100);
 Metro timer_fcu_restart_inverter = Metro(500); // Upon restart of the FCU, power cycle the inverter
 
@@ -141,49 +138,27 @@ void loop() {
     }
 
     /*
-     * Start BMS fault timer if signal drops momentarily
+     * Check for BMS fault
      */
-    if (analogRead(SENSE_BMS) <= BMS_LOW) { // TODO imd/bms
-        bms_faulting = true;
-        timer_bms_faulting.reset();
-    }
-
-    /*
-     * Reset BMS fault condition if signal comes back within timer period
-     */
-    if (bms_faulting && analogRead(SENSE_BMS) > BMS_HIGH) {
-        bms_faulting = false;
-    }
-
-    /*
-     * Declare BMS fault if signal still dropped
-     */
-    if (bms_faulting && timer_bms_faulting.check()) {
+    if (analogRead(SENSE_BMS) > BMS_HIGH) {
+        rcu_status.set_bms_ok_high(true);
+    } else {
         rcu_status.set_bms_ok_high(false);
-        Serial.println("BMS fault detected");
+        if (timer_bms_print_fault.check()) {
+            Serial.println("BMS fault detected");
+        }
     }
 
     /*
-     * Start IMD fault timer if signal drops momentarily
+     * Check for IMD fault
      */
-    if (analogRead(SENSE_IMD) <= IMD_LOW) {
-        imd_faulting = true;
-        timer_imd_faulting.reset();
-    }
-
-    /*
-     * Reset IMD fault condition if signal comes back within timer period
-     */
-    if (imd_faulting && analogRead(SENSE_IMD) > IMD_HIGH) {
-        imd_faulting = false;
-    }
-
-    /*
-     * Declare IMD fault if signal still dropped
-     */
-    if (imd_faulting && timer_imd_faulting.check()) {
+    if (analogRead(SENSE_IMD) > IMD_HIGH) {
+        rcu_status.set_imd_okhs_high(true);
+    } else {
         rcu_status.set_imd_okhs_high(false);
-        Serial.println("IMD fault detected");
+        if (timer_imd_print_fault.check()) {
+            Serial.println("IMD fault detected");
+        }
     }
 
     /*
