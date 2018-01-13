@@ -72,13 +72,14 @@ typedef struct CAN_message_rcu_status_t {
     uint8_t state;
     uint8_t flags;
     uint16_t glv_battery_voltage;
+    int16_t temperature;
 } CAN_msg_rcu_status;
 
 class RCU_status {
     public:
         RCU_status();
         RCU_status(uint8_t buf[8]);
-        RCU_status(uint8_t state, uint8_t flags, uint16_t glv_battery_voltage);
+        RCU_status(uint8_t state, uint8_t flags, uint16_t glv_battery_voltage, int16_t temperature);
         void load(uint8_t buf[8]);
         void write(uint8_t buf[8]);
         uint8_t get_state();
@@ -88,6 +89,7 @@ class RCU_status {
         bool get_bms_imd_latched();
         bool get_inverter_powered();
         uint16_t get_glv_battery_voltage();
+        int16_t get_temperature();
         void set_state(uint8_t state);
         void set_flags(uint8_t flags);
         void set_bms_ok_high(bool bms_ok_high);
@@ -95,6 +97,7 @@ class RCU_status {
         void set_bms_imd_latched(bool bms_imd_latched);
         void set_inverter_powered(bool inverter_powered);
         void set_glv_battery_voltage(uint16_t glv_battery_voltage);
+        void set_temperature(int16_t temperature);
     private:
         CAN_message_rcu_status_t message;
 };
