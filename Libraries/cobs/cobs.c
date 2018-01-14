@@ -12,7 +12,7 @@
  * Remove the "restrict" qualifiers if compiling with a
  * pre-C99 C dialect.
  */
-size_t cobs_encode(const uint8_t * input, size_t length, uint8_t * output)
+size_t cobs_encode(const uint8_t * input, size_t length, uint8_t * out)
 {
     size_t read_index = 0;
     size_t write_index = 1;
@@ -23,25 +23,25 @@ size_t cobs_encode(const uint8_t * input, size_t length, uint8_t * output)
     {
         if(input[read_index] == 0)
         {
-            output[code_index] = code;
+            out[code_index] = code;
             code = 1;
             code_index = write_index++;
             read_index++;
         }
         else
         {
-            output[write_index++] = input[read_index++];
+            out[write_index++] = input[read_index++];
             code++;
             if(code == 0xFF)
             {
-                output[code_index] = code;
+                out[code_index] = code;
                 code = 1;
                 code_index = write_index++;
             }
         }
     }
 
-    output[code_index] = code;
+    out[code_index] = code;
 
     return write_index;
 }
@@ -55,7 +55,7 @@ size_t cobs_encode(const uint8_t * input, size_t length, uint8_t * output)
  * Remove the "restrict" qualifiers if compiling with a
  * pre-C99 C dialect.
  */
-size_t cobs_decode(const uint8_t * restrict input, size_t length, uint8_t * restrict output)
+size_t cobs_decode(const uint8_t * input, size_t length, uint8_t * out)
 {
     size_t read_index = 0;
     size_t write_index = 0;
@@ -75,11 +75,11 @@ size_t cobs_decode(const uint8_t * restrict input, size_t length, uint8_t * rest
 
         for(i = 1; i < code; i++)
         {
-            output[write_index++] = input[read_index++];
+            out[write_index++] = input[read_index++];
         }
         if(code != 0xFF && read_index != length)
         {
-            output[write_index++] = '\0';
+            out[write_index++] = '\0';
         }
     }
 
