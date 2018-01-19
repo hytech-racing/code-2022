@@ -7,6 +7,7 @@
 #include <FlexCAN.h>
 #include <HyTech17.h>
 #include <Metro.h>
+#include <XBTools.h>
 
 /*
  * Pin definitions
@@ -128,14 +129,33 @@ void loop() {
         msg.len = sizeof(CAN_message_rcu_status_t);
         CAN.write(msg);
 
-        if (!rcu_status.get_bms_ok_high()) { // TODO make sure this doesn't happen at startup
-            XB.println("RCU BMS FAULT: detected");
-        }
-        if (!rcu_status.get_imd_okhs_high()) { // TODO make sure this doesn't happen at startup
-            XB.println("RCU IMD FAULT: detected");
-        }
-        XB.print("RCU STATE: ");
-        XB.println(rcu_status.get_state());
+        // delim (1) + checksum (2) + id (id-size) + length (1) + length
+        uint8_t state_msg_size = sizeof(uint16_t) + sizeof(msg.id) + sizeof(uint8_t) + msg.len;
+        uint8_t xb_buf[state_msg_size];
+        memcpy(xb_buf, &msg.id, sizeof(msg.id));        // msg id
+        memcpy(xb_buf + sizeof(msg.id), &msg.len, sizeof(uint8_t));     // msg len
+        memcpy(xb_buf + sizeof(msg.id) + sizeof(uint8_t), msg.buf, msg.len); // msg contents
+
+        // calculate checksum
+        uint16_t checksum = fletcher16(xb_buf, sizeof(msg.id) + sizeof(uint8_t) + msg.len);
+        memcpy(xb_buf + sizeof(msg.id) + sizeof(uint8_t) + msg.len, &checksum, sizeof(uint16_t));
+
+        uint8_t cobs_buf[1 + state_msg_size];
+        cobs_encode(xb_buf, state_msg_size, cobs_buf + 1);
+        cobs_buf[0] = 0x0;
+
+        XB.write(cobs_buf, 1 + state_msg_size);
+
+        // commented below code in case of problems
+        
+        // if (!rcu_status.get_bms_ok_high()) { // TODO make sure this doesn't happen at startup
+        //     XB.println("RCU BMS FAULT: detected");
+        // }
+        // if (!rcu_status.get_imd_okhs_high()) { // TODO make sure this doesn't happen at startup
+        //     XB.println("RCU IMD FAULT: detected");
+        // }
+        // XB.print("RCU STATE: ");
+        // XB.println(rcu_status.get_state());
     }
 
     /*
