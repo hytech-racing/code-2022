@@ -1,9 +1,26 @@
-/* Copyright 2011, Jacques Fortier. All rights reserved.
- *
- * Redistribution and use in source and binary forms are permitted, with or without modification.
- */
-#include <stdint.h>
-#include <stddef.h>
+#include "XBTools.h"
+
+// copied from Wikipedia lol
+uint16_t fletcher16(const uint8_t *data, size_t len) {
+    uint32_t c0, c1;
+    unsigned int i;
+
+    for (c0 = c1 = 0; len >= 5802; len -= 5802) {
+        for (i = 0; i < 5802; ++i) {
+            c0 = c0 + *data++;
+            c1 = c1 + c0;
+        }
+        c0 = c0 % 255;
+        c1 = c1 % 255;
+    }
+    for (i = 0; i < len; ++i) {
+        c0 = c0 + *data++;
+        c1 = c1 + c0;
+    }
+    c0 = c0 % 255;
+    c1 = c1 % 255;
+    return (c1 << 8 | c0);
+}
 
 /* Stuffs "length" bytes of data at the location pointed to by
  * "input", writing the output to the location pointed to by
@@ -12,7 +29,7 @@
  * Remove the "restrict" qualifiers if compiling with a
  * pre-C99 C dialect.
  */
-size_t cobs_encode(const uint8_t * input, size_t length, uint8_t * output)
+size_t cobs_encode(const uint8_t * input, size_t length, uint8_t * out)
 {
     size_t read_index = 0;
     size_t write_index = 1;
@@ -23,25 +40,25 @@ size_t cobs_encode(const uint8_t * input, size_t length, uint8_t * output)
     {
         if(input[read_index] == 0)
         {
-            output[code_index] = code;
+            out[code_index] = code;
             code = 1;
             code_index = write_index++;
             read_index++;
         }
         else
         {
-            output[write_index++] = input[read_index++];
+            out[write_index++] = input[read_index++];
             code++;
             if(code == 0xFF)
             {
-                output[code_index] = code;
+                out[code_index] = code;
                 code = 1;
                 code_index = write_index++;
             }
         }
     }
 
-    output[code_index] = code;
+    out[code_index] = code;
 
     return write_index;
 }
@@ -55,7 +72,7 @@ size_t cobs_encode(const uint8_t * input, size_t length, uint8_t * output)
  * Remove the "restrict" qualifiers if compiling with a
  * pre-C99 C dialect.
  */
-size_t cobs_decode(const uint8_t * restrict input, size_t length, uint8_t * restrict output)
+size_t cobs_decode(const uint8_t * input, size_t length, uint8_t * out)
 {
     size_t read_index = 0;
     size_t write_index = 0;
@@ -75,11 +92,11 @@ size_t cobs_decode(const uint8_t * restrict input, size_t length, uint8_t * rest
 
         for(i = 1; i < code; i++)
         {
-            output[write_index++] = input[read_index++];
+            out[write_index++] = input[read_index++];
         }
         if(code != 0xFF && read_index != length)
         {
-            output[write_index++] = '\0';
+            out[write_index++] = '\0';
         }
     }
 
