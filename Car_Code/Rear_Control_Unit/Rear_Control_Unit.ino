@@ -133,16 +133,6 @@ void loop() {
         msg.len = sizeof(CAN_message_rcu_status_t);
         CAN.write(msg);
 
-<<<<<<< HEAD
-        if (!rcu_status.get_bms_ok_high()) {
-            XB.println("RCU BMS FAULT: detected");
-        }
-        if (!rcu_status.get_imd_okhs_high()) {
-            XB.println("RCU IMD FAULT: detected");
-        }
-        XB.print("RCU STATE: ");
-        XB.println(rcu_status.get_state());
-=======
         write_xbee_data();
 
         // commented below code in case of problems
@@ -155,7 +145,6 @@ void loop() {
         // }
         // XB.print("RCU STATE: ");
         // XB.println(rcu_status.get_state());
->>>>>>> ryan
     }
 
     /*
