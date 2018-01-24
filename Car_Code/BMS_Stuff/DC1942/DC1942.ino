@@ -1,17 +1,16 @@
 /*
  * HyTech 2018 BMS Basic Monitor
- * Init 2017-12-10
+ * Init 2018-01-23
  * Configured for Teensy
- * Based off of DC1894.ino from Linear
- * Modified to support Teensy, and work with 4 daisychained ICs
+ * Based off of DC1942.ino from Linear
+ * Modified to support Teensy, and work with 4 parallel ICs
  */
 
 /*!
-DC1894B
-LTC6804-1: Battery stack monitor
+DC1942B
+LTC6804-2: Battery stack monitor
 
 @verbatim
-
 NOTES
  Setup:
    Set the terminal baud rate to 115200 and select the newline terminator.
@@ -20,8 +19,7 @@ NOTES
 
 
  Menu Entry 1: Write Configuration
-   Writes the configuration register of the LTC6804s on the stack. This command can be used to turn on
-   the reference and shorten ADC conversion Times.
+   Writes the configuration register of the LTC6804. This command can be used to turn on the reference.
 
  Menu Entry 2: Read Configuration
    Reads the configuration register of the LTC6804, the read configuration can differ from the written configuration.
@@ -49,6 +47,7 @@ USER INPUT DATA FORMAT:
  octal   : 02000  (leading 0)
  binary  : B10000000000
  float   : 1024.0
+
 @endverbatim
 
 http://www.linear.com/product/LTC6804-1
@@ -97,7 +96,7 @@ Copyright 2013 Linear Technology Corp. (LTC)
 
 
 /*! @file
-    @ingroup LTC68041
+    @ingroup LTC68042
 */
 
 #include <Arduino.h>
@@ -105,10 +104,10 @@ Copyright 2013 Linear Technology Corp. (LTC)
 #include "Linduino.h"
 #include "LT_SPI.h"
 #include "UserInterface.h"
-#include "LTC68041.h"
+#include "LTC68042.h"
 #include <SPI.h>
 
-const uint8_t TOTAL_IC = 4;//!<number of ICs in the daisy chain
+const uint8_t TOTAL_IC = 4;//!<number of ICs in the isoSPI network LTC6804-2 ICs must be addressed in ascending order starting at 0.
 
 /******************************************************
  *** Global Battery Variables received from 6804 commands
@@ -205,7 +204,7 @@ void loop()
  Menu Entry 5: Start Auxiliary voltage conversion
     Starts a LTC6804 GPIO channel adc conversion.
 
- Menu Entry 6: Read Auxiliary voltages6118
+ Menu Entry 6: Read Auxiliary voltages
     Reads the LTC6804 axiliary registers and prints the GPIO voltages to the serial port.
 
  Menu Entry 7: Start cell voltage measurement loop
@@ -213,7 +212,7 @@ void loop()
     The loop can be exited by sending the MCU a 'm' character over the serial link.
 
 *******************************************/
-void run_command(uint32_t cmd)
+void run_command(uint16_t cmd)
 {
   int8_t error = 0;
 
@@ -222,15 +221,13 @@ void run_command(uint32_t cmd)
   {
 
     case 1:
-      wakeup_idle();
-      delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54
+      wakeup_sleep();
       LTC6804_wrcfg(TOTAL_IC,tx_cfg);
       print_config();
       break;
 
     case 2:
-      wakeup_idle();
-      delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54
+      wakeup_sleep();
       error = LTC6804_rdcfg(TOTAL_IC,rx_cfg);
       if (error == -1)
       {
@@ -248,8 +245,7 @@ void run_command(uint32_t cmd)
       break;
 
     case 4:
-      wakeup_idle();
-      delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54
+      wakeup_sleep();
       error = LTC6804_rdcv(0, TOTAL_IC,cell_codes); // Set to read back all cell voltage registers
       if (error == -1)
       {
@@ -267,8 +263,7 @@ void run_command(uint32_t cmd)
       break;
 
     case 6:
-      wakeup_idle();
-      delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54
+      wakeup_sleep();
       error = LTC6804_rdaux(0,TOTAL_IC,aux_codes); // Set to read back all aux registers
       if (error == -1)
       {
@@ -279,7 +274,7 @@ void run_command(uint32_t cmd)
 
     case 7:
       Serial.println("transmit 'm' to quit");
-      wakeup_idle();
+      wakeup_sleep();
       LTC6804_wrcfg(TOTAL_IC,tx_cfg);
       while (input != 'm')
       {
@@ -287,18 +282,17 @@ void run_command(uint32_t cmd)
         {
           input = read_char();
         }
-        wakeup_sleep();
+        wakeup_idle();
         LTC6804_adcv();
         delay(10);
         wakeup_idle();
-        delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54
         error = LTC6804_rdcv(0, TOTAL_IC,cell_codes);
         if (error == -1)
         {
           Serial.println("A PEC error was detected in the received data");
         }
         print_cells();
-        delay(1000);
+        delay(500);
       }
       print_menu();
       break;
@@ -323,7 +317,6 @@ void init_cfg()
     tx_cfg[i][4] = 0x00 ;
     tx_cfg[i][5] = 0x00 ;
   }
-
 }
 
 /*!*********************************
@@ -346,7 +339,7 @@ void print_menu()
 
 
 /*!************************************************************
-  \brief Prints cell coltage codes to the serial port
+  \brief Prints Cell Voltage Codes to the serial port
  *************************************************************/
 void print_cells()
 {
@@ -370,7 +363,7 @@ void print_cells()
 }
 
 /*!****************************************************************************
-  \brief Prints GPIO voltage codes and Vref2 voltage code onto the serial port
+  \brief Prints GPIO Voltage Codes and Vref2 Voltage Code onto the serial port
  *****************************************************************************/
 void print_aux()
 {
@@ -395,7 +388,7 @@ void print_aux()
   Serial.println();
 }
 /*!******************************************************************************
- \brief Prints the configuration data that is going to be written to the LTC6804
+ \brief Prints the Configuration data that is going to be written to the LTC6804
  to the serial port.
  ********************************************************************************/
 void print_config()
@@ -431,7 +424,7 @@ void print_config()
 }
 
 /*!*****************************************************************
- \brief Prints the configuration data that was read back from the
+ \brief Prints the Configuration data that was read back from the
  LTC6804 to the serial port.
  *******************************************************************/
 void print_rxconfig()
