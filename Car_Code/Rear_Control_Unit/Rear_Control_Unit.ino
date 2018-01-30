@@ -1,7 +1,8 @@
 /*
- * HyTech 2017 Vehicle Rear Control Unit
- * Init 2017-06-02
- * Control Shutdown Circuit initialization.
+ * HyTech 2018 Vehicle Rear Control Unit
+ * Monitor Shutdown Circuit initialization.
+ * Control power to motor controller, fans, and pump.
+ * Send wireless telemetry data via XBee.
  * Configured for Power Board rev4
  */
 #include <FlexCAN.h>
@@ -94,12 +95,7 @@ void loop() {
     while (CAN.read(msg)) {
         if (msg.id == ID_FCU_STATUS) {
             FCU_status fcu_status = FCU_status(msg.buf);
-            if (fcu_status.get_brake_pedal_active()) {
-                digitalWrite(SSR_BRAKE_LIGHT, HIGH);
-            }
-            else {
-                digitalWrite(SSR_BRAKE_LIGHT, LOW);
-            }
+            digitalWrite(SSR_BRAKE_LIGHT, fcu_status.get_brake_pedal_active());
         }
         if (msg.id == ID_FCU_RESTART) { // Restart inverter when the FCU restarts
             if (millis() > 1000) { // Ignore restart messages when this microcontroller has also just booted up

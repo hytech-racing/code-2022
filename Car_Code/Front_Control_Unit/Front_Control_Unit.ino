@@ -1,6 +1,5 @@
 /*
- * HyTech 2017 Vehicle Front Control Unit
- * Init 2017-05-13
+ * HyTech 2018 Vehicle Front Control Unit
  * Interface with dashboard lights, buttons, and buzzer.
  * Read pedal sensor values and communicate with motor controller.
  * Configured for Front ECU Board rev5
@@ -102,12 +101,12 @@ void loop() {
         if (msg.id == ID_RCU_STATUS) {
             // Load message into RCU_status object
             RCU_status rcu_status(msg.buf);
-            if (!rcu_status.get_bms_ok_high()) { // TODO make sure this doesn't happen at startup
-                digitalWrite(LED_BMS, HIGH);
+            digitalWrite(LED_BMS, !rcu_status.get_bms_ok_high());
+            if (!rcu_status.get_bms_ok_high()) {
                 Serial.println("RCU BMS FAULT: detected");
             }
-            if (!rcu_status.get_imd_okhs_high()) { // TODO make sure this doesn't happen at startup
-                digitalWrite(LED_IMD, HIGH);
+            digitalWrite(LED_IMD, !rcu_status.get_imd_okhs_high());
+            if (!rcu_status.get_imd_okhs_high()) {
                 Serial.println("RCU IMD FAULT: detected");
             }
         }
