@@ -285,8 +285,8 @@ int write_xbee_data() {
     memcpy(xb_buf + sizeof(msg.id) + sizeof(uint8_t) + msg.len, &checksum, sizeof(uint16_t));
 
     uint8_t cobs_buf[1 + state_msg_size];
-    cobs_encode(xb_buf, state_msg_size, cobs_buf + 1);
-    cobs_buf[0] = 0x0;
+    cobs_encode(xb_buf, state_msg_size, cobs_buf);
+    cobs_buf[state_msg_size] = 0x0;
 
     return XB.write(cobs_buf, 1 + state_msg_size);
 }
