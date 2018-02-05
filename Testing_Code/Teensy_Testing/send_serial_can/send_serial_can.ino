@@ -136,12 +136,16 @@ void serial_send_message(CAN_message_t msg) {
         Serial.print((uint8_t)string[i], HEX);
     }
 
-    uint8_t cobs_string[message_size];
+    uint8_t cobs_string[message_size + 1];
     size_t cobs_length = cobs_encode(string, message_size, cobs_string);
     Serial.print("\nCOBS-encoded data: ");
     for (int i = 0; i < cobs_length; i++) {
         Serial.print((uint8_t)cobs_string[i], HEX);
     }
+    Serial.print("\nCOBS length: ");
+    Serial.print(cobs_length);
+    Serial.print(" -- Calculated length: ");
+    Serial.print(sizeof(cobs_string));
     uint8_t decoded[message_size];
     cobs_decode(cobs_string, cobs_length, decoded);
     Serial.print("\nDecoded COBS data: ");

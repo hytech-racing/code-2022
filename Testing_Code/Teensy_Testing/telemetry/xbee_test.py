@@ -24,21 +24,23 @@ def fletcher16(data):
     return (c1 << 8 | c0)
 
 def cobs_decode(data):
+    hex_data = bytearray.fromhex(data)
     output = []
     read_index = 0
     write_index = 0
     code = 0
 
-    while read_index < len(data):
-        code = data[read_index]
-        if (read_index + code) > len(data) and code != 1:
+    while read_index < len(hex_data):
+        code = hex_data[read_index]
+        if (read_index + code) > len(hex_data) and code != 1:
+            print("RI: ", read_index, " code: ", code)
             return output
         read_index += 1
         for i in range(1, code):
-            output.append(data[read_index]);
+            output.append(hex_data[read_index]);
             write_index += 1
             read_index += 1
-        if code != 0xFF and read_index != len(data):
+        if code != 0xFF and read_index != len(hex_data):
             output.append(0)
             write_index += 1
     
