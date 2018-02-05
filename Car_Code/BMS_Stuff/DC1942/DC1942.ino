@@ -278,17 +278,6 @@ void run_command(uint16_t cmd)
       wakeup_sleep();
       LTC6804_adax();
       delay(3);
-      digitalWrite(10, LOW);
-      while (digitalRead(12)) {
-        digitalWrite(13, HIGH);
-        delayMicroseconds(1);
-        digitalWrite(13, LOW);
-        delayMicroseconds(1);
-        //Serial.println("waiting...");
-      }
-      digitalWrite(10, HIGH);
-      Serial.println("MISO went low");
-
       Serial.println("aux conversion completed");
       Serial.println();
       break;
@@ -420,6 +409,12 @@ void run_command(uint16_t cmd)
         Serial.println(balance_cell_index);
         delay(500);
       }
+      for (int ic = 0; ic < TOTAL_IC; ic++) {
+        tx_cfg[ic][4] = 0;
+        tx_cfg[ic][5] = 0;
+      }
+      wakeup_sleep();
+      LTC6804_wrcfg(TOTAL_IC,tx_cfg);
       print_menu();
       break;
 
@@ -441,7 +436,7 @@ void init_cfg()
     tx_cfg[i][2] = 0x00 ;
     tx_cfg[i][3] = 0x00 ;
     tx_cfg[i][4] = 0x00 ;
-    tx_cfg[i][5] = 0xF0 ;
+    tx_cfg[i][5] = 0x00 ;
   }
 }
 
