@@ -5,6 +5,7 @@ ADC_SPI adc;
 void setup() {
   // adc = ADC_SPI(9); // Use if CS is not on pin 10
   adc = ADC_SPI();
+  Serial.begin(115200);
 }
 
 void loop() {
