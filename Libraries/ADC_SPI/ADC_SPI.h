@@ -4,15 +4,15 @@
 #include <stdint.h>
 #include <stddef.h>
 
-class Teensy_SPI {
+#define DEFAULT_SPI_CS 10
+
+class ADC_SPI {
 	public:
-		Teensy_SPI(int SCK, int CS, int DOUT, int DIN);
+		ADC_SPI();
+		ADC_SPI(int CS);
 		uint16_t read_adc(int channel);
 	private:
-		int ADC_SPI_SCK;
 		int ADC_SPI_CS;
-		int ADC_SPI_DOUT;
-		int ADC_SPI_DIN;
 };
 
 
