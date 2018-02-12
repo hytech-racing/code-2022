@@ -129,28 +129,29 @@ void serial_send_message(CAN_message_t msg) {
     memcpy(string + sizeof(msg.id) + sizeof(uint8_t), msg.buf, msg.len);
     uint16_t fletcher = fletcher16(string, sizeof(msg.id) + sizeof(uint8_t) + msg.len);
     memcpy(string + sizeof(msg.id) + sizeof(uint8_t) + msg.len, &fletcher, sizeof(uint16_t));
-    Serial.print("Fletcher Checksum: ");
-    Serial.println(fletcher, HEX); // remember it's little endian
-    Serial.print("Original Data:     ");
-    for (int i = 0; i < message_size; i++) {
-        Serial.print((uint8_t)string[i], HEX);
-    }
+//    Serial.print("Fletcher Checksum: ");
+//    Serial.println(fletcher, HEX); // remember it's little endian
+//    Serial.print("Original Data:     ");
+//    for (int i = 0; i < message_size; i++) {
+//        Serial.print((uint8_t)string[i], HEX);
+//    }
 
     uint8_t cobs_string[message_size + 1];
     size_t cobs_length = cobs_encode(string, message_size, cobs_string);
-    Serial.print("\nCOBS-encoded data: ");
+//    Serial.print("\nCOBS-encoded data: ");
     for (int i = 0; i < cobs_length; i++) {
-        Serial.print((uint8_t)cobs_string[i], HEX);
+        Serial.write(cobs_string[i]);
     }
-    Serial.print("\nCOBS length: ");
-    Serial.print(cobs_length);
-    Serial.print(" -- Calculated length: ");
-    Serial.print(sizeof(cobs_string));
+    Serial.write(0x00);
+//    Serial.print("\nCOBS length: ");
+//    Serial.print(cobs_length);
+//    Serial.print(" -- Calculated length: ");
+//    Serial.print(sizeof(cobs_string));
     uint8_t decoded[message_size];
     cobs_decode(cobs_string, cobs_length, decoded);
-    Serial.print("\nDecoded COBS data: ");
-    for (int i = 0; i < message_size; i++) {
-        Serial.print((uint8_t)decoded[i], HEX);
-    }
-    Serial.println("\n");
+//    Serial.print("\nDecoded COBS data: ");
+//    for (int i = 0; i < message_size; i++) {
+//        Serial.print((uint8_t)decoded[i], HEX);
+//    }
+//    Serial.println("\n");
 }

@@ -1,33 +1,41 @@
 #include "../../../Libraries/HyTech17_Library/HyTech17.h"
 #include "../../../Libraries/XBTools/XBTools.h"
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <string.h>
 #include <iostream>
-#include <fstream>
+#include <iomanip>
 
 #define MESSAGE_LENGTH 12
 
 int main(int argc, char **argv) {
     char *serial_port;
-    if (argc >= 1) {
-        serial_port = argv[0];
+    if (argc >= 2) {
+        serial_port = argv[1];
     } else {
         std::cout << "Must provide serial port as argument" << std::endl;
         exit(1);
     }
 
-    // open serial port as ifstream
-    std::ifstream xbee_device;
-    xbee_device.open(serial_port, std::ios::in | std::ios::binary);
-    if (xbee_device.is_open()) {
+    // open serial port as low-level file descriptor
+    std::cout << "Using serial port " << serial_port << std::endl;
+    int xbee_device = open(serial_port, O_NONBLOCK | O_NOCTTY);
+    if (xbee_device != -1) {
         // holds raw data
         uint8_t read_buf[MESSAGE_LENGTH];
         // CAN id
         uint8_t id = 0;
         // CAN message
         uint8_t message[8];
-        unsigned char c = xbee_device.get();
+        std::cout << "Serial port initialized" << std::endl;
+        unsigned char c;
+        int result = read(xbee_device, &c, 1);
+        std::cout << "got first character: ";
+        std::cout << std::hex << std::setfill('0') << std::setw(2) << (int) c << std::endl;
         int index = 0;
-        while (c) {
-            if (c == '\0') {
+        while (result != -1) {
+            if (c == 0x00) {
                 if (index > 0) {
                     // unstuff COBS
                     uint8_t cobs_buf[MESSAGE_LENGTH];
@@ -52,6 +60,7 @@ int main(int argc, char **argv) {
             } else {
                 if (index < 12) {
                     read_buf[index] = c;
+                    index++;
                 } else {
                     // we missed a \0
                     index = 0;
@@ -60,9 +69,11 @@ int main(int argc, char **argv) {
             if (id != 0) {
                 std::cout << std::hex << "Received ID: " << id << " -- " << message << std::endl;
             }
-            std::cout << std::endl;
-            c = xbee_device.get();
+            result = read(xbee_device, &c, 1);
+            std::cout << "got first character: ";
+            std::cout << std::hex << std::setfill('0') << std::setw(2) << (int) c << std::endl;
         }
-        xbee_device.close();
+        std::cout << "errno: " << strerror(errno) << std::endl;
+        close(xbee_device);
     }
 }
