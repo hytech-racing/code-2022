@@ -51,7 +51,8 @@
  */
 #define TOTAL_IC 4
 #define TOTAL_CELLS 9
-#define TOTAL_THERMISTORS 3
+#define THERMISTORS_PER_IC 3
+#define PCB_THERM_PER_IC 2
 #define TOTAL_SEGMENTS 2
 #define THERMISTOR_RESISTOR_VALUE 10000
 
@@ -79,7 +80,7 @@ short voltage_difference_threshold = 500; // 5.00V
 bool first_fault_overvoltage = false; // Wait for 2 voltage faults in a row before shutting off BMS
 bool first_fault_undervoltage = false;
 bool first_fault_total_voltage_high = false;
-
+bool fh_watchdog_test = false;
 uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages. Numbers are stored in 0.1 mV units.
 uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
      /* Data contained in this array is in this format:
@@ -115,6 +116,9 @@ static CAN_message_t msg;
 BMS_detailed_voltages bms_detailed_voltages[TOTAL_SEGMENTS][3];
 BMS_status bms_status;
 BMS_temperatures bms_temperatures;
+BMS_detailed_temperatures bms_detailed_temperatures[TOTAL_IC];
+BMS_onboard_temperatures bms_onboard_temperatures;
+BMS_onboard_detailed_temperatures bms_onboard_detailed_temperatures[TOTAL_IC];
 BMS_voltages bms_voltages;
 bool watchdog_high = true;
 
@@ -186,14 +190,19 @@ void loop() {
                 Serial.println("Charger NOT enabled");
             }
         }
+
+        if (msg.id == ID_FH_WATCHDOG_TEST) { // stop sending pulse to watchdog timer
+            fh_watchdog_test = true;
+        }
     }
 
     if (timer_process_cells.check()) {
         // poll_cell_voltage(); No need to print this twice
         process_voltages(); // polls controller, and store data in bms_voltages object.
         //bms_voltages.set_low(37408); // DEBUG Remove before final code
-        balance_cells();
-        //process_cell_temps(); // store data in bms_temperatures object.
+        //balance_cells();
+        process_cell_temps(); // store data in bms_temperatures object.
+        process_onboard_temps();
         process_current(); // store data in bms_status object.
         print_uptime();
         print_temperatures();
@@ -248,7 +257,7 @@ void loop() {
         CAN.write(msg);*/
     }
 
-    if (timer_watchdog_timer.check()) { // Send alternating keepalive signal to watchdog timer
+    if (timer_watchdog_timer.check() && !fh_watchdog_test) { // Send alternating keepalive signal to watchdog timer
         watchdog_high = !watchdog_high;
         digitalWrite(WATCHDOG, watchdog_high);
     }
@@ -420,7 +429,7 @@ void process_voltages() {
             bms_status.set_overvoltage(true); // TODO may need to comment this out for now when driving due to 65535 errors
         }
         first_fault_overvoltage = true;
-        Serial.println("VOLTAGE FAULT!!!!!!!!!!!!!!!!!!!");
+        Serial.println("VOLTAGE FAULT too high!!!!!!!!!!!!!!!!!!!");
         Serial.print("max IC: "); Serial.println(maxIC);
         Serial.print("max Cell: "); Serial.println(maxCell); Serial.println();
     } else {
@@ -432,7 +441,7 @@ void process_voltages() {
             bms_status.set_undervoltage(true);
         }
         first_fault_undervoltage = true;
-        Serial.println("VOLTAGE FAULT!!!!!!!!!!!!!!!!!!!");
+        Serial.println("VOLTAGE FAULT too low!!!!!!!!!!!!!!!!!!!");
         Serial.print("min IC: "); Serial.println(minIC);
         Serial.print("min Cell: "); Serial.println(minCell); Serial.println();
     } else {
@@ -469,48 +478,38 @@ void poll_aux_voltage() {
 }
 
 void process_cell_temps() { // TODO make work with signed int8_t CAN message (yes temperatures can be negative)
-    double avgTemp, lowTemp, highTemp, totalTemp;
+    double avgTemp, lowTemp, highTemp, totalTemp, thermTemp;
     poll_aux_voltage();
     totalTemp = 0;
-    lowTemp = calculate_degrees_celsius(thermistor_resistance_gpio12(aux_voltages[0][0]));
+    lowTemp = calculate_cell_temp(aux_voltages[0][0], aux_voltages[0][5]);
     highTemp = lowTemp;
     for (int ic = 0; ic < TOTAL_IC; ic++) {
-        Serial.println("Thermistor 1");
-        uint16_t resistance = thermistor_resistance_gpio12(aux_voltages[ic][0]);
-        uint16_t thermTemp = calculate_degrees_celsius(resistance);
-        if (thermTemp < lowTemp) {
-            lowTemp = thermTemp;
+        for (int j = 0; j < THERMISTORS_PER_IC; j++) {
+          thermTemp = calculate_cell_temp(aux_voltages[ic][j], aux_voltages[ic][5]); // TODO: replace 3 with aux_voltages[ic][5]?
+          
+          if (thermTemp < lowTemp) {
+              lowTemp = thermTemp;
+          }
+          
+          if (thermTemp > highTemp) {
+              highTemp = thermTemp;
+          }
+          
+          bms_detailed_temperatures[ic].set_temperature(j, thermTemp); // Populate CAN message struct
+          totalTemp += thermTemp;
+
+          Serial.print("Thermistor ");
+          Serial.print(j);
+          Serial.print(": ");
+          Serial.print(thermTemp / 100, 2);
+          Serial.println(" C");
         }
-        if (thermTemp > highTemp) {
-            highTemp = thermTemp;
-        }
-        totalTemp += thermTemp;
-        Serial.println("Thermistor 2");
-        resistance = thermistor_resistance_gpio12(aux_voltages[ic][1]);
-        thermTemp = calculate_degrees_celsius(resistance);
-        if (thermTemp < lowTemp) {
-            lowTemp = thermTemp;
-        }
-        if (thermTemp > highTemp) {
-            highTemp = thermTemp;
-        }
-        totalTemp += thermTemp;
-        Serial.println("Thermistor 3");
-        resistance = thermistor_resistance_gpio3(aux_voltages[ic][2]);
-        thermTemp = calculate_degrees_celsius(resistance);
-        if (thermTemp < lowTemp) {
-            lowTemp = thermTemp;
-        }
-        if (thermTemp > highTemp) {
-            highTemp = thermTemp;
-        }
-        totalTemp += thermTemp;
         Serial.println("----------------------\n");
     }
-    avgTemp = (uint16_t) (totalTemp / ((3) * TOTAL_THERMISTORS));
-    bms_temperatures.set_low_temperature((uint16_t) lowTemp);
-    bms_temperatures.set_high_temperature((uint16_t) highTemp);
-    bms_temperatures.set_average_temperature((uint16_t) avgTemp);
+    avgTemp = (int16_t) (totalTemp / ((TOTAL_IC) * THERMISTORS_PER_IC));
+    bms_temperatures.set_low_temperature((int16_t) lowTemp);
+    bms_temperatures.set_high_temperature((int16_t) highTemp);
+    bms_temperatures.set_average_temperature((int16_t) avgTemp);
 
     //bms_status.set_discharge_overtemp(false); // RESET these values, then check below if they should be set again
     //bms_status.set_charge_overtemp(false);
@@ -535,66 +534,115 @@ void process_cell_temps() { // TODO make work with signed int8_t CAN message (ye
     Serial.println(avgTemp / 100);
 }
 
+double calculate_cell_temp(double aux_voltage, double v_ref) {
+   /* aux_voltage = (R/(10k+R))*v_ref 
+    * R = 10k * aux_voltage / (v_ref - aux_voltage)
+    */
+    aux_voltage /= 10000;
+    //Serial.print("voltage: ");
+    //Serial.println(aux_voltage);
+    v_ref /= 10000;
+    //Serial.print("v ref: ");
+    //Serial.println(v_ref); 
+    double thermistor_resistance = 1e4 * aux_voltage / (v_ref - aux_voltage); 
+    //Serial.print("thermistor resistance: ");
+    //Serial.println(thermistor_resistance);  
+   /*
+     * Temperature equation (in Kelvin) based on resistance is the following:
+     * 1/T = 1/T0 + (1/B) * ln(R/R0)      (R = thermistor resistance)
+     * T = 1/(1/T0 + (1/B) * ln(R/R0))
+     */
+     double T0 = 298.15; // 25C in Kelvin
+     double b = 3984;    // B constant of the thermistor
+     double R0 = 10000;  // Resistance of thermistor at 25C
+     double temperature = 1 / ((1 / T0) + (1 / b) * log(thermistor_resistance / R0)) - (double) 273.15;
+     //Serial.print("temperature: ");
+     //Serial.println(temperature); 
+     return (int16_t)(temperature * 100);
+}
+
 void process_onboard_temps() {
-    // TODO this function
+    Serial.println("Process onboard temps");
+    double avgTemp, lowTemp, highTemp, totalTemp, thermTemp;
+    poll_aux_voltage();
+    totalTemp = 0;
+    lowTemp = calculate_onboard_temp(aux_voltages[0][3], aux_voltages[0][5]);
+    highTemp = lowTemp;
+
+    for (int ic = 0; ic < TOTAL_IC; ic++) {
+        for (int j = 0; j < PCB_THERM_PER_IC; j++) {
+          thermTemp = calculate_onboard_temp(aux_voltages[ic][j+3], aux_voltages[ic][5]);
+          if (thermTemp < lowTemp) {
+              lowTemp = thermTemp;
+          }
+          
+          if (thermTemp > highTemp) {
+              highTemp = thermTemp;
+          }
+          
+          bms_onboard_detailed_temperatures[ic].set_temperature(j, thermTemp * 10000); // Populate CAN message struct
+          totalTemp += thermTemp;
+
+          Serial.print("PCB thermistor ");
+          Serial.print(j);
+          Serial.print(": ");
+          Serial.print(thermTemp / 100, 2);
+          Serial.println(" C"); 
+        }
+        Serial.println("----------------------\n");
+    }
+    avgTemp = (int16_t) (totalTemp / ((TOTAL_IC) * PCB_THERM_PER_IC));
+    bms_onboard_temperatures.set_low_temperature((int16_t) lowTemp);
+    bms_onboard_temperatures.set_high_temperature((int16_t) highTemp);
+    bms_onboard_temperatures.set_average_temperature((int16_t) avgTemp);
+
+    //bms_status.set_discharge_overtemp(false); // RESET these values, then check below if they should be set again
+    //bms_status.set_charge_overtemp(false);
+    
+    if (bms_status.get_state() == BMS_STATE_DISCHARGING) { // Discharging
+        if (bms_temperatures.get_high_temperature() > discharge_temp_critical_high) {
+            bms_status.set_discharge_overtemp(true);
+            Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
+        }
+    } else if (bms_status.get_state() == BMS_STATE_CHARGING) { // Charging
+        if (bms_temperatures.get_high_temperature() > charge_temp_critical_high) {
+            bms_status.set_charge_overtemp(true);
+            Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
+        }
+    }
+
+    Serial.print("Low Temp: ");
+    Serial.println(lowTemp / 100);
+    Serial.print("High Temp: ");
+    Serial.println(highTemp / 100);
+    Serial.print("Average Temp: ");
+    Serial.println(avgTemp / 100);
     return;
 }
 
-/*
- * Calculate thermistor resistance if connected to GPIO1 or GPIO2, given temp_voltage in 0.1mV units
- */
-uint16_t thermistor_resistance_gpio12(double temp_voltage) { // TODO check this math
-    /* voltage measured across thermistor is dependent on the resistor in the voltage divider
-     * all voltage measurements stored in arrays are in 0.1 mV, or 1/10,000 of a volt
-     */
-     temp_voltage = temp_voltage / 1e4;
-     double resistance = 1e6 * (5 - temp_voltage) / (temp_voltage + 100 * temp_voltage - 5);
-     Serial.println(resistance, 2);
-     return (uint16_t) resistance;
-    // resistances stored as 1 ohm units.
-}
-
-/*
- * Calculate thermistor resistance if connected to GPIO3, given temp_voltage in 0.1mV units
- */
-uint16_t thermistor_resistance_gpio3(double temp_voltage) { // TODO check this math
-    /* voltage measured across thermistor is dependent on the resistor in the voltage divider
-     * all voltage measurements stored in arrays are in 0.1 mV, or 1/10,000 of a volt
-     */
-    temp_voltage = temp_voltage / 1e4;
-    Serial.println(temp_voltage);
-    double res = 5000.0 * temp_voltage;
-    Serial.print("Step 1: "); Serial.println(res, 2);
-    res = 25000.0 - res;
-    Serial.print("Step 2: "); Serial.println(res, 2);
-    res = res + 5000.0;
-    Serial.print("Step 3: "); Serial.println(res, 2);
-    res = res / (temp_voltage - 1.0);
-    Serial.print("Final Step 4: "); Serial.println(res, 2);
-//    double res = (25000.0 - 5000.0 * temp_voltage + 5000.0) / (temp_voltage - 1.0);
-    Serial.print("resistance 3: "); Serial.println(res, 2);
-    uint16_t small_res = (uint16_t) res;
-    Serial.print("integer resistance 3: "); Serial.println(small_res);
-    return small_res;
-    // resistances stored as 1 ohm units.
-}
-
-/*
- * Calculate thermistor temperature in 0.1C units, given thermistor resistance in ohms
- */
-int16_t calculate_degrees_celsius(double thermistor_resistance) {
-    /*
+double calculate_onboard_temp(double aux_voltage, double v_ref) {
+   /* aux_voltage = (R/(10k+R))*v_ref 
+    * R = 10k * aux_voltage / (v_ref - aux_voltage)
+    */
+    aux_voltage /= 10000;
+    //Serial.print("onboard voltage: ");
+    //Serial.println(aux_voltage);
+    v_ref /= 10000;
+    //Serial.print("v ref: ");
+    //Serial.println(v_ref); 
+    double thermistor_resistance = 1e4 * aux_voltage / (v_ref - aux_voltage); 
+    /*Serial.print("thermistor resistance: ");
+    Serial.println(thermistor_resistance); */
+   /*
      * Temperature equation (in Kelvin) based on resistance is the following:
-     * 1/T = 1/T0 + (1/B) * ln(R/R0)
+     * 1/T = 1/T0 + (1/B) * ln(R/R0)      (R = thermistor resistance)
      * T = 1/(1/T0 + (1/B) * ln(R/R0))
-     * 
-     * T0 = 298.15 (25C in Kelvin)
-     * B = 3984 (Specific to our thermistors)
-     * R = thermistor_resistance (calculated resistance of thermistor)
-     * R0 = 10000 (Resistance of thermistor at 25C)
      */
-    double temperature = 1 / ((1 / (double) 298.15) + (1 / (double) 3984) * (double)log(thermistor_resistance / 10000)) - (double) 273.15;
-    return (int16_t) (temperature * 100); // temps stored in 0.1 C units
+     double T0 = 298.15; // 25C in Kelvin
+     double b = 3380;    // B constant of the thermistor
+     double R0 = 10000;  // Resistance of thermistor at 25C
+     double temperature = 1 / ((1 / T0) + (1 / b) * log(thermistor_resistance / R0)) - (double) 273.15;
+     return (int16_t)(temperature * 100);
 }
 
 void process_current() {
