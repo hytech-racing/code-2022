@@ -38,15 +38,19 @@ int main(int argc, char **argv) {
             if (c == 0x00) {
                 if (index > 0) {
                     // unstuff COBS
-                    uint8_t cobs_buf[MESSAGE_LENGTH];
-                    int decoded = cobs_decode(read_buf, MESSAGE_LENGTH, cobs_buf);
-                    std::cout << std::hex << "COBS-decoded data: " << cobs_buf << std::endl;
+                    uint8_t cobs_buf[12];
+                    int decoded = cobs_decode(read_buf, 13, cobs_buf);
+                    std::cout << "COBS-decoded data: ";
+                    for (int i = 0; i < 12; i++) {
+                        std::cout << std::hex << std::setfill('0') << std::setw(2) << (int) cobs_buf[i] << " ";
+                    }
+                    std::cout << "Decoded " << decoded << " bytes" << std::endl;
                     if (decoded) {
                         // COBS decoded some data, now check the checksum
-                        int checksum = read_buf[MESSAGE_LENGTH - 1] << 8 | read_buf[MESSAGE_LENGTH - 2];
+                        int checksum = cobs_buf[MESSAGE_LENGTH - 1] << 8 | cobs_buf[MESSAGE_LENGTH - 2];
                         uint8_t raw_msg[MESSAGE_LENGTH - 2];
-                        memcpy(raw_msg, read_buf, MESSAGE_LENGTH - 2);
-                        int calc_checksum = fletcher16(raw_msg, MESSAGE_LENGTH - 2);
+                        memcpy(raw_msg, cobs_buf, MESSAGE_LENGTH - 2);
+                        int calc_checksum = fletcher16(raw_msg, MESSAGE_LENGTH - 1);
                         std::cout << std::hex << "Msg Checksum: " << checksum << " -- Calc Checksum: " << calc_checksum << std::endl;
                         if (calc_checksum == checksum) {
                             // do stuff with data
