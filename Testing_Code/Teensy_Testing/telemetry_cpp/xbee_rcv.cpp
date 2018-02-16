@@ -7,7 +7,7 @@
 #include <iostream>
 #include <iomanip>
 
-#define MESSAGE_LENGTH 12
+#define MESSAGE_LENGTH 16
 
 int main(int argc, char **argv) {
     char *serial_port;
@@ -20,49 +20,61 @@ int main(int argc, char **argv) {
 
     // open serial port as low-level file descriptor
     std::cout << "Using serial port " << serial_port << std::endl;
-    int xbee_device = open(serial_port, O_NONBLOCK | O_NOCTTY);
+    int xbee_device = open(serial_port, O_NOCTTY);
     if (xbee_device != -1) {
         // holds raw data
         uint8_t read_buf[MESSAGE_LENGTH];
         // CAN id
-        uint8_t id = 0;
+        int id = 0;
         // CAN message
         uint8_t message[8];
+        int length;
         std::cout << "Serial port initialized" << std::endl;
         unsigned char c;
         int result = read(xbee_device, &c, 1);
-        std::cout << "got first character: ";
-        std::cout << std::hex << std::setfill('0') << std::setw(2) << (int) c << std::endl;
         int index = 0;
         while (result != -1) {
             if (c == 0x00) {
                 if (index > 0) {
+                    // std::cout << "Raw data: ";
+                    // for (uint8_t num : read_buf) {
+                    //     std::cout << std::hex << std::setfill('0') << std::setw(2) << (int) num << " ";
+                    // }
                     // unstuff COBS
-                    uint8_t cobs_buf[12];
-                    int decoded = cobs_decode(read_buf, 13, cobs_buf);
-                    std::cout << "COBS-decoded data: ";
-                    for (int i = 0; i < 12; i++) {
-                        std::cout << std::hex << std::setfill('0') << std::setw(2) << (int) cobs_buf[i] << " ";
-                    }
-                    std::cout << "Decoded " << decoded << " bytes" << std::endl;
+                    uint8_t cobs_buf[15];
+                    int decoded = cobs_decode(read_buf, 16, cobs_buf);
+                    // std::cout << "\nCOBS-decoded data: ";
+                    // for (int i = 0; i < 15; i++) {
+                    //     std::cout << std::hex << std::setfill('0') << std::setw(2) << (int) cobs_buf[i] << " ";
+                    // }
+                    // std::cout << "Decoded " << decoded << " bytes" << std::endl;
                     if (decoded) {
                         // COBS decoded some data, now check the checksum
-                        int checksum = cobs_buf[MESSAGE_LENGTH - 1] << 8 | cobs_buf[MESSAGE_LENGTH - 2];
-                        uint8_t raw_msg[MESSAGE_LENGTH - 2];
-                        memcpy(raw_msg, cobs_buf, MESSAGE_LENGTH - 2);
-                        int calc_checksum = fletcher16(raw_msg, MESSAGE_LENGTH - 1);
-                        std::cout << std::hex << "Msg Checksum: " << checksum << " -- Calc Checksum: " << calc_checksum << std::endl;
+                        int checksum = cobs_buf[MESSAGE_LENGTH - 2] << 8 | cobs_buf[MESSAGE_LENGTH - 3];
+                        uint8_t raw_msg[MESSAGE_LENGTH - 3];
+                        memcpy(raw_msg, cobs_buf, MESSAGE_LENGTH - 3);
+                        // std::cout << "Non-checksum data: ";
+                        // for (uint8_t num : raw_msg) {
+                        //     std::cout << std::hex << std::setfill('0') << std::setw(2) << (int) num << " ";
+                        // }
+                        int calc_checksum = fletcher16(raw_msg, MESSAGE_LENGTH - 3);
+                        // std::cout << std::hex << "Msg Checksum: " << checksum << " -- Calc Checksum: " << calc_checksum << std::endl;
                         if (calc_checksum == checksum) {
                             // do stuff with data
-                            id = cobs_buf[0];
-                            int length = cobs_buf[1];
-                            memcpy(message, cobs_buf + 2, length);
+                            memcpy(&id, &raw_msg[0], 4);
+                            int length = raw_msg[4];
+                            memcpy(message, raw_msg + 5, length);
+                            std::cout << std::hex << "Received ID: " << id << " -- ";
+                            for (uint8_t num : message) {
+                                std::cout << std::hex << std::setfill('0') << std::setw(2) << (int) num << " ";
+                            }
+                            std::cout << std::endl;
                         }
                     }
                     index = 0;
                 }
             } else {
-                if (index < 12) {
+                if (index < 16) {
                     read_buf[index] = c;
                     index++;
                 } else {
@@ -70,12 +82,7 @@ int main(int argc, char **argv) {
                     index = 0;
                 }
             }
-            if (id != 0) {
-                std::cout << std::hex << "Received ID: " << id << " -- " << message << std::endl;
-            }
             result = read(xbee_device, &c, 1);
-            std::cout << "got first character: ";
-            std::cout << std::hex << std::setfill('0') << std::setw(2) << (int) c << std::endl;
         }
         std::cout << "errno: " << strerror(errno) << std::endl;
         close(xbee_device);

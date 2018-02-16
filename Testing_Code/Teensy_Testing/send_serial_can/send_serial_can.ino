@@ -3,18 +3,31 @@
 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
+BMS_detailed_temperatures bms_detailed_temperatures(1, 11, 22, 33);
+MC_command_message command_msg(160, 0, 1, 1, 0, 200);
+int msg_id = 0;
+
+// Original data:     DA00081B01602100268C
+// COBS-encoded data: 2DA11481B21622113268C0
+
 void setup() {
     CAN.begin();
     Serial.begin(115200);
-    Serial.println("Initialized serial");
+    //Serial.println("Initialized serial");
 }
 void loop() {
     delay(1000);
-    BMS_detailed_temperatures bms_detailed_temperatures(12, millis(), millis() / 2, millis() / 3);
-    msg.id += 1;
-    msg.len = sizeof(CAN_message_bms_detailed_temperatures_t);
-    bms_detailed_temperatures.write(msg.buf);
+    if (msg_id % 2 == 0) {
+      msg.id = ID_BMS_DETAILED_TEMPERATURES;
+      msg.len = sizeof(CAN_message_bms_detailed_temperatures_t);
+      bms_detailed_temperatures.write(msg.buf);
+    } else if (msg_id % 2 == 1) {
+      msg.id = ID_MC_COMMAND_MESSAGE;
+      msg.len = sizeof(CAN_message_mc_command_message_t);
+      command_msg.write(msg.buf);
+    }
     serial_send_message(msg);
+    msg_id++;
 }
 
 // copied from Wikipedia lol

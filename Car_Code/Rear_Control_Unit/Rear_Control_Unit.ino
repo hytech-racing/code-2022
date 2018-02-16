@@ -273,7 +273,7 @@ void set_state(uint8_t new_state) {
  * returns: number of bytes written to the Xbee serial bus
  */
 int write_xbee_data() {
-    // delim (1) + checksum (2) + id (id-size) + length (1) + length
+    // delim (1) + checksum (2) + id (4) + length (1) + length
     uint8_t state_msg_size = sizeof(uint16_t) + sizeof(msg.id) + sizeof(uint8_t) + msg.len;
     uint8_t xb_buf[state_msg_size];
     memcpy(xb_buf, &msg.id, sizeof(msg.id));        // msg id
