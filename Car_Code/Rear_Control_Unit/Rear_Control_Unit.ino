@@ -1,8 +1,9 @@
 /*
- * HyTech 2017 Vehicle Rear Control Unit
- * Init 2017-06-02
- * Control Shutdown Circuit initialization.
- * Configured for Power Board rev3
+ * HyTech 2018 Vehicle Rear Control Unit
+ * Monitor Shutdown Circuit initialization.
+ * Control power to motor controller, fans, and pump.
+ * Send wireless telemetry data via XBee.
+ * Configured for Power Board rev4
  */
 #include <FlexCAN.h>
 #include <HyTech17.h>
@@ -17,28 +18,28 @@
 #define COOL_MOSFET_3 A6
 #define COOL_RELAY_1 A9
 #define COOL_RELAY_2 2
+#define GPIO1 A4
+#define GPIO2 5
+#define SENSE_12VSUPPLY A3
 #define SENSE_BMS A1
 #define SENSE_IMD A0
 #define SENSE_SHUTDOWN_OUT A2
 #define SSR_BRAKE_LIGHT 12
 #define SSR_INVERTER 6
-#define SSR_LATCH_BMS 11
-#define SSR_LATCH_IMD 8
 
 #define XB Serial2
 
 /*
  * Constant definitions
  */
-#define BMS_HIGH 100
-#define BMS_LOW 50
-#define IMD_HIGH 100
-#define IMD_LOW 50
+#define BMS_HIGH 134 // ~3V on BMS_OK line
+#define IMD_HIGH 134 // ~3V on OKHS line
+#define SHUTDOWN_OUT_HIGH 350 // ~8V on SHUTDOWN_C line
 
 /*
  * Timers
  */
-Metro timer_bms_faulting = Metro(1000); // At startup the BMS_OK line drops shortly
+Metro timer_bms_print_fault = Metro(500);
 Metro timer_debug_bms_status = Metro(1000);
 Metro timer_debug_bms_temperatures = Metro(1000);
 Metro timer_debug_bms_voltages = Metro(1000);
@@ -51,9 +52,8 @@ Metro timer_debug_rms_temperatures_3 = Metro(2000);
 Metro timer_debug_rms_torque_timer_information = Metro(2000);
 Metro timer_debug_rms_voltage_information = Metro(2000);
 Metro timer_debug_fcu_status = Metro(2000);
-Metro timer_imd_faulting = Metro(1000); // At startup the IMD_OKHS line drops shortly
-Metro timer_latch = Metro(1000);
-Metro timer_state_send = Metro(100);
+Metro timer_imd_print_fault = Metro(500);
+Metro timer_status_send = Metro(100);
 Metro timer_fcu_restart_inverter = Metro(500); // Upon restart of the FCU, power cycle the inverter
 
 /*
@@ -62,9 +62,9 @@ Metro timer_fcu_restart_inverter = Metro(500); // Upon restart of the FCU, power
 RCU_status rcu_status;
 
 boolean bms_faulting = false;
-uint8_t btn_start_id = 0; // increments to differentiate separate button presses
-uint8_t btn_start_new = 0;
 boolean imd_faulting = false;
+
+boolean inverter_restart = false; // True when restarting the inverter
 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
@@ -74,8 +74,6 @@ void setup() {
     pinMode(COOL_RELAY_2, OUTPUT);
     pinMode(SSR_BRAKE_LIGHT, OUTPUT);
     pinMode(SSR_INVERTER, OUTPUT);
-    pinMode(SSR_LATCH_BMS, OUTPUT);
-    pinMode(SSR_LATCH_IMD, OUTPUT);
 
     Serial.begin(115200);
     CAN.begin();
@@ -86,7 +84,6 @@ void setup() {
     digitalWrite(SSR_INVERTER, HIGH);
     digitalWrite(COOL_RELAY_1, HIGH);
     digitalWrite(COOL_RELAY_2, HIGH);
-    set_state(RCU_STATE_WAITING_BMS_IMD);
     rcu_status.set_bms_ok_high(true);
     rcu_status.set_imd_okhs_high(true);
 }
@@ -98,23 +95,13 @@ void loop() {
     while (CAN.read(msg)) {
         if (msg.id == ID_FCU_STATUS) {
             FCU_status fcu_status = FCU_status(msg.buf);
-            if (fcu_status.get_brake_pedal_active()) {
-                digitalWrite(SSR_BRAKE_LIGHT, HIGH);
-            }
-            else {
-                digitalWrite(SSR_BRAKE_LIGHT, LOW);
-            }
-            if (btn_start_id != fcu_status.get_start_button_press_id()) {
-                btn_start_id = fcu_status.get_start_button_press_id();
-                Serial.print("Start button pressed id ");
-                Serial.println(btn_start_id);
-            }
+            digitalWrite(SSR_BRAKE_LIGHT, fcu_status.get_brake_pedal_active());
         }
-        if (msg.id == ID_FCU_RESTART) {
+        if (msg.id == ID_FCU_RESTART) { // Restart inverter when the FCU restarts
             if (millis() > 1000) { // Ignore restart messages when this microcontroller has also just booted up
+                inverter_restart = true;
                 digitalWrite(SSR_INVERTER, LOW);
                 timer_fcu_restart_inverter.reset();
-                set_state(0);
             }
         }
         if ((msg.id == ID_MC_TEMPERATURES_1 && timer_debug_rms_temperatures_1.check())
@@ -134,9 +121,9 @@ void loop() {
     }
 
     /*
-     * Send state over CAN and XBee
+     * Send status over CAN and XBee
      */
-    if (timer_state_send.check()) {
+    if (timer_status_send.check()) {
         rcu_status.write(msg.buf);
         msg.id = ID_RCU_STATUS;
         msg.len = sizeof(CAN_message_rcu_status_t);
@@ -157,111 +144,46 @@ void loop() {
     }
 
     /*
-     * State machine
+     * Finish restarting the inverter when timer expires
      */
-    switch (rcu_status.get_state()) {
-        case 0:
-        if (timer_fcu_restart_inverter.check()) {
-            digitalWrite(SSR_INVERTER, HIGH);
-            set_state(RCU_STATE_WAITING_BMS_IMD);
-        }
-        break;
-            
-        case RCU_STATE_WAITING_BMS_IMD:
-        if (analogRead(SENSE_IMD) > IMD_HIGH && analogRead(SENSE_BMS) > BMS_HIGH) { // Wait till IMD and BMS signals go high at startup
-            set_state(RCU_STATE_WAITING_DRIVER);
-        }
-        break;
-
-        case RCU_STATE_WAITING_DRIVER:
-        if (btn_start_new == btn_start_id) { // Start button has been pressed
-            set_state(RCU_STATE_LATCHING);
-        }
-        break;
-
-        case RCU_STATE_LATCHING:
-        if (timer_latch.check()) { // Disable latching SSR
-            set_state(RCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED);
-        }
-        break;
-
-        case RCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
-        break;
-
-        case RCU_STATE_FATAL_FAULT:
-        break;
+    if (inverter_restart && timer_fcu_restart_inverter.check()) {
+        inverter_restart = false;
+        digitalWrite(SSR_INVERTER, HIGH);
     }
 
     /*
-     * Start BMS fault timer if signal drops momentarily
+     * Check for BMS fault
      */
-    if (rcu_status.get_state() != RCU_STATE_WAITING_BMS_IMD && analogRead(SENSE_BMS) <= BMS_LOW) { // TODO imd/bms
-        bms_faulting = true;
-        timer_bms_faulting.reset();
-    }
-
-    /*
-     * Reset BMS fault condition if signal comes back within timer period
-     */
-    if (bms_faulting && analogRead(SENSE_BMS) > BMS_HIGH) {
-        bms_faulting = false;
-    }
-
-    /*
-     * Declare BMS fault if signal still dropped
-     */
-    if (bms_faulting && timer_bms_faulting.check()) {
+    if (analogRead(SENSE_BMS) > BMS_HIGH) {
+        rcu_status.set_bms_ok_high(true);
+    } else {
         rcu_status.set_bms_ok_high(false);
-        set_state(RCU_STATE_FATAL_FAULT);
-        Serial.println("BMS fault detected");
+        if (timer_bms_print_fault.check()) {
+            Serial.println("BMS fault detected");
+        }
     }
 
     /*
-     * Start IMD fault timer if signal drops momentarily
+     * Check for IMD fault
      */
-    if (rcu_status.get_state() != RCU_STATE_WAITING_BMS_IMD && analogRead(SENSE_IMD) <= IMD_LOW) {
-        imd_faulting = true;
-        timer_imd_faulting.reset();
-    }
-
-    /*
-     * Reset IMD fault condition if signal comes back within timer period
-     */
-    if (imd_faulting && analogRead(SENSE_IMD) > IMD_HIGH) {
-        imd_faulting = false;
-    }
-
-    /*
-     * Declare IMD fault if signal still dropped
-     */
-    if (imd_faulting && timer_imd_faulting.check()) {
+    if (analogRead(SENSE_IMD) > IMD_HIGH) {
+        rcu_status.set_imd_okhs_high(true);
+    } else {
         rcu_status.set_imd_okhs_high(false);
-        set_state(RCU_STATE_FATAL_FAULT);
-        Serial.println("IMD fault detected");
+        if (timer_imd_print_fault.check()) {
+            Serial.println("IMD fault detected");
+        }
     }
-}
 
-/*
- * Handle changes in state
- */
-void set_state(uint8_t new_state) {
-    if (rcu_status.get_state() == new_state) {
-        return;
-    }
-    rcu_status.set_state(new_state);
-    if (new_state == RCU_STATE_WAITING_DRIVER) {
-        btn_start_new = btn_start_id + 1;
-    }
-    if (new_state == RCU_STATE_LATCHING) {
-        timer_latch.reset();
-        digitalWrite(SSR_LATCH_BMS, HIGH);
-        digitalWrite(SSR_LATCH_IMD, HIGH);
-        Serial.println("Latching");
-    }
-    if (new_state == RCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED) {
-        digitalWrite(SSR_LATCH_BMS, LOW);
-        digitalWrite(SSR_LATCH_IMD, LOW);
+    /*
+     * Measure SHUTDOWN_C to determine if BMS/IMD relays have latched
+     */
+    if (analogRead(SENSE_SHUTDOWN_OUT) > SHUTDOWN_OUT_HIGH) {
+        rcu_status.set_bms_imd_latched(true);
         digitalWrite(COOL_RELAY_2, HIGH);
+    } else {
+        rcu_status.set_bms_imd_latched(false);
+        digitalWrite(COOL_RELAY_2, LOW);
     }
 }
 
