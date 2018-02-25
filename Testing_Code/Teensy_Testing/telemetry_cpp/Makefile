@@ -3,8 +3,8 @@ FLAGS = -w -std=c++11
 
 all: xbee_rcv
 
-xbee_rcv: HyTech17.o XBTools.o
-	$(CXX) $(FLAGS) -o xbee_rcv xbee_rcv.cpp XBTools.o
+xbee_rcv: HyTech17.o XBTools.o RCU_status.o
+	$(CXX) $(FLAGS) -o xbee_rcv xbee_rcv.cpp XBTools.o RCU_status.o
 
 HyTech17.o: ../../../Libraries/HyTech17_Library/*.cpp
 	$(CXX) $(FLAGS) -c ../../../Libraries/HyTech17_Library/*.cpp

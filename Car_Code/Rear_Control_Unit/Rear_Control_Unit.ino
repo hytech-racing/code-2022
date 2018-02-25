@@ -35,6 +35,7 @@
 #define BMS_HIGH 134 // ~3V on BMS_OK line
 #define IMD_HIGH 134 // ~3V on OKHS line
 #define SHUTDOWN_OUT_HIGH 350 // ~8V on SHUTDOWN_C line
+#define XBEE_PKT_LEN 15
 
 /*
  * Timers
@@ -196,19 +197,37 @@ void loop() {
  */
 int write_xbee_data() {
     // delim (1) + checksum (2) + id (4) + length (1) + length
-    uint8_t state_msg_size = sizeof(uint16_t) + sizeof(msg.id) + sizeof(uint8_t) + msg.len;
-    uint8_t xb_buf[state_msg_size];
+    uint8_t xb_buf[XBEE_PKT_LEN];
     memcpy(xb_buf, &msg.id, sizeof(msg.id));        // msg id
     memcpy(xb_buf + sizeof(msg.id), &msg.len, sizeof(uint8_t));     // msg len
     memcpy(xb_buf + sizeof(msg.id) + sizeof(uint8_t), msg.buf, msg.len); // msg contents
 
     // calculate checksum
-    uint16_t checksum = fletcher16(xb_buf, sizeof(msg.id) + sizeof(uint8_t) + msg.len);
-    memcpy(xb_buf + sizeof(msg.id) + sizeof(uint8_t) + msg.len, &checksum, sizeof(uint16_t));
+    uint16_t checksum = fletcher16(xb_buf, XBEE_PKT_LEN - 2);
+    Serial.print("CHECKSUM: ");
+    Serial.println(checksum, HEX);
+    memcpy(&xb_buf[XBEE_PKT_LEN - 2], &checksum, sizeof(uint16_t));
 
-    uint8_t cobs_buf[1 + state_msg_size];
-    cobs_encode(xb_buf, state_msg_size, cobs_buf);
-    cobs_buf[state_msg_size] = 0x0;
+    for (int i = 0; i < XBEE_PKT_LEN; i++) {
+      Serial.print(xb_buf[i], HEX);
+      Serial.print(" ");
+    }
+    Serial.println();
 
-    return XB.write(cobs_buf, 1 + state_msg_size);
+    uint8_t cobs_buf[2 + XBEE_PKT_LEN];
+    cobs_encode(xb_buf, XBEE_PKT_LEN+1, cobs_buf);
+    cobs_buf[XBEE_PKT_LEN+1] = 0x0;
+
+    for (int i = 0; i < XBEE_PKT_LEN+2; i++) {
+      Serial.print(cobs_buf[i], HEX);
+      Serial.print(" ");
+    }
+    Serial.println();
+
+    int written = XB.write(cobs_buf, 2 + XBEE_PKT_LEN);
+    Serial.print("Wrote ");
+    Serial.print(written);
+    Serial.println(" bytes");
+
+    return written;
 }
