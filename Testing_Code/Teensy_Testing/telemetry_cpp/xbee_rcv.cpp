@@ -84,16 +84,42 @@ int main(int argc, char **argv) {
                             memcpy(&id, &raw_msg, 4);
                             int length = raw_msg[4];
                             memcpy(message, raw_msg + 5, 8);
-                            std::cout << std::hex << "Received ID: " << id << " -- ";
-                            for (uint8_t num : message) {
-                                std::cout << std::hex << std::setfill('0') << std::setw(2) << (int) num << " ";
-                            }
-                            std::cout << std::endl;
+                            // std::cout << std::hex << "Received ID: " << id << " -- ";
+                            // for (int i = 0; i < length; i++) {
+                            //     std::cout << std::hex << std::setfill('0') << std::setw(2) << (int) message[i] << " ";
+                            // }
+                            // std::cout << std::endl;
 
                             if (id == ID_RCU_STATUS) {
                                 RCU_status rcu_status(message);
-                                std::cout << "Battery voltage: " << rcu_status.get_glv_battery_voltage() << std::endl;
-                                std::cout << "Temperature: " << rcu_status.get_temperature() << std::endl;
+                                std::cout << "Battery voltage: " << std::dec << rcu_status.get_glv_battery_voltage() / 10 << std::endl;
+                                std::cout << "Temperature: " << rcu_status.get_temperature() / 100 << std::endl;
+                                std::cout << std::endl;
+                            }
+                            if (id == ID_BMS_VOLTAGES) {
+                                BMS_voltages bms_voltages(message);
+                                std::cout << "Cell avg voltage: " << std::dec << bms_voltages.get_average() / 10 << std::endl;
+                                std::cout << "Cell low voltage: " << bms_voltages.get_low() / 10 << std::endl;
+                                std::cout << "Cell high voltage: " << bms_voltages.get_high() / 10 << std::endl;
+                                std::cout << "Total pack voltage: " << bms_voltages.get_total() / 10 << std::endl;
+                                std::cout << std::endl;
+                            }
+                            if (id == ID_FCU_STATUS) {
+                                FCU_status fcu_status(message);
+                                std::cout << "FCU State: " << std::dec << fcu_status.get_state() << std::endl;
+                                if (fcu_status.get_accelerator_implausibility()) {
+                                    std::cout << "Accelerator Implausibility Detected" << std::endl;
+                                }
+                                if (fcu_status.get_accelerator_boost_mode()) {
+                                    std::cout << "Accel Boost Mode ACTIVE" << std::endl;
+                                }
+                                if (fcu_status.get_brake_implausibility()) {
+                                    std::cout << "Brake Implausibility Detected" << std::endl;
+                                }
+                                if (fcu_status.get_brake_pedal_active()) {
+                                    std::cout << "Brake pedal active" << std::endl;
+                                }
+                                std::cout << std::endl;
                             }
                         }
                     }
