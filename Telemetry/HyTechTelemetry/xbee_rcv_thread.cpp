@@ -1,15 +1,18 @@
 #include "xbee_rcv_thread.h"
 #include <QtCore>
 
-xbee_rcv_thread::xbee_rcv_thread(QObject *parent, QByteArray port) : QThread(parent) {
-    this->xbee_device = this->configure_port(open(port, O_NOCTTY));
+#define MESSAGE_LENGTH 15
+
+xbee_rcv_thread::xbee_rcv_thread(QObject *parent, QString port) : QThread(parent) {
+    QByteArray portba = port.toLatin1();
+    this->xbee_device = this->configure_port(open(portba.data(), O_NOCTTY));
 }
 
 xbee_rcv_thread::~xbee_rcv_thread() {
     close(this->xbee_device);
 }
 
-xbee_rcv_thread::run() {
+void xbee_rcv_thread::run() {
     if (this->xbee_device != -1) {
         uint8_t read_buf[MESSAGE_LENGTH+2];
         // CAN id
@@ -40,7 +43,7 @@ xbee_rcv_thread::run() {
                             int length = raw_msg[4];
                             memcpy(message, raw_msg + 5, 8);
 
-                            emit updated(id, length, message);
+                            emit updated(id, length, QByteArray(reinterpret_cast<char*>(message), 8));
                         }
                     }
                     index = 0;
@@ -61,7 +64,7 @@ xbee_rcv_thread::run() {
     }
 }
 
-xbee_rcv_thread::configure_port(int fd) {
+int xbee_rcv_thread::configure_port(int fd) {
     struct termios port_settings;      // structure to store the port settings in
 
     cfsetispeed(&port_settings, B115200);    // set baud rates

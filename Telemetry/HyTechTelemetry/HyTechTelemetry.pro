@@ -26,7 +26,9 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-    xbee_rcv_thread.cpp
+    xbee_rcv_thread.cpp \
+    ../../Libraries/HyTech17_Library/*.cpp \
+    ../../Libraries/XBTools/XBTools.cpp
 
 HEADERS += \
         mainwindow.h \

@@ -15,7 +15,7 @@
 class xbee_rcv_thread : public QThread {
     Q_OBJECT
 public:
-    explicit xbee_rcv_thread(QObject *parent = 0, QByteArray port);
+    explicit xbee_rcv_thread(QObject *parent = 0, QString port = "");
     ~xbee_rcv_thread();
     void run();
     QByteArray xbee_port;
@@ -29,6 +29,6 @@ signals:
 private:
     int xbee_device;
     int configure_port(int fd);
-}
+};
 
 #endif // XBEE_RCV_THREAD_H

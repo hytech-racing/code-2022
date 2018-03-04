@@ -2,6 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include "../../Libraries/HyTech17_Library/HyTech17.h"
+#include "../../Libraries/XBTools/XBTools.h"
 
 namespace Ui {
 class MainWindow;
@@ -16,8 +18,8 @@ public:
     ~MainWindow();
 
 public slots:
-    on_update(quint32 id, quint8 length, QByteArray msg);
-    on_error(QByteArray err_str);
+    void on_update(quint32 id, quint8 length, QByteArray msg);
+    void on_error(QByteArray err_str);
 
 private:
     Ui::MainWindow *ui;
