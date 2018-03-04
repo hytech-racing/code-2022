@@ -166,6 +166,8 @@ void setup() {
  */
 void loop() {
     while (CAN.read(msg)) {
+        //Serial.println("reading CAN message");
+        //Serial.println(msg.id, HEX);
         if (msg.id == ID_BMS_TEMPERATURES) { // Used temporarily while we have an external temperature monitor ECU
             bms_temperatures.load(msg.buf);
             //bms_status.set_discharge_overtemp(false);  // RESET these values, then check below if they should be set again
@@ -193,17 +195,18 @@ void loop() {
 
         if (msg.id == ID_FH_WATCHDOG_TEST) { // stop sending pulse to watchdog timer
             fh_watchdog_test = true;
+            //Serial.println("FH watchdog test");
         }
     }
 
     if (timer_process_cells.check()) {
         // poll_cell_voltage(); No need to print this twice
-        process_voltages(); // polls controller, and store data in bms_voltages object.
+        //process_voltages(); // polls controller, and store data in bms_voltages object.
         //bms_voltages.set_low(37408); // DEBUG Remove before final code
         //balance_cells();
-        process_cell_temps(); // store data in bms_temperatures object.
-        process_onboard_temps();
-        process_current(); // store data in bms_status object.
+        //process_cell_temps(); // store data in bms_temperatures object.
+        //process_onboard_temps();
+        //process_current(); // store data in bms_status object.
         print_uptime();
         print_temperatures();
 
@@ -257,9 +260,13 @@ void loop() {
         CAN.write(msg);*/
     }
 
-    if (timer_watchdog_timer.check() && !fh_watchdog_test) { // Send alternating keepalive signal to watchdog timer
+    if (timer_watchdog_timer.check() && !fh_watchdog_test) { // Send alternating keepalive signal to watchdog timer   
         watchdog_high = !watchdog_high;
         digitalWrite(WATCHDOG, watchdog_high);
+        Serial.print("set watchdog timer ");
+        Serial.print(watchdog_high);
+        Serial.print(" ");
+        Serial.println(digitalRead(BMS_OK));
     }
 }
 
