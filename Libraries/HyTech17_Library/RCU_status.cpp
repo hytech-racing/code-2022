@@ -13,10 +13,11 @@ RCU_status::RCU_status(uint8_t buf[8]) {
     load(buf);
 }
 
-RCU_status::RCU_status(uint8_t state, uint8_t flags, uint16_t glv_battery_voltage) {
+RCU_status::RCU_status(uint8_t state, uint8_t flags, uint16_t glv_battery_voltage, int16_t temperature) {
     set_state(state);
     set_flags(flags);
     set_glv_battery_voltage(glv_battery_voltage);
+    set_temperature(temperature);
 }
 
 void RCU_status::load(uint8_t buf[8]) {
@@ -24,12 +25,14 @@ void RCU_status::load(uint8_t buf[8]) {
     memcpy(&(message.state), &buf[0], sizeof(uint8_t));
     memcpy(&(message.flags), &buf[1], sizeof(uint8_t));
     memcpy(&(message.glv_battery_voltage), &buf[2], sizeof(uint16_t));
+    memcpy(&(message.temperature), &buf[4], sizeof(int16_t));
 }
 
 void RCU_status::write(uint8_t buf[8]) {
     memcpy(&buf[0], &(message.state), sizeof(uint8_t));
     memcpy(&buf[1], &(message.flags), sizeof(uint8_t));
     memcpy(&buf[2], &(message.glv_battery_voltage), sizeof(uint16_t));
+    memcpy(&buf[4], &(message.temperature), sizeof(int16_t));
 }
 
 uint8_t RCU_status::get_state() {
@@ -60,6 +63,10 @@ uint16_t RCU_status::get_glv_battery_voltage() {
     return message.glv_battery_voltage;
 }
 
+int16_t RCU_status::get_temperature() {
+    return message.temperature;
+}
+
 void RCU_status::set_state(uint8_t state) {
     message.state = state;
 }
@@ -86,4 +93,8 @@ void RCU_status::set_inverter_powered(bool inverter_powered) {
 
 void RCU_status::set_glv_battery_voltage(uint16_t glv_battery_voltage) {
     message.glv_battery_voltage = glv_battery_voltage;
+}
+
+void RCU_status::set_temperature(int16_t temperature) {
+    message.temperature = temperature;
 }
