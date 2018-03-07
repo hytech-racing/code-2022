@@ -3,11 +3,6 @@
 
 #define MESSAGE_LENGTH 15
 
-xbee_rcv_thread::xbee_rcv_thread(QObject *parent, QString port) : QThread(parent) {
-    QByteArray portba = port.toLatin1();
-    this->xbee_device = this->configure_port(open(portba.data(), O_NOCTTY));
-}
-
 xbee_rcv_thread::~xbee_rcv_thread() {
     close(this->xbee_device);
 }
@@ -19,7 +14,6 @@ void xbee_rcv_thread::run() {
         int id = 0;
         // CAN message
         uint8_t message[8];
-        std::cout << "Serial port initialized" << std::endl;
         unsigned char c;
         int result = read(xbee_device, &c, 1);
         int index = 0;
@@ -64,7 +58,9 @@ void xbee_rcv_thread::run() {
     }
 }
 
-int xbee_rcv_thread::configure_port(int fd) {
+int xbee_rcv_thread::configure_port(QString port) {
+    QByteArray portba = port.toLatin1();
+    int fd = open(portba.data(), O_NOCTTY);
     struct termios port_settings;      // structure to store the port settings in
 
     cfsetispeed(&port_settings, B115200);    // set baud rates
@@ -77,5 +73,9 @@ int xbee_rcv_thread::configure_port(int fd) {
     port_settings.c_cflag |= CRTSCTS;
 
     tcsetattr(fd, TCSANOW, &port_settings);    // apply the settings to the port
+
+    std::cout << "Serial port initialized" << std::endl;
+    this->xbee_device = fd;
+
     return(fd);
 }

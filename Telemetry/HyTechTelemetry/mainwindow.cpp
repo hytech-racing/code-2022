@@ -1,6 +1,5 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "xbee_rcv_thread.h"
 #include <QInputDialog>
 #include <QMessageBox>
 
@@ -16,16 +15,17 @@ MainWindow::MainWindow(QWidget *parent) :
                                                 tr("Enter serial port:"), QLineEdit::Normal,
                                                 tr("/dev/cu."), &ok);
     if (ok && !serial_port.isEmpty()) {
-        xbee_rcv_thread worker(this, serial_port);
-        worker.start();
-        connect(&worker, SIGNAL(updated(quint32, quint8, QByteArray)),
+        worker_thread.configure_port(serial_port);
+        worker_thread.start();
+        connect(&worker_thread, SIGNAL(updated(quint32, quint8, QByteArray)),
                 this, SLOT(on_update(quint32,quint8,QByteArray)));
-        connect(&worker, SIGNAL(xbee_error(QByteArray)), this, SLOT(on_error(QByteArray)));
+        connect(&worker_thread, SIGNAL(xbee_error(QByteArray)), this, SLOT(on_error(QByteArray)));
     }
 }
 
 MainWindow::~MainWindow()
 {
+    worker_thread.quit();
     delete ui;
 }
 
