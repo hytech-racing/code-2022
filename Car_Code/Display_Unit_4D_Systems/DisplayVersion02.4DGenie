@@ -59,14 +59,14 @@ Gauge
     Maxvalue                     100
     Minvalue                     0
     Orientation                  Horizontal
-    Palette1.High                clLime
-    Palette1.Low                 0x005100
+    Palette1.High                RED
+    Palette1.Low                 0x000027
     Palette2.High                clYellow
-    Palette2.Low                 0x005151
-    Palette3.High                clRed
-    Palette3.Low                 0x000051
-    Percent1                     60
-    Percent2                     25
+    Palette2.Low                 0x002526
+    Palette3.High                LIME
+    Palette3.Low                 0x001E00
+    Percent1                     20
+    Percent2                     30
     Spacing                      1
     Step                         1
     Style                        BottomLeft
@@ -108,7 +108,7 @@ LedDigits
     Left                         16
     OutlineColor                 BLACK
     Palette.High                 clLime
-    Palette.Low                  0x005100
+    Palette.Low                  BLACK
     Top                          128
     Width                        45
     OnChanged                    ''
@@ -137,7 +137,7 @@ LedDigits
     Left                         80
     OutlineColor                 BLACK
     Palette.High                 YELLOW
-    Palette.Low                  0x009394
+    Palette.Low                  BLACK
     Top                          128
     Width                        46
     OnChanged                    ''
@@ -206,7 +206,7 @@ Coolgauge
     Left                         140
     Logarithmic                  No
     LogarithmicBase              10
-    MaximumValue                 100
+    MaximumValue                 50
     MinimumValue                 0
     Needle.Color                 0xFFD0AF
     Needle.InnerCenterColor      0xFFD0AF
@@ -268,7 +268,7 @@ LedDigits
     Left                         388
     OutlineColor                 BLACK
     Palette.High                 clLime
-    Palette.Low                  0x005100
+    Palette.Low                  BLACK
     Top                          220
     Width                        76
     OnChanged                    ''
@@ -306,7 +306,7 @@ LedDigits
     Left                         373
     OutlineColor                 BLACK
     Palette.High                 0x0707F9
-    Palette.Low                  0x363FF7
+    Palette.Low                  BLACK
     Top                          36
     Width                        91
     OnChanged                    ''
@@ -344,7 +344,7 @@ LedDigits
     Left                         24
     OutlineColor                 BLACK
     Palette.High                 0x0707F9
-    Palette.Low                  0x363FF7
+    Palette.Low                  BLACK
     Top                          36
     Width                        87
     OnChanged                    ''
