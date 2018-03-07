@@ -202,10 +202,13 @@ void loop() {
                 /*if (abs(torque1 - torque2) * 100 / MAX_TORQUE > 10) { // Second accelerator implausibility check FSAE EV2.3.6
                 fcu_status.set_accelerator_implausibility(true);
                 } else {*/
-                calculated_torque = (int) min(torque1, torque2) * rampRatio;
+                calculated_torque = (int) (min(torque1, torque2) * rampRatio);
 
                 if (rampRatio < 1 && timer_ramp_torque.check()) {
-                  rampRatio += 0.1;
+                   rampRatio += 0.1;
+                   if (rampRatio > 1) {
+                      rampRatio = 1;
+                   }
                 }
                 if (debug && timer_debug_raw_torque.check()) {
                     Serial.print("FCU RAW TORQUE: ");
