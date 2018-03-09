@@ -15,8 +15,10 @@
 class xbee_rcv_thread : public QThread {
     Q_OBJECT
 public:
+    xbee_rcv_thread();
     ~xbee_rcv_thread();
     void run();
+    void exec();
     int configure_port(QString port);
     QByteArray xbee_port;
     QByteArray message;

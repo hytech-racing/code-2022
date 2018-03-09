@@ -17,9 +17,10 @@ MainWindow::MainWindow(QWidget *parent) :
     if (ok && !serial_port.isEmpty()) {
         worker_thread.configure_port(serial_port);
         worker_thread.start();
-        connect(&worker_thread, SIGNAL(updated(quint32, quint8, QByteArray)),
-                this, SLOT(on_update(quint32,quint8,QByteArray)));
-        connect(&worker_thread, SIGNAL(xbee_error(QByteArray)), this, SLOT(on_error(QByteArray)));
+        connect(&worker_thread, &xbee_rcv_thread::updated,
+                this, &MainWindow::on_update);
+        connect(&worker_thread, &xbee_rcv_thread::xbee_error,
+                this, &MainWindow::on_error);
     }
 }
 

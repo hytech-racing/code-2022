@@ -3,11 +3,19 @@
 
 #define MESSAGE_LENGTH 15
 
+xbee_rcv_thread::xbee_rcv_thread() {
+    moveToThread(this);
+}
+
 xbee_rcv_thread::~xbee_rcv_thread() {
     close(this->xbee_device);
 }
 
 void xbee_rcv_thread::run() {
+    exec();
+}
+
+void xbee_rcv_thread::exec() {
     if (this->xbee_device != -1) {
         uint8_t read_buf[MESSAGE_LENGTH+2];
         // CAN id
@@ -56,6 +64,7 @@ void xbee_rcv_thread::run() {
         }
         emit xbee_error(strerror(errno));
     }
+    emit xbee_error(strerror(errno));
 }
 
 int xbee_rcv_thread::configure_port(QString port) {
