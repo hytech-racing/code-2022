@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>640</width>
-    <height>443</height>
+    <width>557</width>
+    <height>609</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -64,7 +64,10 @@
       <enum>QFrame::Raised</enum>
      </property>
      <property name="smallDecimalPoint">
-      <bool>false</bool>
+      <bool>true</bool>
+     </property>
+     <property name="digitCount">
+      <number>6</number>
      </property>
      <property name="segmentStyle">
       <enum>QLCDNumber::Flat</enum>
@@ -93,7 +96,10 @@
       </rect>
      </property>
      <property name="smallDecimalPoint">
-      <bool>false</bool>
+      <bool>true</bool>
+     </property>
+     <property name="digitCount">
+      <number>6</number>
      </property>
      <property name="segmentStyle">
       <enum>QLCDNumber::Flat</enum>
@@ -103,8 +109,8 @@
    <widget class="QGroupBox" name="bms_voltage_group">
     <property name="geometry">
      <rect>
-      <x>20</x>
-      <y>100</y>
+      <x>290</x>
+      <y>10</y>
       <width>241</width>
       <height>151</height>
      </rect>
@@ -141,7 +147,10 @@
       </rect>
      </property>
      <property name="smallDecimalPoint">
-      <bool>false</bool>
+      <bool>true</bool>
+     </property>
+     <property name="digitCount">
+      <number>6</number>
      </property>
      <property name="segmentStyle">
       <enum>QLCDNumber::Flat</enum>
@@ -170,7 +179,10 @@
       </rect>
      </property>
      <property name="smallDecimalPoint">
-      <bool>false</bool>
+      <bool>true</bool>
+     </property>
+     <property name="digitCount">
+      <number>6</number>
      </property>
      <property name="segmentStyle">
       <enum>QLCDNumber::Flat</enum>
@@ -199,7 +211,10 @@
       </rect>
      </property>
      <property name="smallDecimalPoint">
-      <bool>false</bool>
+      <bool>true</bool>
+     </property>
+     <property name="digitCount">
+      <number>6</number>
      </property>
      <property name="segmentStyle">
       <enum>QLCDNumber::Flat</enum>
@@ -228,7 +243,10 @@
       </rect>
      </property>
      <property name="smallDecimalPoint">
-      <bool>false</bool>
+      <bool>true</bool>
+     </property>
+     <property name="digitCount">
+      <number>6</number>
      </property>
      <property name="segmentStyle">
       <enum>QLCDNumber::Flat</enum>
@@ -238,8 +256,8 @@
    <widget class="QGroupBox" name="bms_temps_group">
     <property name="geometry">
      <rect>
-      <x>20</x>
-      <y>250</y>
+      <x>290</x>
+      <y>160</y>
       <width>241</width>
       <height>121</height>
      </rect>
@@ -302,7 +320,10 @@
       </rect>
      </property>
      <property name="smallDecimalPoint">
-      <bool>false</bool>
+      <bool>true</bool>
+     </property>
+     <property name="digitCount">
+      <number>6</number>
      </property>
      <property name="segmentStyle">
       <enum>QLCDNumber::Flat</enum>
@@ -318,7 +339,10 @@
       </rect>
      </property>
      <property name="smallDecimalPoint">
-      <bool>false</bool>
+      <bool>true</bool>
+     </property>
+     <property name="digitCount">
+      <number>6</number>
      </property>
      <property name="segmentStyle">
       <enum>QLCDNumber::Flat</enum>
@@ -334,7 +358,804 @@
       </rect>
      </property>
      <property name="smallDecimalPoint">
-      <bool>false</bool>
+      <bool>true</bool>
+     </property>
+     <property name="digitCount">
+      <number>6</number>
+     </property>
+     <property name="segmentStyle">
+      <enum>QLCDNumber::Flat</enum>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="fcu_group">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>100</y>
+      <width>241</width>
+      <height>81</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="title">
+     <string>FCU Status</string>
+    </property>
+    <widget class="QLabel" name="accel_implausibility_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>30</y>
+       <width>161</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Accelerator Implausibility:</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="brake_implausibility_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>50</y>
+       <width>151</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Brake Implausibility:</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="accel_implausibility">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>180</x>
+       <y>30</y>
+       <width>41</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>OK</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="brake_implausibility">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>180</x>
+       <y>50</y>
+       <width>41</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>OK</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="bms_status_group">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>180</y>
+      <width>241</width>
+      <height>171</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="title">
+     <string>BMS Status</string>
+    </property>
+    <widget class="QLabel" name="current_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>30</y>
+       <width>60</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Current:</string>
+     </property>
+    </widget>
+    <widget class="QLCDNumber" name="current">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>30</y>
+       <width>64</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="smallDecimalPoint">
+      <bool>true</bool>
+     </property>
+     <property name="digitCount">
+      <number>6</number>
+     </property>
+     <property name="segmentStyle">
+      <enum>QLCDNumber::Flat</enum>
+     </property>
+    </widget>
+    <widget class="QLabel" name="overvoltage_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>60</y>
+       <width>111</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Cell Overvoltage:</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="undervoltage_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>80</y>
+       <width>111</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Cell Undervoltage:</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="total_voltage_label_2">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>100</y>
+       <width>111</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Total Voltage:</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="charge_current_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>120</y>
+       <width>101</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Charge Current:</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="bms_temperature_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>140</y>
+       <width>101</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Temperature:</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="cell_overvoltage">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>170</x>
+       <y>60</y>
+       <width>51</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>OK</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="cell_undervoltage">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>170</x>
+       <y>80</y>
+       <width>51</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>OK</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="bms_total_voltage">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>170</x>
+       <y>100</y>
+       <width>51</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>OK</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="charge_current">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>170</x>
+       <y>120</y>
+       <width>51</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>OK</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="bms_temperature">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>170</x>
+       <y>140</y>
+       <width>51</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>OK</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="mc_status_group">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>350</y>
+      <width>241</width>
+      <height>181</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="title">
+     <string>Motor Controller Status</string>
+    </property>
+    <widget class="QLabel" name="vsm_state_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>30</y>
+       <width>71</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>VSM State:</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="vsm_state">
+     <property name="geometry">
+      <rect>
+       <x>109</x>
+       <y>30</y>
+       <width>111</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Loading...</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="inverter_state_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>50</y>
+       <width>91</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Inverter State:</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="inverter_state">
+     <property name="geometry">
+      <rect>
+       <x>109</x>
+       <y>50</y>
+       <width>111</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Loading...</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="discharge_state_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>70</y>
+       <width>101</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Discharge State:</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="discharge_state">
+     <property name="geometry">
+      <rect>
+       <x>119</x>
+       <y>70</y>
+       <width>101</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Loading...</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="inverter_enabled_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>90</y>
+       <width>111</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Inverter Enabled:</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="inverter_enabled">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>90</y>
+       <width>60</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>NO</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="inverter_lockout_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>110</y>
+       <width>111</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Inverter Lockout:</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="inverter_lockout">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>110</y>
+       <width>60</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>NO</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="mc_post_fault_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>130</y>
+       <width>81</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>POST Fault:</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="mc_post_fault">
+     <property name="geometry">
+      <rect>
+       <x>99</x>
+       <y>130</y>
+       <width>121</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>None</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="mc_run_fault_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>150</y>
+       <width>60</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Run Fault:</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="mc_run_fault">
+     <property name="geometry">
+      <rect>
+       <x>100</x>
+       <y>150</y>
+       <width>121</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>None</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="mc_voltages_group">
+    <property name="geometry">
+     <rect>
+      <x>290</x>
+      <y>280</y>
+      <width>241</width>
+      <height>161</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="title">
+     <string>Motor Controller Voltages</string>
+    </property>
+    <widget class="QLabel" name="dc_bus_voltage_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>30</y>
+       <width>101</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>DC Bus Voltage:</string>
+     </property>
+    </widget>
+    <widget class="QLCDNumber" name="dc_bus_voltage">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>30</y>
+       <width>64</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="smallDecimalPoint">
+      <bool>true</bool>
+     </property>
+     <property name="digitCount">
+      <number>6</number>
+     </property>
+     <property name="segmentStyle">
+      <enum>QLCDNumber::Flat</enum>
+     </property>
+    </widget>
+    <widget class="QLabel" name="output_voltage_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>60</y>
+       <width>101</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Output Voltage:</string>
+     </property>
+    </widget>
+    <widget class="QLCDNumber" name="output_voltage">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>60</y>
+       <width>64</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="smallDecimalPoint">
+      <bool>true</bool>
+     </property>
+     <property name="digitCount">
+      <number>6</number>
+     </property>
+     <property name="segmentStyle">
+      <enum>QLCDNumber::Flat</enum>
+     </property>
+    </widget>
+    <widget class="QLabel" name="phase_ab_voltage_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>90</y>
+       <width>121</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Phase A/B Voltage:</string>
+     </property>
+    </widget>
+    <widget class="QLCDNumber" name="phase_ab_voltage">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>90</y>
+       <width>64</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="smallDecimalPoint">
+      <bool>true</bool>
+     </property>
+     <property name="digitCount">
+      <number>6</number>
+     </property>
+     <property name="segmentStyle">
+      <enum>QLCDNumber::Flat</enum>
+     </property>
+    </widget>
+    <widget class="QLabel" name="phase_bc_voltage_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>120</y>
+       <width>121</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Phase B/C Voltage:</string>
+     </property>
+    </widget>
+    <widget class="QLCDNumber" name="phase_bc_voltage">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>120</y>
+       <width>64</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="smallDecimalPoint">
+      <bool>true</bool>
+     </property>
+     <property name="digitCount">
+      <number>6</number>
+     </property>
+     <property name="segmentStyle">
+      <enum>QLCDNumber::Flat</enum>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QGroupBox" name="mc_temperature_group">
+    <property name="geometry">
+     <rect>
+      <x>290</x>
+      <y>440</y>
+      <width>241</width>
+      <height>91</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="title">
+     <string>Motor Controller Temperatures</string>
+    </property>
+    <widget class="QLabel" name="gate_driver_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>30</y>
+       <width>121</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Gate Driver Board:</string>
+     </property>
+    </widget>
+    <widget class="QLCDNumber" name="gate_driver">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>30</y>
+       <width>64</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="smallDecimalPoint">
+      <bool>true</bool>
+     </property>
+     <property name="digitCount">
+      <number>6</number>
+     </property>
+     <property name="segmentStyle">
+      <enum>QLCDNumber::Flat</enum>
+     </property>
+    </widget>
+    <widget class="QLabel" name="motor_temp_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>60</y>
+       <width>131</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Motor Temperature:</string>
+     </property>
+    </widget>
+    <widget class="QLCDNumber" name="motor_temp">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>60</y>
+       <width>64</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="smallDecimalPoint">
+      <bool>true</bool>
+     </property>
+     <property name="digitCount">
+      <number>6</number>
      </property>
      <property name="segmentStyle">
       <enum>QLCDNumber::Flat</enum>
@@ -347,7 +1168,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>640</width>
+     <width>557</width>
      <height>22</height>
     </rect>
    </property>
