@@ -89,9 +89,9 @@ void MainWindow::on_update(quint32 id, quint8 length, QByteArray msg) {
 }
 
 void MainWindow::set_label(QLabel *label, int status, QString text) {
-    if (status == 0) { // normal
+    if (status == 0) {              // normal
         label->setStyleSheet("QLabel {color: black;}");
-    } else if (status == 1) { // error
+    } else if (status == 1) {       // error
         label->setStyleSheet("QLabel {color: red;}");
     }
     label->setText(text);
