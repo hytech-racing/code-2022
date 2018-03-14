@@ -23,6 +23,7 @@ public slots:
     void on_error(QByteArray err_str);
 
 private:
+    void set_label(QLabel label, int status, QString text);
     Ui::MainWindow *ui;
     xbee_rcv_thread worker_thread;
 };
