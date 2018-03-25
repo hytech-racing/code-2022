@@ -46,6 +46,7 @@ Metro timer_btn_start = Metro(10);
 Metro timer_debug = Metro(200);
 Metro timer_debug_raw_torque = Metro(200);
 Metro timer_debug_torque = Metro(200);
+Metro timer_ramp_torque = Metro(100);
 Metro timer_inverter_enable = Metro(2000); // Timeout failed inverter enable
 Metro timer_led_start_blink_fast = Metro(150);
 Metro timer_led_start_blink_slow = Metro(400);
@@ -58,6 +59,7 @@ Metro timer_can_update = Metro(100);
  */
 FCU_status fcu_status;
 FCU_readings fcu_readings;
+RCU_status rcu_status;
 
 bool btn_start_debouncing = false;
 uint8_t btn_start_new = 0;
@@ -65,6 +67,7 @@ bool btn_start_pressed = false;
 bool debug = true;
 bool led_start_active = false;
 uint8_t led_start_type = 0; // 0 for off, 1 for steady, 2 for fast blink, 3 for slow blink
+float rampRatio = 1;
 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
@@ -100,7 +103,7 @@ void loop() {
         // Handle RCU status messages
         if (msg.id == ID_RCU_STATUS) {
             // Load message into RCU_status object
-            RCU_status rcu_status(msg.buf);
+            rcu_status.load(msg.buf);
             digitalWrite(LED_BMS, !rcu_status.get_bms_ok_high());
             if (!rcu_status.get_bms_ok_high()) {
                 Serial.println("RCU BMS FAULT: detected");
@@ -199,7 +202,14 @@ void loop() {
                 /*if (abs(torque1 - torque2) * 100 / MAX_TORQUE > 10) { // Second accelerator implausibility check FSAE EV2.3.6
                 fcu_status.set_accelerator_implausibility(true);
                 } else {*/
-                calculated_torque = min(torque1, torque2);
+                calculated_torque = (int) (min(torque1, torque2) * rampRatio);
+
+                if (rampRatio < 1 && timer_ramp_torque.check()) {
+                   rampRatio += 0.1;
+                   if (rampRatio > 1) {
+                      rampRatio = 1;
+                   }
+                }
                 if (debug && timer_debug_raw_torque.check()) {
                     Serial.print("FCU RAW TORQUE: ");
                     Serial.println(calculated_torque);
@@ -223,6 +233,16 @@ void loop() {
 
             if (fcu_status.get_brake_implausibility() || fcu_status.get_accelerator_implausibility()) {
                 // Implausibility exists, command 0 torque
+                calculated_torque = 0;
+                rampRatio = 0;
+            }
+
+            // FSAE FMEA specifications
+            if (!rcu_status.get_bms_ok_high()) {
+                calculated_torque = 0;
+            }
+            
+            if (!rcu_status.get_imd_okhs_high()) {
                 calculated_torque = 0;
             }
             
