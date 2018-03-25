@@ -49,11 +49,10 @@
 /*
  * Constant definitions
  */
-#define TOTAL_IC 4
-#define TOTAL_CELLS 9
+#define TOTAL_IC 6
+#define CELLS_PER_IC 9
 #define THERMISTORS_PER_IC 3
 #define PCB_THERM_PER_IC 2
-#define TOTAL_SEGMENTS 2
 #define THERMISTOR_RESISTOR_VALUE 10000
 
 /*
@@ -67,9 +66,9 @@ Metro timer_watchdog_timer = Metro(250);
 /*
  * Global variables
  */
-short voltage_cutoff_low = 2980;
-short voltage_cutoff_high = 4200;
-short total_voltage_cutoff = 150;
+short voltage_cutoff_low = 29800; // 2.9800V
+short voltage_cutoff_high = 42000; // 4.2000V
+short total_voltage_cutoff = 15000; // 150.00V
 short discharge_current_constant_high = 22000; // 220.00A
 short charge_current_constant_high = -10000; // 100.00A // TODO take into account max charge allowed for regen, 100A is NOT NOMINALLY ALLOWED!
 short charge_temp_critical_high = 4400; // 44.00C
@@ -88,8 +87,8 @@ uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
       * Thermistor 2
       * Thermistor 3
       */
-int16_t cell_delta_voltage[TOTAL_IC][TOTAL_CELLS]; // keep track of which cells are being discharged
-int16_t ignore_cell[TOTAL_IC][TOTAL_CELLS]; //cells to be ignored for Balance testing
+int16_t cell_delta_voltage[TOTAL_IC][CELLS_PER_IC]; // keep track of which cells are being discharged
+int16_t ignore_cell[TOTAL_IC][CELLS_PER_IC]; //cells to be ignored for Balance testing
 
 /*!<
   The tx_cfg[][6] store the LTC6804 configuration data that is going to be written
@@ -112,8 +111,7 @@ static CAN_message_t msg;
 /**
  * BMS State Variables
  */
-//BMS_detailed_temperatures bms_detailed_temperatures[TOTAL_SEGMENTS]; // TODO write individual temperatures here for CAN bus
-BMS_detailed_voltages bms_detailed_voltages[TOTAL_SEGMENTS][3];
+BMS_detailed_voltages bms_detailed_voltages[TOTAL_IC][3];
 BMS_status bms_status;
 BMS_temperatures bms_temperatures;
 BMS_detailed_temperatures bms_detailed_temperatures[TOTAL_IC];
@@ -148,7 +146,7 @@ void setup() {
     initialize(); // Call our modified initialize function instead of the default Linear function
     init_cfg(); // Initialize and write configuration registers to LTC6804 chips
     poll_cell_voltage();
-    memcpy(cell_delta_voltage, cell_voltages, 2 * TOTAL_IC * TOTAL_CELLS);
+    memcpy(cell_delta_voltage, cell_voltages, 2 * TOTAL_IC * CELLS_PER_IC);
     bms_status.set_state(BMS_STATE_CHARGING);
     Serial.println("Setup Complete!");
 
@@ -200,12 +198,11 @@ void loop() {
     }
 
     if (timer_process_cells.check()) {
-        // poll_cell_voltage(); No need to print this twice
-        //process_voltages(); // polls controller, and store data in bms_voltages object.
+        process_voltages(); // polls controller, and store data in bms_voltages object.
         //bms_voltages.set_low(37408); // DEBUG Remove before final code
-        //balance_cells();
-        //process_cell_temps(); // store data in bms_temperatures object.
-        //process_onboard_temps();
+        balance_cells();
+        process_cell_temps(); // store data in bms_temperatures object.
+        process_onboard_temps();
         //process_current(); // store data in bms_status object.
         print_uptime();
         print_temperatures();
@@ -247,7 +244,7 @@ void loop() {
 
         msg.id = ID_BMS_DETAILED_VOLTAGES;
         msg.len = sizeof(CAN_message_bms_detailed_voltages_t);
-        for (int i = 0; i < TOTAL_SEGMENTS; i++) {
+        for (int i = 0; i < TOTAL_IC; i++) {
             for (int j = 0; j < 3; j++) {
                 bms_detailed_voltages[i][j].write(msg.buf);
                 CAN.write(msg);
@@ -263,10 +260,10 @@ void loop() {
     if (timer_watchdog_timer.check() && !fh_watchdog_test) { // Send alternating keepalive signal to watchdog timer   
         watchdog_high = !watchdog_high;
         digitalWrite(WATCHDOG, watchdog_high);
-        Serial.print("set watchdog timer ");
+        /*Serial.print("set watchdog timer ");
         Serial.print(watchdog_high);
         Serial.print(" ");
-        Serial.println(digitalRead(BMS_OK));
+        Serial.println(digitalRead(BMS_OK));*/
     }
 }
 
@@ -305,7 +302,10 @@ void discharge_cell(int ic, int cell) {
 }
 
 void discharge_cell(int ic, int cell, bool setDischarge) {
-    if (ic < TOTAL_IC && cell < TOTAL_CELLS) {
+    if (ic < TOTAL_IC && cell < CELLS_PER_IC) {
+        if (cell > 4) {
+            cell++; // Increment cell, skipping the disconnected C5. This abstracts the missing cell from the rest of the program.
+        }
         if (cell < 8) {
             if(setDischarge) {
                 tx_cfg[ic][4] = tx_cfg[ic][4] | (0b1 << cell); 
@@ -353,7 +353,7 @@ void stop_discharge_all() {
 void balance_cells() {
   if (bms_voltages.get_low() > voltage_cutoff_low) {
       for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
-          for (int cell = 0; cell < TOTAL_CELLS; cell++) { // Loop through cells
+          for (int cell = 0; cell < CELLS_PER_IC; cell++) { // Loop through cells
               if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
                   uint16_t cell_voltage = cell_voltages[ic][cell]; // current cell voltage in mV
                   if (cell_discharging[ic][cell]) {
@@ -386,21 +386,27 @@ void poll_cell_voltage() {
     if (error == -1) {
         Serial.println("A PEC error was detected in cell voltage data");
     }
+    // Move C7-C10 down by one in the array, skipping C6. This abstracts the missing cell from the rest of the program.
+    for (int i=0; i<TOTAL_IC; i++) { // Loop through ICs
+        for (int j=6; j<10; j++) { // Loop through C7-C10
+            cell_voltages[i][j-1] = cell_voltages[i][j];
+        }
+    }
     print_cells(); // Print the cell voltages to Serial.
 }
 
 void process_voltages() {
-    poll_cell_voltage(); // cell_voltages[] array populated with cell voltages now.
-    double totalVolts = 0; // stored as double volts
+    poll_cell_voltage(); // cell_voltages[] array populated with cell voltages after this
+    uint32_t totalVolts = 0; // stored in 10 mV units
     uint16_t maxVolt = cell_voltages[0][0]; // stored in 0.1 mV units
     uint16_t minVolt = cell_voltages[0][0]; // stored in 0.1 mV units
-    double avgVolt = 0; // stored as double volts
+    uint16_t avgVolt = 0; // stored in 0.1 mV units
     int maxIC = 0;
     int maxCell = 0;
     int minIC = 0;
     int minCell = 0;
     for (int ic = 0; ic < TOTAL_IC; ic++) {
-        for (int cell = 0; cell < TOTAL_CELLS; cell++) {
+        for (int cell = 0; cell < CELLS_PER_IC; cell++) {
             bms_detailed_voltages[ic][cell / 3].set_voltage(cell % 3, cell_voltages[ic][cell]); // Populate CAN message struct
             if (!ignore_cell[ic][cell]) {
                 uint16_t currentCell = cell_voltages[ic][cell];
@@ -415,15 +421,15 @@ void process_voltages() {
                     minIC = ic;
                     minCell = cell;
                 }
-                totalVolts += currentCell * 0.0001;
+                totalVolts += currentCell;
             }
         }
     }
-    avgVolt = totalVolts / (TOTAL_IC * TOTAL_CELLS); // stored as double volts
-    bms_voltages.set_average(static_cast<uint16_t>(avgVolt * 1000 + 0.5)); // stored in millivolts
-    bms_voltages.set_total(static_cast<uint16_t>(totalVolts + 0.5)); // number is in units volts
+    avgVolt = totalVolts / (TOTAL_IC * CELLS_PER_IC); // stored in 0.1 mV units
+    bms_voltages.set_average(avgVolt);
     bms_voltages.set_low(minVolt);
     bms_voltages.set_high(maxVolt);
+    bms_voltages.set_total(totalVolts);
 
     // TODO: Low and High voltage error checking.
 
@@ -431,7 +437,7 @@ void process_voltages() {
     //bms_status.set_undervoltage(false);
     //bms_status.set_total_voltage_high(false);
 
-    if (bms_voltages.get_high() > voltage_cutoff_high*10) {
+    if (bms_voltages.get_high() > voltage_cutoff_high) {
         if (first_fault_overvoltage) {
             bms_status.set_overvoltage(true); // TODO may need to comment this out for now when driving due to 65535 errors
         }
@@ -463,8 +469,8 @@ void process_voltages() {
         Serial.println("VOLTAGE FAULT!!!!!!!!!!!!!!!!!!!");
     }
 
-    Serial.print("Average: "); Serial.println(avgVolt, 4);
-    Serial.print("Total: "); Serial.println(totalVolts, 4);
+    Serial.print("Average: "); Serial.println(avgVolt / (double) 1e4, 4);
+    Serial.print("Total: "); Serial.println(totalVolts / (double) 1e2, 4);
     Serial.print("Min: "); Serial.println(minVolt / (double) 1e4, 4);
     Serial.print("Max: "); Serial.println(maxVolt / (double) 1e4, 4);
 }
@@ -734,8 +740,8 @@ int update_constraints(uint8_t address, short value) {
 void print_cells() {
     for (int current_ic = 0; current_ic < TOTAL_IC; current_ic++) {
         Serial.print("IC: ");
-        Serial.println(current_ic+1);
-        for (int i = 0; i < TOTAL_CELLS; i++) {
+        Serial.println(current_ic);
+        for (int i = 0; i < CELLS_PER_IC; i++) {
             Serial.print("C"); Serial.print(i);
             if (ignore_cell[current_ic][i]) {
                 Serial.print(" IGNORED CELL ");
@@ -757,7 +763,7 @@ void print_cells() {
 void print_aux() {
     for (int current_ic = 0; current_ic < TOTAL_IC; current_ic++) {
         Serial.print("IC: ");
-        Serial.println(current_ic + 1);
+        Serial.println(current_ic);
         for (int i = 0; i < 6; i++) {
             Serial.print("Aux-"); Serial.print(i+1); Serial.print(": ");
             float voltage = aux_voltages[current_ic][i] * 0.0001;

@@ -116,7 +116,7 @@ Copyright 2013 Linear Technology Corp. (LTC)
 #include "LTC68042.h"
 #include <SPI.h>
 
-const uint8_t TOTAL_IC = 4;//!<number of ICs in the isoSPI network LTC6804-2 ICs must be addressed in ascending order starting at 0.
+const uint8_t TOTAL_IC = 8;//!<number of ICs in the isoSPI network LTC6804-2 ICs must be addressed in ascending order starting at 0.
 
 /******************************************************
  *** Global Battery Variables received from 6804 commands
