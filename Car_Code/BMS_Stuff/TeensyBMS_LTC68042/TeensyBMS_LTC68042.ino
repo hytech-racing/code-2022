@@ -53,6 +53,7 @@
 #define CELLS_PER_IC 9
 #define THERMISTORS_PER_IC 3
 #define PCB_THERM_PER_IC 2
+#define TOTAL_CELLS 18 // Number of non-ignored cells (used for calculating averages)
 #define THERMISTOR_RESISTOR_VALUE 10000
 
 /*
@@ -66,15 +67,15 @@ Metro timer_watchdog_timer = Metro(250);
 /*
  * Global variables
  */
-short voltage_cutoff_low = 29800; // 2.9800V
-short voltage_cutoff_high = 42000; // 4.2000V
-short total_voltage_cutoff = 15000; // 150.00V
-short discharge_current_constant_high = 22000; // 220.00A
-short charge_current_constant_high = -10000; // 100.00A // TODO take into account max charge allowed for regen, 100A is NOT NOMINALLY ALLOWED!
-short charge_temp_critical_high = 4400; // 44.00C
-short discharge_temp_critical_high = 6000; // 60.00C
-short temp_critical_low = 0; // 0C
-short voltage_difference_threshold = 500; // 5.00V
+uint16_t voltage_cutoff_low = 29800; // 2.9800V
+uint16_t voltage_cutoff_high = 42000; // 4.2000V
+uint16_t total_voltage_cutoff = 15000; // 150.00V
+uint16_t discharge_current_constant_high = 22000; // 220.00A
+uint16_t charge_current_constant_high = -10000; // 100.00A // TODO take into account max charge allowed for regen, 100A is NOT NOMINALLY ALLOWED!
+uint16_t charge_temp_critical_high = 4400; // 44.00C
+uint16_t discharge_temp_critical_high = 6000; // 60.00C
+uint16_t temp_critical_low = 0; // 0C
+uint16_t voltage_difference_threshold = 500; // 5.00V
 
 bool first_fault_overvoltage = false; // Wait for 2 voltage faults in a row before shutting off BMS
 bool first_fault_undervoltage = false;
@@ -151,10 +152,11 @@ void setup() {
     Serial.println("Setup Complete!");
 
     // DEBUG Code for testing cell packs
-    /*ignore_cell[0][3] = true;
-    ignore_cell[0][4] = true;
-    ignore_cell[0][5] = true;
-    ignore_cell[0][6] = true;*/
+    for (int i=0; i<4; i++) {
+        for (int j=0; j<9; j++) {
+            ignore_cell[i][j] = true; // Ignore ICs 0-3
+        }
+    }
 }
 
 // TODO Implement Coulomb counting to track state of charge of battery.
@@ -200,9 +202,9 @@ void loop() {
     if (timer_process_cells.check()) {
         process_voltages(); // polls controller, and store data in bms_voltages object.
         //bms_voltages.set_low(37408); // DEBUG Remove before final code
-        balance_cells();
-        process_cell_temps(); // store data in bms_temperatures object.
-        process_onboard_temps();
+        //balance_cells();
+        process_cell_temps(); // store data in bms_temperatures and bms_detailed_temperatures
+        process_onboard_temps(); // store data in bms_onboard_temperatures and bms_onboard_detailed_temperatures
         //process_current(); // store data in bms_status object.
         print_uptime();
         print_temperatures();
@@ -398,8 +400,8 @@ void poll_cell_voltage() {
 void process_voltages() {
     poll_cell_voltage(); // cell_voltages[] array populated with cell voltages after this
     uint32_t totalVolts = 0; // stored in 10 mV units
-    uint16_t maxVolt = cell_voltages[0][0]; // stored in 0.1 mV units
-    uint16_t minVolt = cell_voltages[0][0]; // stored in 0.1 mV units
+    uint16_t maxVolt = 0; // stored in 0.1 mV units
+    uint16_t minVolt = 65535; // stored in 0.1 mV units
     uint16_t avgVolt = 0; // stored in 0.1 mV units
     int maxIC = 0;
     int maxCell = 0;
@@ -425,7 +427,8 @@ void process_voltages() {
             }
         }
     }
-    avgVolt = totalVolts / (TOTAL_IC * CELLS_PER_IC); // stored in 0.1 mV units
+    avgVolt = totalVolts / TOTAL_CELLS; // stored in 0.1 mV units
+    totalVolts /= 100; // convert 0.1mV units down to 10mV units
     bms_voltages.set_average(avgVolt);
     bms_voltages.set_low(minVolt);
     bms_voltages.set_high(maxVolt);
@@ -473,6 +476,7 @@ void process_voltages() {
     Serial.print("Total: "); Serial.println(totalVolts / (double) 1e2, 4);
     Serial.print("Min: "); Serial.println(minVolt / (double) 1e4, 4);
     Serial.print("Max: "); Serial.println(maxVolt / (double) 1e4, 4);
+    Serial.println();
 }
 
 void poll_aux_voltage() {
@@ -609,6 +613,8 @@ void process_onboard_temps() {
     bms_onboard_temperatures.set_high_temperature((int16_t) highTemp);
     bms_onboard_temperatures.set_average_temperature((int16_t) avgTemp);
 
+    // TODO don't fault the BMS based on onboard thermistors, but do disable balancing
+
     //bms_status.set_discharge_overtemp(false); // RESET these values, then check below if they should be set again
     //bms_status.set_charge_overtemp(false);
     
@@ -705,7 +711,7 @@ void process_current() {
 /*
  * Update maximum and minimum allowed voltage, current, temperature, etc.
  */
-int update_constraints(uint8_t address, short value) {
+int update_constraints(uint8_t address, uint16_t value) {
     switch(address) {
         case 0: // voltage_cutoff_low
             voltage_cutoff_low = value;
@@ -744,7 +750,7 @@ void print_cells() {
         for (int i = 0; i < CELLS_PER_IC; i++) {
             Serial.print("C"); Serial.print(i);
             if (ignore_cell[current_ic][i]) {
-                Serial.print(" IGNORED CELL ");
+                Serial.print(" IGNORED CELL");
             }
             Serial.print(": ");
             float voltage = cell_voltages[current_ic][i] * 0.0001;
