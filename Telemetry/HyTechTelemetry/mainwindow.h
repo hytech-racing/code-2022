@@ -24,6 +24,9 @@ public slots:
 
 private:
     void set_label(QLabel label, int status, QString text);
+    QString vsm_state_to_string(quint8 vsm);
+    QString inverter_state_to_string(quint8 inv);
+    QString discharge_state_to_string(quint8 discharge);
     Ui::MainWindow *ui;
     xbee_rcv_thread worker_thread;
 };

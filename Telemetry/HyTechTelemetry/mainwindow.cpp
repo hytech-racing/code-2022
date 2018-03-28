@@ -79,12 +79,94 @@ void MainWindow::on_update(quint32 id, quint8 length, QByteArray msg) {
 
         ui->current->display(bmss.get_current());   // FIND OUT FORMAT
     }
+    if (id == ID_MC_INTERNAL_STATES) {
+        MC_internal_states mc_states((unsigned char*) msg.data());
+        ui->vsm_state->setText(vsm_state_to_string(mc_states.get_vsm_state()));
+        ui->inverter_state->setText(inverter_state_to_string(mc_states.get_inverter_state()));
+        ui->discharge_state->setText(discharge_state_to_string(mc_states.get_inverter_run_mode()));
+        ui->inverter_enabled->setText(mc_states.get_inverter_enable_state() ? "YES" : "NO");
+        ui->inverter_lockout->setText(mc_states.get_inverter_enable_lockout() ? "YES" : "NO");
+    }
     if (id == ID_BMS_VOLTAGES) {
         BMS_voltages bmsv((unsigned char*) msg.data());
         ui->avg_voltage->display(bmsv.get_average() / 10.0);
         ui->low_voltage->display(bmsv.get_low() / 10.0);
         ui->high_voltage->display(bmsv.get_high() / 10.0);
         ui->total_voltage->display(bmsv.get_total() / 10.0);
+    }
+}
+
+QString MainWindow::vsm_state_to_string(quint8 vsm) {
+    QString result = "";
+    switch (vsm) {
+    case 0:
+        result = "Start";
+        break;
+    case 1:
+        result = "Pre-Charge Init";
+        break;
+    case 2:
+        result = "Pre-Charge Active";
+        break;
+    case 3:
+        result = "Pre-C Complete";
+        break;
+    case 4:
+        result = "Wait";
+        break;
+    case 5:
+        result = "Ready";
+        break;
+    case 6:
+        result = "Running";
+        break;
+    case 7:
+        result = "Fault";
+        break;
+    case 14:
+        result = "Shutdown";
+        break;
+    case 15:
+        result = "Recycle";
+        break;
+    default:
+        result = "VSM State";
+        break;
+    }
+    return result;
+}
+
+QString MainWindow::inverter_state_to_string(quint8 inv) {
+    QString result = "";
+    switch (inv) {
+    case 0:
+        result = "Power On";
+        break;
+    case 1:
+        result = "Stop";
+        break;
+    case 2:
+        result = "Open Loop";
+        break;
+    case 3:
+        result = "Closed Loop";
+        break;
+    case 4:
+        result = "Wait";
+        break;
+    case 5:
+    case 6:
+    case 7:
+    case 10:
+    case 11:
+    case 12:
+        result = "Internal";
+        break;
+    case 8:
+        result = "Idle Run";
+        break;
+    case 9:
+        result = "Idle Stop";
     }
 }
 
