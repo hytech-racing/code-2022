@@ -90,11 +90,11 @@ StaticText
     Font.Name                    Tahoma
     Font.Size                    9
     Font.Style                   []
-    Height                       28
+    Height                       16
     Left                         4
     Top                          196
     Transparent                  Yes
-    Width                        88
+    Width                        80
     WordWrap                     Yes
 end
 LedDigits
@@ -250,11 +250,11 @@ StaticText
     Font.Name                    Tahoma
     Font.Size                    9
     Font.Style                   []
-    Height                       28
+    Height                       19
     Left                         128
     Top                          196
     Transparent                  Yes
-    Width                        105
+    Width                        79
     WordWrap                     Yes
 end
 LedDigits
@@ -288,7 +288,7 @@ StaticText
     Font.Name                    Tahoma
     Font.Size                    9
     Font.Style                   []
-    Height                       28
+    Height                       16
     Left                         264
     Top                          4
     Transparent                  Yes
@@ -364,10 +364,10 @@ StaticText
     Font.Name                    Tahoma
     Font.Size                    9
     Font.Style                   []
-    Height                       28
+    Height                       18
     Left                         0
     Top                          0
     Transparent                  Yes
-    Width                        137
+    Width                        100
     WordWrap                     Yes
 end
