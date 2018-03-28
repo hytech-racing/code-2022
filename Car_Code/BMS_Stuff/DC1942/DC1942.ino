@@ -1,7 +1,7 @@
 /*
  * HyTech 2018 BMS Basic Monitor
  * Init 2018-01-23
- * Configured for Teensy
+ * Configured for Teensy with added testing functionality
  * Based off of DC1942.ino from Linear
  * Modified to support Teensy, and work with 4 parallel ICs
  */
@@ -40,6 +40,15 @@ NOTES
  Menu Entry 7: Start cell voltage measurement loop
     The command will continuously measure the LTC6804 cell voltages and print the results to the serial port.
     The loop can be exited by sending the MCU a 'm' character over the serial link.
+
+ Menu Entry 8: Start aux voltage measurement loop
+    Continuously measure aux voltages.
+
+ Menu Entry 9: Start aux voltage measurement with register clearing loop
+    Continously measure aux voltages, then clear registers, to test if new values are being measured.
+
+ Menu Entry 10: Start cell balancing loop
+    Continuously loops through cells, balancing one cell at a time.
 
 USER INPUT DATA FORMAT:
  decimal : 1024
@@ -107,7 +116,7 @@ Copyright 2013 Linear Technology Corp. (LTC)
 #include "LTC68042.h"
 #include <SPI.h>
 
-const uint8_t TOTAL_IC = 4;//!<number of ICs in the isoSPI network LTC6804-2 ICs must be addressed in ascending order starting at 0.
+const uint8_t TOTAL_IC = 8;//!<number of ICs in the isoSPI network LTC6804-2 ICs must be addressed in ascending order starting at 0.
 
 /******************************************************
  *** Global Battery Variables received from 6804 commands
@@ -154,6 +163,8 @@ uint8_t rx_cfg[TOTAL_IC][8];
 |---------------|---------------|---------------|---------------|---------------|---------------|-----------------|----------------|---------------|---------------|-----------|
 |IC1 CFGR0      |IC1 CFGR1      |IC1 CFGR2      |IC1 CFGR3      |IC1 CFGR4      |IC1 CFGR5      |IC1 PEC High     |IC1 PEC Low     |IC2 CFGR0      |IC2 CFGR1      |  .....    |
 */
+
+uint8_t balance_cell_index = 0;
 
 /*!**********************************************************************
  \brief  Inititializes hardware and variables
@@ -210,6 +221,15 @@ void loop()
  Menu Entry 7: Start cell voltage measurement loop
     The command will continuously measure the LTC6804 cell voltages and print the results to the serial port.
     The loop can be exited by sending the MCU a 'm' character over the serial link.
+
+ Menu Entry 8: Start aux voltage measurement loop
+    Continuously measure aux voltages.
+
+ Menu Entry 9: Start aux voltage measurement with register clearing loop
+    Continously measure aux voltages, then clear registers, to test if new values are being measured.
+
+ Menu Entry 10: Start cell balancing loop
+    Continuously loops through cells, balancing one cell at a time.
 
 *******************************************/
 void run_command(uint16_t cmd)
@@ -297,6 +317,107 @@ void run_command(uint16_t cmd)
       print_menu();
       break;
 
+    case 8:
+      Serial.println("transmit 'm' to quit");
+      wakeup_sleep();
+      LTC6804_wrcfg(TOTAL_IC,tx_cfg);
+      delay(5);
+      while (input != 'm')
+      {
+        if (Serial.available() > 0)
+        {
+          input = read_char();
+        }
+        LTC6804_adax();
+        delay(10);
+        error = LTC6804_rdaux(0,TOTAL_IC,aux_codes); // Set to read back all aux registers
+        if (error == -1)
+        {
+          Serial.println("A PEC error was detected in the received data");
+        }
+        print_aux();
+        delay(1000);
+      }
+      print_menu();
+      break;
+
+    case 9:
+      Serial.println("transmit 'm' to quit");
+      wakeup_sleep();
+      LTC6804_wrcfg(TOTAL_IC,tx_cfg);
+      delay(5);
+      while (input != 'm')
+      {
+        if (Serial.available() > 0)
+        {
+          input = read_char();
+        }
+        LTC6804_adax();
+        delay(10);
+        error = LTC6804_rdaux(0,TOTAL_IC,aux_codes); // Set to read back all aux registers
+        if (error == -1)
+        {
+          Serial.println("A PEC error was detected in the received data");
+        }
+        Serial.println("Reading back newly measured values:");
+        print_aux();
+        // Clear the registers and read back 
+        delay(5);
+        LTC6804_clraux();
+        delay(10);
+        error = LTC6804_rdaux(0,TOTAL_IC,aux_codes); // Set to read back all aux registers
+        if (error == -1)
+        {
+          Serial.println("A PEC error was detected in the received data");
+        }
+        Serial.println("Reading back cleared registers:");
+        print_aux();
+        Serial.println("--------------");
+        delay(1000);
+      }
+      print_menu();
+      break;
+
+    case 10:
+      Serial.println("transmit 'm' to quit");
+      wakeup_sleep();
+      LTC6804_wrcfg(TOTAL_IC,tx_cfg);
+      while (input != 'm')
+      {
+        if (Serial.available() > 0)
+        {
+          input = read_char();
+        }
+        for (int ic = 0; ic < TOTAL_IC; ic++) { // Turn off discharging on previous cell
+          if (balance_cell_index < 8) {
+            tx_cfg[ic][4] = tx_cfg[ic][4] & ~(0b1 << balance_cell_index );
+          } else {
+            tx_cfg[ic][5] = tx_cfg[ic][5] & ~(0b1 << (balance_cell_index - 8)); 
+          }
+        }
+        balance_cell_index = (balance_cell_index + 1) % 12;
+        for (int ic = 0; ic < TOTAL_IC; ic++) { // Turn on discharging on next cell
+          if (balance_cell_index < 8) {
+            tx_cfg[ic][4] = tx_cfg[ic][4] | (0b1 << balance_cell_index);
+          } else {
+            tx_cfg[ic][5] = tx_cfg[ic][5] | (0b1 << (balance_cell_index - 8));
+          }
+        }
+        wakeup_sleep();
+        LTC6804_wrcfg(TOTAL_IC, tx_cfg);
+        Serial.print("Balancing cell ");
+        Serial.println(balance_cell_index);
+        delay(500);
+      }
+      for (int ic = 0; ic < TOTAL_IC; ic++) {
+        tx_cfg[ic][4] = 0;
+        tx_cfg[ic][5] = 0;
+      }
+      wakeup_sleep();
+      LTC6804_wrcfg(TOTAL_IC,tx_cfg);
+      print_menu();
+      break;
+
     default:
       Serial.println("Incorrect Option");
       break;
@@ -331,7 +452,10 @@ void print_menu()
   Serial.println("Read Cell Voltages: 4");
   Serial.println("Start Aux Voltage Conversion: 5");
   Serial.println("Read Aux Voltages: 6");
-  Serial.println("loop cell voltages: 7");
+  Serial.println("Loop Cell Voltages: 7");
+  Serial.println("Loop Aux Voltages: 8");
+  Serial.println("Loop Aux Voltages, clearing after every measurement: 9");
+  Serial.println("Loop Cell Balancing: 10");
   Serial.println("Please enter command: ");
   Serial.println();
 }

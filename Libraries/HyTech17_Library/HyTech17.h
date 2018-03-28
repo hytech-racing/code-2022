@@ -30,11 +30,14 @@
 #define ID_FCU_STATUS 0xD2
 #define ID_FCU_READINGS 0xD3
 #define ID_FCU_RESTART 0xD4
+#define ID_BMS_ONBOARD_TEMPERATURES 0xD5
+#define ID_BMS_ONBOARD_DETAILED_TEMPERATURES 0xD6
 #define ID_BMS_VOLTAGES 0xD7
 #define ID_BMS_DETAILED_VOLTAGES 0xD8
 #define ID_BMS_TEMPERATURES 0xD9
 #define ID_BMS_DETAILED_TEMPERATURES 0xDA
 #define ID_BMS_STATUS 0xDB
+#define ID_FH_WATCHDOG_TEST 0xDC
 #define ID_CCU_STATUS 0xDD
 #define ID_MC_TEMPERATURES_1 0xA0
 #define ID_MC_TEMPERATURES_2 0xA1
@@ -63,6 +66,8 @@
  *
  * A GENERAL_NOTE: The write functions in these classes take a byte array that is meant to be populated
  * with the data contained in the object. The byte array can then be used as the raw CAN buffer.
+ * 
+ * TODO: If you make changes here, make sure to update https://hytechracing.me.gatech.edu/wiki/CAN_Data_Formats
  */
 
 /*
@@ -264,6 +269,54 @@ class BMS_detailed_temperatures {
         void set_temperature(uint8_t temperature_id, int16_t temperature);
     private:
         CAN_message_bms_detailed_temperatures_t message;
+};
+
+typedef struct CAN_message_bms_onboard_temperatures_t {
+    int16_t average_temperature;
+    int16_t low_temperature;
+    int16_t high_temperature;
+} CAN_message_bms_onboard_temperatures_t;
+
+class BMS_onboard_temperatures {
+    public:
+        BMS_onboard_temperatures();
+        BMS_onboard_temperatures(uint8_t buf[]);
+        BMS_onboard_temperatures(int16_t average_temperature, int16_t low_temperature, int16_t high_temperature);
+        void load(uint8_t buf[]);
+        void write(uint8_t buf[]);
+        int16_t get_average_temperature();
+        int16_t get_low_temperature();
+        int16_t get_high_temperature();
+        void set_average_temperature(int16_t average_temperature);
+        void set_low_temperature(int16_t low_temperature);
+        void set_high_temperature(int16_t high_temperature);
+    private:
+        CAN_message_bms_onboard_temperatures_t message;
+};
+
+typedef struct CAN_message_bms_onboard_detailed_temperatures_t {
+	uint8_t ic_id;
+    int16_t temperature_0;
+    int16_t temperature_1;
+} CAN_message_bms_onboard_detailed_temperatures_t;
+
+class BMS_onboard_detailed_temperatures {
+    public:
+        BMS_onboard_detailed_temperatures();
+        BMS_onboard_detailed_temperatures(uint8_t buf[]);
+        BMS_onboard_detailed_temperatures(uint8_t ic_id, int16_t temperature_0, int16_t temperature_1);
+        void load(uint8_t buf[]);
+        void write(uint8_t buf[]);
+        uint8_t get_ic_id();
+        int16_t get_temperature_0();
+        int16_t get_temperature_1();
+        int16_t get_temperature(uint8_t temperature_id);
+        void set_ic_id(uint8_t ic_id);
+        void set_temperature_0(int16_t temperature_0);
+        void set_temperature_1(int16_t temperature_1);
+        void set_temperature(uint8_t temperature_id, int16_t temperature);
+    private:
+        CAN_message_bms_onboard_detailed_temperatures_t message;
 };
 
 typedef struct CAN_message_bms_status_t {
