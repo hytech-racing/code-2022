@@ -1,7 +1,7 @@
 #platform "Gen4-uLCD-43D"
 
 
-// generated 3/6/2018 8:36:09 PM
+// generated 3/8/2018 9:11:32 PM
 
 #MODE FLASHBANK_0
 
@@ -176,8 +176,8 @@
     word rKeyboardRoutines -1
     word oLedDigitsn 16, 2, 1, 22, 0,
                 80, 2, 1, 23, 0,
-                388, 3, 2, 25, 0,
-                373, 4, 3, 22, 0,
+                380, 4, 2, 24, 0,
+                380, 4, 3, 22, 0,
                 24, 4, 3, 21, 0
 #END
 

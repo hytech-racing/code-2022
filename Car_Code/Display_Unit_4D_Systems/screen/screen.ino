@@ -6,9 +6,9 @@
 
  /*
   * There's a possibility that things may not show up because it's not 
-  * the corresponding correct data type. It might also be too bright so 
-  * the lights make it not readable fromt he background
+  * the corresponding correct data type.
   */
+  
 #include <genieArduino.h>
 //#include <stdio.h>
 //#include <stdint.h>
@@ -17,10 +17,10 @@
 #include <FlexCAN.h>
 #include <HyTech17.h>
 
-#ifndef TRUE
-#define TRUE  (1==1)
-#define FALSE  (!TRUE)
-#endif
+//#ifndef TRUE
+//#define TRUE  (1==1)
+//#define FALSE  (!TRUE)
+//#endif
 
 #define RESETLINE 2  // Change this for reset pin
 
@@ -28,11 +28,22 @@
 Genie genie;
 int leddigits0 = 10; //battery temp high
 int leddigits1 = 11; //battery temp low
-int leddigits2 = 12; //Motor temp
-int leddigits3 = 13; // GLV Voltage
-int leddigits4 = 14; //Current Draw
-int gauge0 = 51; // Battery Level
+int leddigits2 = 99*10; //Motor temp
+int leddigits3 = 99*100; // GLV Voltage
+int leddigits4 = 99*100; //Current Draw
+int gauge0 = 69; // Battery Level
 int coolgauge0 = 45; //Speed
+
+//ratio of rotations of gear to wheel: 8:23
+//diameter of wheel: 16in; circumference: 16pi in
+//motor speed*60: rotations per hour; rpm range 0-5000
+//speed = 8.0/23.0 * pi * 16 in * 1.0 mi /63360.0 in
+float rpmratio = 8.0/23.0 * 3.14159 * 16 * 1.0/63360.0 * 60; // rpmrtaio * rotations per hour = mph
+
+/*TESTING PURPOSES*/
+/*********************/
+int incrementspeed = 1;//boolean for animations
+/*********************/
 
 //Message Reading 
 FlexCAN CAN(500000);
@@ -56,6 +67,8 @@ void setup() {
   delay (3500); //let the display start up
 
   genie.WriteContrast(15); 
+
+  
 }
 
 void loop() {
@@ -69,68 +82,96 @@ void loop() {
       MC_motor_position_information motorposition;
       RCU_status rcu_status;
       MC_temperatures_3 mctemp3;
+      BMS_voltages bmsvoltages;
       
       switch(msg.id)
       {
         case ID_MC_CURRENT_INFORMATION: //current draw
+              /*
+              int16_t get_phase_a_current();
+              int16_t get_phase_b_current();
+              int16_t get_phase_c_current();
+              int16_t get_dc_bus_current();
+              */
               MCcurrentInfo = MC_current_information(msg.buf);
-/*
-        int16_t get_phase_a_current();
-        int16_t get_phase_b_current();
-        int16_t get_phase_c_current();
-        int16_t get_dc_bus_current();
-*/
               leddigits4 = MCcurrentInfo.get_phase_a_current();//Current Draw
-              Serial1.print("Current Draw:");
+              leddigits4 = leddigits4*100; //2 decimal points
+              Serial1.print("Current Draw: ");
               Serial1.println(leddigits4);
               break;
         case ID_BMS_TEMPERATURES: //low avg high battery temperature
               BMStemps = BMS_temperatures(msg.buf);
               leddigits0 = BMStemps.get_high_temperature(); //battery temp high
               leddigits1 = BMStemps.get_low_temperature(); //battery temp low
-              Serial1.print("Battery Temperature High:");
+              Serial1.print("Battery Temperature High: ");
               Serial1.println(leddigits0);
-              Serial1.print("Battery Temperature Low:");
+              Serial1.print("Battery Temperature Low: ");
               Serial1.println(leddigits1);
               break;
-        //case BATTERY LEVEL:
+        case ID_BMS_VOLTAGES:
+              bmsvoltages = BMS-voltages(msg.buf)
               //int gauge0 = 50; // Battery Level
               //printf();
-              //break;
+              Serial1.print("Battery Level: ");
+              Serial1.println(gauge0);
+              break;
+
         case ID_MC_MOTOR_POSITION_INFORMATION: //speed (angular velocity)
               //Right Now its only the rotation
               motorposition = MC_motor_position_information(msg.buf);
-              /*
-        int16_t get_motor_angle();
-        int16_t get_motor_speed();
-        int16_t get_electrical_output_frequency();
-        int16_t get_delta_resolver_filtered();
-               */
-              coolgauge0 = motorposition.get_motor_speed();
-              Serial1.print("Motor Speed (Unrefined):");
+              //see rpmratio above for conversion explanation
+              coolgauge0 = rpmratio * motorposition.get_motor_speed();
+              Serial1.print("Motor Speed: ");
               Serial1.println(coolgauge0);
               break;
         case ID_RCU_STATUS: //GLV Voltage
               rcu_status = RCU_status(msg.buf);
-              leddigits3 = rcu_status.get_glv_battery_voltage();
-              Serial1.print("GLV Voltage:");
+              leddigits3 = rcu_status.get_glv_battery_voltage()*100; //2 decimal points
+              Serial1.print("GLV Voltage: ");
               Serial1.println(leddigits3);
               break;
         case ID_MC_TEMPERATURES_3: //motor temperature              
               mctemp3 = MC_temperatures_3(msg.buf);
-              leddigits2 = mctemp3.get_motor_temperature();
-              Serial1.print("Motor Temperature:");
+              leddigits2 = mctemp3.get_motor_temperature()*10; //1 decimal point
+              Serial1.print("Motor Temperature: ");
               Serial1.println(leddigits2);
               break;
       }
   }
+/******************/
+  //create testing conditions
+  if (coolgauge0 >= 50) {
+      incrementspeed = 0;
+  }
+  if (coolgauge0 <= 0) {
+      incrementspeed = 1;
+  }
+
+  //testing ranges
+  if (incrementspeed) {
+    coolgauge0++;
+    gauge0++;
+    leddigits0 -= 2;
+    leddigits1 -= 3;
+    leddigits2 += 4;
+    leddigits3 += 5;
+    leddigits4 += 1;
+  } else {
+    coolgauge0--;
+    gauge0--;
+    leddigits0 += 2;
+    leddigits1 += 3;
+    leddigits2 -= 4;
+    leddigits3 -= 5;
+    leddigits4 -= 1;
+  }
+  /******************/
   updateLCD();
   delay(50);
 
 }
 
 void updateLCD() {
-  
   genie.WriteObject(GENIE_OBJ_LED_DIGITS, 0, leddigits0);
   genie.WriteObject(GENIE_OBJ_LED_DIGITS, 1, leddigits1);
   genie.WriteObject(GENIE_OBJ_LED_DIGITS, 2, leddigits2);

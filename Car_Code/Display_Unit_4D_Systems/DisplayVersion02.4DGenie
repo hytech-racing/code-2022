@@ -90,11 +90,11 @@ StaticText
     Font.Name                    Tahoma
     Font.Size                    15
     Font.Style                   []
-    Height                       35
+    Height                       24
     Left                         12
     Top                          179
     Transparent                  Yes
-    Width                        134
+    Width                        122
     WordWrap                     Yes
 end
 LedDigits
@@ -150,24 +150,24 @@ StaticText
     Alias                        Statictext1
     Alignment                    Left
     AutoSize                     Yes
-    Caption                      Battery(°C)
+    Caption                      'Battery (°C)'
     Color                        BLACK
     Font.Color                   WHITE
     Font.Effects                 []
     Font.Name                    Tahoma
     Font.Size                    15
     Font.Style                   []
-    Height                       24
+    Height                       26
     Left                         16
     Top                          100
     Transparent                  Yes
-    Width                        102
+    Width                        111
     WordWrap                     Yes
 end
 Coolgauge
     Name                         Coolgauge0
     Alias                        Speed
-    Arc.Color                    0xFFEFE0
+    Arc.Color                    0xFFD0AF
     Arc.Opacity                  200
     Arc.StartAngle               135
     Arc.StopAngle                405
@@ -190,7 +190,7 @@ Coolgauge
     Digit.Color                  0x902F00
     Digit.Visible                Yes
     DivisionColor                0x902F00
-    DivisionCount                10
+    DivisionCount                8
     DivisionWidth                5
     EqualDimensions              Yes
     Font.Color                   0x902F00
@@ -198,15 +198,15 @@ Coolgauge
     Font.Name                    Tahoma
     Font.Size                    14
     Font.Style                   []
-    Height                       215
+    Height                       220
     Innercircle.Color            0xFFD0AF
     Gloss.Color                  clWhite
     Gloss.Opacity                72
     Innercircle.Opacity          150
-    Left                         140
+    Left                         144
     Logarithmic                  No
     LogarithmicBase              10
-    MaximumValue                 50
+    MaximumValue                 80
     MinimumValue                 0
     Needle.Color                 0xFFD0AF
     Needle.InnerCenterColor      0xFFD0AF
@@ -225,17 +225,17 @@ Coolgauge
     OuterRim.Width               2
     ShowValues                   Yes
     SubDivisionColor             0x902F00
-    SubDivisionCount             3
-    SubDivisionWidth             2
+    SubDivisionCount             5
+    SubDivisionWidth             1
     TextRendering                ClearType
-    Top                          3
+    Top                          4
     ValueFont.Color              0x902F00
     ValueFont.Effects            []
     ValueFont.Name               Tahoma
     ValueFont.Size               11
     ValueFont.Style              []
     ValueFormat                  0
-    Width                        215
+    Width                        220
     OnChanged                    ''
 end
 StaticText
@@ -254,7 +254,7 @@ StaticText
     Left                         156
     Top                          220
     Transparent                  Yes
-    Width                        221
+    Width                        190
     WordWrap                     Yes
 end
 LedDigits
@@ -262,15 +262,15 @@ LedDigits
     Alias                        'Motor Temp'
     Color                        BLACK
     Decimals                     1
-    Digits                       3
+    Digits                       4
     Height                       45
     LeadingZero                  Yes
-    Left                         388
+    Left                         380
     OutlineColor                 BLACK
     Palette.High                 clLime
     Palette.Low                  BLACK
     Top                          220
-    Width                        76
+    Width                        97
     OnChanged                    ''
     OnTouchMoving                ''
     OnTouchPressed               ''
@@ -288,11 +288,11 @@ StaticText
     Font.Name                    Tahoma
     Font.Size                    15
     Font.Style                   []
-    Height                       48
-    Left                         377
-    Top                          8
+    Height                       26
+    Left                         388
+    Top                          4
     Transparent                  Yes
-    Width                        103
+    Width                        77
     WordWrap                     Yes
 end
 LedDigits
@@ -303,7 +303,7 @@ LedDigits
     Digits                       4
     Height                       43
     LeadingZero                  Yes
-    Left                         373
+    Left                         380
     OutlineColor                 BLACK
     Palette.High                 0x0707F9
     Palette.Low                  BLACK
@@ -319,18 +319,18 @@ StaticText
     Alias                        Statictext4
     Alignment                    Left
     AutoSize                     Yes
-    Caption                      Motor(°C)
+    Caption                      'Motor (°C)'
     Color                        BLACK
     Font.Color                   WHITE
     Font.Effects                 []
     Font.Name                    Tahoma
     Font.Size                    15
     Font.Style                   []
-    Height                       24
+    Height                       30
     Left                         380
-    Top                          180
+    Top                          188
     Transparent                  Yes
-    Width                        88
+    Width                        96
     WordWrap                     Yes
 end
 LedDigits
@@ -362,27 +362,27 @@ StaticText
     Font.Color                   WHITE
     Font.Effects                 []
     Font.Name                    Tahoma
-    Font.Size                    15
+    Font.Size                    13
     Font.Style                   []
-    Height                       38
+    Height                       23
     Left                         8
     Top                          8
     Transparent                  Yes
-    Width                        181
+    Width                        132
     WordWrap                     Yes
 end
 Image
     Name                         Image0
     Alias                        Image0
-    Height                       70
+    Height                       77
     Image                        '2016 Logo_square.png'
-    Left                         392
+    Left                         384
     Source.Height                2200
     Source.Left                  0
     Source.Top                   0
     Source.Width                 2200
-    Top                          92
-    Width                        71
+    Top                          96
+    Width                        79
     OnTouchMoving                ''
     OnTouchPressed               ''
     OnTouchReleased              ''
