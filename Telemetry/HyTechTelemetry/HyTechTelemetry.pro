@@ -25,14 +25,17 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         main.cpp \
+        mc_fault_info.cpp \
         mainwindow.cpp \
     xbee_rcv_thread.cpp \
     ../../Libraries/HyTech17_Library/*.cpp \
-    ../../Libraries/XBTools/XBTools.cpp
+    ../../Libraries/XBTools/XBTools.cpp \
 
 HEADERS += \
+        mc_fault_info.h \
         mainwindow.h \
-    xbee_rcv_thread.h
+    xbee_rcv_thread.h \
 
 FORMS += \
-        mainwindow.ui
+        mainwindow.ui \
+    mc_fault_info.ui

@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "mc_fault_info.h"
 #include <QInputDialog>
 #include <QMessageBox>
 
@@ -87,12 +88,50 @@ void MainWindow::on_update(quint32 id, quint8 length, QByteArray msg) {
         ui->inverter_enabled->setText(mc_states.get_inverter_enable_state() ? "YES" : "NO");
         ui->inverter_lockout->setText(mc_states.get_inverter_enable_lockout() ? "YES" : "NO");
     }
+    if (id == ID_MC_FAULT_CODES) {
+        MC_fault_codes mc_faults((unsigned char*) msg.data());
+        quint16 post_lo = mc_faults.get_post_fault_lo();
+        quint16 post_hi = mc_faults.get_post_fault_hi();
+        quint16 run_lo = mc_faults.get_run_fault_lo();
+        quint16 run_hi = mc_faults.get_run_fault_hi();
+        int post_fault = (post_lo << 16) | post_hi;
+        int run_fault = (run_lo << 16) | run_hi;
+        ui->mc_post_fault->setText(post_fault != 0 ? QString::number(post_fault) : "None");
+        ui->mc_run_fault->setText(run_fault != 0 ? QString::number(run_fault) : "None");
+    }
+    if (id == ID_MC_TORQUE_TIMER_INFORMATION) {
+        MC_torque_timer_information mc_timer((unsigned char*) msg.data());
+        ui->uptime->setText(QString::number(mc_timer.get_power_on_timer()));
+        ui->commanded->display(mc_timer.get_commanded_torque() / 10.0);
+        ui->feedback->display(mc_timer.get_torque_feedback() / 10.0);
+    }
     if (id == ID_BMS_VOLTAGES) {
         BMS_voltages bmsv((unsigned char*) msg.data());
         ui->avg_voltage->display(bmsv.get_average() / 10.0);
         ui->low_voltage->display(bmsv.get_low() / 10.0);
         ui->high_voltage->display(bmsv.get_high() / 10.0);
         ui->total_voltage->display(bmsv.get_total() / 10.0);
+    }
+    if (id == ID_BMS_TEMPERATURES) {
+        BMS_temperatures bms_temp((unsigned char*) msg.data());
+        ui->bms_avg_temp->display(bms_temp.get_average_temperature() / 10.0);
+        ui->bms_low_temp->display(bms_temp.get_low_temperature() / 10.0);
+        ui->bms_high_temp->display(bms_temp.get_high_temperature() / 10.0);
+    }
+    if (id == ID_MC_VOLTAGE_INFORMATION) {
+        MC_voltage_information mc_voltage((unsigned char*) msg.data());
+        ui->dc_bus_voltage->display(mc_voltage.get_dc_bus_voltage() / 10.0);
+        ui->output_voltage->display(mc_voltage.get_output_voltage() / 10.0);
+        ui->phase_ab_voltage->display(mc_voltage.get_phase_ab_voltage() / 10.0);
+        ui->phase_bc_voltage->display(mc_voltage.get_phase_bc_voltage() / 10.0);
+    }
+    if (id == ID_MC_TEMPERATURES_1) {
+        MC_temperatures_1 mct1((unsigned char*) msg.data());
+        ui->gate_driver->display(mct1.get_gate_driver_board_temperature() / 10.0);
+    }
+    if (id == ID_MC_TEMPERATURES_3) {
+        MC_temperatures_3 mct3((unsigned char*) msg.data());
+        ui->motor_temp->display(mct3.get_motor_temperature() / 10.0);
     }
 }
 
@@ -168,6 +207,29 @@ QString MainWindow::inverter_state_to_string(quint8 inv) {
     case 9:
         result = "Idle Stop";
     }
+    return result;
+}
+
+QString MainWindow::discharge_state_to_string(quint8 discharge) {
+    QString result = "";
+    switch (discharge) {
+    case 0:
+        result = "Disabled";
+        break;
+    case 1:
+        result = "Enabled, Waiting";
+        break;
+    case 2:
+        result = "Speed Check";
+        break;
+    case 3:
+        result = "Discharge Occurring";
+        break;
+    case 4:
+        result = "Completed";
+        break;
+    }
+    return result;
 }
 
 void MainWindow::set_label(QLabel *label, int status, QString text) {
@@ -181,4 +243,11 @@ void MainWindow::set_label(QLabel *label, int status, QString text) {
 
 void MainWindow::on_error(QByteArray err_str) {
     QMessageBox::critical(this, tr("Error"), tr(err_str));
+}
+
+void MainWindow::on_mc_fault_button_clicked()
+{
+    // Show MC fault info window
+    mc_fault_info mcfw;
+    mcfw.show();
 }

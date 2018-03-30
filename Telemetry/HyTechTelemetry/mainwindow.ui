@@ -1274,6 +1274,19 @@
      </property>
     </widget>
    </widget>
+   <widget class="QPushButton" name="mc_fault_button">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>560</y>
+      <width>241</width>
+      <height>61</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Show MC Faults</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
