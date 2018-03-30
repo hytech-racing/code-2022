@@ -40,6 +40,12 @@ int coolgauge0 = 45; //Speed
 //speed = 8.0/23.0 * pi * 16 in * 1.0 mi /63360.0 in
 float rpmratio = 8.0/23.0 * 3.14159 * 16 * 1.0/63360.0 * 60; // rpmrtaio * rotations per hour = mph
 
+
+//battery measurement
+int cellnum = 72; //There are 72 Cells
+int minvoltage = 3; //3V till its empty
+int maxvoltage = 4.2;//4.2 Total V
+float level = 100.0;
 /*TESTING PURPOSES*/
 /*********************/
 int incrementspeed = 1;//boolean for animations
@@ -109,9 +115,9 @@ void loop() {
               Serial1.println(leddigits1);
               break;
         case ID_BMS_VOLTAGES:
-              bmsvoltages = BMS-voltages(msg.buf)
-              //int gauge0 = 50; // Battery Level
-              //printf();
+              bmsvoltages = BMS_voltages(msg.buf);
+              level = ((float) bmsvoltages.get_total() - cellnum*minvoltage)/((float)cellnum * (maxvoltage - minvoltage)) * 100;
+              gauge0 = level;
               Serial1.print("Battery Level: ");
               Serial1.println(gauge0);
               break;
@@ -139,6 +145,7 @@ void loop() {
       }
   }
 /******************/
+/*
   //create testing conditions
   if (coolgauge0 >= 50) {
       incrementspeed = 0;
@@ -165,7 +172,8 @@ void loop() {
     leddigits3 -= 5;
     leddigits4 -= 1;
   }
-  /******************/
+*/
+/******************/
   updateLCD();
   delay(50);
 
