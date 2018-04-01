@@ -13,6 +13,8 @@ class mc_fault_info : public QDialog
 
 public:
     explicit mc_fault_info(QWidget *parent = 0);
+    void set_post_fault(int post);
+    void set_run_fault(int run);
     ~mc_fault_info();
 
 private:

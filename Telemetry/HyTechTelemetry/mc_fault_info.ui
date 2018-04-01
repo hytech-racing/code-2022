@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>251</width>
-    <height>332</height>
+    <height>382</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,7 +17,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>290</y>
+     <y>350</y>
      <width>231</width>
      <height>32</height>
     </rect>
@@ -32,41 +32,58 @@
     <bool>true</bool>
    </property>
   </widget>
-  <widget class="QGroupBox" name="post_group">
+  <widget class="QPlainTextEdit" name="post_text">
    <property name="geometry">
     <rect>
-     <x>30</x>
-     <y>10</y>
-     <width>191</width>
-     <height>131</height>
+     <x>10</x>
+     <y>30</y>
+     <width>231</width>
+     <height>121</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <weight>75</weight>
-     <bold>true</bold>
-    </font>
+   <property name="readOnly">
+    <bool>true</bool>
    </property>
-   <property name="title">
+  </widget>
+  <widget class="QLabel" name="label">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>10</y>
+     <width>81</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
     <string>POST Faults</string>
    </property>
   </widget>
-  <widget class="QGroupBox" name="groupBox">
+  <widget class="QPlainTextEdit" name="run_text">
    <property name="geometry">
     <rect>
-     <x>30</x>
-     <y>150</y>
-     <width>191</width>
+     <x>10</x>
+     <y>200</y>
+     <width>231</width>
      <height>131</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <weight>75</weight>
-     <bold>true</bold>
-    </font>
+   <property name="documentTitle">
+    <string/>
    </property>
-   <property name="title">
+   <property name="readOnly">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_2">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>180</y>
+     <width>71</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
     <string>Run Faults</string>
    </property>
   </widget>
