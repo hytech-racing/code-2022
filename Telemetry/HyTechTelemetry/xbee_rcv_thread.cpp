@@ -27,19 +27,21 @@ void xbee_rcv_thread::exec() {
         int index = 0;
         while (result != -1) {
             if (c == 0x00) {
+                //std::cout << "got a packet" << std::endl;
                 if (index > 0) {
                     // unstuff COBS
                     uint8_t cobs_buf[MESSAGE_LENGTH];
                     int decoded = cobs_decode(read_buf, MESSAGE_LENGTH + 2, cobs_buf);
-
                     if (decoded) {
                         // COBS decoded some data, now check the checksum
+                        //std::cout << "unstuffed" << std::endl;
                         int checksum = cobs_buf[MESSAGE_LENGTH - 1] << 8 | cobs_buf[MESSAGE_LENGTH - 2];
                         uint8_t raw_msg[MESSAGE_LENGTH - 2];
                         memcpy(raw_msg, cobs_buf, MESSAGE_LENGTH - 2);
                         int calc_checksum = fletcher16(raw_msg, MESSAGE_LENGTH - 2);
 
                         if (calc_checksum == checksum) {
+                            //std::cout << "checksummed" << std::endl;
                             // do stuff with data
                             memcpy(&id, &raw_msg, 4);
                             int length = raw_msg[4];

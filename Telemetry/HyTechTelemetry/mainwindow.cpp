@@ -248,8 +248,8 @@ void MainWindow::on_error(QByteArray err_str) {
 void MainWindow::on_mc_fault_button_clicked()
 {
     // Show MC fault info window
-    mc_fault_info mcfw;
-    mcfw.set_post_fault(mc_post_fault);
-    mcfw.set_run_fault(mc_run_fault);
-    mcfw.show();
+    mcfw = new mc_fault_info();
+    mcfw->set_post_fault(mc_post_fault);
+    mcfw->set_run_fault(mc_run_fault);
+    mcfw->show();
 }

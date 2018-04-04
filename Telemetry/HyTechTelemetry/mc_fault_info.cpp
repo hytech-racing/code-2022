@@ -9,8 +9,8 @@ mc_fault_info::mc_fault_info(QWidget *parent) :
 }
 
 void mc_fault_info::set_post_fault(int post) {
-    int post_lo = post & 0xFFFF;
-    int post_hi = (post >> 16) & 0xFFFF;
+    int post_hi = post & 0xFFFF;
+    int post_lo = (post >> 16) & 0xFFFF;
     if (post_lo & 0x0001)
         ui->post_text->appendPlainText("HW Gate Desaturation Fault\n");
     if ((post_lo & 0x0002) >> 1)
@@ -78,8 +78,8 @@ void mc_fault_info::set_post_fault(int post) {
 }
 
 void mc_fault_info::set_run_fault(int run) {
-    int run_lo = run & 0xFFFF;
-    int run_hi = (run >> 16) & 0xFFFF;
+    int run_hi = run & 0xFFFF;
+    int run_lo = (run >> 16) & 0xFFFF;
     if (run_lo & 0x0001)
         ui->run_text->appendPlainText("Motor Overspeed\n");
     if ((run_lo & 0x0002) >> 1)

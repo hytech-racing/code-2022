@@ -7,6 +7,7 @@
 #include "../../Libraries/HyTech17_Library/HyTech17.h"
 #include "../../Libraries/XBTools/XBTools.h"
 #include "xbee_rcv_thread.h"
+#include "mc_fault_info.h"
 
 namespace Ui {
 class MainWindow;
@@ -29,6 +30,7 @@ private slots:
 
 private:
     QPushButton *mc_fault_button;
+    mc_fault_info *mcfw;
     void set_label(QLabel *label, int status, QString text);
     QString vsm_state_to_string(quint8 vsm);
     QString inverter_state_to_string(quint8 inv);
