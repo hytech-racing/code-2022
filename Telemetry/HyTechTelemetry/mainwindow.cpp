@@ -94,8 +94,8 @@ void MainWindow::on_update(quint32 id, quint8 length, QByteArray msg) {
         quint16 post_hi = mc_faults.get_post_fault_hi();
         quint16 run_lo = mc_faults.get_run_fault_lo();
         quint16 run_hi = mc_faults.get_run_fault_hi();
-        int post_fault = (post_lo << 16) | post_hi;
-        int run_fault = (run_lo << 16) | run_hi;
+        mc_post_fault = (post_lo << 16) | post_hi;
+        mc_run_fault = (run_lo << 16) | run_hi;
         ui->mc_post_fault->setText(post_fault != 0 ? QString::number(post_fault, 16) : "None");
         ui->mc_run_fault->setText(run_fault != 0 ? QString::number(run_fault, 16) : "None");
     }
@@ -249,5 +249,7 @@ void MainWindow::on_mc_fault_button_clicked()
 {
     // Show MC fault info window
     mc_fault_info mcfw;
+    mcfw.set_post_fault(mc_post_fault);
+    mcfw.set_run_fault(mc_run_fault);
     mcfw.show();
 }

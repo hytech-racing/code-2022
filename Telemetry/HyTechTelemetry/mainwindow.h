@@ -35,6 +35,8 @@ private:
     QString discharge_state_to_string(quint8 discharge);
     Ui::MainWindow *ui;
     xbee_rcv_thread worker_thread;
+    int mc_post_fault;
+    int mc_run_fault;
 };
 
 #endif // MAINWINDOW_H
