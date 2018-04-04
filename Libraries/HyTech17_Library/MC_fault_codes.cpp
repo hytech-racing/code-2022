@@ -102,67 +102,67 @@ bool MC_fault_codes::get_post_lo_12v_sense_voltage_high() {
 }
 
 bool MC_fault_codes::get_post_hi_25v_sense_voltage_low() {
-    return message.post_fault_lo & 0x0001;
+    return message.post_fault_hi & 0x0001;
 }
 
 bool MC_fault_codes::get_post_hi_25v_sense_voltage_high() {
-    return (message.post_fault_lo & 0x0002) >> 1;
+    return (message.post_fault_hi & 0x0002) >> 1;
 }
 
 bool MC_fault_codes::get_post_hi_15v_sense_voltage_low() {
-    return (message.post_fault_lo & 0x0004) >> 2;
+    return (message.post_fault_hi & 0x0004) >> 2;
 }
 
 bool MC_fault_codes::get_post_hi_15v_sense_voltage_high() {
-    return (message.post_fault_lo & 0x0008) >> 3;
+    return (message.post_fault_hi & 0x0008) >> 3;
 }
 
 bool MC_fault_codes::get_post_hi_dc_bus_voltage_high() {
-    return (message.post_fault_lo & 0x0010) >> 4;
+    return (message.post_fault_hi & 0x0010) >> 4;
 }
 
 bool MC_fault_codes::get_post_hi_dc_bus_voltage_low() {
-    return (message.post_fault_lo & 0x0020) >> 5;
+    return (message.post_fault_hi & 0x0020) >> 5;
 }
 
 bool MC_fault_codes::get_post_hi_precharge_timeout() {
-    return (message.post_fault_lo & 0x0040) >> 6;
+    return (message.post_fault_hi & 0x0040) >> 6;
 }
 
 bool MC_fault_codes::get_post_hi_precharge_voltage_failure() {
-    return (message.post_fault_lo & 0x0080) >> 7;
+    return (message.post_fault_hi & 0x0080) >> 7;
 }
 
 bool MC_fault_codes::get_post_hi_eeprom_checksum_invalid() {
-    return (message.post_fault_lo & 0x0100) >> 8;
+    return (message.post_fault_hi & 0x0100) >> 8;
 }
 
 bool MC_fault_codes::get_post_hi_eeprom_data_out_of_range() {
-    return (message.post_fault_lo & 0x0200) >> 9;
+    return (message.post_fault_hi & 0x0200) >> 9;
 }
 
 bool MC_fault_codes::get_post_hi_eeprom_update_required() {
-    return (message.post_fault_lo & 0x0400) >> 10;
+    return (message.post_fault_hi & 0x0400) >> 10;
 }
 
 bool MC_fault_codes::get_post_hi_reserved1() {
-    return (message.post_fault_lo & 0x0800) >> 11;
+    return (message.post_fault_hi & 0x0800) >> 11;
 }
 
 bool MC_fault_codes::get_post_hi_reserved2() {
-    return (message.post_fault_lo & 0x1000) >> 12;
+    return (message.post_fault_hi & 0x1000) >> 12;
 }
 
 bool MC_fault_codes::get_post_hi_reserved3() {
-    return (message.post_fault_lo & 0x2000) >> 13;
+    return (message.post_fault_hi & 0x2000) >> 13;
 }
 
 bool MC_fault_codes::get_post_hi_brake_shorted() {
-    return (message.post_fault_lo & 0x4000) >> 14;
+    return (message.post_fault_hi & 0x4000) >> 14;
 }
 
 bool MC_fault_codes::get_post_hi_brake_open() {
-    return (message.post_fault_lo & 0x8000) >> 15;
+    return (message.post_fault_hi & 0x8000) >> 15;
 }
 
 bool MC_fault_codes::get_run_lo_motor_overspeed_fault() {
