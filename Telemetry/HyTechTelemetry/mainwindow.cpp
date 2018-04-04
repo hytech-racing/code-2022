@@ -96,8 +96,8 @@ void MainWindow::on_update(quint32 id, quint8 length, QByteArray msg) {
         quint16 run_hi = mc_faults.get_run_fault_hi();
         mc_post_fault = (post_lo << 16) | post_hi;
         mc_run_fault = (run_lo << 16) | run_hi;
-        ui->mc_post_fault->setText(post_fault != 0 ? QString::number(post_fault, 16) : "None");
-        ui->mc_run_fault->setText(run_fault != 0 ? QString::number(run_fault, 16) : "None");
+        ui->mc_post_fault->setText(mc_post_fault != 0 ? QString::number(mc_post_fault, 16) : "None");
+        ui->mc_run_fault->setText(mc_run_fault != 0 ? QString::number(mc_run_fault, 16) : "None");
     }
     if (id == ID_MC_TORQUE_TIMER_INFORMATION) {
         MC_torque_timer_information mc_timer((unsigned char*) msg.data());
