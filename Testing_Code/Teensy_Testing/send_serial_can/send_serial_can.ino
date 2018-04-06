@@ -1,20 +1,40 @@
 #include <FlexCAN.h>
 #include "HyTech17.h"
 
+#define XBEE_PKT_LEN 15
+
 FlexCAN CAN(500000);
 static CAN_message_t msg;
+BMS_detailed_temperatures bms_detailed_temperatures(1, 11, 22, 33);
+MC_command_message command_msg(160, 0, 1, 1, 0, 200);
+int msg_id = 0;
+
+// Original data:     DA00081B01602100268C
+// COBS-encoded data: 2DA11481B21622113268C0
+
 void setup() {
     CAN.begin();
     Serial.begin(115200);
-    Serial.println("Initialized serial");
+    //Serial.println("Initialized serial");
 }
 void loop() {
     delay(1000);
-    BMS_detailed_temperatures bms_detailed_temperatures(12, millis(), millis() / 2, millis() / 3);
-    msg.id += 1;
-    msg.len = sizeof(CAN_message_bms_detailed_temperatures_t);
-    bms_detailed_temperatures.write(msg.buf);
+     if (msg_id % 3 == 1) {
+      msg.id = ID_MC_FAULT_CODES;
+      msg.len = sizeof(CAN_message_mc_fault_codes_t);
+      memset(msg.buf, 0, 8);
+      msg.buf[5] = 8;
+    } else if (msg_id % 2 == 0) {
+      msg.id = ID_BMS_DETAILED_TEMPERATURES;
+      msg.len = sizeof(CAN_message_bms_detailed_temperatures_t);
+      bms_detailed_temperatures.write(msg.buf);
+    } else if (msg_id % 2 == 1) {
+      msg.id = ID_MC_COMMAND_MESSAGE;
+      msg.len = sizeof(CAN_message_mc_command_message_t);
+      command_msg.write(msg.buf);
+    }
     serial_send_message(msg);
+    msg_id++;
 }
 
 // copied from Wikipedia lol
@@ -121,32 +141,36 @@ size_t cobs_decode(const uint8_t * input, size_t length, uint8_t * out)
 }
 
 void serial_send_message(CAN_message_t msg) {
-    // checksum (2) + id (id-size) + length (1) + length (length)
-    uint8_t message_size = sizeof(uint16_t) + sizeof(msg.id) + sizeof(uint8_t) + msg.len;
-    uint8_t string[message_size];
-    memcpy(string, &msg.id, sizeof(msg.id));
-    memcpy(string + sizeof(msg.id), &msg.len, sizeof(uint8_t));
-    memcpy(string + sizeof(msg.id) + sizeof(uint8_t), msg.buf, msg.len);
-    uint16_t fletcher = fletcher16(string, sizeof(msg.id) + sizeof(uint8_t) + msg.len);
-    memcpy(string + sizeof(msg.id) + sizeof(uint8_t) + msg.len, &fletcher, sizeof(uint16_t));
-    Serial.print("Fletcher Checksum: ");
-    Serial.println(fletcher, HEX); // remember it's little endian
-    Serial.print("Original Data:     ");
-    for (int i = 0; i < message_size; i++) {
-        Serial.print((uint8_t)string[i], HEX);
-    }
+    // delim (1) + checksum (2) + id (4) + length (1) + length
+    uint8_t xb_buf[XBEE_PKT_LEN] = {0};
+    memcpy(xb_buf, &msg.id, sizeof(msg.id));        // msg id
+    memcpy(xb_buf + sizeof(msg.id), &msg.len, sizeof(msg.len));     // msg len
+    memcpy(xb_buf + sizeof(msg.id) + sizeof(msg.len), msg.buf, msg.len); // msg contents
 
-    uint8_t cobs_string[message_size];
-    size_t cobs_length = cobs_encode(string, message_size, cobs_string);
-    Serial.print("\nCOBS-encoded data: ");
-    for (int i = 0; i < cobs_length; i++) {
-        Serial.print((uint8_t)cobs_string[i], HEX);
-    }
-    uint8_t decoded[message_size];
-    cobs_decode(cobs_string, cobs_length, decoded);
-    Serial.print("\nDecoded COBS data: ");
-    for (int i = 0; i < message_size; i++) {
-        Serial.print((uint8_t)decoded[i], HEX);
-    }
-    Serial.println("\n");
+    // calculate checksum
+    uint16_t checksum = fletcher16(xb_buf, XBEE_PKT_LEN - 2);
+    //Serial.print("CHECKSUM: ");
+    //Serial.println(checksum, HEX);
+    memcpy(&xb_buf[XBEE_PKT_LEN - 2], &checksum, sizeof(uint16_t));
+
+//    for (int i = 0; i < XBEE_PKT_LEN; i++) {
+//      Serial.print(xb_buf[i], HEX);
+//      Serial.print(" ");
+//    }
+//    Serial.println();
+
+    uint8_t cobs_buf[2 + XBEE_PKT_LEN];
+    cobs_encode(xb_buf, XBEE_PKT_LEN+1, cobs_buf);
+    cobs_buf[XBEE_PKT_LEN+1] = 0x0;
+
+//    for (int i = 0; i < XBEE_PKT_LEN+2; i++) {
+//      Serial.print(cobs_buf[i], HEX);
+//      Serial.print(" ");
+//    }
+//    Serial.println();
+
+    int written = Serial.write(cobs_buf, 2 + XBEE_PKT_LEN);
+//    Serial.print("Wrote ");
+//    Serial.print(written);
+//    Serial.println(" bytes");
 }

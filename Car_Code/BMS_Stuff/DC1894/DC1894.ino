@@ -3,7 +3,7 @@
  * Init 2017-12-10
  * Configured for Teensy
  * Based off of DC1894.ino from Linear
- * Modified to support Teensy, and work with 4 ICs
+ * Modified to support Teensy, and work with 4 daisychained ICs
  */
 
 /*!

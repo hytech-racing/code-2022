@@ -1,6 +1,5 @@
 /*
- * HyTech 2017 Vehicle Front Control Unit
- * Init 2017-05-13
+ * HyTech 2018 Vehicle Front Control Unit
  * Interface with dashboard lights, buttons, and buzzer.
  * Read pedal sensor values and communicate with motor controller.
  * Configured for Front ECU Board rev5
@@ -47,6 +46,7 @@ Metro timer_btn_start = Metro(10);
 Metro timer_debug = Metro(200);
 Metro timer_debug_raw_torque = Metro(200);
 Metro timer_debug_torque = Metro(200);
+Metro timer_ramp_torque = Metro(100);
 Metro timer_inverter_enable = Metro(2000); // Timeout failed inverter enable
 Metro timer_led_start_blink_fast = Metro(150);
 Metro timer_led_start_blink_slow = Metro(400);
@@ -59,6 +59,7 @@ Metro timer_can_update = Metro(100);
  */
 FCU_status fcu_status;
 FCU_readings fcu_readings;
+RCU_status rcu_status;
 
 bool btn_start_debouncing = false;
 uint8_t btn_start_new = 0;
@@ -66,6 +67,7 @@ bool btn_start_pressed = false;
 bool debug = true;
 bool led_start_active = false;
 uint8_t led_start_type = 0; // 0 for off, 1 for steady, 2 for fast blink, 3 for slow blink
+float rampRatio = 1;
 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
@@ -88,7 +90,7 @@ void setup() {
     Serial.println("CAN system and serial communication initialized");
 
     digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH);
-    set_state(FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
+    set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
 
     // Send restart message, so RCU knows to power cycle the inverter (in case of CAN message timeout from FCU to inverter)
     msg.id = ID_FCU_RESTART;
@@ -101,45 +103,14 @@ void loop() {
         // Handle RCU status messages
         if (msg.id == ID_RCU_STATUS) {
             // Load message into RCU_status object
-            RCU_status rcu_status(msg.buf);
-            if (!rcu_status.get_bms_ok_high()) { // TODO make sure this doesn't happen at startup
-                digitalWrite(LED_BMS, HIGH);
+            rcu_status.load(msg.buf);
+            digitalWrite(LED_BMS, !rcu_status.get_bms_ok_high());
+            if (!rcu_status.get_bms_ok_high()) {
                 Serial.println("RCU BMS FAULT: detected");
             }
-            if (!rcu_status.get_imd_okhs_high()) { // TODO make sure this doesn't happen at startup
-                digitalWrite(LED_IMD, HIGH);
+            digitalWrite(LED_IMD, !rcu_status.get_imd_okhs_high());
+            if (!rcu_status.get_imd_okhs_high()) {
                 Serial.println("RCU IMD FAULT: detected");
-            }
-
-            // Set internal state based on RCU state
-            // If initializing, start light off
-            // If waiting for driver press, flash start light slow
-            switch (rcu_status.get_state()) {
-                case RCU_STATE_WAITING_BMS_IMD:
-                set_start_led(0);
-                set_state(FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
-                break;
-
-                case RCU_STATE_WAITING_DRIVER:
-                set_start_led(3); // Slow blink
-                set_state(FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
-                break;
-
-                case RCU_STATE_LATCHING:
-                set_start_led(0);
-                set_state(FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED);
-                break;
-
-                case RCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED:
-                if (fcu_status.get_state() == FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED) {
-                    set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
-                }
-                break;
-
-                case RCU_STATE_FATAL_FAULT:
-                set_start_led(0);
-                set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
-                break;
             }
         }
 
@@ -184,9 +155,6 @@ void loop() {
      * State machine
      */
     switch (fcu_status.get_state()) {
-        case FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED:
-        break;
-
         case FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE:
         break;
 
@@ -234,7 +202,14 @@ void loop() {
                 /*if (abs(torque1 - torque2) * 100 / MAX_TORQUE > 10) { // Second accelerator implausibility check FSAE EV2.3.6
                 fcu_status.set_accelerator_implausibility(true);
                 } else {*/
-                calculated_torque = min(torque1, torque2);
+                calculated_torque = (int) (min(torque1, torque2) * rampRatio);
+
+                if (rampRatio < 1 && timer_ramp_torque.check()) {
+                   rampRatio += 0.1;
+                   if (rampRatio > 1) {
+                      rampRatio = 1;
+                   }
+                }
                 if (debug && timer_debug_raw_torque.check()) {
                     Serial.print("FCU RAW TORQUE: ");
                     Serial.println(calculated_torque);
@@ -258,6 +233,16 @@ void loop() {
 
             if (fcu_status.get_brake_implausibility() || fcu_status.get_accelerator_implausibility()) {
                 // Implausibility exists, command 0 torque
+                calculated_torque = 0;
+                rampRatio = 0;
+            }
+
+            // FSAE FMEA specifications
+            if (!rcu_status.get_bms_ok_high()) {
+                calculated_torque = 0;
+            }
+            
+            if (!rcu_status.get_imd_okhs_high()) {
                 calculated_torque = 0;
             }
             

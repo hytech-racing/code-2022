@@ -7,18 +7,11 @@
 /*
  * ECU state definitions // TODO make these enums?
  */
-#define RCU_STATE_WAITING_BMS_IMD 1
-#define RCU_STATE_WAITING_DRIVER 2
-#define RCU_STATE_LATCHING 3
-#define RCU_STATE_SHUTDOWN_CIRCUIT_INITIALIZED 4
-#define RCU_STATE_FATAL_FAULT 5
-
-#define FCU_STATE_WAITING_SHUTDOWN_CIRCUIT_INITIALIZED 1
-#define FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE 2
-#define FCU_STATE_TRACTIVE_SYSTEM_ACTIVE 3
-#define FCU_STATE_ENABLING_INVERTER 4
-#define FCU_STATE_WAITING_READY_TO_DRIVE_SOUND 5
-#define FCU_STATE_READY_TO_DRIVE 6
+#define FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE 1
+#define FCU_STATE_TRACTIVE_SYSTEM_ACTIVE 2
+#define FCU_STATE_ENABLING_INVERTER 3
+#define FCU_STATE_WAITING_READY_TO_DRIVE_SOUND 4
+#define FCU_STATE_READY_TO_DRIVE 5
 
 #define BMS_STATE_DISCHARGING 1
 #define BMS_STATE_CHARGING 2
@@ -37,11 +30,14 @@
 #define ID_FCU_STATUS 0xD2
 #define ID_FCU_READINGS 0xD3
 #define ID_FCU_RESTART 0xD4
+#define ID_BMS_ONBOARD_TEMPERATURES 0xD5
+#define ID_BMS_ONBOARD_DETAILED_TEMPERATURES 0xD6
 #define ID_BMS_VOLTAGES 0xD7
 #define ID_BMS_DETAILED_VOLTAGES 0xD8
 #define ID_BMS_TEMPERATURES 0xD9
 #define ID_BMS_DETAILED_TEMPERATURES 0xDA
 #define ID_BMS_STATUS 0xDB
+#define ID_FH_WATCHDOG_TEST 0xDC
 #define ID_CCU_STATUS 0xDD
 #define ID_MC_TEMPERATURES_1 0xA0
 #define ID_MC_TEMPERATURES_2 0xA1
@@ -70,6 +66,8 @@
  *
  * A GENERAL_NOTE: The write functions in these classes take a byte array that is meant to be populated
  * with the data contained in the object. The byte array can then be used as the raw CAN buffer.
+ * 
+ * TODO: If you make changes here, make sure to update https://hytechracing.me.gatech.edu/wiki/CAN_Data_Formats
  */
 
 /*
@@ -79,13 +77,14 @@ typedef struct CAN_message_rcu_status_t {
     uint8_t state;
     uint8_t flags;
     uint16_t glv_battery_voltage;
+    int16_t temperature;
 } CAN_msg_rcu_status;
 
 class RCU_status {
     public:
         RCU_status();
         RCU_status(uint8_t buf[8]);
-        RCU_status(uint8_t state, uint8_t flags, uint16_t glv_battery_voltage);
+        RCU_status(uint8_t state, uint8_t flags, uint16_t glv_battery_voltage, int16_t temperature);
         void load(uint8_t buf[8]);
         void write(uint8_t buf[8]);
         uint8_t get_state();
@@ -95,6 +94,7 @@ class RCU_status {
         bool get_bms_imd_latched();
         bool get_inverter_powered();
         uint16_t get_glv_battery_voltage();
+        int16_t get_temperature();
         void set_state(uint8_t state);
         void set_flags(uint8_t flags);
         void set_bms_ok_high(bool bms_ok_high);
@@ -102,6 +102,7 @@ class RCU_status {
         void set_bms_imd_latched(bool bms_imd_latched);
         void set_inverter_powered(bool inverter_powered);
         void set_glv_battery_voltage(uint16_t glv_battery_voltage);
+        void set_temperature(int16_t temperature);
     private:
         CAN_message_rcu_status_t message;
 };
@@ -268,6 +269,54 @@ class BMS_detailed_temperatures {
         void set_temperature(uint8_t temperature_id, int16_t temperature);
     private:
         CAN_message_bms_detailed_temperatures_t message;
+};
+
+typedef struct CAN_message_bms_onboard_temperatures_t {
+    int16_t average_temperature;
+    int16_t low_temperature;
+    int16_t high_temperature;
+} CAN_message_bms_onboard_temperatures_t;
+
+class BMS_onboard_temperatures {
+    public:
+        BMS_onboard_temperatures();
+        BMS_onboard_temperatures(uint8_t buf[]);
+        BMS_onboard_temperatures(int16_t average_temperature, int16_t low_temperature, int16_t high_temperature);
+        void load(uint8_t buf[]);
+        void write(uint8_t buf[]);
+        int16_t get_average_temperature();
+        int16_t get_low_temperature();
+        int16_t get_high_temperature();
+        void set_average_temperature(int16_t average_temperature);
+        void set_low_temperature(int16_t low_temperature);
+        void set_high_temperature(int16_t high_temperature);
+    private:
+        CAN_message_bms_onboard_temperatures_t message;
+};
+
+typedef struct CAN_message_bms_onboard_detailed_temperatures_t {
+	uint8_t ic_id;
+    int16_t temperature_0;
+    int16_t temperature_1;
+} CAN_message_bms_onboard_detailed_temperatures_t;
+
+class BMS_onboard_detailed_temperatures {
+    public:
+        BMS_onboard_detailed_temperatures();
+        BMS_onboard_detailed_temperatures(uint8_t buf[]);
+        BMS_onboard_detailed_temperatures(uint8_t ic_id, int16_t temperature_0, int16_t temperature_1);
+        void load(uint8_t buf[]);
+        void write(uint8_t buf[]);
+        uint8_t get_ic_id();
+        int16_t get_temperature_0();
+        int16_t get_temperature_1();
+        int16_t get_temperature(uint8_t temperature_id);
+        void set_ic_id(uint8_t ic_id);
+        void set_temperature_0(int16_t temperature_0);
+        void set_temperature_1(int16_t temperature_1);
+        void set_temperature(uint8_t temperature_id, int16_t temperature);
+    private:
+        CAN_message_bms_onboard_detailed_temperatures_t message;
 };
 
 typedef struct CAN_message_bms_status_t {
