@@ -54,7 +54,7 @@ Metro timer_debug_rms_torque_timer_information = Metro(2000);
 Metro timer_debug_rms_voltage_information = Metro(2000);
 Metro timer_debug_fcu_status = Metro(2000);
 Metro timer_imd_print_fault = Metro(500);
-Metro timer_status_send = Metro(500); // this is longer for debug purposes
+Metro timer_status_send = Metro(100);
 Metro timer_fcu_restart_inverter = Metro(500); // Upon restart of the FCU, power cycle the inverter
 
 /*
@@ -105,72 +105,30 @@ void loop() {
                 timer_fcu_restart_inverter.reset();
             }
         }
-//        if ((msg.id == ID_MC_TEMPERATURES_1 && timer_debug_rms_temperatures_1.check())
-//                || (msg.id == ID_MC_TEMPERATURES_3 && timer_debug_rms_temperatures_3.check())
-//                || (msg.id == ID_MC_MOTOR_POSITION_INFORMATION && timer_debug_rms_motor_position_information.check())
-//                || (msg.id == ID_MC_CURRENT_INFORMATION && timer_debug_rms_current_information.check())
-//                || (msg.id == ID_MC_VOLTAGE_INFORMATION && timer_debug_rms_voltage_information.check())
-//                || (msg.id == ID_MC_INTERNAL_STATES && timer_debug_rms_internal_states.check())
-//                || (msg.id == ID_MC_FAULT_CODES && timer_debug_rms_fault_codes.check())
-//                || (msg.id == ID_MC_TORQUE_TIMER_INFORMATION && timer_debug_rms_torque_timer_information.check())
-//                || (msg.id == ID_BMS_VOLTAGES && timer_debug_bms_voltages.check())
-//                || (msg.id == ID_BMS_TEMPERATURES && timer_debug_bms_temperatures.check())
-//                || (msg.id == ID_BMS_STATUS && timer_debug_bms_status.check())
-//                || (msg.id == ID_FCU_STATUS && timer_debug_fcu_status.check())) {
-//            Serial.println("Sent non-status CAN Message");
-//            write_xbee_data();
-//        }
+       if ((msg.id == ID_MC_TEMPERATURES_1 && timer_debug_rms_temperatures_1.check())
+               || (msg.id == ID_MC_TEMPERATURES_3 && timer_debug_rms_temperatures_3.check())
+               || (msg.id == ID_MC_MOTOR_POSITION_INFORMATION && timer_debug_rms_motor_position_information.check())
+               || (msg.id == ID_MC_CURRENT_INFORMATION && timer_debug_rms_current_information.check())
+               || (msg.id == ID_MC_VOLTAGE_INFORMATION && timer_debug_rms_voltage_information.check())
+               || (msg.id == ID_MC_INTERNAL_STATES && timer_debug_rms_internal_states.check())
+               || (msg.id == ID_MC_FAULT_CODES && timer_debug_rms_fault_codes.check())
+               || (msg.id == ID_MC_TORQUE_TIMER_INFORMATION && timer_debug_rms_torque_timer_information.check())
+               || (msg.id == ID_BMS_VOLTAGES && timer_debug_bms_voltages.check())
+               || (msg.id == ID_BMS_TEMPERATURES && timer_debug_bms_temperatures.check())
+               || (msg.id == ID_BMS_STATUS && timer_debug_bms_status.check())
+               || (msg.id == ID_FCU_STATUS && timer_debug_fcu_status.check())) {
+           write_xbee_data();
+       }
     }
-    // ***** TESTING PURPOSES ONLY -- NOT REAL DATA
-    if (timer_debug_bms_voltages.check()) {
-        msg.id = ID_BMS_VOLTAGES;
-        msg.len = sizeof(CAN_message_bms_voltages_t);
-        BMS_voltages voltage_info;
-        voltage_info.set_average(30);
-        voltage_info.set_low(28);
-        voltage_info.set_high(33);
-        voltage_info.set_total(3000);
-        voltage_info.write(msg.buf);
-        Serial.println("Sent BMS Voltages");
-        write_xbee_data();
-    }
-    if (timer_debug_fcu_status.check()) {
-        msg.id = ID_FCU_STATUS;
-        msg.len = sizeof(CAN_message_fcu_status_t);
-        FCU_status fcu_status;
-        fcu_status.set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
-        fcu_status.set_accelerator_implausibility(0);
-        fcu_status.set_accelerator_boost_mode(0);
-        fcu_status.set_brake_implausibility(0);
-        fcu_status.set_brake_pedal_active(1);
-        fcu_status.set_start_button_press_id(3);
-        fcu_status.write(msg.buf);
-        Serial.println("Sent FCU Status");
-        write_xbee_data();
-    }
-    // ***** END TESTING CODE
 
     /*
      * Send status over CAN and XBee
      */
     if (timer_status_send.check()) {
-        // ***** TESTING PURPOSES ONLY -- NOT REAL VOLTAGE OR TEMPERATURE
-        rcu_status.set_glv_battery_voltage(127);
-        rcu_status.set_temperature(2055);
-        // ***** END TESTING CODE
         rcu_status.write(msg.buf);
         msg.id = ID_RCU_STATUS;
         msg.len = sizeof(CAN_message_rcu_status_t);
-//        CAN.write(msg);
-//        Serial.print("STATUS MESSAGE ");
-//        Serial.print(msg.id, HEX);
-//        Serial.print(": ");
-//        for (int i = 0; i < msg.len; i++) {
-//            Serial.print(msg.buf[i]);
-//            Serial.print(" ");
-//        }
-//        Serial.println();
-
+        CAN.write(msg);
         write_xbee_data();
 
         // commented below code in case of problems
