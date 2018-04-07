@@ -54,6 +54,8 @@
 #define THERMISTORS_PER_IC 3
 #define PCB_THERM_PER_IC 2
 #define TOTAL_CELLS 18 // Number of non-ignored cells (used for calculating averages)
+#define TOTAL_PCB_THERMISTORS 12    // number of non-ignored PCB thermistors (for averages)
+#define TOTAL_CELL_THERMISTORS 18   // number of non-ignored Cell thermistors (for averages)
 #define THERMISTOR_RESISTOR_VALUE 10000
 
 /*
@@ -89,7 +91,9 @@ uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
       * Thermistor 3
       */
 int16_t cell_delta_voltage[TOTAL_IC][CELLS_PER_IC]; // keep track of which cells are being discharged
-int16_t ignore_cell[TOTAL_IC][CELLS_PER_IC]; //cells to be ignored for Balance testing
+int8_t ignore_cell[TOTAL_IC][CELLS_PER_IC]; //cells to be ignored for Balance testing
+int8_t ignore_pcb_therm[TOTAL_IC][PCB_THERM_PER_IC]; // PCB thermistors to be ignored
+int8_t ignore_cell_therm[TOTAL_IC][THERMISTORS_PER_IC] // Cell thermistors to be ignored
 
 /*!<
   The tx_cfg[][6] store the LTC6804 configuration data that is going to be written
