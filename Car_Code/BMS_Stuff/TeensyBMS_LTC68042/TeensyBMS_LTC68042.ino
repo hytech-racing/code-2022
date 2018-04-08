@@ -165,6 +165,8 @@ void setup() {
             ignore_cell[i][j] = true; // Ignore ICs 0-3
         }
     }
+    // DEBUG insert PCB thermistors to ignore here
+    // DEBUG insert cell thermistors to ignore here
 }
 
 // TODO Implement Coulomb counting to track state of charge of battery.
@@ -524,28 +526,33 @@ void process_cell_temps() { // TODO make work with signed int8_t CAN message (ye
     highTemp = lowTemp;
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         for (int j = 0; j < THERMISTORS_PER_IC; j++) {
-          thermTemp = calculate_cell_temp(aux_voltages[ic][j], aux_voltages[ic][5]); // TODO: replace 3 with aux_voltages[ic][5]?
-          
-          if (thermTemp < lowTemp) {
-              lowTemp = thermTemp;
-          }
-          
-          if (thermTemp > highTemp) {
-              highTemp = thermTemp;
-          }
-          
-          bms_detailed_temperatures[ic].set_temperature(j, thermTemp); // Populate CAN message struct
-          totalTemp += thermTemp;
+            if (!ignore_cell_therm[ic][j]) {
+                thermTemp = calculate_cell_temp(aux_voltages[ic][j], aux_voltages[ic][5]); // TODO: replace 3 with aux_voltages[ic][5]?
+                
+                if (thermTemp < lowTemp) {
+                    lowTemp = thermTemp;
+                }
+                
+                if (thermTemp > highTemp) {
+                    highTemp = thermTemp;
+                }
+                
+                bms_detailed_temperatures[ic].set_temperature(j, thermTemp); // Populate CAN message struct
+                totalTemp += thermTemp;
 
-          Serial.print("Thermistor ");
-          Serial.print(j);
-          Serial.print(": ");
-          Serial.print(thermTemp / 100, 2);
-          Serial.println(" C");
+                Serial.print("Thermistor ");
+                Serial.print(j);
+                Serial.print(": ");
+                Serial.print(thermTemp / 100, 2);
+                Serial.println(" C");
+            } else {
+                Serial.print("Ignored thermistor ");
+                Serial.println(j);
+            }
         }
         Serial.println("----------------------\n");
     }
-    avgTemp = (int16_t) (totalTemp / ((TOTAL_IC) * THERMISTORS_PER_IC));
+    avgTemp = (int16_t) (totalTemp / (TOTAL_CELL_THERMISTORS);
     bms_temperatures.set_low_temperature((int16_t) lowTemp);
     bms_temperatures.set_high_temperature((int16_t) highTemp);
     bms_temperatures.set_average_temperature((int16_t) avgTemp);
@@ -610,23 +617,28 @@ void process_onboard_temps() {
 
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         for (int j = 0; j < PCB_THERM_PER_IC; j++) {
-          thermTemp = calculate_onboard_temp(aux_voltages[ic][j+3], aux_voltages[ic][5]);
-          if (thermTemp < lowTemp) {
-              lowTemp = thermTemp;
-          }
-          
-          if (thermTemp > highTemp) {
-              highTemp = thermTemp;
-          }
-          
-          bms_onboard_detailed_temperatures[ic].set_temperature(j, thermTemp * 10000); // Populate CAN message struct
-          totalTemp += thermTemp;
+            if (!ignore_pcb_therm[ic][j]) {
+                thermTemp = calculate_onboard_temp(aux_voltages[ic][j+3], aux_voltages[ic][5]);
+                if (thermTemp < lowTemp) {
+                    lowTemp = thermTemp;
+                }
+                
+                if (thermTemp > highTemp) {
+                    highTemp = thermTemp;
+                }
+                
+                bms_onboard_detailed_temperatures[ic].set_temperature(j, thermTemp * 10000); // Populate CAN message struct
+                totalTemp += thermTemp;
 
-          Serial.print("PCB thermistor ");
-          Serial.print(j);
-          Serial.print(": ");
-          Serial.print(thermTemp / 100, 2);
-          Serial.println(" C"); 
+                Serial.print("PCB thermistor ");
+                Serial.print(j);
+                Serial.print(": ");
+                Serial.print(thermTemp / 100, 2);
+                Serial.println(" C"); 
+            } else {
+                Serial.print("Ignored PCB thermistor ")
+                Serial.println(j);
+            }
         }
         Serial.println("----------------------\n");
     }
