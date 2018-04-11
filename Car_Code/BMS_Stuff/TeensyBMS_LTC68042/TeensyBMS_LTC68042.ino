@@ -29,11 +29,12 @@
  */
 
 #include <Arduino.h>
+#include <Metro.h>
 #include <FlexCAN.h>
 #include "HyTech17.h"
 #include "LT_SPI.h"
 #include "LTC68042.h"
-#include <Metro.h>
+#include "ADC_SPI.h"
 
 /*
  * Pin definitions
@@ -58,6 +59,17 @@
 #define TOTAL_CELL_THERMISTORS 18   // number of non-ignored Cell thermistors (for averages)
 #define THERMISTOR_RESISTOR_VALUE 10000
 #define IGNORE_FAULT_THRESHOLD 5
+#define SHUTDOWN_HIGH_THRESHOLD 2
+
+/*
+ * Current Sensor ADC Channel definitions
+ */
+#define CH_CUR_SENSE_1 1
+#define CH_CUR_SENSE_2 3
+#define CH_TEMP_SENSE_1 2
+#define CH_TEMP_SENSE_2 4
+#define CH_SHUTDOWN 6
+#define CH_5V 5
 
 /*
  * Timers
@@ -116,6 +128,9 @@ uint8_t tx_cfg[TOTAL_IC][6]; // data defining how data will be written to daisy 
  */
 FlexCAN CAN(500000);
 static CAN_message_t msg;
+
+// ADC Declaration
+ADC_SPI ADC();
 
 /**
  * BMS State Variables
@@ -705,21 +720,10 @@ void process_current() {
      * Maximum negative current (-300A) corresponds to 0.5V signal
      * 0A current corresponds to 2.5V signal
      * 
-     * Resistor divider configuration (R1 = 1e3, R2=2e3):
-     * 0V signal corresponds to analogRead == 0
-     * 5V signal corresponds to analogRead == 1023
-     * 
-     * voltage = analogRead() * 5 / 1023
+     * voltage = read_adc() * 5 / 4095
      * current = (voltage - 2.5) * 300 / 2
      */
-    double voltage = analogRead(CURRENT_SENSE) / (double) 204.6;
-    /*
-     * Resistor divider compensation (TODO fix this in hardware by not using resistor dividers)
-     * Sensor output @0A: 2.53V/5V=.506
-     * Teensy input @0A: 1.698V/3.3V=.51454
-     * Ratio: .506/.51454=.9834
-     */
-    voltage *= .9834;
+    double voltage = read_adc(CH_CUR_SENSE_1) / (double) 819;
     double current = (voltage - 2.5) * (double) 150;
     Serial.print("\nCurrent Sensor: ");
     Serial.print(current, 2);
