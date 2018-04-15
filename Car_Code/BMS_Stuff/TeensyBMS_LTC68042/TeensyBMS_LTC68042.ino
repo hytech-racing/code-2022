@@ -60,10 +60,12 @@
 #define THERMISTOR_RESISTOR_VALUE 10000
 #define IGNORE_FAULT_THRESHOLD 5
 #define SHUTDOWN_HIGH_THRESHOLD 2
+#define DC_BUS_HIGH_THRESHOLD 50
 
 /*
  * Current Sensor ADC Channel definitions
  */
+#define ADC_CS 9
 #define CH_CUR_SENSE_1 1
 #define CH_CUR_SENSE_2 3
 #define CH_TEMP_SENSE_1 2
@@ -109,7 +111,7 @@ uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
 int16_t cell_delta_voltage[TOTAL_IC][CELLS_PER_IC]; // keep track of which cells are being discharged
 int8_t ignore_cell[TOTAL_IC][CELLS_PER_IC]; //cells to be ignored for Balance testing
 int8_t ignore_pcb_therm[TOTAL_IC][PCB_THERM_PER_IC]; // PCB thermistors to be ignored
-int8_t ignore_cell_therm[TOTAL_IC][THERMISTORS_PER_IC] // Cell thermistors to be ignored
+int8_t ignore_cell_therm[TOTAL_IC][THERMISTORS_PER_IC]; // Cell thermistors to be ignored
 
 /*!<
   The tx_cfg[][6] store the LTC6804 configuration data that is going to be written
@@ -130,7 +132,7 @@ FlexCAN CAN(500000);
 static CAN_message_t msg;
 
 // ADC Declaration
-ADC_SPI ADC();
+ADC_SPI ADC(ADC_CS);
 
 /**
  * BMS State Variables
@@ -142,6 +144,7 @@ BMS_detailed_temperatures bms_detailed_temperatures[TOTAL_IC];
 BMS_onboard_temperatures bms_onboard_temperatures;
 BMS_onboard_detailed_temperatures bms_onboard_detailed_temperatures[TOTAL_IC];
 BMS_voltages bms_voltages;
+MC_voltage_information mc_voltage_info;
 bool watchdog_high = true;
 
 int minVoltageICIndex;
@@ -221,6 +224,10 @@ void loop() {
         if (msg.id == ID_FH_WATCHDOG_TEST) { // stop sending pulse to watchdog timer
             fh_watchdog_test = true;
             //Serial.println("FH watchdog test");
+        }
+
+        if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
+            mc_voltage_info.load(msg.buf);
         }
     }
 
@@ -387,27 +394,28 @@ void stop_discharge_all() {
 }
 
 void balance_cells() {
-  if (bms_voltages.get_low() > voltage_cutoff_low) {
-      for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
-          for (int cell = 0; cell < CELLS_PER_IC; cell++) { // Loop through cells
-              if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
-                  uint16_t cell_voltage = cell_voltages[ic][cell]; // current cell voltage in mV
-                  if (cell_discharging[ic][cell]) {
-                      if (cell_voltage < bms_voltages.get_low() + voltage_difference_threshold - 6) {
-                          stop_discharge_cell(ic, cell);
-                      }
-                  }
-                  else if (cell_voltage > bms_voltages.get_low() + voltage_difference_threshold) {
-                          discharge_cell(ic, cell);
-                  }
-              }
-          }
-      }
-  }
-  else {
-      Serial.println("Not Balancing!");
-      stop_discharge_all(); // Make sure none of the cells are discharging
-  }
+    if (bms_voltages.get_low() > voltage_cutoff_low 
+        && mc_voltage_info.get_dc_bus_voltage() >= DC_BUS_HIGH_THRESHOLD) {
+        for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
+            for (int cell = 0; cell < CELLS_PER_IC; cell++) { // Loop through cells
+                if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
+                    uint16_t cell_voltage = cell_voltages[ic][cell]; // current cell voltage in mV
+                    if (cell_discharging[ic][cell]) {
+                        if (cell_voltage < bms_voltages.get_low() + voltage_difference_threshold - 6) {
+                            stop_discharge_cell(ic, cell);
+                        }
+                    }
+                    else if (cell_voltage > bms_voltages.get_low() + voltage_difference_threshold) {
+                            discharge_cell(ic, cell);
+                    }
+                }
+            }
+        }
+    }
+    else {
+        Serial.println("Not Balancing!");
+        stop_discharge_all(); // Make sure none of the cells are discharging
+    }
 }
 
 void poll_cell_voltage() {
@@ -567,7 +575,7 @@ void process_cell_temps() { // TODO make work with signed int8_t CAN message (ye
         }
         Serial.println("----------------------\n");
     }
-    avgTemp = (int16_t) (totalTemp / (TOTAL_CELL_THERMISTORS);
+    avgTemp = (int16_t) (totalTemp / TOTAL_CELL_THERMISTORS);
     bms_temperatures.set_low_temperature((int16_t) lowTemp);
     bms_temperatures.set_high_temperature((int16_t) highTemp);
     bms_temperatures.set_average_temperature((int16_t) avgTemp);
@@ -651,7 +659,7 @@ void process_onboard_temps() {
                 Serial.print(thermTemp / 100, 2);
                 Serial.println(" C"); 
             } else {
-                Serial.print("Ignored PCB thermistor ")
+                Serial.print("Ignored PCB thermistor ");
                 Serial.println(j);
             }
         }
@@ -723,7 +731,7 @@ void process_current() {
      * voltage = read_adc() * 5 / 4095
      * current = (voltage - 2.5) * 300 / 2
      */
-    double voltage = read_adc(CH_CUR_SENSE_1) / (double) 819;
+    double voltage = ADC.read_adc(CH_CUR_SENSE_1) / (double) 819;
     double current = (voltage - 2.5) * (double) 150;
     Serial.print("\nCurrent Sensor: ");
     Serial.print(current, 2);
