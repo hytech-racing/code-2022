@@ -55,6 +55,7 @@
 #define PCB_THERM_PER_IC 2
 #define TOTAL_CELLS 18 // Number of non-ignored cells (used for calculating averages)
 #define THERMISTOR_RESISTOR_VALUE 10000
+#define IGNORE_FAULT_THRESHOLD 5
 
 /*
  * Timers
@@ -77,10 +78,13 @@ uint16_t discharge_temp_critical_high = 6000; // 60.00C
 uint16_t temp_critical_low = 0; // 0C
 uint16_t voltage_difference_threshold = 500; // 5.00V
 
-bool first_fault_overvoltage = false; // Wait for 2 voltage faults in a row before shutting off BMS
-bool first_fault_undervoltage = false;
-bool first_fault_total_voltage_high = false;
+uint8_t error_flags_history = 0; // will not be reset with BMS_OK if a fault has occured
+uint8_t first_fault_overvoltage = 0;// keep track of how many consecutive faults occured
+uint8_t first_fault_undervoltage = 0;
+uint8_t first_fault_total_voltage_high = 0;
 bool fh_watchdog_test = false;
+
+
 uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages. Numbers are stored in 0.1 mV units.
 uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
      /* Data contained in this array is in this format:
@@ -213,7 +217,16 @@ void loop() {
             Serial.println("STATUS NOT GOOD!!!!!!!!!!!!!!!");
             Serial.print("Error code: 0x");
             Serial.println(bms_status.get_error_flags(), HEX);
+            error_flags_history = bms_status.get_error_flags();
+
             digitalWrite(BMS_OK, LOW);
+        }else {
+            digitalWrite(BMS_OK, HIGH);
+            if(error_flags_history > 0){
+                Serial.println("An Error Occured But Has Been Cleared");
+                Serial.print("Error code: 0x");
+                Serial.println(error_flags_history, HEX);
+            }
         }
     }
 
@@ -436,40 +449,45 @@ void process_voltages() {
 
     // TODO: Low and High voltage error checking.
 
-    //bms_status.set_overvoltage(false); // RESET these values, then check below if they should be set again
-    //bms_status.set_undervoltage(false);
-    //bms_status.set_total_voltage_high(false);
+    bms_status.set_overvoltage(false); // RESET these values, then check below if they should be set again
+    bms_status.set_undervoltage(false);
+    bms_status.set_total_voltage_high(false);
 
     if (bms_voltages.get_high() > voltage_cutoff_high) {
-        if (first_fault_overvoltage) {
+        if (first_fault_overvoltage==IGNORE_FAULT_THRESHOLD) {
             bms_status.set_overvoltage(true); // TODO may need to comment this out for now when driving due to 65535 errors
+        } else {
+            first_fault_overvoltage += 1;
         }
-        first_fault_overvoltage = true;
         Serial.println("VOLTAGE FAULT too high!!!!!!!!!!!!!!!!!!!");
         Serial.print("max IC: "); Serial.println(maxIC);
         Serial.print("max Cell: "); Serial.println(maxCell); Serial.println();
     } else {
-        first_fault_overvoltage = false;
+        first_fault_overvoltage = 0;
     }
 
     if (bms_voltages.get_low() < voltage_cutoff_low) {
-        if (first_fault_undervoltage) {
+        if (first_fault_undervoltage==IGNORE_FAULT_THRESHOLD) {
             bms_status.set_undervoltage(true);
+        }else {
+            first_fault_undervoltage += 1;
         }
-        first_fault_undervoltage = true;
         Serial.println("VOLTAGE FAULT too low!!!!!!!!!!!!!!!!!!!");
         Serial.print("min IC: "); Serial.println(minIC);
         Serial.print("min Cell: "); Serial.println(minCell); Serial.println();
     } else {
-        first_fault_undervoltage = false;
+        first_fault_undervoltage = 0;
     }
 
     if (bms_voltages.get_total() > total_voltage_cutoff) {
-        if (first_fault_total_voltage_high) {
+        if (first_fault_total_voltage_high==IGNORE_FAULT_THRESHOLD) {
             bms_status.set_total_voltage_high(true); // TODO may need to comment this out for now when driving due to 65535 errors
+        }else {
+            first_fault_total_voltage_high += 1;
         }
-        first_fault_total_voltage_high = true;
         Serial.println("VOLTAGE FAULT!!!!!!!!!!!!!!!!!!!");
+    }else{ 
+        first_fault_total_voltage_high = 0;
     }
 
     Serial.print("Average: "); Serial.println(avgVolt / (double) 1e4, 4);
