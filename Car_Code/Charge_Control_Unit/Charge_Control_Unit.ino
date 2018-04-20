@@ -35,8 +35,7 @@ void loop() {
     while (CAN.read(msg)) {
         if (msg.id == ID_BMS_STATUS) {
             BMS_status bms_status = BMS_status(msg.buf);
-            ccu_status.set_charger_enabled(bms_status.get_state() == BMS_STATE_BALANCING_CHARGE_ENABLE ||
-                                            bms_status.get_state() == BMS_STATE_CHARGING);
+            ccu_status.set_charger_enabled(bms_status.get_state() == BMS_STATE_CHARGE_ENABLE);
         }
     }
 
@@ -50,7 +49,7 @@ void loop() {
     if (timer_update_CAN.check()) {
         ccu_status.write(msg.buf);
         msg.id = ID_CCU_STATUS;
-        msg.len = 1;
+         msg.len = sizeof(CAN_message_ccu_status_t);
         CAN.write(msg);
     }
 }
