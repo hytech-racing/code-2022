@@ -150,6 +150,7 @@ BMS_onboard_detailed_temperatures bms_onboard_detailed_temperatures[TOTAL_IC];
 BMS_voltages bms_voltages;
 MC_voltage_information mc_voltage_info;
 bool watchdog_high = true;
+bool disable_balance = false;
 
 int minVoltageICIndex;
 int minVoltageCellIndex;
@@ -178,7 +179,7 @@ void setup() {
     init_cfg(); // Initialize and write configuration registers to LTC6804 chips
     poll_cell_voltage();
     memcpy(cell_delta_voltage, cell_voltages, 2 * TOTAL_IC * CELLS_PER_IC);
-    bms_status.set_state(BMS_STATE_CHARGING);
+    bms_status.set_state(BMS_STATE_DISCHARGING);
     Serial.println("Setup Complete!");
 
     // DEBUG Code for testing cell packs
@@ -208,7 +209,7 @@ void loop() {
             if (bms_status.get_state() == BMS_STATE_DISCHARGING && bms_temperatures.get_high_temperature() > discharge_temp_cell_critical_high) {
                 bms_status.set_discharge_overtemp(true);
                 Serial.println("Discharge overtemperature fault!");
-            } else if (bms_status.get_state() >= BMS_STATE_CHARGING && bms_temperatures.get_high_temperature() > charge_temp_cell_critical_high) {
+            } else if (bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED && bms_temperatures.get_high_temperature() > charge_temp_cell_critical_high) {
                 bms_status.set_charge_overtemp(true);
                 Serial.println("Charge overtemperature fault!");
             } else if (bms_temperatures.get_low_temperature() < temp_critical_low) {
@@ -217,7 +218,7 @@ void loop() {
             }
         }
         if (msg.id == ID_CCU_STATUS) { // Check if CCU status message is received and enable charger
-            bms_status.set_state(BMS_STATE_CHARGING);
+            bms_status.set_state(BMS_STATE_CHARGE_ENABLED);
             timer_charge_timeout.reset();
         }
         if (timer_charge_timeout.check()) { // 1 second timeout - if timeout is reached, disable charging
@@ -400,9 +401,9 @@ void stop_discharge_all() {
 void balance_cells() {
     if (bms_voltages.get_low() > voltage_cutoff_low 
         && mc_voltage_info.get_dc_bus_voltage() >= DC_BUS_HIGH_THRESHOLD
-        && (bms_status.get_state() == BMS_STATE_CHARGING || bms_status.get_state() == BMS_STATE_BALANCING_CHARGE_ENABLE)) {
-        
-        bms_status.set_state(BMS_STATE_BALANCING_CHARGE_ENABLE);
+        && !disable_balance
+        && bms_status.get_state() >= BMS_STATE_CHARGE_ENABLE) {
+
         for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
             for (int cell = 0; cell < CELLS_PER_IC; cell++) { // Loop through cells
                 if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
@@ -420,10 +421,6 @@ void balance_cells() {
         }
     }
     else {
-        if (bms_status.get_state() == BMS_STATE_CHARGING || bms_status.get_state() == BMS_STATE_BALANCING_CHARGE_ENABLE)
-            bms_status.set_state(BMS_STATE_CHARGING);
-        else
-            bms_status.set_state(BMS_STATE_DISCHARGING);
         Serial.println("Not Balancing!");
         stop_discharge_all(); // Make sure none of the cells are discharging
     }
@@ -599,7 +596,7 @@ void process_cell_temps() { // TODO make work with signed int8_t CAN message (ye
             bms_status.set_discharge_overtemp(true);
             Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
         }
-    } else if (bms_status.get_state() == BMS_STATE_CHARGING) { // Charging
+    } else if (bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED) { // Charging
         if (bms_temperatures.get_high_temperature() > charge_temp_cell_critical_high) {
             bms_status.set_charge_overtemp(true);
             Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
@@ -691,18 +688,20 @@ void process_onboard_temps() {
             bms_status.set_discharge_overtemp(true);
             Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
         }
-    } else if (bms_status.get_state() == BMS_STATE_CHARGING 
-                || bms_status.get_state() == BMS_STATE_BALANCING_CHARGE_ENABLE) { // Charging
+    } else if (bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED) { // Charging
         if (bms_onboard_temperatures.get_high_temperature() > onboard_temp_critical_high) {
             bms_status.set_charge_overtemp(true);
+            disable_balance = true;
             Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
         } else if (bms_onboard_temperatures.get_high_temperature() >= onboard_temp_balance_disable) {
-            bms_status.set_state(BMS_STATE_BALANCING_CHARGE_DISABLE);
+            bms_status.set_state(BMS_STATE_CHARGE_DISABLED);
+            disable_balance = true;
             Serial.println("WARNING: Onboard temperature too high; disabling balancing");
         }
-    } else if (bms_status.get_state() == BMS_STATE_BALANCING_CHARGE_DISABLE) {
+    } else if (bms_status.get_state() == BMS_STATE_CHARGE_DISABLED) {
         if (bms_onboard_temperatures.get_high_temperature() < onboard_temp_balance_reenable) {
-            bms_status.set_state(BMS_STATE_BALANCING_CHARGE_ENABLE);
+            bms_status.set_state(BMS_STATE_CHARGE_ENABLED);
+            disable_balance = false;
             Serial.println("CLEARED: Onboard temperature OK; reenabling balancing");
         }
     }
@@ -759,14 +758,12 @@ void process_current() {
     bms_status.set_current((int16_t) (current * 100));
     //bms_status.set_charge_overcurrent(false); // RESET these values, then check below if they should be set again
     //bms_status.set_discharge_overcurrent(false);
-    if (current < 0) {
-        bms_status.set_state(BMS_STATE_CHARGING);
+    if (bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED) {
         if (bms_status.get_current() < charge_current_constant_high) {
             bms_status.set_charge_overcurrent(true);
             Serial.println("CHARGE CURRENT HIGH FAULT!!!!!!!!!!!!!!!!!!!");
         }
-    } else if (current > 0) {
-        bms_status.set_state(BMS_STATE_DISCHARGING);
+    } else {
         if (bms_status.get_current() > discharge_current_constant_high) {
             bms_status.set_discharge_overcurrent(true);
             Serial.println("DISCHARGE CURRENT HIGH FAULT!!!!!!!!!!!!!!!!!!!");
