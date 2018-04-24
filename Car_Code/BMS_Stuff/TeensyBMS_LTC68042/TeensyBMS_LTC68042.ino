@@ -92,8 +92,8 @@ uint16_t discharge_current_constant_high = 22000; // 220.00A
 uint16_t charge_current_constant_high = -10000; // 100.00A // TODO take into account max charge allowed for regen, 100A is NOT NOMINALLY ALLOWED!
 uint16_t charge_temp_cell_critical_high = 4400; // 44.00C
 uint16_t discharge_temp_cell_critical_high = 6000; // 60.00C
-uint16_t onboard_temp_balance_disable = 0;  // TODO fill this in with real numbers
-uint16_t onboard_temp_balance_reenable = 0; // TODO fill this in with real numbers
+uint16_t onboard_temp_balance_disable = 5000;  // TODO fill this in with real numbers
+uint16_t onboard_temp_balance_reenable = 4000; // TODO fill this in with real numbers
 uint16_t onboard_temp_critical_high = 6000; // TODO fill this in with real numbers
 uint16_t temp_critical_low = 0; // 0C
 uint16_t voltage_difference_threshold = 500; // 5.00V
@@ -201,22 +201,22 @@ void loop() {
     while (CAN.read(msg)) {
         //Serial.println("reading CAN message");
         //Serial.println(msg.id, HEX);
-        if (msg.id == ID_BMS_TEMPERATURES) { // Used temporarily while we have an external temperature monitor ECU
-            bms_temperatures.load(msg.buf);
-            //bms_status.set_discharge_overtemp(false);  // RESET these values, then check below if they should be set again
-            //bms_status.set_charge_overtemp(false);
-            //bms_status.set_undertemp(false);
-            if (bms_status.get_state() == BMS_STATE_DISCHARGING && bms_temperatures.get_high_temperature() > discharge_temp_cell_critical_high) {
-                bms_status.set_discharge_overtemp(true);
-                Serial.println("Discharge overtemperature fault!");
-            } else if (bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED && bms_temperatures.get_high_temperature() > charge_temp_cell_critical_high) {
-                bms_status.set_charge_overtemp(true);
-                Serial.println("Charge overtemperature fault!");
-            } else if (bms_temperatures.get_low_temperature() < temp_critical_low) {
-                bms_status.set_undertemp(true);
-                Serial.println("Undertemperature fault!");
-            }
-        }
+        // if (msg.id == ID_BMS_TEMPERATURES) { // Used temporarily while we have an external temperature monitor ECU
+        //     bms_temperatures.load(msg.buf);
+        //     //bms_status.set_discharge_overtemp(false);  // RESET these values, then check below if they should be set again
+        //     //bms_status.set_charge_overtemp(false);
+        //     //bms_status.set_undertemp(false);
+        //     if (bms_status.get_state() == BMS_STATE_DISCHARGING && bms_temperatures.get_high_temperature() > discharge_temp_cell_critical_high) {
+        //         bms_status.set_discharge_overtemp(true);
+        //         Serial.println("Discharge overtemperature fault!");
+        //     } else if (bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED && bms_temperatures.get_high_temperature() > charge_temp_cell_critical_high) {
+        //         bms_status.set_charge_overtemp(true);
+        //         Serial.println("Charge overtemperature fault!");
+        //     } else if (bms_temperatures.get_low_temperature() < temp_critical_low) {
+        //         bms_status.set_undertemp(true);
+        //         Serial.println("Undertemperature fault!");
+        //     }
+        // }
         if (msg.id == ID_CCU_STATUS) { // Check if CCU status message is received and enable charger
             bms_status.set_state(BMS_STATE_CHARGE_ENABLED);
             timer_charge_timeout.reset();
@@ -402,7 +402,7 @@ void balance_cells() {
     if (bms_voltages.get_low() > voltage_cutoff_low 
         && mc_voltage_info.get_dc_bus_voltage() >= DC_BUS_HIGH_THRESHOLD
         && !disable_balance
-        && bms_status.get_state() >= BMS_STATE_CHARGE_ENABLE) {
+        && bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED) {
 
         for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
             for (int cell = 0; cell < CELLS_PER_IC; cell++) { // Loop through cells
@@ -588,8 +588,8 @@ void process_cell_temps() { // TODO make work with signed int8_t CAN message (ye
     bms_temperatures.set_high_temperature((int16_t) highTemp);
     bms_temperatures.set_average_temperature((int16_t) avgTemp);
 
-    //bms_status.set_discharge_overtemp(false); // RESET these values, then check below if they should be set again
-    //bms_status.set_charge_overtemp(false);
+    bms_status.set_discharge_overtemp(false); // RESET these values, then check below if they should be set again
+    bms_status.set_charge_overtemp(false);
 
     if (bms_status.get_state() == BMS_STATE_DISCHARGING) { // Discharging
         if (bms_temperatures.get_high_temperature() > discharge_temp_cell_critical_high) {
@@ -680,17 +680,17 @@ void process_onboard_temps() {
 
     // TODO don't fault the BMS based on onboard thermistors, but do disable balancing
 
-    //bms_status.set_discharge_overtemp(false); // RESET these values, then check below if they should be set again
-    //bms_status.set_charge_overtemp(false);
+    bms_status.set_onboard_overtemp(false); // RESET this value, then check below if they should be set
+
     //marker
     if (bms_status.get_state() == BMS_STATE_DISCHARGING) { // Discharging
         if (bms_onboard_temperatures.get_high_temperature() > onboard_temp_critical_high) {
-            bms_status.set_discharge_overtemp(true);
+            bms_status.set_onboard_overtemp(true);
             Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
         }
     } else if (bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED) { // Charging
         if (bms_onboard_temperatures.get_high_temperature() > onboard_temp_critical_high) {
-            bms_status.set_charge_overtemp(true);
+            bms_status.set_onboard_overtemp(true);
             disable_balance = true;
             Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
         } else if (bms_onboard_temperatures.get_high_temperature() >= onboard_temp_balance_disable) {
@@ -756,8 +756,8 @@ void process_current() {
     Serial.print(current, 2);
     Serial.println("A");
     bms_status.set_current((int16_t) (current * 100));
-    //bms_status.set_charge_overcurrent(false); // RESET these values, then check below if they should be set again
-    //bms_status.set_discharge_overcurrent(false);
+    bms_status.set_charge_overcurrent(false); // RESET these values, then check below if they should be set again
+    bms_status.set_discharge_overcurrent(false);
     if (bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED) {
         if (bms_status.get_current() < charge_current_constant_high) {
             bms_status.set_charge_overcurrent(true);

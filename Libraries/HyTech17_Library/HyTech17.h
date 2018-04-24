@@ -14,10 +14,8 @@
 #define FCU_STATE_READY_TO_DRIVE 5
 
 #define BMS_STATE_DISCHARGING 1
-#define BMS_STATE_CHARGING 2
-#define BMS_STATE_BALANCING_CHARGE_ENABLE 3
-#define BMS_STATE_BALANCING_CHARGE_DISABLE 4
-#define BMS_STATE_ERROR 5
+#define BMS_STATE_CHARGE_ENABLED 2
+#define BMS_STATE_CHARGE_DISABLED 3
 
 #define CCU_STATE_NOT_CHARGING 1
 #define CCU_STATE_CHARGE_REQUESTED 2
@@ -341,6 +339,7 @@ class BMS_status {
         bool get_discharge_overtemp();
         bool get_charge_overtemp();
         bool get_undertemp();
+        bool get_onboard_overtemp();
         int16_t get_current();
 
         void set_state(uint8_t state);
@@ -353,6 +352,7 @@ class BMS_status {
         void set_discharge_overtemp(bool discharge_overtemp);
         void set_charge_overtemp(bool charge_overtemp);
         void set_undertemp(bool undertemp);
+        void set_onboard_overtemp(bool onboard_overtemp);
         void set_current(int16_t current);
     private:
         CAN_message_bms_status_t message;
