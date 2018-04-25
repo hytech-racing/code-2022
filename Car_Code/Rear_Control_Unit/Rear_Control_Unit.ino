@@ -196,10 +196,10 @@ void loop() {
  */
 int write_xbee_data() {
     // delim (1) + checksum (2) + id (4) + length (1) + length
-    uint8_t xb_buf[XBEE_PKT_LEN] = {0};
+    uint8_t xb_buf[XBEE_PKT_LEN];
     memcpy(xb_buf, &msg.id, sizeof(msg.id));        // msg id
-    memcpy(xb_buf + sizeof(msg.id), &msg.len, sizeof(msg.len));     // msg len
-    memcpy(xb_buf + sizeof(msg.id) + sizeof(msg.len), msg.buf, msg.len); // msg contents
+    memcpy(xb_buf + sizeof(msg.id), &msg.len, sizeof(uint8_t));     // msg len
+    memcpy(xb_buf + sizeof(msg.id) + sizeof(uint8_t), msg.buf, msg.len); // msg contents
 
     // calculate checksum
     uint16_t checksum = fletcher16(xb_buf, XBEE_PKT_LEN - 2);
