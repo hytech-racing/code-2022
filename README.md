@@ -24,3 +24,9 @@
 * `Libraries/` Library files that are needed to compile our code (you can create a symlink from your Arduino libraries folder to this)
 * `Resources/` Files that might help you as you work on HyTech software projects
 * `Testing_Code/` Files that are used to either test components of the car or different hardware (such as the CAN Bus)
+
+## More Information
+* [Wiki](https://hytechracing.me.gatech.edu/wiki/Main_Page)
+* [Home Webpage](https://hytechracing.gatech.edu/)
+* [Org Sync](https://orgsync.com/136388/chapter)
+* [Our Facebook](https://www.facebook.com/HyTechRacing/)

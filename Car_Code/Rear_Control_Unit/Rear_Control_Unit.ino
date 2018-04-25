@@ -35,6 +35,7 @@
 #define BMS_HIGH 134 // ~3V on BMS_OK line
 #define IMD_HIGH 134 // ~3V on OKHS line
 #define SHUTDOWN_OUT_HIGH 350 // ~8V on SHUTDOWN_C line
+#define XBEE_PKT_LEN 15
 
 /*
  * Timers
@@ -104,20 +105,20 @@ void loop() {
                 timer_fcu_restart_inverter.reset();
             }
         }
-        if ((msg.id == ID_MC_TEMPERATURES_1 && timer_debug_rms_temperatures_1.check())
-                || (msg.id == ID_MC_TEMPERATURES_3 && timer_debug_rms_temperatures_3.check())
-                || (msg.id == ID_MC_MOTOR_POSITION_INFORMATION && timer_debug_rms_motor_position_information.check())
-                || (msg.id == ID_MC_CURRENT_INFORMATION && timer_debug_rms_current_information.check())
-                || (msg.id == ID_MC_VOLTAGE_INFORMATION && timer_debug_rms_voltage_information.check())
-                || (msg.id == ID_MC_INTERNAL_STATES && timer_debug_rms_internal_states.check())
-                || (msg.id == ID_MC_FAULT_CODES && timer_debug_rms_fault_codes.check())
-                || (msg.id == ID_MC_TORQUE_TIMER_INFORMATION && timer_debug_rms_torque_timer_information.check())
-                || (msg.id == ID_BMS_VOLTAGES && timer_debug_bms_voltages.check())
-                || (msg.id == ID_BMS_TEMPERATURES && timer_debug_bms_temperatures.check())
-                || (msg.id == ID_BMS_STATUS && timer_debug_bms_status.check())
-                || (msg.id == ID_FCU_STATUS && timer_debug_fcu_status.check())) {
-            write_xbee_data();
-        }
+       if ((msg.id == ID_MC_TEMPERATURES_1 && timer_debug_rms_temperatures_1.check())
+               || (msg.id == ID_MC_TEMPERATURES_3 && timer_debug_rms_temperatures_3.check())
+               || (msg.id == ID_MC_MOTOR_POSITION_INFORMATION && timer_debug_rms_motor_position_information.check())
+               || (msg.id == ID_MC_CURRENT_INFORMATION && timer_debug_rms_current_information.check())
+               || (msg.id == ID_MC_VOLTAGE_INFORMATION && timer_debug_rms_voltage_information.check())
+               || (msg.id == ID_MC_INTERNAL_STATES && timer_debug_rms_internal_states.check())
+               || (msg.id == ID_MC_FAULT_CODES && timer_debug_rms_fault_codes.check())
+               || (msg.id == ID_MC_TORQUE_TIMER_INFORMATION && timer_debug_rms_torque_timer_information.check())
+               || (msg.id == ID_BMS_VOLTAGES && timer_debug_bms_voltages.check())
+               || (msg.id == ID_BMS_TEMPERATURES && timer_debug_bms_temperatures.check())
+               || (msg.id == ID_BMS_STATUS && timer_debug_bms_status.check())
+               || (msg.id == ID_FCU_STATUS && timer_debug_fcu_status.check())) {
+           write_xbee_data();
+       }
     }
 
     /*
@@ -128,7 +129,6 @@ void loop() {
         msg.id = ID_RCU_STATUS;
         msg.len = sizeof(CAN_message_rcu_status_t);
         CAN.write(msg);
-
         write_xbee_data();
 
         // commented below code in case of problems
@@ -195,20 +195,38 @@ void loop() {
  * returns: number of bytes written to the Xbee serial bus
  */
 int write_xbee_data() {
-    // delim (1) + checksum (2) + id (id-size) + length (1) + length
-    uint8_t state_msg_size = sizeof(uint16_t) + sizeof(msg.id) + sizeof(uint8_t) + msg.len;
-    uint8_t xb_buf[state_msg_size];
+    // delim (1) + checksum (2) + id (4) + length (1) + length
+    uint8_t xb_buf[XBEE_PKT_LEN];
     memcpy(xb_buf, &msg.id, sizeof(msg.id));        // msg id
     memcpy(xb_buf + sizeof(msg.id), &msg.len, sizeof(uint8_t));     // msg len
     memcpy(xb_buf + sizeof(msg.id) + sizeof(uint8_t), msg.buf, msg.len); // msg contents
 
     // calculate checksum
-    uint16_t checksum = fletcher16(xb_buf, sizeof(msg.id) + sizeof(uint8_t) + msg.len);
-    memcpy(xb_buf + sizeof(msg.id) + sizeof(uint8_t) + msg.len, &checksum, sizeof(uint16_t));
+    uint16_t checksum = fletcher16(xb_buf, XBEE_PKT_LEN - 2);
+    Serial.print("CHECKSUM: ");
+    Serial.println(checksum, HEX);
+    memcpy(&xb_buf[XBEE_PKT_LEN - 2], &checksum, sizeof(uint16_t));
 
-    uint8_t cobs_buf[1 + state_msg_size];
-    cobs_encode(xb_buf, state_msg_size, cobs_buf + 1);
-    cobs_buf[0] = 0x0;
+    for (int i = 0; i < XBEE_PKT_LEN; i++) {
+      Serial.print(xb_buf[i], HEX);
+      Serial.print(" ");
+    }
+    Serial.println();
 
-    return XB.write(cobs_buf, 1 + state_msg_size);
+    uint8_t cobs_buf[2 + XBEE_PKT_LEN];
+    cobs_encode(xb_buf, XBEE_PKT_LEN+1, cobs_buf);
+    cobs_buf[XBEE_PKT_LEN+1] = 0x0;
+
+    for (int i = 0; i < XBEE_PKT_LEN+2; i++) {
+      Serial.print(cobs_buf[i], HEX);
+      Serial.print(" ");
+    }
+    Serial.println();
+
+    int written = XB.write(cobs_buf, 2 + XBEE_PKT_LEN);
+    Serial.print("Wrote ");
+    Serial.print(written);
+    Serial.println(" bytes");
+
+    return written;
 }

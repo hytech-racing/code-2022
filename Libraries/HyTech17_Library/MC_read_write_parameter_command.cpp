@@ -14,6 +14,7 @@ MC_read_write_parameter_command::MC_read_write_parameter_command(uint8_t buf[8])
 }
 
 MC_read_write_parameter_command::MC_read_write_parameter_command(uint16_t parameter_address, bool rw_command, uint32_t data) {
+    message = {};
     set_parameter_address(parameter_address);
     set_rw_command(rw_command);
     set_data(data);
