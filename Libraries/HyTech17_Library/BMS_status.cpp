@@ -82,39 +82,39 @@ void BMS_status::set_error_flags(uint8_t error_flags) {
 }
 
 void BMS_status::set_overvoltage(bool overvoltage) {
-    message.error_flags = (message.error_flags & 0xFE) | (overvoltage & 0x1);
+    message.error_flags = (message.error_flags & 0xFFFE) | (overvoltage & 0x1);
 }
 
 void BMS_status::set_undervoltage(bool undervoltage) {
-    message.error_flags = (message.error_flags & 0xFD) | ((undervoltage & 0x1) << 1);
+    message.error_flags = (message.error_flags & 0xFFFD) | ((undervoltage & 0x1) << 1);
 }
 
 void BMS_status::set_total_voltage_high(bool total_voltage_high) {
-    message.error_flags = (message.error_flags & 0xFB) | ((total_voltage_high & 0x1) << 2);
+    message.error_flags = (message.error_flags & 0xFFFB) | ((total_voltage_high & 0x1) << 2);
 }
 
 void BMS_status::set_discharge_overcurrent(bool discharge_overcurrent) {
-    message.error_flags = (message.error_flags & 0xF7) | ((discharge_overcurrent & 0x1) << 3);
+    message.error_flags = (message.error_flags & 0xFFF7) | ((discharge_overcurrent & 0x1) << 3);
 }
 
 void BMS_status::set_charge_overcurrent(bool charge_overcurrent) {
-    message.error_flags = (message.error_flags & 0xEF) | ((charge_overcurrent & 0x1) << 4);
+    message.error_flags = (message.error_flags & 0xFFEF) | ((charge_overcurrent & 0x1) << 4);
 }
 
 void BMS_status::set_discharge_overtemp(bool discharge_overtemp) {
-    message.error_flags = (message.error_flags & 0xDF) | ((discharge_overtemp & 0x1) << 5);
+    message.error_flags = (message.error_flags & 0xFFDF) | ((discharge_overtemp & 0x1) << 5);
 }
 
 void BMS_status::set_charge_overtemp(bool charge_overtemp) {
-    message.error_flags = (message.error_flags & 0xBF) | ((charge_overtemp & 0x1) << 6);
+    message.error_flags = (message.error_flags & 0xFFBF) | ((charge_overtemp & 0x1) << 6);
 }
 
 void BMS_status::set_undertemp(bool undertemp) {
-    message.error_flags = (message.error_flags & 0x7F) | ((undertemp & 0x1) << 7);
+    message.error_flags = (message.error_flags & 0xFF7F) | ((undertemp & 0x1) << 7);
 }
 
 void BMS_status::set_onboard_overtemp(bool onboard_overtemp) {
-    message.error_flags = (message.error_flags & 0xFF) | ((onboard_overtemp & 0x1) << 8);
+    message.error_flags = (message.error_flags & 0xFEFF) | ((onboard_overtemp & 0x1) << 8);
 }
 
 void BMS_status::set_current(int16_t current) {
