@@ -50,13 +50,13 @@
 /*
  * Constant definitions
  */
-#define TOTAL_IC 6
+#define TOTAL_IC 8
 #define CELLS_PER_IC 9
 #define THERMISTORS_PER_IC 3
 #define PCB_THERM_PER_IC 2
-#define TOTAL_CELLS 18 // Number of non-ignored cells (used for calculating averages)
-#define TOTAL_PCB_THERMISTORS 12    // number of non-ignored PCB thermistors (for averages)
-#define TOTAL_CELL_THERMISTORS 18   // number of non-ignored Cell thermistors (for averages)
+#define TOTAL_CELLS 72 // Number of non-ignored cells (used for calculating averages)
+#define TOTAL_PCB_THERMISTORS 16    // number of non-ignored PCB thermistors (for averages)
+#define TOTAL_CELL_THERMISTORS 24   // number of non-ignored Cell thermistors (for averages)
 #define THERMISTOR_RESISTOR_VALUE 10000
 #define IGNORE_FAULT_THRESHOLD 5
 #define SHUTDOWN_HIGH_THRESHOLD 2
@@ -87,7 +87,7 @@ Metro timer_charge_timeout = Metro(1000);
  */
 uint16_t voltage_cutoff_low = 29800; // 2.9800V
 uint16_t voltage_cutoff_high = 42000; // 4.2000V
-uint16_t total_voltage_cutoff = 15000; // 150.00V
+uint16_t total_voltage_cutoff = 30000; // 300.00V
 uint16_t discharge_current_constant_high = 22000; // 220.00A
 uint16_t charge_current_constant_high = -10000; // 100.00A // TODO take into account max charge allowed for regen, 100A is NOT NOMINALLY ALLOWED!
 uint16_t charge_temp_cell_critical_high = 4400; // 44.00C
