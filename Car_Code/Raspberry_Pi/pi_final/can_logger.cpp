@@ -28,6 +28,8 @@ int main() {
             if (msg->can_id == ID_MC_TORQUE_TIMER_INFORMATION && count % 10 == 0) {
                 log_to_file(msg);
                 count = 0;
+            } else {
+                count++;
             }
         }
     }
