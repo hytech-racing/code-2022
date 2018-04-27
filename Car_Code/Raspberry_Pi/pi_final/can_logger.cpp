@@ -15,7 +15,11 @@ std::string base_log_dir = "/home/pi/logs/";
 char timestr[20];
 
 int main() {
-    log_mc.open(base_log_dir + "logs.txt", std::ios::out | std::ios::app);
+    std::time_t timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    if (std::strftime(timestr, sizeof(timestr), "%G%m%d-%H%M",
+                std::localtime(&timestamp))) {
+        log_mc.open(base_log_dir + "log-" + timestr + ".txt", std::ios::out | std::ios::app);
+                }
     CAN green_bus;
     canframe_t *msg = (canframe_t*) malloc(sizeof(canframe_t));
     int count_torque = 0;
