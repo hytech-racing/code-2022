@@ -15,10 +15,11 @@ std::string base_log_dir = "/home/pi/logs/";
 char timestr[20];
 
 int main() {
-    log_mc.open(base_log_dir + "logs_mc.txt", std::ios::out | std::ios::app);
+    log_mc.open(base_log_dir + "logs.txt", std::ios::out | std::ios::app);
     CAN green_bus;
     canframe_t *msg = (canframe_t*) malloc(sizeof(canframe_t));
-    int count = 0;
+    int count_torque = 0;
+    int count_current = 0;
 
     while (1) {
         if (green_bus.read(msg) > 0) {
@@ -26,11 +27,21 @@ int main() {
         } else {
             msg->can_id = msg->can_id & 0xFF;
             if (msg->can_id == ID_MC_TORQUE_TIMER_INFORMATION) {
-                if (count == 10) {
+                if (count_torque == 10) {
                     log_to_file(msg);
-                    count = 0;
+                    count_torque = 0;
                 } else {
-                    count++;
+                    count_torque++;
+                }
+            } else if (msg->can_id >= ID_BMS_ONBOARD_TEMPERATURES
+                    && msg->can_id <= ID_BMS_STATUS) {
+                log_to_file(msg);
+            } else if (msg->can_id == ID_MC_CURRENT_INFORMATION) {
+                if (count_current == 10) {
+                    log_to_file(msg);
+                    count_current = 0;
+                } else {
+                    count_current++;
                 }
             }
         }
