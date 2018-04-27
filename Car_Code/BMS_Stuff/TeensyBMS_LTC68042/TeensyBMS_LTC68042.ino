@@ -66,12 +66,12 @@
  * Current Sensor ADC Channel definitions
  */
 #define ADC_CS 9
-#define CH_CUR_SENSE_1 1
-#define CH_CUR_SENSE_2 3
-#define CH_TEMP_SENSE_1 2
-#define CH_TEMP_SENSE_2 4
-#define CH_SHUTDOWN 6
-#define CH_5V 5
+#define CH_CUR_SENSE_1 0
+#define CH_CUR_SENSE_2 2
+#define CH_TEMP_SENSE_1 1
+#define CH_TEMP_SENSE_2 3
+#define CH_SHUTDOWN 5
+#define CH_5V 4
 
 /*
  * Timers
