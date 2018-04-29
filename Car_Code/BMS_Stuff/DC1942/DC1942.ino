@@ -115,6 +115,9 @@ Copyright 2013 Linear Technology Corp. (LTC)
 #include "UserInterface.h"
 #include "LTC68042.h"
 #include <SPI.h>
+#include <ADC_SPI.h>
+
+ADC_SPI adc;
 
 const uint8_t TOTAL_IC = 8;//!<number of ICs in the isoSPI network LTC6804-2 ICs must be addressed in ascending order starting at 0.
 
@@ -173,6 +176,7 @@ void setup()
 {
   pinMode(10, OUTPUT); // Enable CS pin for Teensy compatibility
   Serial.begin(115200);
+  adc = ADC_SPI(9);
   LTC6804_initialize();  //Initialize LTC6804 hardware
   init_cfg();        //initialize the 6804 configuration array to be written
   print_menu();
@@ -312,6 +316,17 @@ void run_command(uint16_t cmd)
           Serial.println("A PEC error was detected in the received data");
         }
         print_cells();
+        for (int i = 0; i < 8; i++) {
+          int val = adc.read_adc(i);
+          Serial.print("C");
+          Serial.print(i);
+          Serial.print(": ");
+          Serial.print(val);
+          Serial.print('\t');
+        }
+        pinMode(10, OUTPUT);
+        digitalWrite(10, HIGH);
+        Serial.println();
         delay(500);
       }
       print_menu();

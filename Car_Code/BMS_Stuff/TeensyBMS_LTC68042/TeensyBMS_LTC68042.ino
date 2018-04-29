@@ -50,13 +50,13 @@
 /*
  * Constant definitions
  */
-#define TOTAL_IC 6
+#define TOTAL_IC 8
 #define CELLS_PER_IC 9
 #define THERMISTORS_PER_IC 3
 #define PCB_THERM_PER_IC 2
-#define TOTAL_CELLS 18 // Number of non-ignored cells (used for calculating averages)
-#define TOTAL_PCB_THERMISTORS 12    // number of non-ignored PCB thermistors (for averages)
-#define TOTAL_CELL_THERMISTORS 18   // number of non-ignored Cell thermistors (for averages)
+#define TOTAL_CELLS 72 // Number of non-ignored cells (used for calculating averages)
+#define TOTAL_PCB_THERMISTORS 16    // number of non-ignored PCB thermistors (for averages)
+#define TOTAL_CELL_THERMISTORS 24   // number of non-ignored Cell thermistors (for averages)
 #define THERMISTOR_RESISTOR_VALUE 10000
 #define IGNORE_FAULT_THRESHOLD 10
 #define CURRENT_FAULT_THRESHOLD 5
@@ -88,7 +88,7 @@ Metro timer_charge_timeout = Metro(1000);
  */
 uint16_t voltage_cutoff_low = 29800; // 2.9800V
 uint16_t voltage_cutoff_high = 42000; // 4.2000V
-uint16_t total_voltage_cutoff = 15000; // 150.00V
+uint16_t total_voltage_cutoff = 30000; // 300.00V
 uint16_t discharge_current_constant_high = 22000; // 220.00A
 uint16_t charge_current_constant_high = -10000; // 100.00A // TODO take into account max charge allowed for regen, 100A is NOT NOMINALLY ALLOWED!
 uint16_t charge_temp_cell_critical_high = 4400; // 44.00C
@@ -138,7 +138,9 @@ uint8_t tx_cfg[TOTAL_IC][6]; // data defining how data will be written to daisy 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
 
-// ADC Declaration
+/**
+ * ADC Declaration
+ */
 ADC_SPI ADC(ADC_CS);
 
 /**
@@ -186,11 +188,11 @@ void setup() {
     Serial.println("Setup Complete!");
 
     // DEBUG Code for testing cell packs
-    for (int i=0; i<4; i++) {
-        for (int j=0; j<9; j++) {
-            ignore_cell[i][j] = true; // Ignore ICs 0-3
-        }
-    }
+    // for (int i=0; i<4; i++) {
+    //     for (int j=0; j<9; j++) {
+    //         ignore_cell[i][j] = true; // Ignore ICs 0-3
+    //     }
+    // }
     // DEBUG insert PCB thermistors to ignore here
     // DEBUG insert cell thermistors to ignore here
 }
@@ -775,6 +777,7 @@ void process_current() {
      * current = (voltage - 2.5) * 300 / 2
      */
     double voltage = ADC.read_adc(CH_CUR_SENSE_1) / (double) 819;
+    initialize(); // Reconfigure so LTC communication is successful
     double current = (voltage - 2.5) * (double) 150;
     Serial.print("\nCurrent Sensor: ");
     Serial.print(current, 2);

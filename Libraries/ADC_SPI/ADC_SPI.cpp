@@ -36,7 +36,7 @@ ADC_SPI::ADC_SPI(int CS) {
 uint16_t ADC_SPI::read_adc(int channel) {
 	// Gain control of the SPI port
 	// and configure settings
-	SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
+	SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
 
 	// Take the SS pin low to select the chip:
 	digitalWrite(ADC_SPI_CS, LOW);
