@@ -13,11 +13,9 @@
 /*
  * Pin definitions
  */
-#define COOL_MOSFET_1 A8
-#define COOL_MOSFET_2 A7
-#define COOL_MOSFET_3 A6
 #define COOL_RELAY_1 A9
 #define COOL_RELAY_2 2
+#define COOL_RELAY_3 A8
 #define GPIO1 A4
 #define GPIO2 5
 #define SENSE_12VSUPPLY A3
@@ -73,6 +71,7 @@ static CAN_message_t msg;
 void setup() {
     pinMode(COOL_RELAY_1, OUTPUT);
     pinMode(COOL_RELAY_2, OUTPUT);
+    pinMode(COOL_RELAY_3, OUTPUT);
     pinMode(SSR_BRAKE_LIGHT, OUTPUT);
     pinMode(SSR_INVERTER, OUTPUT);
 
@@ -85,6 +84,7 @@ void setup() {
     digitalWrite(SSR_INVERTER, HIGH);
     digitalWrite(COOL_RELAY_1, HIGH);
     digitalWrite(COOL_RELAY_2, HIGH);
+    digitalWrite(COOL_RELAY_3, HIGH);
     rcu_status.set_bms_ok_high(true);
     rcu_status.set_imd_okhs_high(true);
 }
@@ -181,9 +181,11 @@ void loop() {
     if (analogRead(SENSE_SHUTDOWN_OUT) > SHUTDOWN_OUT_HIGH) {
         rcu_status.set_bms_imd_latched(true);
         digitalWrite(COOL_RELAY_2, HIGH);
+        digitalWrite(COOL_RELAY_3, HIGH);
     } else {
         rcu_status.set_bms_imd_latched(false);
         digitalWrite(COOL_RELAY_2, LOW);
+        digitalWrite(COOL_RELAY_3, LOW);
     }
 }
 
