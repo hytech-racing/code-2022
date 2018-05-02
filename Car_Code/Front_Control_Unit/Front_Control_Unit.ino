@@ -29,11 +29,11 @@
  * Constant definitions
  */
 // TODO some of these values need to be calibrated once hardware is installed
-#define BRAKE_ACTIVE 1600
-#define MIN_ACCELERATOR_PEDAL_1 2394 // compare pedal travel
-#define MAX_ACCELERATOR_PEDAL_1 1020
-#define MIN_ACCELERATOR_PEDAL_2 372
-#define MAX_ACCELERATOR_PEDAL_2 1372
+#define BRAKE_ACTIVE 600
+#define MIN_ACCELERATOR_PEDAL_1 250 // compare pedal travel
+#define MAX_ACCELERATOR_PEDAL_1 550
+#define MIN_ACCELERATOR_PEDAL_2 3840
+#define MAX_ACCELERATOR_PEDAL_2 3550
 #define MIN_BRAKE_PEDAL 1510
 #define MAX_BRAKE_PEDAL 1684
 #define MAX_TORQUE 1600 // Torque in Nm * 10
@@ -187,12 +187,12 @@ void loop() {
 
             // Check for accelerator implausibility FSAE EV2.3.10
             fcu_status.set_accelerator_implausibility(false);
-            /*if (fcu_readings.get_accelerator_pedal_raw_1() < MIN_ACCELERATOR_PEDAL_1 || fcu_readings.get_accelerator_pedal_raw_1() > MAX_ACCELERATOR_PEDAL_1) {
+            if (fcu_readings.get_accelerator_pedal_raw_1() < MIN_ACCELERATOR_PEDAL_1 || fcu_readings.get_accelerator_pedal_raw_1() > MAX_ACCELERATOR_PEDAL_1) {
                 fcu_status.set_accelerator_implausibility(true);
             }
-            if (fcu_readings.get_accelerator_pedal_raw_2() < MIN_ACCELERATOR_PEDAL_2 || fcu_readings.get_accelerator_pedal_raw_2() > MAX_ACCELERATOR_PEDAL_2) {
+            if (fcu_readings.get_accelerator_pedal_raw_2() > MIN_ACCELERATOR_PEDAL_2 || fcu_readings.get_accelerator_pedal_raw_2() < MAX_ACCELERATOR_PEDAL_2) {
                 fcu_status.set_accelerator_implausibility(true);
-            }*/
+            }
 
             // Calculate torque value
             int calculated_torque = 0;
