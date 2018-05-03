@@ -39,8 +39,10 @@
 #define MAX_ACCELERATOR_PEDAL_2 3550
 #define MIN_BRAKE_PEDAL 1510
 #define MAX_BRAKE_PEDAL 1684
-#define MAX_TORQUE 1600 // Torque in Nm * 10
+//#define MAX_TORQUE 1600 // Torque in Nm * 10
 #define MIN_HV_VOLTAGE 500 // Volts in V * 0.1 - Used to check if Accumulator is energized
+
+int MAX_TORQUE = 1600;
 
 /*
  * Timers
@@ -77,6 +79,7 @@ bool btn_cycle_pressed = false;
 bool debug = true;
 bool led_start_active = false;
 bool regen_active = false;
+bool low_torque = false;
 uint8_t led_start_type = 0; // 0 for off, 1 for steady, 2 for fast blink, 3 for slow blink
 float rampRatio = 1;
 
@@ -215,9 +218,9 @@ void loop() {
                 calculated_torque = (int) (min(torque1, torque2) * rampRatio);
 
                 // if regen is active and pedal is not pressed, send negative torque for regen
-                if (regen_active && calculated_torque == 0) {
-                    calculated_torque = -20;
-                }
+                // if (regen_active && calculated_torque == 0) {
+                //     calculated_torque = -20;
+                // }
 
                 if (rampRatio < 1 && timer_ramp_torque.check()) {
                    rampRatio += 0.1;
@@ -338,7 +341,7 @@ void loop() {
     if (btn_mode_debouncing && timer_btn_mode.check()) {                        // debounce period finishes
         btn_mode_pressed = !btn_mode_pressed;
         if (btn_mode_pressed) {
-            regen_active = !regen_active;
+            low_torque = !low_torque;
         }
     }
 
@@ -361,6 +364,12 @@ void loop() {
         digitalWrite(LED_MODE, HIGH);
     } else {
         digitalWrite(LED_MODE, LOW);
+    }
+
+    if (low_torque) {
+        MAX_TORQUE = 800;
+    } else {
+        MAX_TORQUE = 1600;
     }
 }
 
