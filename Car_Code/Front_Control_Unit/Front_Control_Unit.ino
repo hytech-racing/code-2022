@@ -367,8 +367,10 @@ void loop() {
     }
 
     if (low_torque) {
+        digitalWrite(LED_MODE, HIGH);
         MAX_TORQUE = 800;
     } else {
+        digitalWrite(LED_MODE, LOW);
         MAX_TORQUE = 1600;
     }
 }
