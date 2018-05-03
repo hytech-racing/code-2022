@@ -204,30 +204,28 @@ void setup() {
  */
 void loop() {
     while (CAN.read(msg)) {
-        //Serial.println("reading CAN message");
-        //Serial.println(msg.id, HEX);
-        // if (msg.id == ID_BMS_TEMPERATURES) { // Used temporarily while we have an external temperature monitor ECU
-        //     bms_temperatures.load(msg.buf);
-        //     //bms_status.set_discharge_overtemp(false);  // RESET these values, then check below if they should be set again
-        //     //bms_status.set_charge_overtemp(false);
-        //     //bms_status.set_undertemp(false);
-        //     if (bms_status.get_state() == BMS_STATE_DISCHARGING && bms_temperatures.get_high_temperature() > discharge_temp_cell_critical_high) {
-        //         bms_status.set_discharge_overtemp(true);
-        //         Serial.println("Discharge overtemperature fault!");
-        //     } else if (bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED && bms_temperatures.get_high_temperature() > charge_temp_cell_critical_high) {
-        //         bms_status.set_charge_overtemp(true);
-        //         Serial.println("Charge overtemperature fault!");
-        //     } else if (bms_temperatures.get_low_temperature() < temp_critical_low) {
-        //         bms_status.set_undertemp(true);
-        //         Serial.println("Undertemperature fault!");
-        //     }
-        // }
+        /*if (msg.id == ID_BMS_TEMPERATURES) { // Used temporarily while we have an external temperature monitor ECU
+            bms_temperatures.load(msg.buf);
+            //bms_status.set_discharge_overtemp(false);  // RESET these values, then check below if they should be set again
+            //bms_status.set_charge_overtemp(false);
+            //bms_status.set_undertemp(false);
+            if (bms_status.get_state() == BMS_STATE_DISCHARGING && bms_temperatures.get_high_temperature() > discharge_temp_cell_critical_high) {
+                bms_status.set_discharge_overtemp(true);
+                Serial.println("Discharge overtemperature fault!");
+            } else if (bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED && bms_temperatures.get_high_temperature() > charge_temp_cell_critical_high) {
+                bms_status.set_charge_overtemp(true);
+                Serial.println("Charge overtemperature fault!");
+            } else if (bms_temperatures.get_low_temperature() < temp_critical_low) {
+                bms_status.set_undertemp(true);
+                Serial.println("Undertemperature fault!");
+            }
+        }*/
         if (msg.id == ID_CCU_STATUS) { // Check if CCU status message is received and enable charger
-            bms_status.set_state(BMS_STATE_CHARGE_ENABLED);
+            if (bms_status.get_state() == BMS_STATE_CHARGE_DISABLED) {
+                Serial.println("Entering charge mode");
+                bms_status.set_state(BMS_STATE_CHARGE_ENABLED);
+            }
             timer_charge_timeout.reset();
-        }
-        if (timer_charge_timeout.check()) { // 1 second timeout - if timeout is reached, disable charging
-            bms_status.set_state(BMS_STATE_DISCHARGING);
         }
 
         if (msg.id == ID_FH_WATCHDOG_TEST) { // stop sending pulse to watchdog timer
@@ -241,6 +239,11 @@ void loop() {
         }
     }
 
+    if (timer_charge_timeout.check() && bms_status.get_state() > BMS_STATE_DISCHARGING) { // 1 second timeout - if timeout is reached, disable charging
+        Serial.println("Disabling charge mode - CCU timeout");
+        //bms_status.set_state(BMS_STATE_DISCHARGING);
+    }
+
     if (timer_process_cells.check()) {
         process_voltages(); // polls controller, and store data in bms_voltages object.
         //bms_voltages.set_low(37408); // DEBUG Remove before final code
@@ -250,6 +253,11 @@ void loop() {
         process_current(); // store data in bms_status object.
         print_uptime();
         print_temperatures();
+
+        Serial.print("State: ");
+        if (bms_status.get_state() == BMS_STATE_DISCHARGING) {Serial.println("DISCHARGING");}
+        if (bms_status.get_state() == BMS_STATE_CHARGE_ENABLED) {Serial.println("CHARGE ENABLED");}
+        if (bms_status.get_state() == BMS_STATE_CHARGE_DISABLED) {Serial.println("CHARGE DISABLED");}
 
         if (bms_status.get_error_flags()) { // BMS error - drive BMS_OK signal low
             Serial.println("STATUS NOT GOOD!!!!!!!!!!!!!!!");
@@ -295,6 +303,11 @@ void loop() {
         msg.len = sizeof(CAN_message_bms_voltages_t);
         CAN.write(msg);
 
+        bms_temperatures.write(msg.buf);
+        msg.id = ID_BMS_TEMPERATURES;
+        msg.len = sizeof(CAN_message_bms_temperatures_t);
+        CAN.write(msg);
+
         msg.id = ID_BMS_DETAILED_VOLTAGES;
         msg.len = sizeof(CAN_message_bms_detailed_voltages_t);
         for (int i = 0; i < TOTAL_IC; i++) {
@@ -304,19 +317,17 @@ void loop() {
             }
         }
 
-        /*bms_temperatures.write(msg.buf);
-        msg.id = ID_BMS_TEMPERATURES;
-        msg.len = sizeof(CAN_message_bms_temperatures_t);
-        CAN.write(msg);*/
+        msg.id = ID_BMS_DETAILED_TEMPERATURES;
+        msg.len = sizeof(CAN_message_bms_detailed_temperatures_t);
+        for (int i = 0; i < TOTAL_IC; i++) {
+            bms_detailed_temperatures[i].write(msg.buf);
+            CAN.write(msg);
+        }
     }
 
     if (timer_watchdog_timer.check() && !fh_watchdog_test) { // Send alternating keepalive signal to watchdog timer   
         watchdog_high = !watchdog_high;
         digitalWrite(WATCHDOG, watchdog_high);
-        /*Serial.print("set watchdog timer ");
-        Serial.print(watchdog_high);
-        Serial.print(" ");
-        Serial.println(digitalRead(BMS_OK));*/
     }
 }
 
