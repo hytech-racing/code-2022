@@ -20,6 +20,7 @@
 #define ADC_SPI_SCK 13
 #define BTN_START A5
 #define BTN_MODE 11
+#define BTN_CYCLE A4
 #define LED_START 5
 #define LED_BMS 6
 #define LED_IMD 7
@@ -46,6 +47,7 @@
  */
 Metro timer_btn_start = Metro(10);
 Metro timer_btn_mode = Metro(10);
+Metro timer_btn_cycle = Metro(10);
 Metro timer_debug = Metro(200);
 Metro timer_debug_raw_torque = Metro(200);
 Metro timer_debug_torque = Metro(200);
@@ -68,8 +70,10 @@ bool btn_start_debouncing = false;
 uint8_t btn_start_new = 0;
 bool btn_start_pressed = false;
 bool btn_mode_debouncing = false;
-uin8_t btn_mode_new = 0;
+uint8_t btn_mode_new = 0;
 bool btn_mode_pressed = true;
+bool btn_cycle_debouncing = false;
+bool btn_cycle_pressed = false;
 bool debug = true;
 bool led_start_active = false;
 bool regen_active = false;
@@ -86,6 +90,7 @@ void setup() {
     pinMode(ADC_SPI_SCK, OUTPUT);
     pinMode(BTN_START, INPUT_PULLUP);
     pinMode(BTN_MODE, INPUT_PULLUP);
+    pinMode(BTN_CYCLE, INPUT_PULLUP);
     pinMode(LED_BMS, OUTPUT);
     pinMode(LED_IMD, OUTPUT);
     pinMode(LED_START, OUTPUT);
@@ -100,11 +105,7 @@ void setup() {
 
     digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH);
     set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
-
-    // Send restart message, so RCU knows to power cycle the inverter (in case of CAN message timeout from FCU to inverter)
-    msg.id = ID_FCU_RESTART;
-    msg.len = 1;
-    CAN.write(msg);
+    reset_inverter();
 }
 
 void loop() {
@@ -341,6 +342,18 @@ void loop() {
         }
     }
 
+    if (digitalRead(BTN_CYCLE) == btn_cycle_pressed && !btn_cycle_debouncing) { // value different than stored
+        btn_cycle_debouncing = true;
+        timer_btn_cycle.reset();
+    }
+    if (btn_cycle_debouncing && digitalRead(BTN_CYCLE) != btn_cycle_pressed) {  // value returns during debounce period
+        btn_cycle_debouncing = false;
+    }
+    if (btn_cycle_debouncing && timer_btn_cycle.check()) {
+        btn_cycle_pressed = !btn_cycle_pressed;
+        reset_inverter();
+    }
+
     /*
      * Handle regen toggling after button pressed
      */
@@ -405,6 +418,13 @@ void set_start_led(uint8_t type) {
             Serial.println("FCU Setting Start LED slow blink");
         }
     }
+}
+
+void reset_inverter() {
+    // Send restart message, so RCU knows to power cycle the inverter (in case of CAN message timeout from FCU to inverter)
+    msg.id = ID_FCU_RESTART;
+    msg.len = 1;
+    CAN.write(msg);
 }
 
 /*
