@@ -58,7 +58,8 @@
 #define TOTAL_PCB_THERMISTORS 16    // number of non-ignored PCB thermistors (for averages)
 #define TOTAL_CELL_THERMISTORS 24   // number of non-ignored Cell thermistors (for averages)
 #define THERMISTOR_RESISTOR_VALUE 10000
-#define IGNORE_FAULT_THRESHOLD 5
+#define IGNORE_FAULT_THRESHOLD 10
+#define CURRENT_FAULT_THRESHOLD 5
 #define SHUTDOWN_HIGH_THRESHOLD 2
 #define DC_BUS_HIGH_THRESHOLD 50
 
@@ -66,12 +67,12 @@
  * Current Sensor ADC Channel definitions
  */
 #define ADC_CS 9
-#define CH_CUR_SENSE_1 1
-#define CH_CUR_SENSE_2 3
-#define CH_TEMP_SENSE_1 2
-#define CH_TEMP_SENSE_2 4
-#define CH_SHUTDOWN 6
-#define CH_5V 5
+#define CH_CUR_SENSE_1 0
+#define CH_CUR_SENSE_2 2
+#define CH_TEMP_SENSE_1 1
+#define CH_TEMP_SENSE_2 3
+#define CH_SHUTDOWN 5
+#define CH_5V 4
 
 /*
  * Timers
@@ -102,6 +103,8 @@ uint8_t error_flags_history = 0; // will not be reset with BMS_OK if a fault has
 uint8_t first_fault_overvoltage = 0;// keep track of how many consecutive faults occured
 uint8_t first_fault_undervoltage = 0;
 uint8_t first_fault_total_voltage_high = 0;
+uint8_t first_fault_thermistor = 0;
+uint8_t first_fault_current = 0;
 bool fh_watchdog_test = false;
 
 
@@ -135,7 +138,9 @@ uint8_t tx_cfg[TOTAL_IC][6]; // data defining how data will be written to daisy 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
 
-// ADC Declaration
+/**
+ * ADC Declaration
+ */
 ADC_SPI ADC(ADC_CS);
 
 /**
@@ -183,11 +188,11 @@ void setup() {
     Serial.println("Setup Complete!");
 
     // DEBUG Code for testing cell packs
-    for (int i=0; i<4; i++) {
-        for (int j=0; j<9; j++) {
-            ignore_cell[i][j] = true; // Ignore ICs 0-3
-        }
-    }
+    // for (int i=0; i<4; i++) {
+    //     for (int j=0; j<9; j++) {
+    //         ignore_cell[i][j] = true; // Ignore ICs 0-3
+    //     }
+    // }
     // DEBUG insert PCB thermistors to ignore here
     // DEBUG insert cell thermistors to ignore here
 }
@@ -199,30 +204,28 @@ void setup() {
  */
 void loop() {
     while (CAN.read(msg)) {
-        //Serial.println("reading CAN message");
-        //Serial.println(msg.id, HEX);
-        // if (msg.id == ID_BMS_TEMPERATURES) { // Used temporarily while we have an external temperature monitor ECU
-        //     bms_temperatures.load(msg.buf);
-        //     //bms_status.set_discharge_overtemp(false);  // RESET these values, then check below if they should be set again
-        //     //bms_status.set_charge_overtemp(false);
-        //     //bms_status.set_undertemp(false);
-        //     if (bms_status.get_state() == BMS_STATE_DISCHARGING && bms_temperatures.get_high_temperature() > discharge_temp_cell_critical_high) {
-        //         bms_status.set_discharge_overtemp(true);
-        //         Serial.println("Discharge overtemperature fault!");
-        //     } else if (bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED && bms_temperatures.get_high_temperature() > charge_temp_cell_critical_high) {
-        //         bms_status.set_charge_overtemp(true);
-        //         Serial.println("Charge overtemperature fault!");
-        //     } else if (bms_temperatures.get_low_temperature() < temp_critical_low) {
-        //         bms_status.set_undertemp(true);
-        //         Serial.println("Undertemperature fault!");
-        //     }
-        // }
+        /*if (msg.id == ID_BMS_TEMPERATURES) { // Used temporarily while we have an external temperature monitor ECU
+            bms_temperatures.load(msg.buf);
+            //bms_status.set_discharge_overtemp(false);  // RESET these values, then check below if they should be set again
+            //bms_status.set_charge_overtemp(false);
+            //bms_status.set_undertemp(false);
+            if (bms_status.get_state() == BMS_STATE_DISCHARGING && bms_temperatures.get_high_temperature() > discharge_temp_cell_critical_high) {
+                bms_status.set_discharge_overtemp(true);
+                Serial.println("Discharge overtemperature fault!");
+            } else if (bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED && bms_temperatures.get_high_temperature() > charge_temp_cell_critical_high) {
+                bms_status.set_charge_overtemp(true);
+                Serial.println("Charge overtemperature fault!");
+            } else if (bms_temperatures.get_low_temperature() < temp_critical_low) {
+                bms_status.set_undertemp(true);
+                Serial.println("Undertemperature fault!");
+            }
+        }*/
         if (msg.id == ID_CCU_STATUS) { // Check if CCU status message is received and enable charger
-            bms_status.set_state(BMS_STATE_CHARGE_ENABLED);
+            if (bms_status.get_state() == BMS_STATE_CHARGE_DISABLED) {
+                Serial.println("Entering charge mode");
+                bms_status.set_state(BMS_STATE_CHARGE_ENABLED);
+            }
             timer_charge_timeout.reset();
-        }
-        if (timer_charge_timeout.check()) { // 1 second timeout - if timeout is reached, disable charging
-            bms_status.set_state(BMS_STATE_DISCHARGING);
         }
 
         if (msg.id == ID_FH_WATCHDOG_TEST) { // stop sending pulse to watchdog timer
@@ -236,15 +239,25 @@ void loop() {
         }
     }
 
+    if (timer_charge_timeout.check() && bms_status.get_state() > BMS_STATE_DISCHARGING) { // 1 second timeout - if timeout is reached, disable charging
+        Serial.println("Disabling charge mode - CCU timeout");
+        //bms_status.set_state(BMS_STATE_DISCHARGING);
+    }
+
     if (timer_process_cells.check()) {
         process_voltages(); // polls controller, and store data in bms_voltages object.
         //bms_voltages.set_low(37408); // DEBUG Remove before final code
         //balance_cells();
         process_cell_temps(); // store data in bms_temperatures and bms_detailed_temperatures
         process_onboard_temps(); // store data in bms_onboard_temperatures and bms_onboard_detailed_temperatures
-        //process_current(); // store data in bms_status object.
+        process_current(); // store data in bms_status object.
         print_uptime();
         print_temperatures();
+
+        Serial.print("State: ");
+        if (bms_status.get_state() == BMS_STATE_DISCHARGING) {Serial.println("DISCHARGING");}
+        if (bms_status.get_state() == BMS_STATE_CHARGE_ENABLED) {Serial.println("CHARGE ENABLED");}
+        if (bms_status.get_state() == BMS_STATE_CHARGE_DISABLED) {Serial.println("CHARGE DISABLED");}
 
         if (bms_status.get_error_flags()) { // BMS error - drive BMS_OK signal low
             Serial.println("STATUS NOT GOOD!!!!!!!!!!!!!!!");
@@ -290,6 +303,11 @@ void loop() {
         msg.len = sizeof(CAN_message_bms_voltages_t);
         CAN.write(msg);
 
+        bms_temperatures.write(msg.buf);
+        msg.id = ID_BMS_TEMPERATURES;
+        msg.len = sizeof(CAN_message_bms_temperatures_t);
+        CAN.write(msg);
+
         msg.id = ID_BMS_DETAILED_VOLTAGES;
         msg.len = sizeof(CAN_message_bms_detailed_voltages_t);
         for (int i = 0; i < TOTAL_IC; i++) {
@@ -299,19 +317,17 @@ void loop() {
             }
         }
 
-        /*bms_temperatures.write(msg.buf);
-        msg.id = ID_BMS_TEMPERATURES;
-        msg.len = sizeof(CAN_message_bms_temperatures_t);
-        CAN.write(msg);*/
+        msg.id = ID_BMS_DETAILED_TEMPERATURES;
+        msg.len = sizeof(CAN_message_bms_detailed_temperatures_t);
+        for (int i = 0; i < TOTAL_IC; i++) {
+            bms_detailed_temperatures[i].write(msg.buf);
+            CAN.write(msg);
+        }
     }
 
     if (timer_watchdog_timer.check() && !fh_watchdog_test) { // Send alternating keepalive signal to watchdog timer   
         watchdog_high = !watchdog_high;
         digitalWrite(WATCHDOG, watchdog_high);
-        /*Serial.print("set watchdog timer ");
-        Serial.print(watchdog_high);
-        Serial.print(" ");
-        Serial.println(digitalRead(BMS_OK));*/
     }
 }
 
@@ -593,14 +609,24 @@ void process_cell_temps() { // TODO make work with signed int8_t CAN message (ye
 
     if (bms_status.get_state() == BMS_STATE_DISCHARGING) { // Discharging
         if (bms_temperatures.get_high_temperature() > discharge_temp_cell_critical_high) {
-            bms_status.set_discharge_overtemp(true);
-            Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
+            if (first_fault_thermistor == IGNORE_FAULT_THRESHOLD) {
+                bms_status.set_discharge_overtemp(true);
+                Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!"); 
+            } else {
+                first_fault_thermistor++;
+            }
         }
     } else if (bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED) { // Charging
         if (bms_temperatures.get_high_temperature() > charge_temp_cell_critical_high) {
-            bms_status.set_charge_overtemp(true);
-            Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
+            if (first_fault_thermistor == IGNORE_FAULT_THRESHOLD) {
+                bms_status.set_charge_overtemp(true);
+                Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
+            } else {
+                first_fault_thermistor++;
+            }
         }
+    } else {
+        first_fault_thermistor = 0;
     }
 
     Serial.print("Low Temp: ");
@@ -685,14 +711,22 @@ void process_onboard_temps() {
     //marker
     if (bms_status.get_state() == BMS_STATE_DISCHARGING) { // Discharging
         if (bms_onboard_temperatures.get_high_temperature() > onboard_temp_critical_high) {
-            bms_status.set_onboard_overtemp(true);
-            Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
+            if (first_fault_thermistor == IGNORE_FAULT_THRESHOLD) {
+                bms_status.set_onboard_overtemp(true);
+                Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
+            } else {
+                first_fault_thermistor++;
+            }
         }
     } else if (bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED) { // Charging
         if (bms_onboard_temperatures.get_high_temperature() > onboard_temp_critical_high) {
-            bms_status.set_onboard_overtemp(true);
-            disable_balance = true;
-            Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
+            if (first_fault_thermistor == IGNORE_FAULT_THRESHOLD) {
+                bms_status.set_onboard_overtemp(true);
+                disable_balance = true;
+                Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
+            } else {
+                first_fault_thermistor++;
+            }
         } else if (bms_onboard_temperatures.get_high_temperature() >= onboard_temp_balance_disable) {
             bms_status.set_state(BMS_STATE_CHARGE_DISABLED);
             disable_balance = true;
@@ -703,7 +737,10 @@ void process_onboard_temps() {
             bms_status.set_state(BMS_STATE_CHARGE_ENABLED);
             disable_balance = false;
             Serial.println("CLEARED: Onboard temperature OK; reenabling balancing");
+            first_fault_thermistor = 0;
         }
+    } else {
+        first_fault_thermistor = 0;
     }
 
     Serial.print("Low Temp: ");
@@ -751,6 +788,7 @@ void process_current() {
      * current = (voltage - 2.5) * 300 / 2
      */
     double voltage = ADC.read_adc(CH_CUR_SENSE_1) / (double) 819;
+    initialize(); // Reconfigure so LTC communication is successful
     double current = (voltage - 2.5) * (double) 150;
     Serial.print("\nCurrent Sensor: ");
     Serial.print(current, 2);
@@ -760,13 +798,21 @@ void process_current() {
     bms_status.set_discharge_overcurrent(false);
     if (bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED) {
         if (bms_status.get_current() < charge_current_constant_high) {
-            bms_status.set_charge_overcurrent(true);
-            Serial.println("CHARGE CURRENT HIGH FAULT!!!!!!!!!!!!!!!!!!!");
+            if (first_fault_current == CURRENT_FAULT_THRESHOLD) {
+                bms_status.set_charge_overcurrent(true);
+                Serial.println("CHARGE CURRENT HIGH FAULT!!!!!!!!!!!!!!!!!!!");
+            } else {
+                first_fault_current = 0;
+            }
         }
     } else {
         if (bms_status.get_current() > discharge_current_constant_high) {
-            bms_status.set_discharge_overcurrent(true);
-            Serial.println("DISCHARGE CURRENT HIGH FAULT!!!!!!!!!!!!!!!!!!!");
+            if (first_fault_current == CURRENT_FAULT_THRESHOLD) {
+                bms_status.set_discharge_overcurrent(true);
+                Serial.println("DISCHARGE CURRENT HIGH FAULT!!!!!!!!!!!!!!!!!!!");
+            } else {
+                first_fault_current = 0;
+            }
         }
     }
 }

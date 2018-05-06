@@ -1,6 +1,7 @@
 import curses
 import serial
 import sys
+import datetime
 
 def main():
     if len(sys.argv) != 2:
@@ -65,7 +66,7 @@ def main():
     screen.addstr(6,105,'BMS FAULT: ')
     screen.addstr(7,105,'IMD FAULT: ')
     screen.addstr(8,105,'BMS AVERAGE TEMPERATURE: ')
-    screen.addstr(9,105,'BMS LOW TEMPERATURE: : ')
+    screen.addstr(9,105,'BMS LOW TEMPERATURE: ')
     screen.addstr(10,105,'BMS HIGH TEMPERATURE: ')
     screen.addstr(11,105,'BMS STATE: ')
     screen.addstr(12,105,'BMS ERROR FLAGS: ')
@@ -78,6 +79,7 @@ def main():
     curses.endwin()
 
 def live(screen):
+    filename = str(datetime.datetime.now()) + ".txt"
     ser = serial.Serial(sys.argv[1], 115200)
     incomingLine = ''
     screen.nodelay(True)
@@ -88,6 +90,8 @@ def live(screen):
         if len(data) > 0:
             incomingLine += data
             if ('\n' in incomingLine):
+                with open(filename, "a") as f:
+                    f.write(str(datetime.datetime.now()) + ' ' + incomingLine)
                 updateScreen(screen, incomingLine[0:incomingLine.find('\n')])
                 incomingLine = incomingLine[incomingLine.find('\n') + 1:]
 

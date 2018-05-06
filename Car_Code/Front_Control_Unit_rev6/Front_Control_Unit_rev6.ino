@@ -2,8 +2,9 @@
  * HyTech 2018 Vehicle Front Control Unit
  * Interface with dashboard lights, buttons, and buzzer.
  * Read pedal sensor values and communicate with motor controller.
- * Configured for Front ECU Board rev5
+ * Configured for Front ECU Board rev6
  */
+#include "ADC_SPI.h"
 #include <FlexCAN.h>
 #include "HyTech17.h"
 #include <Metro.h>
@@ -14,10 +15,7 @@
 #define ADC_ACCEL_1_CHANNEL 0
 #define ADC_ACCEL_2_CHANNEL 1
 #define ADC_BRAKE_CHANNEL 2
-#define ADC_SPI_CS A0
-#define ADC_SPI_DIN 0
-#define ADC_SPI_DOUT 1
-#define ADC_SPI_SCK 13
+#define ADC_SPI_CS 10
 #define BTN_START A5
 #define LED_START 5
 #define LED_BMS 6
@@ -29,11 +27,11 @@
  * Constant definitions
  */
 // TODO some of these values need to be calibrated once hardware is installed
-#define BRAKE_ACTIVE 600
-#define MIN_ACCELERATOR_PEDAL_1 250 // compare pedal travel
-#define MAX_ACCELERATOR_PEDAL_1 550
-#define MIN_ACCELERATOR_PEDAL_2 3840
-#define MAX_ACCELERATOR_PEDAL_2 3550
+#define BRAKE_ACTIVE 1600
+#define MIN_ACCELERATOR_PEDAL_1 2394 // compare pedal travel
+#define MAX_ACCELERATOR_PEDAL_1 1020
+#define MIN_ACCELERATOR_PEDAL_2 171
+#define MAX_ACCELERATOR_PEDAL_2 639
 #define MIN_BRAKE_PEDAL 1510
 #define MAX_BRAKE_PEDAL 1684
 #define MAX_TORQUE 1600 // Torque in Nm * 10
@@ -69,14 +67,11 @@ bool led_start_active = false;
 uint8_t led_start_type = 0; // 0 for off, 1 for steady, 2 for fast blink, 3 for slow blink
 float rampRatio = 1;
 
+ADC_SPI ADC(ADC_SPI_CS);
 FlexCAN CAN(500000);
 static CAN_message_t msg;
 
 void setup() {
-    pinMode(ADC_SPI_CS, OUTPUT);
-    pinMode(ADC_SPI_DIN, INPUT);
-    pinMode(ADC_SPI_DOUT, OUTPUT);
-    pinMode(ADC_SPI_SCK, OUTPUT);
     pinMode(BTN_START, INPUT_PULLUP);
     pinMode(LED_BMS, OUTPUT);
     pinMode(LED_IMD, OUTPUT);
@@ -187,12 +182,12 @@ void loop() {
 
             // Check for accelerator implausibility FSAE EV2.3.10
             fcu_status.set_accelerator_implausibility(false);
-            if (fcu_readings.get_accelerator_pedal_raw_1() < MIN_ACCELERATOR_PEDAL_1 || fcu_readings.get_accelerator_pedal_raw_1() > MAX_ACCELERATOR_PEDAL_1) {
+            /*if (fcu_readings.get_accelerator_pedal_raw_1() < MIN_ACCELERATOR_PEDAL_1 || fcu_readings.get_accelerator_pedal_raw_1() > MAX_ACCELERATOR_PEDAL_1) {
                 fcu_status.set_accelerator_implausibility(true);
             }
-            if (fcu_readings.get_accelerator_pedal_raw_2() > MIN_ACCELERATOR_PEDAL_2 || fcu_readings.get_accelerator_pedal_raw_2() < MAX_ACCELERATOR_PEDAL_2) {
+            if (fcu_readings.get_accelerator_pedal_raw_2() < MIN_ACCELERATOR_PEDAL_2 || fcu_readings.get_accelerator_pedal_raw_2() > MAX_ACCELERATOR_PEDAL_2) {
                 fcu_status.set_accelerator_implausibility(true);
-            }
+            }*/
 
             // Calculate torque value
             int calculated_torque = 0;
@@ -315,9 +310,9 @@ void loop() {
  * Read values of sensors
  */
 void read_values() {
-    fcu_readings.set_accelerator_pedal_raw_1(read_adc(ADC_ACCEL_1_CHANNEL));
-    fcu_readings.set_accelerator_pedal_raw_2(read_adc(ADC_ACCEL_2_CHANNEL));
-    fcu_readings.set_brake_pedal_raw(read_adc(ADC_BRAKE_CHANNEL));
+    fcu_readings.set_accelerator_pedal_raw_1(ADC.read_adc(ADC_ACCEL_1_CHANNEL));
+    fcu_readings.set_accelerator_pedal_raw_2(ADC.read_adc(ADC_ACCEL_2_CHANNEL));
+    fcu_readings.set_brake_pedal_raw(ADC.read_adc(ADC_BRAKE_CHANNEL));
     if (fcu_readings.get_brake_pedal_raw() >= BRAKE_ACTIVE) {
         fcu_status.set_brake_pedal_active(true);
     } else {
@@ -421,25 +416,25 @@ void set_state(uint8_t new_state) {
  * Credit to Arduino Playground
  * https://playground.arduino.cc/Code/MCP3208
  */
-int read_adc(int channel) {
-    int adcvalue = 0;
-    byte commandbits = B11000000; // Command bits - start, mode, chn (3), dont care (3)
-    commandbits|=((channel)<<3); // Select channel
-    digitalWrite(ADC_SPI_CS, LOW); // Select adc
-    for (int i=7; i>=3; i--){ // Write bits to adc
-        digitalWrite(ADC_SPI_DOUT, commandbits&1<<i);
-        digitalWrite(ADC_SPI_SCK, HIGH); // Cycle clock
-        digitalWrite(ADC_SPI_SCK, LOW);    
-    }
-    digitalWrite(ADC_SPI_SCK, HIGH);  // Ignore 2 null bits
-    digitalWrite(ADC_SPI_SCK, LOW);
-    digitalWrite(ADC_SPI_SCK, HIGH);  
-    digitalWrite(ADC_SPI_SCK, LOW);
-    for (int i=11; i>=0; i--){ // Read bits from adc
-        adcvalue+=digitalRead(ADC_SPI_DIN)<<i;
-        digitalWrite(ADC_SPI_SCK, HIGH); // Cycle clock
-        digitalWrite(ADC_SPI_SCK, LOW);
-    }
-    digitalWrite(ADC_SPI_CS, HIGH); // Turn off device
-    return adcvalue;
-}
+// int read_adc(int channel) {
+//     int adcvalue = 0;
+//     byte commandbits = B11000000; // Command bits - start, mode, chn (3), dont care (3)
+//     commandbits|=((channel)<<3); // Select channel
+//     digitalWrite(ADC_SPI_CS, LOW); // Select adc
+//     for (int i=7; i>=3; i--){ // Write bits to adc
+//         digitalWrite(ADC_SPI_DOUT, commandbits&1<<i);
+//         digitalWrite(ADC_SPI_SCK, HIGH); // Cycle clock
+//         digitalWrite(ADC_SPI_SCK, LOW);    
+//     }
+//     digitalWrite(ADC_SPI_SCK, HIGH);  // Ignore 2 null bits
+//     digitalWrite(ADC_SPI_SCK, LOW);
+//     digitalWrite(ADC_SPI_SCK, HIGH);  
+//     digitalWrite(ADC_SPI_SCK, LOW);
+//     for (int i=11; i>=0; i--){ // Read bits from adc
+//         adcvalue+=digitalRead(ADC_SPI_DIN)<<i;
+//         digitalWrite(ADC_SPI_SCK, HIGH); // Cycle clock
+//         digitalWrite(ADC_SPI_SCK, LOW);
+//     }
+//     digitalWrite(ADC_SPI_CS, HIGH); // Turn off device
+//     return adcvalue;
+// }
