@@ -29,7 +29,7 @@ uint8_t BMS_status::get_state() {
     return message.state;
 }
 
-uint8_t BMS_status::get_error_flags() {
+uint16_t BMS_status::get_error_flags() {
     return message.error_flags;
 }
 
@@ -77,7 +77,7 @@ void BMS_status::set_state(uint8_t state) {
     message.state = state;
 }
 
-void BMS_status::set_error_flags(uint8_t error_flags) {
+void BMS_status::set_error_flags(uint16_t error_flags) {
     message.error_flags = error_flags;
 }
 

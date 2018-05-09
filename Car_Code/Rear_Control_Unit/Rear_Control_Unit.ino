@@ -39,8 +39,8 @@
  * Timers
  */
 Metro timer_bms_print_fault = Metro(500);
-Metro timer_debug_bms_status = Metro(1000);
-Metro timer_debug_bms_temperatures = Metro(1000);
+Metro timer_debug_bms_status = Metro(200);
+Metro timer_debug_bms_temperatures = Metro(2000);
 Metro timer_debug_bms_voltages = Metro(1000);
 Metro timer_debug_rms_current_information = Metro(2000);
 Metro timer_debug_rms_fault_codes = Metro(2000);
@@ -51,6 +51,7 @@ Metro timer_debug_rms_temperatures_3 = Metro(2000);
 Metro timer_debug_rms_torque_timer_information = Metro(2000);
 Metro timer_debug_rms_voltage_information = Metro(2000);
 Metro timer_debug_fcu_status = Metro(2000);
+Metro timer_detailed_voltages = Metro(1000);
 Metro timer_imd_print_fault = Metro(500);
 Metro timer_restart_inverter = Metro(500); // Allow the FCU to restart the inverter
 Metro timer_status_send = Metro(100);
@@ -60,6 +61,7 @@ Metro timer_status_send_xbee = Metro(1000);
  * Global variables
  */
 RCU_status rcu_status;
+BMS_detailed_voltages bms_detailed_voltages[8][3];
 
 boolean bms_faulting = false;
 boolean imd_faulting = false;
@@ -120,7 +122,29 @@ void loop() {
                || (msg.id == ID_FCU_STATUS && timer_debug_fcu_status.check())) {
            write_xbee_data();
        }*/
+       if (msg.id == ID_BMS_DETAILED_VOLTAGES) {
+           BMS_detailed_voltages temp = BMS_detailed_voltages(msg.buf);
+           bms_detailed_voltages[temp.get_ic_id()][temp.get_group_id()].load(msg.buf);
+       }
        send_xbee();
+    }
+
+    if (timer_detailed_voltages.check()) {
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 3; j++) {
+                Serial.print("IC ");
+                Serial.print(i);
+                Serial.print(" Group ");
+                Serial.print(j);
+                Serial.print(" V0: ");
+                Serial.print(bms_detailed_voltages[i][j].get_voltage(0) / (double) 10000, 4);
+                Serial.print(" V1: ");
+                Serial.print(bms_detailed_voltages[i][j].get_voltage(1) / (double) 10000, 4);
+                Serial.print(" V2: ");
+                Serial.println(bms_detailed_voltages[i][j].get_voltage(2) / (double) 10000, 4);
+            }
+        }
+        Serial.println();
     }
 
     /*

@@ -90,7 +90,7 @@ uint16_t voltage_cutoff_low = 29800; // 2.9800V
 uint16_t voltage_cutoff_high = 42000; // 4.2000V
 uint16_t total_voltage_cutoff = 30000; // 300.00V
 uint16_t discharge_current_constant_high = 22000; // 220.00A
-uint16_t charge_current_constant_high = -10000; // 100.00A // TODO take into account max charge allowed for regen, 100A is NOT NOMINALLY ALLOWED!
+int16_t charge_current_constant_high = -10000; // 100.00A // TODO take into account max charge allowed for regen, 100A is NOT NOMINALLY ALLOWED!
 uint16_t charge_temp_cell_critical_high = 4400; // 44.00C
 uint16_t discharge_temp_cell_critical_high = 6000; // 60.00C
 uint16_t onboard_temp_balance_disable = 5000;  // TODO fill this in with real numbers
@@ -187,6 +187,14 @@ void setup() {
     bms_status.set_state(BMS_STATE_DISCHARGING);
     Serial.println("Setup Complete!");
 
+    for (int i = 0; i < TOTAL_IC; i++) {
+        for (int j = 0; j < 3; j++) {
+            bms_detailed_voltages[i][j].set_ic_id(i);
+            bms_detailed_voltages[i][j].set_group_id(j);
+        }
+        bms_detailed_temperatures[i].set_ic_id(i);
+    }
+
     // DEBUG Code for testing cell packs
     // for (int i=0; i<4; i++) {
     //     for (int j=0; j<9; j++) {
@@ -278,16 +286,18 @@ void loop() {
     }
 
     if (timer_can_update_fast.check()) {
-        msg.timeout = 10; // Use blocking mode, wait up to 10ms to send each message instead of immediately failing (keep in mind this is slower)
+        msg.timeout = 4; // Use blocking mode, wait up to 4ms to send each message instead of immediately failing (keep in mind this is slower)
 
         bms_status.write(msg.buf);
         msg.id = ID_BMS_STATUS;
         msg.len = sizeof(CAN_message_bms_status_t);
         CAN.write(msg);
+
+        msg.timeout = 0;
     }
 
     if (timer_can_update_slow.check()) {
-        msg.timeout = 10; // Use blocking mode, wait up to 10ms to send each message instead of immediately failing (keep in mind this is slower)
+        msg.timeout = 4; // Use blocking mode, wait up to 4ms to send each message instead of immediately failing (keep in mind this is slower)
 
         bms_voltages.write(msg.buf);
         msg.id = ID_BMS_VOLTAGES;
@@ -314,6 +324,8 @@ void loop() {
             bms_detailed_temperatures[i].write(msg.buf);
             CAN.write(msg);
         }
+
+        msg.timeout = 0;
     }
 
     if (timer_watchdog_timer.check() && !fh_watchdog_test) { // Send alternating keepalive signal to watchdog timer   
