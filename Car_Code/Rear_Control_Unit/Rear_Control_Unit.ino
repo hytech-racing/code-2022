@@ -39,8 +39,8 @@
  * Timers
  */
 Metro timer_bms_print_fault = Metro(500);
-Metro timer_debug_bms_status = Metro(1000);
-Metro timer_debug_bms_temperatures = Metro(1000);
+Metro timer_debug_bms_status = Metro(200);
+Metro timer_debug_bms_temperatures = Metro(2000);
 Metro timer_debug_bms_voltages = Metro(1000);
 Metro timer_debug_rms_current_information = Metro(2000);
 Metro timer_debug_rms_fault_codes = Metro(2000);
@@ -51,15 +51,17 @@ Metro timer_debug_rms_temperatures_3 = Metro(2000);
 Metro timer_debug_rms_torque_timer_information = Metro(2000);
 Metro timer_debug_rms_voltage_information = Metro(2000);
 Metro timer_debug_fcu_status = Metro(2000);
+Metro timer_detailed_voltages = Metro(1000);
 Metro timer_imd_print_fault = Metro(500);
+Metro timer_restart_inverter = Metro(500); // Allow the FCU to restart the inverter
 Metro timer_status_send = Metro(100);
 Metro timer_status_send_xbee = Metro(1000);
-Metro timer_fcu_restart_inverter = Metro(500); // Upon restart of the FCU, power cycle the inverter
 
 /*
  * Global variables
  */
 RCU_status rcu_status;
+BMS_detailed_voltages bms_detailed_voltages[8][3];
 
 boolean bms_faulting = false;
 boolean imd_faulting = false;
@@ -99,11 +101,11 @@ void loop() {
             FCU_status fcu_status = FCU_status(msg.buf);
             digitalWrite(SSR_BRAKE_LIGHT, fcu_status.get_brake_pedal_active());
         }
-        if (msg.id == ID_FCU_RESTART) { // Restart inverter when the FCU restarts
+        if (msg.id == ID_RCU_RESTART_MC) { // Restart inverter when the FCU restarts
             if (millis() > 1000) { // Ignore restart messages when this microcontroller has also just booted up
                 inverter_restart = true;
                 digitalWrite(SSR_INVERTER, LOW);
-                timer_fcu_restart_inverter.reset();
+                timer_restart_inverter.reset();
             }
         }
        /*if ((msg.id == ID_MC_TEMPERATURES_1 && timer_debug_rms_temperatures_1.check())
@@ -120,7 +122,29 @@ void loop() {
                || (msg.id == ID_FCU_STATUS && timer_debug_fcu_status.check())) {
            write_xbee_data();
        }*/
+       if (msg.id == ID_BMS_DETAILED_VOLTAGES) {
+           BMS_detailed_voltages temp = BMS_detailed_voltages(msg.buf);
+           bms_detailed_voltages[temp.get_ic_id()][temp.get_group_id()].load(msg.buf);
+       }
        send_xbee();
+    }
+
+    if (timer_detailed_voltages.check()) {
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 3; j++) {
+                Serial.print("IC ");
+                Serial.print(i);
+                Serial.print(" Group ");
+                Serial.print(j);
+                Serial.print(" V0: ");
+                Serial.print(bms_detailed_voltages[i][j].get_voltage(0) / (double) 10000, 4);
+                Serial.print(" V1: ");
+                Serial.print(bms_detailed_voltages[i][j].get_voltage(1) / (double) 10000, 4);
+                Serial.print(" V2: ");
+                Serial.println(bms_detailed_voltages[i][j].get_voltage(2) / (double) 10000, 4);
+            }
+        }
+        Serial.println();
     }
 
     /*
@@ -135,10 +159,10 @@ void loop() {
     }
 
     if (timer_status_send_xbee.check()) {
-        if (!rcu_status.get_bms_ok_high()) { // TODO make sure this doesn't happen at startup
+        if (!rcu_status.get_bms_ok_high() && millis() > 3500) {
             XB.println("RCU BMS FAULT: detected");
         }
-        if (!rcu_status.get_imd_okhs_high()) { // TODO make sure this doesn't happen at startup
+        if (!rcu_status.get_imd_okhs_high() && millis() > 3500) {
             XB.println("RCU IMD FAULT: detected");
         }
         XB.print("RCU STATE: ");
@@ -148,7 +172,7 @@ void loop() {
     /*
      * Finish restarting the inverter when timer expires
      */
-    if (inverter_restart && timer_fcu_restart_inverter.check()) {
+    if (inverter_restart && timer_restart_inverter.check()) {
         inverter_restart = false;
         digitalWrite(SSR_INVERTER, HIGH);
     }
@@ -349,9 +373,8 @@ void send_xbee() {
             XB.print("BMS VOLTAGE TOTAL: ");
             XB.println(bms_voltages.get_total() / (double) 100, 2);
         }
-        if (msg.id == ID_BMS_TEMPERATURES) {Serial.println("Found BMS temp message");}
+
         if (msg.id == ID_BMS_TEMPERATURES && timer_debug_bms_temperatures.check()) {
-            Serial.println("Sent XBee BMS temp message");
             BMS_temperatures bms_temperatures = BMS_temperatures(msg.buf);
             XB.print("BMS AVERAGE TEMPERATURE: ");
             XB.println(bms_temperatures.get_average_temperature() / (double) 100, 2);

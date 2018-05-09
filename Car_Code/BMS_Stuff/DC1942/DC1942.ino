@@ -487,11 +487,11 @@ void print_cells()
   for (int current_ic = 0 ; current_ic < TOTAL_IC; current_ic++)
   {
     Serial.print(" IC ");
-    Serial.print(current_ic+1,DEC);
+    Serial.print(current_ic,DEC);
     for (int i=0; i<12; i++)
     {
       Serial.print(" C");
-      Serial.print(i+1,DEC);
+      Serial.print(i,DEC);
       Serial.print(":");
       Serial.print(cell_codes[current_ic][i]*0.0001,4);
       Serial.print(",");
@@ -510,11 +510,11 @@ void print_aux()
   for (int current_ic =0 ; current_ic < TOTAL_IC; current_ic++)
   {
     Serial.print(" IC ");
-    Serial.print(current_ic+1,DEC);
+    Serial.print(current_ic,DEC);
     for (int i=0; i < 5; i++)
     {
       Serial.print(" GPIO-");
-      Serial.print(i+1,DEC);
+      Serial.print(i,DEC);
       Serial.print(":");
       Serial.print(aux_codes[current_ic][i]*0.0001,4);
       Serial.print(",");
@@ -538,7 +538,7 @@ void print_config()
   for (int current_ic = 0; current_ic<TOTAL_IC; current_ic++)
   {
     Serial.print(" IC ");
-    Serial.print(current_ic+1,DEC);
+    Serial.print(current_ic,DEC);
     Serial.print(": ");
     Serial.print("0x");
     serial_print_hex(tx_cfg[current_ic][0]);
@@ -572,7 +572,7 @@ void print_rxconfig()
   for (int current_ic=0; current_ic<TOTAL_IC; current_ic++)
   {
     Serial.print(" IC ");
-    Serial.print(current_ic+1,DEC);
+    Serial.print(current_ic,DEC);
     Serial.print(": 0x");
     serial_print_hex(rx_cfg[current_ic][0]);
     Serial.print(", 0x");

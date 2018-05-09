@@ -29,7 +29,7 @@
 #define ID_RCU_STATUS 0xD0
 #define ID_FCU_STATUS 0xD2
 #define ID_FCU_READINGS 0xD3
-#define ID_FCU_RESTART 0xD4
+#define ID_RCU_RESTART_MC 0xD4
 #define ID_BMS_ONBOARD_TEMPERATURES 0xD5
 #define ID_BMS_ONBOARD_DETAILED_TEMPERATURES 0xD6
 #define ID_BMS_VOLTAGES 0xD7
@@ -321,7 +321,7 @@ class BMS_onboard_detailed_temperatures {
 
 typedef struct CAN_message_bms_status_t {
 	uint8_t state;
-    uint8_t error_flags;
+    uint16_t error_flags;
     int16_t current;
 } CAN_message_bms_status_t;
 
@@ -332,7 +332,7 @@ class BMS_status {
         void load(uint8_t buf[]);
         void write(uint8_t buf[]);
         uint8_t get_state();
-        uint8_t get_error_flags();
+        uint16_t get_error_flags();
         bool get_overvoltage();
         bool get_undervoltage();
         bool get_total_voltage_high();
@@ -345,7 +345,7 @@ class BMS_status {
         int16_t get_current();
 
         void set_state(uint8_t state);
-        void set_error_flags(uint8_t error_flags);
+        void set_error_flags(uint16_t error_flags);
         void set_overvoltage(bool overvoltage);
         void set_undervoltage(bool undervoltage);
         void set_total_voltage_high(bool total_voltage_high);

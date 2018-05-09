@@ -19,9 +19,12 @@
 #define ADC_SPI_DOUT 1
 #define ADC_SPI_SCK 13
 #define BTN_START A5
+#define BTN_MODE 11
+#define BTN_CYCLE A4
 #define LED_START 5
 #define LED_BMS 6
 #define LED_IMD 7
+#define LED_MODE 9
 #define READY_SOUND 2
 #define SOFTWARE_SHUTDOWN_RELAY 12
 
@@ -36,13 +39,17 @@
 #define MAX_ACCELERATOR_PEDAL_2 3550
 #define MIN_BRAKE_PEDAL 1510
 #define MAX_BRAKE_PEDAL 1684
-#define MAX_TORQUE 1600 // Torque in Nm * 10
+//#define MAX_TORQUE 1600 // Torque in Nm * 10
 #define MIN_HV_VOLTAGE 500 // Volts in V * 0.1 - Used to check if Accumulator is energized
+
+int MAX_TORQUE = 1600;
 
 /*
  * Timers
  */
 Metro timer_btn_start = Metro(10);
+Metro timer_btn_mode = Metro(10);
+Metro timer_btn_cycle = Metro(10);
 Metro timer_debug = Metro(200);
 Metro timer_debug_raw_torque = Metro(200);
 Metro timer_debug_torque = Metro(200);
@@ -64,8 +71,15 @@ RCU_status rcu_status;
 bool btn_start_debouncing = false;
 uint8_t btn_start_new = 0;
 bool btn_start_pressed = false;
+bool btn_mode_debouncing = false;
+uint8_t btn_mode_new = 0;
+bool btn_mode_pressed = true;
+bool btn_cycle_debouncing = false;
+bool btn_cycle_pressed = false;
 bool debug = true;
 bool led_start_active = false;
+bool regen_active = false;
+bool low_torque = false;
 uint8_t led_start_type = 0; // 0 for off, 1 for steady, 2 for fast blink, 3 for slow blink
 float rampRatio = 1;
 
@@ -78,9 +92,12 @@ void setup() {
     pinMode(ADC_SPI_DOUT, OUTPUT);
     pinMode(ADC_SPI_SCK, OUTPUT);
     pinMode(BTN_START, INPUT_PULLUP);
+    pinMode(BTN_MODE, INPUT_PULLUP);
+    pinMode(BTN_CYCLE, INPUT_PULLUP);
     pinMode(LED_BMS, OUTPUT);
     pinMode(LED_IMD, OUTPUT);
     pinMode(LED_START, OUTPUT);
+    pinMode(LED_MODE, OUTPUT);
     pinMode(READY_SOUND, OUTPUT);
     pinMode(SOFTWARE_SHUTDOWN_RELAY, OUTPUT);
 
@@ -91,11 +108,7 @@ void setup() {
 
     digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH);
     set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
-
-    // Send restart message, so RCU knows to power cycle the inverter (in case of CAN message timeout from FCU to inverter)
-    msg.id = ID_FCU_RESTART;
-    msg.len = 1;
-    CAN.write(msg);
+    reset_inverter();
 }
 
 void loop() {
@@ -204,6 +217,11 @@ void loop() {
                 } else {*/
                 calculated_torque = (int) (min(torque1, torque2) * rampRatio);
 
+                // if regen is active and pedal is not pressed, send negative torque for regen
+                // if (regen_active && calculated_torque == 0) {
+                //     calculated_torque = -20;
+                // }
+
                 if (rampRatio < 1 && timer_ramp_torque.check()) {
                    rampRatio += 0.1;
                    if (rampRatio > 1) {
@@ -217,7 +235,7 @@ void loop() {
                 if (calculated_torque > MAX_TORQUE) {
                     calculated_torque = MAX_TORQUE;
                 }
-                if (calculated_torque < 0) {
+                if (!regen_active && calculated_torque < 0) {
                     calculated_torque = 0;
                 }
                 /*}*/
@@ -309,6 +327,52 @@ void loop() {
             Serial.println(fcu_status.get_start_button_press_id());
         }
     }
+
+    /*
+     * Handle Regen button press and depress
+     */
+    if (digitalRead(BTN_MODE) == btn_mode_pressed && !btn_mode_debouncing) {    // value different than stored
+        btn_mode_debouncing = true;
+        timer_btn_mode.reset();
+    }
+    if (btn_mode_debouncing && digitalRead(BTN_MODE) != btn_mode_pressed) {     // value returns during debounce period
+        btn_mode_debouncing = false;
+    }
+    if (btn_mode_debouncing && timer_btn_mode.check()) {                        // debounce period finishes
+        btn_mode_pressed = !btn_mode_pressed;
+        if (btn_mode_pressed) {
+            low_torque = !low_torque;
+        }
+    }
+
+    if (digitalRead(BTN_CYCLE) == btn_cycle_pressed && !btn_cycle_debouncing) { // value different than stored
+        btn_cycle_debouncing = true;
+        timer_btn_cycle.reset();
+    }
+    if (btn_cycle_debouncing && digitalRead(BTN_CYCLE) != btn_cycle_pressed) {  // value returns during debounce period
+        btn_cycle_debouncing = false;
+    }
+    if (btn_cycle_debouncing && timer_btn_cycle.check()) {
+        btn_cycle_pressed = !btn_cycle_pressed;
+        reset_inverter();
+    }
+
+    /*
+     * Handle regen toggling after button pressed
+     */
+    if (regen_active) {
+        digitalWrite(LED_MODE, HIGH);
+    } else {
+        digitalWrite(LED_MODE, LOW);
+    }
+
+    if (low_torque) {
+        digitalWrite(LED_MODE, HIGH);
+        MAX_TORQUE = 800;
+    } else {
+        digitalWrite(LED_MODE, LOW);
+        MAX_TORQUE = 1600;
+    }
 }
 
 /*
@@ -365,6 +429,17 @@ void set_start_led(uint8_t type) {
             Serial.println("FCU Setting Start LED slow blink");
         }
     }
+}
+
+/*
+ * Send restart message, so RCU will power cycle the inverter
+ * Used at FCU restart to clear the inverter's CAN message timeout fault
+ * Also used manually by the driver to clear other motor controller faults
+ */
+void reset_inverter() {
+    msg.id = ID_RCU_RESTART_MC;
+    msg.len = 1;
+    CAN.write(msg);
 }
 
 /*
