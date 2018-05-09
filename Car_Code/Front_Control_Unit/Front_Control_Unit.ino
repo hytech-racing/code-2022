@@ -2,7 +2,7 @@
  * HyTech 2018 Vehicle Front Control Unit
  * Interface with dashboard lights, buttons, and buzzer.
  * Read pedal sensor values and communicate with motor controller.
- * Configured for Front ECU Board rev5
+ * Configured for Front Control Unit rev5
  */
 #include <FlexCAN.h>
 #include "HyTech17.h"
@@ -18,13 +18,13 @@
 #define ADC_SPI_DIN 0
 #define ADC_SPI_DOUT 1
 #define ADC_SPI_SCK 13
-#define BTN_START A5
-#define BTN_MODE 11
 #define BTN_CYCLE A4
-#define LED_START 5
+#define BTN_MODE 11
+#define BTN_START A5
 #define LED_BMS 6
 #define LED_IMD 7
 #define LED_MODE 9
+#define LED_START 5
 #define READY_SOUND 2
 #define SOFTWARE_SHUTDOWN_RELAY 12
 
@@ -39,17 +39,14 @@
 #define MAX_ACCELERATOR_PEDAL_2 3550
 #define MIN_BRAKE_PEDAL 1510
 #define MAX_BRAKE_PEDAL 1684
-//#define MAX_TORQUE 1600 // Torque in Nm * 10
 #define MIN_HV_VOLTAGE 500 // Volts in V * 0.1 - Used to check if Accumulator is energized
-
-int MAX_TORQUE = 1600;
 
 /*
  * Timers
  */
-Metro timer_btn_start = Metro(10);
-Metro timer_btn_mode = Metro(10);
 Metro timer_btn_cycle = Metro(10);
+Metro timer_btn_mode = Metro(10);
+Metro timer_btn_start = Metro(10);
 Metro timer_debug = Metro(200);
 Metro timer_debug_raw_torque = Metro(200);
 Metro timer_debug_torque = Metro(200);
@@ -83,6 +80,8 @@ bool low_torque = false;
 uint8_t led_start_type = 0; // 0 for off, 1 for steady, 2 for fast blink, 3 for slow blink
 float rampRatio = 1;
 
+int MAX_TORQUE = 1600; // Torque in Nm * 10
+
 FlexCAN CAN(500000);
 static CAN_message_t msg;
 
@@ -91,13 +90,13 @@ void setup() {
     pinMode(ADC_SPI_DIN, INPUT);
     pinMode(ADC_SPI_DOUT, OUTPUT);
     pinMode(ADC_SPI_SCK, OUTPUT);
-    pinMode(BTN_START, INPUT_PULLUP);
-    pinMode(BTN_MODE, INPUT_PULLUP);
     pinMode(BTN_CYCLE, INPUT_PULLUP);
+    pinMode(BTN_MODE, INPUT_PULLUP);
+    pinMode(BTN_START, INPUT_PULLUP);
     pinMode(LED_BMS, OUTPUT);
     pinMode(LED_IMD, OUTPUT);
-    pinMode(LED_START, OUTPUT);
     pinMode(LED_MODE, OUTPUT);
+    pinMode(LED_START, OUTPUT);
     pinMode(READY_SOUND, OUTPUT);
     pinMode(SOFTWARE_SHUTDOWN_RELAY, OUTPUT);
 
@@ -217,11 +216,6 @@ void loop() {
                 } else {*/
                 calculated_torque = (int) (min(torque1, torque2) * rampRatio);
 
-                // if regen is active and pedal is not pressed, send negative torque for regen
-                // if (regen_active && calculated_torque == 0) {
-                //     calculated_torque = -20;
-                // }
-
                 if (rampRatio < 1 && timer_ramp_torque.check()) {
                    rampRatio += 0.1;
                    if (rampRatio > 1) {
@@ -235,9 +229,13 @@ void loop() {
                 if (calculated_torque > MAX_TORQUE) {
                     calculated_torque = MAX_TORQUE;
                 }
-                if (!regen_active && calculated_torque < 0) {
+                if (calculated_torque < 0) {
                     calculated_torque = 0;
                 }
+                // if regen is active and pedal is not pressed, send negative torque for regen
+                // if (regen_active && calculated_torque == 0) {
+                //     calculated_torque = -20;
+                // }
                 /*}*/
             }
 

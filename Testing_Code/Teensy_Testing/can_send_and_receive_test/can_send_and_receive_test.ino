@@ -38,7 +38,6 @@ void loop() {
         timer_light.reset();
     }
     while (CAN.read(msg)) { // Receive a message on CAN
-        if (msg.id >= 0xD5 && msg.id <= 0xDB) {
         Serial.print("Received 0x");
         Serial.print(msg.id, HEX);
         Serial.print(": ");
@@ -49,7 +48,6 @@ void loop() {
         Serial.println();
         digitalWrite(13, HIGH);
         timer_light.reset();
-        }
     }
     if (timer_light.check()) { // Turn off LED
         digitalWrite(13, LOW);

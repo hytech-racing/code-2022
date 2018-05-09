@@ -2,7 +2,7 @@
  * HyTech 2018 Vehicle Front Control Unit
  * Interface with dashboard lights, buttons, and buzzer.
  * Read pedal sensor values and communicate with motor controller.
- * Configured for Front ECU Board rev6
+ * Configured for Front Control Unit rev6
  */
 #include "ADC_SPI.h"
 #include <FlexCAN.h>
@@ -16,10 +16,13 @@
 #define ADC_ACCEL_2_CHANNEL 1
 #define ADC_BRAKE_CHANNEL 2
 #define ADC_SPI_CS 10
+#define BTN_CYCLE A4
+#define BTN_MODE 11
 #define BTN_START A5
-#define LED_START 5
 #define LED_BMS 6
 #define LED_IMD 7
+#define LED_MODE 9
+#define LED_START 5
 #define READY_SOUND 2
 #define SOFTWARE_SHUTDOWN_RELAY 12
 
@@ -27,19 +30,20 @@
  * Constant definitions
  */
 // TODO some of these values need to be calibrated once hardware is installed
-#define BRAKE_ACTIVE 1600
-#define MIN_ACCELERATOR_PEDAL_1 2394 // compare pedal travel
-#define MAX_ACCELERATOR_PEDAL_1 1020
-#define MIN_ACCELERATOR_PEDAL_2 171
-#define MAX_ACCELERATOR_PEDAL_2 639
+#define BRAKE_ACTIVE 600
+#define MIN_ACCELERATOR_PEDAL_1 250 // compare pedal travel
+#define MAX_ACCELERATOR_PEDAL_1 550
+#define MIN_ACCELERATOR_PEDAL_2 3840
+#define MAX_ACCELERATOR_PEDAL_2 3550
 #define MIN_BRAKE_PEDAL 1510
 #define MAX_BRAKE_PEDAL 1684
-#define MAX_TORQUE 1600 // Torque in Nm * 10
 #define MIN_HV_VOLTAGE 500 // Volts in V * 0.1 - Used to check if Accumulator is energized
 
 /*
  * Timers
  */
+Metro timer_btn_cycle = Metro(10);
+Metro timer_btn_mode = Metro(10);
 Metro timer_btn_start = Metro(10);
 Metro timer_debug = Metro(200);
 Metro timer_debug_raw_torque = Metro(200);
@@ -62,19 +66,31 @@ RCU_status rcu_status;
 bool btn_start_debouncing = false;
 uint8_t btn_start_new = 0;
 bool btn_start_pressed = false;
+bool btn_mode_debouncing = false;
+uint8_t btn_mode_new = 0;
+bool btn_mode_pressed = true;
+bool btn_cycle_debouncing = false;
+bool btn_cycle_pressed = false;
 bool debug = true;
 bool led_start_active = false;
+bool regen_active = false;
+bool low_torque = false;
 uint8_t led_start_type = 0; // 0 for off, 1 for steady, 2 for fast blink, 3 for slow blink
 float rampRatio = 1;
+
+int MAX_TORQUE = 1600; // Torque in Nm * 10
 
 ADC_SPI ADC(ADC_SPI_CS);
 FlexCAN CAN(500000);
 static CAN_message_t msg;
 
 void setup() {
+    pinMode(BTN_CYCLE, INPUT_PULLUP);
+    pinMode(BTN_MODE, INPUT_PULLUP);
     pinMode(BTN_START, INPUT_PULLUP);
     pinMode(LED_BMS, OUTPUT);
     pinMode(LED_IMD, OUTPUT);
+    pinMode(LED_MODE, OUTPUT);
     pinMode(LED_START, OUTPUT);
     pinMode(READY_SOUND, OUTPUT);
     pinMode(SOFTWARE_SHUTDOWN_RELAY, OUTPUT);
@@ -86,11 +102,7 @@ void setup() {
 
     digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH);
     set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
-
-    // Send restart message, so RCU knows to power cycle the inverter (in case of CAN message timeout from FCU to inverter)
-    msg.id = ID_FCU_RESTART;
-    msg.len = 1;
-    CAN.write(msg);
+    reset_inverter();
 }
 
 void loop() {
@@ -182,12 +194,12 @@ void loop() {
 
             // Check for accelerator implausibility FSAE EV2.3.10
             fcu_status.set_accelerator_implausibility(false);
-            /*if (fcu_readings.get_accelerator_pedal_raw_1() < MIN_ACCELERATOR_PEDAL_1 || fcu_readings.get_accelerator_pedal_raw_1() > MAX_ACCELERATOR_PEDAL_1) {
+            if (fcu_readings.get_accelerator_pedal_raw_1() < MIN_ACCELERATOR_PEDAL_1 || fcu_readings.get_accelerator_pedal_raw_1() > MAX_ACCELERATOR_PEDAL_1) {
                 fcu_status.set_accelerator_implausibility(true);
             }
-            if (fcu_readings.get_accelerator_pedal_raw_2() < MIN_ACCELERATOR_PEDAL_2 || fcu_readings.get_accelerator_pedal_raw_2() > MAX_ACCELERATOR_PEDAL_2) {
+            if (fcu_readings.get_accelerator_pedal_raw_2() > MIN_ACCELERATOR_PEDAL_2 || fcu_readings.get_accelerator_pedal_raw_2() < MAX_ACCELERATOR_PEDAL_2) {
                 fcu_status.set_accelerator_implausibility(true);
-            }*/
+            }
 
             // Calculate torque value
             int calculated_torque = 0;
@@ -215,6 +227,10 @@ void loop() {
                 if (calculated_torque < 0) {
                     calculated_torque = 0;
                 }
+                // if regen is active and pedal is not pressed, send negative torque for regen
+                // if (regen_active && calculated_torque == 0) {
+                //     calculated_torque = -20;
+                // }
                 /*}*/
             }
 
@@ -304,6 +320,52 @@ void loop() {
             Serial.println(fcu_status.get_start_button_press_id());
         }
     }
+
+    /*
+     * Handle Regen button press and depress
+     */
+    if (digitalRead(BTN_MODE) == btn_mode_pressed && !btn_mode_debouncing) {    // value different than stored
+        btn_mode_debouncing = true;
+        timer_btn_mode.reset();
+    }
+    if (btn_mode_debouncing && digitalRead(BTN_MODE) != btn_mode_pressed) {     // value returns during debounce period
+        btn_mode_debouncing = false;
+    }
+    if (btn_mode_debouncing && timer_btn_mode.check()) {                        // debounce period finishes
+        btn_mode_pressed = !btn_mode_pressed;
+        if (btn_mode_pressed) {
+            low_torque = !low_torque;
+        }
+    }
+
+    if (digitalRead(BTN_CYCLE) == btn_cycle_pressed && !btn_cycle_debouncing) { // value different than stored
+        btn_cycle_debouncing = true;
+        timer_btn_cycle.reset();
+    }
+    if (btn_cycle_debouncing && digitalRead(BTN_CYCLE) != btn_cycle_pressed) {  // value returns during debounce period
+        btn_cycle_debouncing = false;
+    }
+    if (btn_cycle_debouncing && timer_btn_cycle.check()) {
+        btn_cycle_pressed = !btn_cycle_pressed;
+        reset_inverter();
+    }
+
+    /*
+     * Handle regen toggling after button pressed
+     */
+    if (regen_active) {
+        digitalWrite(LED_MODE, HIGH);
+    } else {
+        digitalWrite(LED_MODE, LOW);
+    }
+
+    if (low_torque) {
+        digitalWrite(LED_MODE, HIGH);
+        MAX_TORQUE = 800;
+    } else {
+        digitalWrite(LED_MODE, LOW);
+        MAX_TORQUE = 1600;
+    }
 }
 
 /*
@@ -363,6 +425,17 @@ void set_start_led(uint8_t type) {
 }
 
 /*
+ * Send restart message, so RCU will power cycle the inverter
+ * Used at FCU restart to clear the inverter's CAN message timeout fault
+ * Also used manually by the driver to clear other motor controller faults
+ */
+void reset_inverter() {
+    msg.id = ID_RCU_RESTART_MC;
+    msg.len = 1;
+    CAN.write(msg);
+}
+
+/*
  * Handle changes in state
  */
 void set_state(uint8_t new_state) {
@@ -410,31 +483,3 @@ void set_state(uint8_t new_state) {
         Serial.println("Ready to drive");
     }
 }
-
-/*
- * Read analog value from MCP3208 ADC
- * Credit to Arduino Playground
- * https://playground.arduino.cc/Code/MCP3208
- */
-// int read_adc(int channel) {
-//     int adcvalue = 0;
-//     byte commandbits = B11000000; // Command bits - start, mode, chn (3), dont care (3)
-//     commandbits|=((channel)<<3); // Select channel
-//     digitalWrite(ADC_SPI_CS, LOW); // Select adc
-//     for (int i=7; i>=3; i--){ // Write bits to adc
-//         digitalWrite(ADC_SPI_DOUT, commandbits&1<<i);
-//         digitalWrite(ADC_SPI_SCK, HIGH); // Cycle clock
-//         digitalWrite(ADC_SPI_SCK, LOW);    
-//     }
-//     digitalWrite(ADC_SPI_SCK, HIGH);  // Ignore 2 null bits
-//     digitalWrite(ADC_SPI_SCK, LOW);
-//     digitalWrite(ADC_SPI_SCK, HIGH);  
-//     digitalWrite(ADC_SPI_SCK, LOW);
-//     for (int i=11; i>=0; i--){ // Read bits from adc
-//         adcvalue+=digitalRead(ADC_SPI_DIN)<<i;
-//         digitalWrite(ADC_SPI_SCK, HIGH); // Cycle clock
-//         digitalWrite(ADC_SPI_SCK, LOW);
-//     }
-//     digitalWrite(ADC_SPI_CS, HIGH); // Turn off device
-//     return adcvalue;
-// }

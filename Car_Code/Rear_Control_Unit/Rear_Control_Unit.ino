@@ -3,7 +3,7 @@
  * Monitor Shutdown Circuit initialization.
  * Control power to motor controller, fans, and pump.
  * Send wireless telemetry data via XBee.
- * Configured for Power Board rev5
+ * Configured for Rear Control Unit rev5
  */
 #include <FlexCAN.h>
 #include <HyTech17.h>
@@ -61,7 +61,19 @@ Metro timer_status_send_xbee = Metro(1000);
  * Global variables
  */
 RCU_status rcu_status;
+MC_temperatures_1 mc_temperatures_1;
+MC_temperatures_3 mc_temperatures_3;
+MC_motor_position_information mc_motor_position_information;
+MC_current_information mc_current_information;
+MC_voltage_information mc_voltage_information;
+MC_internal_states mc_internal_states;
+MC_fault_codes mc_fault_codes;
+MC_torque_timer_information mc_torque_timer_information;
+BMS_voltages bms_voltages;
 BMS_detailed_voltages bms_detailed_voltages[8][3];
+BMS_temperatures bms_temperatures;
+BMS_status bms_status;
+FCU_status fcu_status;
 
 boolean bms_faulting = false;
 boolean imd_faulting = false;
@@ -90,6 +102,7 @@ void setup() {
     digitalWrite(COOL_RELAY_3, HIGH);
     rcu_status.set_bms_ok_high(true);
     rcu_status.set_imd_okhs_high(true);
+    rcu_status.set_inverter_powered(true);
 }
 
 void loop() {
@@ -98,7 +111,7 @@ void loop() {
      */
     while (CAN.read(msg)) {
         if (msg.id == ID_FCU_STATUS) {
-            FCU_status fcu_status = FCU_status(msg.buf);
+            fcu_status.load(msg.buf);
             digitalWrite(SSR_BRAKE_LIGHT, fcu_status.get_brake_pedal_active());
         }
         if (msg.id == ID_RCU_RESTART_MC) { // Restart inverter when the FCU restarts
@@ -106,6 +119,7 @@ void loop() {
                 inverter_restart = true;
                 digitalWrite(SSR_INVERTER, LOW);
                 timer_restart_inverter.reset();
+                rcu_status.set_inverter_powered(false);
             }
         }
        /*if ((msg.id == ID_MC_TEMPERATURES_1 && timer_debug_rms_temperatures_1.check())
@@ -122,12 +136,46 @@ void loop() {
                || (msg.id == ID_FCU_STATUS && timer_debug_fcu_status.check())) {
            write_xbee_data();
        }*/
+       if (msg.id == ID_MC_TEMPERATURES_1) {
+           mc_temperatures_1.load(msg.buf);
+       }
+       if (msg.id == ID_MC_TEMPERATURES_3) {
+           mc_temperatures_3.load(msg.buf);
+       }
+       if (msg.id == ID_MC_MOTOR_POSITION_INFORMATION) {
+           mc_motor_position_information.load(msg.buf);
+       }
+       if (msg.id == ID_MC_CURRENT_INFORMATION) {
+           mc_current_information.load(msg.buf);
+       }
+       if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
+           mc_voltage_information.load(msg.buf);
+       }
+       if (msg.id == ID_MC_INTERNAL_STATES) {
+           mc_internal_states.load(msg.buf);
+       }
+       if (msg.id == ID_MC_FAULT_CODES) {
+           mc_fault_codes.load(msg.buf);
+       }
+       if (msg.id == ID_MC_TORQUE_TIMER_INFORMATION) {
+           mc_torque_timer_information.load(msg.buf);
+       }
+       if (msg.id == ID_BMS_VOLTAGES) {
+           bms_voltages.load(msg.buf);
+       }
+       if (msg.id == ID_BMS_TEMPERATURES) {
+           bms_temperatures.load(msg.buf);
+       }
+       if (msg.id == ID_BMS_STATUS) {
+           bms_status.load(msg.buf);
+       }
        if (msg.id == ID_BMS_DETAILED_VOLTAGES) {
            BMS_detailed_voltages temp = BMS_detailed_voltages(msg.buf);
            bms_detailed_voltages[temp.get_ic_id()][temp.get_group_id()].load(msg.buf);
        }
-       send_xbee();
     }
+
+    send_xbee();
 
     if (timer_detailed_voltages.check()) {
         for (int i = 0; i < 8; i++) {
@@ -175,6 +223,7 @@ void loop() {
     if (inverter_restart && timer_restart_inverter.check()) {
         inverter_restart = false;
         digitalWrite(SSR_INVERTER, HIGH);
+        rcu_status.set_inverter_powered(true);
     }
 
     /*
@@ -213,6 +262,15 @@ void loop() {
         digitalWrite(COOL_RELAY_2, LOW);
         digitalWrite(COOL_RELAY_3, LOW);
     }
+
+    /*
+     * Measure GLV battery voltage
+     * measured_voltage = analogRead * 5 / 1024
+     * real_voltage = measured_voltage * 55 / 12
+     * We can approximate with 5/1024*55/12 = .02238
+     * We then multiply this value by 100 to get 10mV units
+     */
+    rcu_status.set_glv_battery_voltage((uint16_t) (analogRead(SENSE_12VSUPPLY) * 2.238));
 }
 
 /**
@@ -260,8 +318,7 @@ int write_xbee_data() {
 }
 
 void send_xbee() {
-    if (msg.id == ID_MC_TEMPERATURES_1 && timer_debug_rms_temperatures_1.check()) {
-            MC_temperatures_1 mc_temperatures_1 = MC_temperatures_1(msg.buf);
+    if (timer_debug_rms_temperatures_1.check()) {
             XB.print("MODULE A TEMP: ");
             XB.println(mc_temperatures_1.get_module_a_temperature() / (double) 10, 1);
             XB.print("MODULE B TEMP: ");
@@ -272,8 +329,7 @@ void send_xbee() {
             XB.println(mc_temperatures_1.get_gate_driver_board_temperature() / (double) 10, 1);
         }
 
-        if (msg.id ==ID_MC_TEMPERATURES_3 && timer_debug_rms_temperatures_3.check()) {
-            MC_temperatures_3 mc_temperatures_3 = MC_temperatures_3(msg.buf);
+        if (timer_debug_rms_temperatures_3.check()) {
             //XB.print("RTD 4 TEMP: "); // These aren't needed since we aren't using RTDs
             //XB.println(mc_temperatures_3.get_rtd_4_temperature());
             //XB.print("RTD 5 TEMP: ");
@@ -284,8 +340,7 @@ void send_xbee() {
             XB.println(mc_temperatures_3.get_torque_shudder() / (double) 10, 1);
         }
 
-        if (msg.id == ID_MC_MOTOR_POSITION_INFORMATION && timer_debug_rms_motor_position_information.check()) {
-            MC_motor_position_information mc_motor_position_information = MC_motor_position_information(msg.buf);
+        if (timer_debug_rms_motor_position_information.check()) {
             XB.print("MOTOR ANGLE: ");
             XB.println(mc_motor_position_information.get_motor_angle());
             XB.print("MOTOR SPEED: ");
@@ -296,8 +351,7 @@ void send_xbee() {
             XB.println(mc_motor_position_information.get_delta_resolver_filtered());
         }
 
-        if (msg.id == ID_MC_CURRENT_INFORMATION && timer_debug_rms_current_information.check()) {
-            MC_current_information mc_current_information = MC_current_information(msg.buf);
+        if (timer_debug_rms_current_information.check()) {
             XB.print("PHASE A CURRENT: ");
             XB.println(mc_current_information.get_phase_a_current() / (double) 10, 1);
             XB.print("PHASE B CURRENT: ");
@@ -308,8 +362,7 @@ void send_xbee() {
             XB.println(mc_current_information.get_dc_bus_current() / (double) 10, 1);
         }
 
-        if (msg.id == ID_MC_VOLTAGE_INFORMATION && timer_debug_rms_voltage_information.check()) {
-            MC_voltage_information mc_voltage_information = MC_voltage_information(msg.buf);
+        if (timer_debug_rms_voltage_information.check()) {
             XB.print("DC BUS VOLTAGE: ");
             XB.println(mc_voltage_information.get_dc_bus_voltage() / (double) 10, 1);
             XB.print("OUTPUT VOLTAGE: ");
@@ -320,8 +373,7 @@ void send_xbee() {
             XB.println(mc_voltage_information.get_phase_bc_voltage() / (double) 10, 1);
         }
 
-        if (msg.id == ID_MC_INTERNAL_STATES && timer_debug_rms_internal_states.check()) {
-            MC_internal_states mc_internal_states = MC_internal_states(msg.buf);
+        if (timer_debug_rms_internal_states.check()) {
             XB.print("VSM STATE: ");
             XB.println(mc_internal_states.get_vsm_state());
             XB.print("INVERTER STATE: ");
@@ -340,8 +392,7 @@ void send_xbee() {
             XB.println(mc_internal_states.get_direction_command());
         }
 
-        if (msg.id == ID_MC_FAULT_CODES && timer_debug_rms_fault_codes.check()) {
-            MC_fault_codes mc_fault_codes = MC_fault_codes(msg.buf);
+        if (timer_debug_rms_fault_codes.check()) {
             XB.print("POST FAULT LO: 0x");
             XB.println(mc_fault_codes.get_post_fault_lo(), HEX);
             XB.print("POST FAULT HI: 0x");
@@ -352,8 +403,7 @@ void send_xbee() {
             XB.println(mc_fault_codes.get_run_fault_hi(), HEX);
         }
 
-        if (msg.id == ID_MC_TORQUE_TIMER_INFORMATION && timer_debug_rms_torque_timer_information.check()) {
-            MC_torque_timer_information mc_torque_timer_information = MC_torque_timer_information(msg.buf);
+        if (timer_debug_rms_torque_timer_information.check()) {
             XB.print("COMMANDED TORQUE: ");
             XB.println(mc_torque_timer_information.get_commanded_torque() / (double) 10, 1);
             XB.print("TORQUE FEEDBACK: ");
@@ -362,8 +412,7 @@ void send_xbee() {
             XB.println(mc_torque_timer_information.get_power_on_timer() * .003, 0);
         }
 
-        if (msg.id == ID_BMS_VOLTAGES && timer_debug_bms_voltages.check()) {
-            BMS_voltages bms_voltages = BMS_voltages(msg.buf);
+        if (timer_debug_bms_voltages.check()) {
             XB.print("BMS VOLTAGE AVERAGE: ");
             XB.println(bms_voltages.get_average() / (double) 10000, 4);
             XB.print("BMS VOLTAGE LOW: ");
@@ -374,8 +423,7 @@ void send_xbee() {
             XB.println(bms_voltages.get_total() / (double) 100, 2);
         }
 
-        if (msg.id == ID_BMS_TEMPERATURES && timer_debug_bms_temperatures.check()) {
-            BMS_temperatures bms_temperatures = BMS_temperatures(msg.buf);
+        if (timer_debug_bms_temperatures.check()) {
             XB.print("BMS AVERAGE TEMPERATURE: ");
             XB.println(bms_temperatures.get_average_temperature() / (double) 100, 2);
             XB.print("BMS LOW TEMPERATURE: ");
@@ -384,8 +432,7 @@ void send_xbee() {
             XB.println(bms_temperatures.get_high_temperature() / (double) 100, 2);
         }
 
-        if (msg.id == ID_BMS_STATUS && timer_debug_bms_status.check()) {
-            BMS_status bms_status = BMS_status(msg.buf);
+        if (timer_debug_bms_status.check()) {
             XB.print("BMS STATE: ");
             XB.println(bms_status.get_state());
             XB.print("BMS ERROR FLAGS: 0x");
@@ -394,8 +441,7 @@ void send_xbee() {
             XB.println(bms_status.get_current() / (double) 100, 2);
         }
 
-        if (msg.id == ID_FCU_STATUS && timer_debug_fcu_status.check()) {
-            FCU_status fcu_status = FCU_status(msg.buf);
+        if (timer_debug_fcu_status.check()) {
             XB.print("FCU BRAKE ACT: ");
             XB.println(fcu_status.get_brake_pedal_active());
             XB.print("FCU STATE: ");
