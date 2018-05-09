@@ -431,9 +431,13 @@ void set_start_led(uint8_t type) {
     }
 }
 
+/*
+ * Send restart message, so RCU will power cycle the inverter
+ * Used at FCU restart to clear the inverter's CAN message timeout fault
+ * Also used manually by the driver to clear other motor controller faults
+ */
 void reset_inverter() {
-    // Send restart message, so RCU knows to power cycle the inverter (in case of CAN message timeout from FCU to inverter)
-    msg.id = ID_FCU_RESTART;
+    msg.id = ID_RCU_RESTART_MC;
     msg.len = 1;
     CAN.write(msg);
 }
