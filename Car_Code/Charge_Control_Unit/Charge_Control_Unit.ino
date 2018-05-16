@@ -15,7 +15,7 @@ CCU_status ccu_status;
 
 FlexCAN CAN(500000);
 static CAN_message_t msg;
-Metro timer_update_CAN = Metro(100);
+Metro timer_update_CAN = Metro(265);
 
 void setup() {
     pinMode(CHARGE_ENABLE, OUTPUT);
@@ -38,16 +38,13 @@ void loop() {
             Serial.print("BMS state: ");
             Serial.println(bms_status.get_state());
             ccu_status.set_charger_enabled(bms_status.get_state() == BMS_STATE_CHARGE_ENABLED);
+            digitalWrite(CHARGE_ENABLE, ccu_status.get_charger_enabled());
         }
     }
-
-
-    if (ccu_status.get_charger_enabled()) {
-        digitalWrite(CHARGE_ENABLE, HIGH);
-    } else {
-        digitalWrite(CHARGE_ENABLE, HIGH);
-    }
     
+    /*
+     * Send status over CAN
+     */
     if (timer_update_CAN.check()) {
         ccu_status.write(msg.buf);
         msg.id = ID_CCU_STATUS;
@@ -58,6 +55,3 @@ void loop() {
         Serial.println(ccu_status.get_charger_enabled());
     }
 }
-
-
-

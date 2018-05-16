@@ -22,6 +22,7 @@
 #define LED_BMS 6
 #define LED_IMD 7
 #define LED_MODE 9
+#define LED_POWER 8
 #define LED_START 5
 #define READY_SOUND 2
 #define SOFTWARE_SHUTDOWN_RELAY 12
@@ -42,6 +43,7 @@
 /*
  * Timers
  */
+Metro timer_bms_imd_print_fault = Metro(500);
 Metro timer_btn_cycle = Metro(10);
 Metro timer_btn_mode = Metro(10);
 Metro timer_btn_start = Metro(10);
@@ -59,6 +61,7 @@ Metro timer_can_update = Metro(100);
 /*
  * Global variables
  */
+BMS_status bms_status;
 FCU_status fcu_status;
 FCU_readings fcu_readings;
 RCU_status rcu_status;
@@ -91,6 +94,7 @@ void setup() {
     pinMode(LED_BMS, OUTPUT);
     pinMode(LED_IMD, OUTPUT);
     pinMode(LED_MODE, OUTPUT);
+    pinMode(LED_POWER, OUTPUT);
     pinMode(LED_START, OUTPUT);
     pinMode(READY_SOUND, OUTPUT);
     pinMode(SOFTWARE_SHUTDOWN_RELAY, OUTPUT);
@@ -100,25 +104,14 @@ void setup() {
     delay(100);
     Serial.println("CAN system and serial communication initialized");
 
-    digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH);
     set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
     reset_inverter();
 }
 
 void loop() {
     while (CAN.read(msg)) {
-        // Handle RCU status messages
         if (msg.id == ID_RCU_STATUS) {
-            // Load message into RCU_status object
             rcu_status.load(msg.buf);
-            digitalWrite(LED_BMS, !rcu_status.get_bms_ok_high());
-            if (!rcu_status.get_bms_ok_high()) {
-                Serial.println("RCU BMS FAULT: detected");
-            }
-            digitalWrite(LED_IMD, !rcu_status.get_imd_okhs_high());
-            if (!rcu_status.get_imd_okhs_high()) {
-                Serial.println("RCU IMD FAULT: detected");
-            }
         }
 
         if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
@@ -136,6 +129,10 @@ void loop() {
             if (mc_internal_states.get_inverter_enable_state() && fcu_status.get_state() == FCU_STATE_ENABLING_INVERTER) {
                 set_state(FCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
             }
+        }
+
+        if (msg.id == ID_BMS_STATUS) {
+            bms_status.load(msg.buf);
         }
     }
 
@@ -206,32 +203,35 @@ void loop() {
             if (!fcu_status.get_accelerator_implausibility()) {
                 int torque1 = map(fcu_readings.get_accelerator_pedal_raw_1(), MIN_ACCELERATOR_PEDAL_1, MAX_ACCELERATOR_PEDAL_1, 0, MAX_TORQUE);
                 int torque2 = map(fcu_readings.get_accelerator_pedal_raw_2(), MIN_ACCELERATOR_PEDAL_2, MAX_ACCELERATOR_PEDAL_2, 0, MAX_TORQUE);
-                /*if (abs(torque1 - torque2) * 100 / MAX_TORQUE > 10) { // Second accelerator implausibility check FSAE EV2.3.6
-                fcu_status.set_accelerator_implausibility(true);
-                } else {*/
-                calculated_torque = (int) (min(torque1, torque2) * rampRatio);
+                if (abs(torque1 - torque2) * 100 / MAX_TORQUE > 10) { // Second accelerator implausibility check FSAE EV2.3.6
+                    fcu_status.set_accelerator_implausibility(true);
+                    Serial.print("ACCEL IMPLAUSIBILITY: COMPARISON FAILED");
+                } else {
+                    calculated_torque = (int) (min(torque1, torque2) * rampRatio);
 
-                if (rampRatio < 1 && timer_ramp_torque.check()) {
-                   rampRatio += 0.1;
-                   if (rampRatio > 1) {
-                      rampRatio = 1;
-                   }
+                    if (rampRatio < 1 && timer_ramp_torque.check()) {
+                        rampRatio += 0.1;
+                        if (rampRatio > 1) {
+                            rampRatio = 1;
+                        }
+                    }
+                    if (debug && timer_debug_raw_torque.check()) {
+                        Serial.print("TORQUE REQUEST DELTA PERCENT: "); // Print the % difference between the 2 accelerator sensor requests
+                        Serial.println(abs(torque1 - torque2) / (double) MAX_TORQUE * 100);
+                        Serial.print("FCU RAW TORQUE: ");
+                        Serial.println(calculated_torque);
+                    }
+                    if (calculated_torque > MAX_TORQUE) {
+                        calculated_torque = MAX_TORQUE;
+                    }
+                    if (calculated_torque < 0) {
+                        calculated_torque = 0;
+                    }
+                    // if regen is active and pedal is not pressed, send negative torque for regen
+                    // if (regen_active && calculated_torque == 0) {
+                    //     calculated_torque = -20;
+                    // }
                 }
-                if (debug && timer_debug_raw_torque.check()) {
-                    Serial.print("FCU RAW TORQUE: ");
-                    Serial.println(calculated_torque);
-                }
-                if (calculated_torque > MAX_TORQUE) {
-                    calculated_torque = MAX_TORQUE;
-                }
-                if (calculated_torque < 0) {
-                    calculated_torque = 0;
-                }
-                // if regen is active and pedal is not pressed, send negative torque for regen
-                // if (regen_active && calculated_torque == 0) {
-                //     calculated_torque = -20;
-                // }
-                /*}*/
             }
 
             // FSAE EV2.5 APPS / Brake Pedal Plausibility Check
@@ -239,7 +239,7 @@ void loop() {
                 fcu_status.set_brake_implausibility(false); // Clear implausibility
             }
             if (fcu_status.get_brake_pedal_active() && calculated_torque > (MAX_TORQUE / 4)) {
-                //fcu_status.set_brake_implausibility(true);
+                fcu_status.set_brake_implausibility(true);
             }
 
             if (fcu_status.get_brake_implausibility() || fcu_status.get_accelerator_implausibility()) {
@@ -316,8 +316,10 @@ void loop() {
         btn_start_pressed = !btn_start_pressed;
         if (btn_start_pressed) {
             fcu_status.set_start_button_press_id(fcu_status.get_start_button_press_id() + 1);
-            Serial.print("FCU START BUTTON ID: ");
-            Serial.println(fcu_status.get_start_button_press_id());
+            if (debug) {
+                Serial.print("FCU START BUTTON ID: ");
+                Serial.println(fcu_status.get_start_button_press_id());
+            }
         }
     }
 
@@ -351,20 +353,30 @@ void loop() {
     }
 
     /*
-     * Handle regen toggling after button pressed
+     * Handle torque mode toggling after button pressed
      */
-    if (regen_active) {
-        digitalWrite(LED_MODE, HIGH);
-    } else {
-        digitalWrite(LED_MODE, LOW);
-    }
-
     if (low_torque) {
         digitalWrite(LED_MODE, HIGH);
-        MAX_TORQUE = 800;
+        MAX_TORQUE = 1500;
     } else {
         digitalWrite(LED_MODE, LOW);
         MAX_TORQUE = 1600;
+    }
+
+    /*
+     * Open shutdown circuit if we detect a BMS or IMD fault; this is in addition to the latching relay hardware
+     */
+    digitalWrite(SOFTWARE_SHUTDOWN_RELAY, !(bms_status.get_error_flags() || !rcu_status.get_bms_ok_high() || !rcu_status.get_imd_okhs_high()));
+    digitalWrite(LED_BMS, bms_status.get_error_flags() || !rcu_status.get_bms_ok_high());
+    digitalWrite(LED_IMD, !rcu_status.get_imd_okhs_high());
+    digitalWrite(LED_POWER, rcu_status.get_bms_imd_latched());
+    if (debug && timer_bms_imd_print_fault.check()) {
+        if (!rcu_status.get_bms_ok_high() || bms_status.get_error_flags()) {
+            Serial.println("RCU BMS FAULT: detected");
+        }
+        if (!rcu_status.get_imd_okhs_high()) {
+            Serial.println("RCU IMD FAULT: detected");
+        }
     }
 }
 
@@ -405,7 +417,9 @@ void set_start_led(uint8_t type) {
         if (type == 0) {
             digitalWrite(LED_START, LOW);
             led_start_active = false;
-            Serial.println("FCU Setting Start LED off");
+            if (debug) {
+                Serial.println("FCU Setting Start LED off");
+            }
             return;
         }
 
@@ -413,13 +427,19 @@ void set_start_led(uint8_t type) {
         led_start_active = true;
 
         if (type == 1) {
-            Serial.println("FCU Setting Start LED solid on");
+            if (debug) {
+                Serial.println("FCU Setting Start LED solid on");
+            }
         } else if (type == 2) {
             timer_led_start_blink_fast.reset();
-            Serial.println("FCU Setting Start LED fast blink");
+            if (debug) {
+                Serial.println("FCU Setting Start LED fast blink");
+            }
         } else if (type == 3) {
             timer_led_start_blink_slow.reset();
-            Serial.println("FCU Setting Start LED slow blink");
+            if (debug) {
+                Serial.println("FCU Setting Start LED slow blink");
+            }
         }
     }
 }
