@@ -272,12 +272,12 @@ void loop() {
 
     /*
      * Measure GLV battery voltage
-     * measured_voltage = analogRead * 5 / 1024
+     * measured_voltage = analogRead * 3.3 / 1024
      * real_voltage = measured_voltage * 55 / 12
-     * We can approximate with 5/1024*55/12 = .02238
+     * We can approximate with 3.3/1024*55/12 = .01477
      * We then multiply this value by 100 to get 10mV units
      */
-    rcu_status.set_glv_battery_voltage((uint16_t) (analogRead(SENSE_12VSUPPLY) * 2.238));
+    rcu_status.set_glv_battery_voltage((uint16_t) (analogRead(SENSE_12VSUPPLY) * 1.477));
 }
 
 /**
