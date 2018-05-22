@@ -16,16 +16,16 @@
 #define ADC_ACCEL_2_CHANNEL 1
 #define ADC_BRAKE_CHANNEL 2
 #define ADC_SPI_CS 10
-#define BTN_CYCLE A4
-#define BTN_MODE 11
-#define BTN_START A5
+#define BTN_CYCLE A3
+#define BTN_MODE A1
+#define BTN_START A6
 #define LED_BMS 6
 #define LED_IMD 7
 #define LED_MODE 9
 #define LED_POWER 8
 #define LED_START 5
 #define READY_SOUND 2
-#define SOFTWARE_SHUTDOWN_RELAY 12
+#define SOFTWARE_SHUTDOWN_RELAY A2
 
 /*
  * Constant definitions

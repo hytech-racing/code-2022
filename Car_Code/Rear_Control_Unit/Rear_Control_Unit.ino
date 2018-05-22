@@ -32,7 +32,7 @@
  */
 #define BMS_HIGH 134 // ~3V on BMS_OK line
 #define IMD_HIGH 134 // ~3V on OKHS line
-#define SHUTDOWN_OUT_HIGH 350 // ~8V on SHUTDOWN_C line
+#define SHUTDOWN_OUT_HIGH 350 // ~5V on SHUTDOWN_C line
 #define XBEE_PKT_LEN 15
 
 /*
@@ -222,6 +222,8 @@ void loop() {
         XB.println(rcu_status.get_state());
         XB.print("GLV BATT VOLTAGE: ");
         XB.println(rcu_status.get_glv_battery_voltage() / (double) 100, 2);
+        XB.print("BMS IMD LATCHED: ");
+        XB.println(rcu_status.get_bms_imd_latched());
     }
 
     /*
