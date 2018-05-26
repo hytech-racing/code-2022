@@ -192,7 +192,7 @@ def updateScreen(screen, incomingLine):
     if ('RUN FAULT HI' in incomingLine):
         clearLine(35,5)
         screen.addstr(35,5,incomingLine)
-    if ('COMMANDED TORQUE' in incomingLine):
+    if ('COMMANDED TORQUE:' in incomingLine):
         clearLine(36,5)
         screen.addstr(36,5,incomingLine)
     if ('TORQUE FEEDBACK' in incomingLine):

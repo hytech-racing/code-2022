@@ -52,11 +52,11 @@ bool RCU_status::get_imd_okhs_high() {
 }
 
 bool RCU_status::get_bms_imd_latched() {
-    return (message.flags & 0x3) >> 2;
+    return (message.flags & 0x4) >> 2;
 }
 
 bool RCU_status::get_inverter_powered() {
-    return (message.flags & 0x4) >> 3;
+    return (message.flags & 0x8) >> 3;
 }
 
 uint16_t RCU_status::get_glv_battery_voltage() {
