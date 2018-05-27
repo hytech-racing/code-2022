@@ -32,10 +32,12 @@
  */
 // TODO some of these values need to be calibrated once hardware is installed
 #define BRAKE_ACTIVE 600
-#define MIN_ACCELERATOR_PEDAL_1 250 // compare pedal travel
-#define MAX_ACCELERATOR_PEDAL_1 550
-#define MIN_ACCELERATOR_PEDAL_2 3840
-#define MAX_ACCELERATOR_PEDAL_2 3550
+#define MIN_ACCELERATOR_PEDAL_1 100 // Low accelerator implausibility threshold
+#define ZERO_ACCELERATOR_PEDAL_1 250 // Position to start acceleration
+#define MAX_ACCELERATOR_PEDAL_1 550 // High accelerator implausibility threshold
+#define MIN_ACCELERATOR_PEDAL_2 3990 // Low accelerator implausibility threshold
+#define ZERO_ACCELERATOR_PEDAL_2 3840 // Position to start acceleration
+#define MAX_ACCELERATOR_PEDAL_2 3550 // High accelerator implausibility threshold
 #define MIN_BRAKE_PEDAL 1510
 #define MAX_BRAKE_PEDAL 1684
 #define MIN_HV_VOLTAGE 500 // Volts in V * 0.1 - Used to check if Accumulator is energized
@@ -201,8 +203,8 @@ void loop() {
             // Calculate torque value
             int calculated_torque = 0;
             if (!fcu_status.get_accelerator_implausibility()) {
-                int torque1 = map(fcu_readings.get_accelerator_pedal_raw_1(), MIN_ACCELERATOR_PEDAL_1, MAX_ACCELERATOR_PEDAL_1, 0, MAX_TORQUE);
-                int torque2 = map(fcu_readings.get_accelerator_pedal_raw_2(), MIN_ACCELERATOR_PEDAL_2, MAX_ACCELERATOR_PEDAL_2, 0, MAX_TORQUE);
+                int torque1 = map(fcu_readings.get_accelerator_pedal_raw_1(), ZERO_ACCELERATOR_PEDAL_1, MAX_ACCELERATOR_PEDAL_1, 0, MAX_TORQUE);
+                int torque2 = map(fcu_readings.get_accelerator_pedal_raw_2(), ZERO_ACCELERATOR_PEDAL_2, MAX_ACCELERATOR_PEDAL_2, 0, MAX_TORQUE);
                 if (abs(torque1 - torque2) * 100 / MAX_TORQUE > 10) { // Second accelerator implausibility check FSAE EV2.3.6
                     fcu_status.set_accelerator_implausibility(true);
                     Serial.print("ACCEL IMPLAUSIBILITY: COMPARISON FAILED");
@@ -260,7 +262,7 @@ void loop() {
             if (debug && timer_debug_torque.check()) {
                 Serial.print("FCU REQUESTED TORQUE: ");
                 Serial.println(calculated_torque);
-                Serial.print("FCU IMPLAUS THROTTLE: ");
+                Serial.print("FCU IMPLAUS ACCEL: ");
                 Serial.println(fcu_status.get_accelerator_implausibility());
                 Serial.print("FCU IMPLAUS BRAKE: ");
                 Serial.println(fcu_status.get_brake_implausibility());
@@ -393,9 +395,9 @@ void read_values() {
         fcu_status.set_brake_pedal_active(false);
     }
     if (debug && timer_debug.check()) {
-        Serial.print("FCU PEDAL THROTTLE 1: ");
+        Serial.print("FCU PEDAL ACCEL 1: ");
         Serial.println(fcu_readings.get_accelerator_pedal_raw_1());
-        Serial.print("FCU PEDAL THROTTLE 2: ");
+        Serial.print("FCU PEDAL ACCEL 2: ");
         Serial.println(fcu_readings.get_accelerator_pedal_raw_2());
         Serial.print("FCU PEDAL BRAKE: ");
         Serial.println(fcu_readings.get_brake_pedal_raw());

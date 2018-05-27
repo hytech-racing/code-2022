@@ -54,11 +54,11 @@ def main():
     screen.addstr(6,55,'START BUTTON ID: ')
     screen.addstr(7,55,'FCU RAW TORQUE: ')
     screen.addstr(8,55,'FCU REQUESTED TORQUE: ')
-    screen.addstr(9,55,'FCU PEDAL THROTTLE 1: ')
-    screen.addstr(10,55,'FCU PEDAL THROTTLE 2: ')
+    screen.addstr(9,55,'FCU PEDAL ACCEL 1: ')
+    screen.addstr(10,55,'FCU PEDAL ACCEL 2: ')
     screen.addstr(11,55,'FCU PEDAL BRAKE: ')
     screen.addstr(12,55,'FCU BRAKE ACT: ')
-    screen.addstr(13,55,'FCU IMPLAUS THROTTLE: ')
+    screen.addstr(13,55,'FCU IMPLAUS ACCEL: ')
     screen.addstr(14,55,'FCU IMPLAUS BRAKE: ')
     screen.addstr(3,105,'REAR CONTROL UNIT')
     screen.addstr(4,105,'RCU UPTIME: ')
@@ -216,10 +216,10 @@ def updateScreen(screen, incomingLine):
     if ('FCU REQUESTED TORQUE' in incomingLine):
         clearLine(8,55)
         screen.addstr(8,55,incomingLine)
-    if ('FCU PEDAL THROTTLE 1' in incomingLine):
+    if ('FCU PEDAL ACCEL 1' in incomingLine):
         clearLine(9,55)
         screen.addstr(9,55,incomingLine)
-    if ('FCU PEDAL THROTTLE 2' in incomingLine):
+    if ('FCU PEDAL ACCEL 2' in incomingLine):
         clearLine(10,55)
         screen.addstr(10,55,incomingLine)
     if ('FCU PEDAL BRAKE' in incomingLine):
@@ -228,7 +228,7 @@ def updateScreen(screen, incomingLine):
     if ('FCU BRAKE ACT' in incomingLine):
         clearLine(12,55)
         screen.addstr(12,55,incomingLine)
-    if ('FCU IMPLAUS THROTTLE' in incomingLine):
+    if ('FCU IMPLAUS ACCEL' in incomingLine):
         clearLine(13,55)
         screen.addstr(13,55,incomingLine)
     if ('FCU IMPLAUS BRAKE' in incomingLine):
