@@ -6,7 +6,7 @@
 #include "HyTech17.h"
 #include <Metro.h>
 
-#define CHARGE_ENABLE 10
+#define CHARGE_ENABLE A1
 
 /*
  * Global variables
@@ -18,7 +18,9 @@ static CAN_message_t msg;
 Metro timer_update_CAN = Metro(265);
 
 void setup() {
-    pinMode(CHARGE_ENABLE, OUTPUT);
+	pinMode(CHARGE_ENABLE, OUTPUT);
+	pinMode(10, OUTPUT);
+	pinMode(13, OUTPUT);
 
     Serial.begin(115200); // Init serial for PC communication
     CAN.begin(); // Init CAN for vehicle communication
@@ -26,6 +28,8 @@ void setup() {
     Serial.println("CAN system and serial communication initialized");
 
     ccu_status.set_charger_enabled(false);
+	digitalWrite(10, OUTPUT);
+	digitalWrite(13, OUTPUT);
 }
 
 void loop() {
