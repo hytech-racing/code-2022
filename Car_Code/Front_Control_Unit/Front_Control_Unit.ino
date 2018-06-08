@@ -4,9 +4,9 @@
  * Read pedal sensor values and communicate with motor controller.
  * Configured for Front Control Unit rev7
  */
-#include "ADC_SPI.h"
+#include <ADC_SPI.h>
 #include <FlexCAN.h>
-#include "HyTech17.h"
+#include <HyTech17.h>
 #include <kinetis_flexcan.h>
 #include <Metro.h>
 

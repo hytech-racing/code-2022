@@ -1,5 +1,5 @@
-#ifndef __SPI_H__
-#define __SPI_H__
+#ifndef __ADC_SPI_H__
+#define __ADC_SPI_H__
 
 #include <stdint.h>
 #include <stddef.h>
@@ -10,11 +10,12 @@ class ADC_SPI {
 	public:
 		ADC_SPI();
 		ADC_SPI(int CS);
+		void init(int CS);
 		uint16_t read_adc(int channel);
 	private:
 		int ADC_SPI_CS;
 };
 
 
-#endif // !<SPI.H>
+#endif // !<ADC_SPI.H>
 #pragma once

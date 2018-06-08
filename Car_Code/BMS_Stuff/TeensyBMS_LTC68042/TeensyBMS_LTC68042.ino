@@ -28,14 +28,14 @@
  * When sending any other command (such as reading or writing registers), wake up the isoSPI circuit by calling wakeup_idle().
  */
 
+#include <ADC_SPI.h>
 #include <Arduino.h>
-#include <Metro.h>
 #include <FlexCAN.h>
-#include "HyTech17.h"
+#include <HyTech17.h>
 #include <kinetis_flexcan.h>
-#include "LT_SPI.h"
-#include "LTC68042.h"
-#include "ADC_SPI.h"
+#include <LT_SPI.h>
+#include <LTC68042.h>
+#include <Metro.h>
 
 /*
  * Pin definitions
