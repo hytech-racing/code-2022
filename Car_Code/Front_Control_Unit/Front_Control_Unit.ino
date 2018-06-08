@@ -2,10 +2,12 @@
  * HyTech 2018 Vehicle Front Control Unit
  * Interface with dashboard lights, buttons, and buzzer.
  * Read pedal sensor values and communicate with motor controller.
- * Configured for Front Control Unit rev5
+ * Configured for Front Control Unit rev7
  */
+#include "ADC_SPI.h"
 #include <FlexCAN.h>
 #include "HyTech17.h"
+#include <kinetis_flexcan.h>
 #include <Metro.h>
 
 /*
@@ -14,30 +16,29 @@
 #define ADC_ACCEL_1_CHANNEL 0
 #define ADC_ACCEL_2_CHANNEL 1
 #define ADC_BRAKE_CHANNEL 2
-#define ADC_SPI_CS A0
-#define ADC_SPI_DIN 0
-#define ADC_SPI_DOUT 1
-#define ADC_SPI_SCK 13
-#define BTN_CYCLE A4
-#define BTN_MODE 11
-#define BTN_START A5
+#define ADC_SPI_CS 10
+#define BTN_CYCLE A3
+#define BTN_MODE A1
+#define BTN_START A6
 #define LED_BMS 6
 #define LED_IMD 7
 #define LED_MODE 9
 #define LED_POWER 8
 #define LED_START 5
 #define READY_SOUND 2
-#define SOFTWARE_SHUTDOWN_RELAY 12
+#define SOFTWARE_SHUTDOWN_RELAY A2
 
 /*
  * Constant definitions
  */
 // TODO some of these values need to be calibrated once hardware is installed
 #define BRAKE_ACTIVE 600
-#define MIN_ACCELERATOR_PEDAL_1 250 // compare pedal travel
-#define MAX_ACCELERATOR_PEDAL_1 550
-#define MIN_ACCELERATOR_PEDAL_2 3840
-#define MAX_ACCELERATOR_PEDAL_2 3540
+#define MIN_ACCELERATOR_PEDAL_1 100 // Low accelerator implausibility threshold
+#define ZERO_ACCELERATOR_PEDAL_1 250 // Position to start acceleration
+#define MAX_ACCELERATOR_PEDAL_1 550 // High accelerator implausibility threshold
+#define MIN_ACCELERATOR_PEDAL_2 3990 // Low accelerator implausibility threshold
+#define ZERO_ACCELERATOR_PEDAL_2 3840 // Position to start acceleration
+#define MAX_ACCELERATOR_PEDAL_2 3550 // High accelerator implausibility threshold
 #define MIN_BRAKE_PEDAL 1510
 #define MAX_BRAKE_PEDAL 1684
 #define MIN_HV_VOLTAGE 500 // Volts in V * 0.1 - Used to check if Accumulator is energized
@@ -85,14 +86,11 @@ float rampRatio = 1;
 
 int MAX_TORQUE = 1600; // Torque in Nm * 10
 
+ADC_SPI ADC(ADC_SPI_CS);
 FlexCAN CAN(500000);
 static CAN_message_t msg;
 
 void setup() {
-    pinMode(ADC_SPI_CS, OUTPUT);
-    pinMode(ADC_SPI_DIN, INPUT);
-    pinMode(ADC_SPI_DOUT, OUTPUT);
-    pinMode(ADC_SPI_SCK, OUTPUT);
     pinMode(BTN_CYCLE, INPUT_PULLUP);
     pinMode(BTN_MODE, INPUT_PULLUP);
     pinMode(BTN_START, INPUT_PULLUP);
@@ -106,6 +104,14 @@ void setup() {
 
     Serial.begin(115200); // Init serial for PC communication
     CAN.begin(); // Init CAN for vehicle communication
+
+    /* Configure CAN rx interrupt */
+    interrupts();
+    NVIC_ENABLE_IRQ(IRQ_CAN_MESSAGE);
+    attachInterruptVector(IRQ_CAN_MESSAGE,parse_can_message);
+    FLEXCAN0_IMASK1 = FLEXCAN_IMASK1_BUF5M;
+    /* Configure CAN rx interrupt */
+
     delay(100);
     Serial.println("CAN system and serial communication initialized");
 
@@ -114,33 +120,6 @@ void setup() {
 }
 
 void loop() {
-    while (CAN.read(msg)) {
-        if (msg.id == ID_RCU_STATUS) {
-            rcu_status.load(msg.buf);
-        }
-
-        if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
-            MC_voltage_information mc_voltage_information = MC_voltage_information(msg.buf);
-            if (mc_voltage_information.get_dc_bus_voltage() >= MIN_HV_VOLTAGE && fcu_status.get_state() == FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
-                set_state(FCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
-            }
-            if (mc_voltage_information.get_dc_bus_voltage() < MIN_HV_VOLTAGE && fcu_status.get_state() > FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
-                set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
-            }
-        }
-
-        if (msg.id == ID_MC_INTERNAL_STATES) {
-            MC_internal_states mc_internal_states = MC_internal_states(msg.buf);
-            if (mc_internal_states.get_inverter_enable_state() && fcu_status.get_state() == FCU_STATE_ENABLING_INVERTER) {
-                set_state(FCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
-            }
-        }
-
-        if (msg.id == ID_BMS_STATUS) {
-            bms_status.load(msg.buf);
-        }
-    }
-
     /*
      * Send state over CAN
      */
@@ -206,8 +185,8 @@ void loop() {
             // Calculate torque value
             int calculated_torque = 0;
             if (!fcu_status.get_accelerator_implausibility()) {
-                int torque1 = map(fcu_readings.get_accelerator_pedal_raw_1(), MIN_ACCELERATOR_PEDAL_1, MAX_ACCELERATOR_PEDAL_1, 0, MAX_TORQUE);
-                int torque2 = map(fcu_readings.get_accelerator_pedal_raw_2(), MIN_ACCELERATOR_PEDAL_2, MAX_ACCELERATOR_PEDAL_2, 0, MAX_TORQUE);
+                int torque1 = map(fcu_readings.get_accelerator_pedal_raw_1(), ZERO_ACCELERATOR_PEDAL_1, MAX_ACCELERATOR_PEDAL_1, 0, MAX_TORQUE);
+                int torque2 = map(fcu_readings.get_accelerator_pedal_raw_2(), ZERO_ACCELERATOR_PEDAL_2, MAX_ACCELERATOR_PEDAL_2, 0, MAX_TORQUE);
                 if (abs(torque1 - torque2) * 100 / MAX_TORQUE > 10) { // Second accelerator implausibility check FSAE EV2.3.6
                     fcu_status.set_accelerator_implausibility(true);
                     Serial.print("ACCEL IMPLAUSIBILITY: COMPARISON FAILED");
@@ -265,11 +244,12 @@ void loop() {
             if (debug && timer_debug_torque.check()) {
                 Serial.print("FCU REQUESTED TORQUE: ");
                 Serial.println(calculated_torque);
-                Serial.print("FCU IMPLAUS THROTTLE: ");
+                Serial.print("FCU IMPLAUS ACCEL: ");
                 Serial.println(fcu_status.get_accelerator_implausibility());
                 Serial.print("FCU IMPLAUS BRAKE: ");
                 Serial.println(fcu_status.get_brake_implausibility());
             }
+            
             mc_command_message.set_torque_command(calculated_torque);
 
             mc_command_message.write(msg.buf);
@@ -384,22 +364,51 @@ void loop() {
     }
 }
 
+void parse_can_message() {
+    while (CAN.read(msg)) {
+        if (msg.id == ID_RCU_STATUS) {
+            rcu_status.load(msg.buf);
+        }
+
+        if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
+            MC_voltage_information mc_voltage_information = MC_voltage_information(msg.buf);
+            if (mc_voltage_information.get_dc_bus_voltage() >= MIN_HV_VOLTAGE && fcu_status.get_state() == FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
+                set_state(FCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
+            }
+            if (mc_voltage_information.get_dc_bus_voltage() < MIN_HV_VOLTAGE && fcu_status.get_state() > FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
+                set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
+            }
+        }
+
+        if (msg.id == ID_MC_INTERNAL_STATES) {
+            MC_internal_states mc_internal_states = MC_internal_states(msg.buf);
+            if (mc_internal_states.get_inverter_enable_state() && fcu_status.get_state() == FCU_STATE_ENABLING_INVERTER) {
+                set_state(FCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
+            }
+        }
+
+        if (msg.id == ID_BMS_STATUS) {
+            bms_status.load(msg.buf);
+        }
+    }
+}
+
 /*
  * Read values of sensors
  */
 void read_values() {
-    fcu_readings.set_accelerator_pedal_raw_1(read_adc(ADC_ACCEL_1_CHANNEL));
-    fcu_readings.set_accelerator_pedal_raw_2(read_adc(ADC_ACCEL_2_CHANNEL));
-    fcu_readings.set_brake_pedal_raw(read_adc(ADC_BRAKE_CHANNEL));
+    fcu_readings.set_accelerator_pedal_raw_1(ADC.read_adc(ADC_ACCEL_1_CHANNEL));
+    fcu_readings.set_accelerator_pedal_raw_2(ADC.read_adc(ADC_ACCEL_2_CHANNEL));
+    fcu_readings.set_brake_pedal_raw(ADC.read_adc(ADC_BRAKE_CHANNEL));
     if (fcu_readings.get_brake_pedal_raw() >= BRAKE_ACTIVE) {
         fcu_status.set_brake_pedal_active(true);
     } else {
         fcu_status.set_brake_pedal_active(false);
     }
     if (debug && timer_debug.check()) {
-        Serial.print("FCU PEDAL THROTTLE 1: ");
+        Serial.print("FCU PEDAL ACCEL 1: ");
         Serial.println(fcu_readings.get_accelerator_pedal_raw_1());
-        Serial.print("FCU PEDAL THROTTLE 2: ");
+        Serial.print("FCU PEDAL ACCEL 2: ");
         Serial.println(fcu_readings.get_accelerator_pedal_raw_2());
         Serial.print("FCU PEDAL BRAKE: ");
         Serial.println(fcu_readings.get_brake_pedal_raw());
@@ -506,32 +515,4 @@ void set_state(uint8_t new_state) {
         Serial.println("RTDS deactivated");
         Serial.println("Ready to drive");
     }
-}
-
-/*
- * Read analog value from MCP3208 ADC
- * Credit to Arduino Playground
- * https://playground.arduino.cc/Code/MCP3208
- */
-int read_adc(int channel) {
-    int adcvalue = 0;
-    byte commandbits = B11000000; // Command bits - start, mode, chn (3), dont care (3)
-    commandbits|=((channel)<<3); // Select channel
-    digitalWrite(ADC_SPI_CS, LOW); // Select adc
-    for (int i=7; i>=3; i--){ // Write bits to adc
-        digitalWrite(ADC_SPI_DOUT, commandbits&1<<i);
-        digitalWrite(ADC_SPI_SCK, HIGH); // Cycle clock
-        digitalWrite(ADC_SPI_SCK, LOW);    
-    }
-    digitalWrite(ADC_SPI_SCK, HIGH);  // Ignore 2 null bits
-    digitalWrite(ADC_SPI_SCK, LOW);
-    digitalWrite(ADC_SPI_SCK, HIGH);  
-    digitalWrite(ADC_SPI_SCK, LOW);
-    for (int i=11; i>=0; i--){ // Read bits from adc
-        adcvalue+=digitalRead(ADC_SPI_DIN)<<i;
-        digitalWrite(ADC_SPI_SCK, HIGH); // Cycle clock
-        digitalWrite(ADC_SPI_SCK, LOW);
-    }
-    digitalWrite(ADC_SPI_CS, HIGH); // Turn off device
-    return adcvalue;
 }
