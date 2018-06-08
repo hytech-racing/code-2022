@@ -7,6 +7,7 @@
 #include "ADC_SPI.h"
 #include <FlexCAN.h>
 #include "HyTech17.h"
+#include <kinetis_flexcan.h>
 #include <Metro.h>
 
 /*
@@ -103,6 +104,14 @@ void setup() {
 
     Serial.begin(115200); // Init serial for PC communication
     CAN.begin(); // Init CAN for vehicle communication
+
+    /* Configure CAN rx interrupt */
+    interrupts();
+    NVIC_ENABLE_IRQ(IRQ_CAN_MESSAGE);
+    attachInterruptVector(IRQ_CAN_MESSAGE,parse_can_message);
+    FLEXCAN0_IMASK1 = FLEXCAN_IMASK1_BUF5M;
+    /* Configure CAN rx interrupt */
+
     delay(100);
     Serial.println("CAN system and serial communication initialized");
 
@@ -111,33 +120,6 @@ void setup() {
 }
 
 void loop() {
-    while (CAN.read(msg)) {
-        if (msg.id == ID_RCU_STATUS) {
-            rcu_status.load(msg.buf);
-        }
-
-        if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
-            MC_voltage_information mc_voltage_information = MC_voltage_information(msg.buf);
-            if (mc_voltage_information.get_dc_bus_voltage() >= MIN_HV_VOLTAGE && fcu_status.get_state() == FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
-                set_state(FCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
-            }
-            if (mc_voltage_information.get_dc_bus_voltage() < MIN_HV_VOLTAGE && fcu_status.get_state() > FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
-                set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
-            }
-        }
-
-        if (msg.id == ID_MC_INTERNAL_STATES) {
-            MC_internal_states mc_internal_states = MC_internal_states(msg.buf);
-            if (mc_internal_states.get_inverter_enable_state() && fcu_status.get_state() == FCU_STATE_ENABLING_INVERTER) {
-                set_state(FCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
-            }
-        }
-
-        if (msg.id == ID_BMS_STATUS) {
-            bms_status.load(msg.buf);
-        }
-    }
-
     /*
      * Send state over CAN
      */
@@ -378,6 +360,35 @@ void loop() {
         }
         if (!rcu_status.get_imd_okhs_high()) {
             Serial.println("RCU IMD FAULT: detected");
+        }
+    }
+}
+
+void parse_can_message() {
+    while (CAN.read(msg)) {
+        if (msg.id == ID_RCU_STATUS) {
+            rcu_status.load(msg.buf);
+        }
+
+        if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
+            MC_voltage_information mc_voltage_information = MC_voltage_information(msg.buf);
+            if (mc_voltage_information.get_dc_bus_voltage() >= MIN_HV_VOLTAGE && fcu_status.get_state() == FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
+                set_state(FCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
+            }
+            if (mc_voltage_information.get_dc_bus_voltage() < MIN_HV_VOLTAGE && fcu_status.get_state() > FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
+                set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
+            }
+        }
+
+        if (msg.id == ID_MC_INTERNAL_STATES) {
+            MC_internal_states mc_internal_states = MC_internal_states(msg.buf);
+            if (mc_internal_states.get_inverter_enable_state() && fcu_status.get_state() == FCU_STATE_ENABLING_INVERTER) {
+                set_state(FCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
+            }
+        }
+
+        if (msg.id == ID_BMS_STATUS) {
+            bms_status.load(msg.buf);
         }
     }
 }

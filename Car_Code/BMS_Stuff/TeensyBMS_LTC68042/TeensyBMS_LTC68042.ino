@@ -32,6 +32,7 @@
 #include <Metro.h>
 #include <FlexCAN.h>
 #include "HyTech17.h"
+#include <kinetis_flexcan.h>
 #include "LT_SPI.h"
 #include "LTC68042.h"
 #include "ADC_SPI.h"
@@ -97,7 +98,7 @@ uint16_t onboard_temp_balance_disable = 5000;  // TODO fill this in with real nu
 uint16_t onboard_temp_balance_reenable = 4000; // TODO fill this in with real numbers
 uint16_t onboard_temp_critical_high = 6000; // TODO fill this in with real numbers
 uint16_t temp_critical_low = 0; // 0C
-uint16_t voltage_difference_threshold = 500; // 5.00V
+uint16_t voltage_difference_threshold = 500; // 0.0500V
 
 uint8_t error_flags_history = 0; // will not be reset with BMS_OK if a fault has occured
 uint8_t consecutive_faults_overvoltage = 0;// keep track of how many consecutive faults occured
@@ -174,6 +175,14 @@ void setup() {
 
     Serial.begin(115200); // Init serial for PC communication
     CAN.begin(); // Init CAN for vehicle communication
+
+    /* Configure CAN rx interrupt */
+    interrupts();
+    NVIC_ENABLE_IRQ(IRQ_CAN_MESSAGE);
+    attachInterruptVector(IRQ_CAN_MESSAGE,parse_can_message);
+    FLEXCAN0_IMASK1 = FLEXCAN_IMASK1_BUF5M;
+    /* Configure CAN rx interrupt */
+
     delay(100);
     Serial.println("CAN system and serial communication initialized");
 
@@ -211,41 +220,6 @@ void setup() {
  * Main BMS Control Loop
  */
 void loop() {
-    while (CAN.read(msg)) {
-        /*if (msg.id == ID_BMS_TEMPERATURES) { // Used temporarily while we have an external temperature monitor ECU
-            bms_temperatures.load(msg.buf);
-            //bms_status.set_discharge_overtemp(false);  // RESET these values, then check below if they should be set again
-            //bms_status.set_charge_overtemp(false);
-            //bms_status.set_undertemp(false);
-            if (bms_status.get_state() == BMS_STATE_DISCHARGING && bms_temperatures.get_high_temperature() > discharge_temp_cell_critical_high) {
-                bms_status.set_discharge_overtemp(true);
-                Serial.println("Discharge overtemperature fault!");
-            } else if (bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED && bms_temperatures.get_high_temperature() > charge_temp_cell_critical_high) {
-                bms_status.set_charge_overtemp(true);
-                Serial.println("Charge overtemperature fault!");
-            } else if (bms_temperatures.get_low_temperature() < temp_critical_low) {
-                bms_status.set_undertemp(true);
-                Serial.println("Undertemperature fault!");
-            }
-        }*/
-        if (msg.id == ID_CCU_STATUS) { // Enable charger if CCU status message is received
-            if (bms_status.get_state() == BMS_STATE_CHARGE_DISABLED) {
-                Serial.println("Entering charge mode");
-                bms_status.set_state(BMS_STATE_CHARGE_ENABLED);
-            }
-            timer_charge_timeout.reset();
-        }
-
-        if (msg.id == ID_FH_WATCHDOG_TEST) { // stop sending pulse to watchdog timer
-            fh_watchdog_test = true;
-        }
-
-        // Need MC voltage info to determine if MC is receiving tractive system voltage
-        if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
-            mc_voltage_info.load(msg.buf);
-        }
-    }
-
     if (timer_charge_timeout.check() && bms_status.get_state() > BMS_STATE_DISCHARGING) { // 1 second timeout - if timeout is reached, disable charging
         Serial.println("Disabling charge mode - CCU timeout");
         bms_status.set_state(BMS_STATE_DISCHARGING);
@@ -257,7 +231,7 @@ void loop() {
 
     if (timer_process_cells_slow.check()) {
         process_voltages(); // poll controller and store data in bms_voltages object.
-        //balance_cells();
+        balance_cells();
         process_cell_temps(); // poll controller and store data in bms_temperatures and bms_detailed_temperatures
         process_onboard_temps(); // poll controller and store data in bms_onboard_temperatures and bms_onboard_detailed_temperatures
         print_uptime();
@@ -937,5 +911,25 @@ void cfg_set_undervoltage_comparison_voltage(uint16_t voltage) {
     for (int i = 0; i < TOTAL_IC; i++) {
         tx_cfg[i][1] = voltage && 0x0FF;
         tx_cfg[i][2] = (tx_cfg[i][2] & 0xF0) | ((voltage && 0xF00) >> 8);
+    }
+}
+
+void parse_can_message() {
+    while (CAN.read(msg)) {
+        if (msg.id == ID_CCU_STATUS) { // Enable charger if CCU status message is received
+            if (bms_status.get_state() == BMS_STATE_CHARGE_DISABLED) {
+                bms_status.set_state(BMS_STATE_CHARGE_ENABLED);
+            }
+            timer_charge_timeout.reset();
+        }
+
+        if (msg.id == ID_FH_WATCHDOG_TEST) { // stop sending pulse to watchdog timer
+            fh_watchdog_test = true;
+        }
+
+        // Need MC voltage info to determine if MC is receiving tractive system voltage
+        if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
+            mc_voltage_info.load(msg.buf);
+        }
     }
 }

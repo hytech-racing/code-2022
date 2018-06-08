@@ -7,6 +7,7 @@
  */
 #include <FlexCAN.h>
 #include <HyTech17.h>
+#include <kinetis_flexcan.h>
 #include <Metro.h>
 #include <XBTools.h>
 
@@ -94,6 +95,14 @@ void setup() {
 
     Serial.begin(115200);
     CAN.begin();
+
+    /* Configure CAN rx interrupt */
+    interrupts();
+    NVIC_ENABLE_IRQ(IRQ_CAN_MESSAGE);
+    attachInterruptVector(IRQ_CAN_MESSAGE,parse_can_message);
+    FLEXCAN0_IMASK1 = FLEXCAN_IMASK1_BUF5M;
+    /* Configure CAN rx interrupt */
+
     XB.begin(115200);
     delay(100);
     Serial.println("CAN system, serial communication, and XBee initialized");
@@ -111,75 +120,6 @@ void loop() {
     /*
      * Handle incoming CAN messages
      */
-    while (CAN.read(msg)) {
-        if (msg.id == ID_FCU_STATUS) {
-            fcu_status.load(msg.buf);
-            digitalWrite(SSR_BRAKE_LIGHT, fcu_status.get_brake_pedal_active());
-        }
-        if (msg.id == ID_RCU_RESTART_MC) { // Restart inverter when the FCU restarts
-            if (millis() > 1000) { // Ignore restart messages when this microcontroller has also just booted up
-                inverter_restart = true;
-                digitalWrite(SSR_INVERTER, LOW);
-                timer_restart_inverter.reset();
-                rcu_status.set_inverter_powered(false);
-            }
-        }
-       /*if ((msg.id == ID_MC_TEMPERATURES_1 && timer_debug_rms_temperatures_1.check())
-               || (msg.id == ID_MC_TEMPERATURES_3 && timer_debug_rms_temperatures_3.check())
-               || (msg.id == ID_MC_MOTOR_POSITION_INFORMATION && timer_debug_rms_motor_position_information.check())
-               || (msg.id == ID_MC_CURRENT_INFORMATION && timer_debug_rms_current_information.check())
-               || (msg.id == ID_MC_VOLTAGE_INFORMATION && timer_debug_rms_voltage_information.check())
-               || (msg.id == ID_MC_INTERNAL_STATES && timer_debug_rms_internal_states.check())
-               || (msg.id == ID_MC_FAULT_CODES && timer_debug_rms_fault_codes.check())
-               || (msg.id == ID_MC_TORQUE_TIMER_INFORMATION && timer_debug_rms_torque_timer_information.check())
-               || (msg.id == ID_BMS_VOLTAGES && timer_debug_bms_voltages.check())
-               || (msg.id == ID_BMS_TEMPERATURES && timer_debug_bms_temperatures.check())
-               || (msg.id == ID_BMS_STATUS && timer_debug_bms_status.check())
-               || (msg.id == ID_FCU_STATUS && timer_debug_fcu_status.check())) {
-           write_xbee_data();
-       }*/
-       if (msg.id == ID_MC_COMMAND_MESSAGE) {
-           mc_command_message.load(msg.buf);
-       }
-       if (msg.id == ID_MC_TEMPERATURES_1) {
-           mc_temperatures_1.load(msg.buf);
-       }
-       if (msg.id == ID_MC_TEMPERATURES_3) {
-           mc_temperatures_3.load(msg.buf);
-       }
-       if (msg.id == ID_MC_MOTOR_POSITION_INFORMATION) {
-           mc_motor_position_information.load(msg.buf);
-       }
-       if (msg.id == ID_MC_CURRENT_INFORMATION) {
-           mc_current_information.load(msg.buf);
-       }
-       if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
-           mc_voltage_information.load(msg.buf);
-       }
-       if (msg.id == ID_MC_INTERNAL_STATES) {
-           mc_internal_states.load(msg.buf);
-       }
-       if (msg.id == ID_MC_FAULT_CODES) {
-           mc_fault_codes.load(msg.buf);
-       }
-       if (msg.id == ID_MC_TORQUE_TIMER_INFORMATION) {
-           mc_torque_timer_information.load(msg.buf);
-       }
-       if (msg.id == ID_BMS_VOLTAGES) {
-           bms_voltages.load(msg.buf);
-       }
-       if (msg.id == ID_BMS_TEMPERATURES) {
-           bms_temperatures.load(msg.buf);
-       }
-       if (msg.id == ID_BMS_STATUS) {
-           bms_status.load(msg.buf);
-       }
-       if (msg.id == ID_BMS_DETAILED_VOLTAGES) {
-           BMS_detailed_voltages temp = BMS_detailed_voltages(msg.buf);
-           bms_detailed_voltages[temp.get_ic_id()][temp.get_group_id()].load(msg.buf);
-       }
-    }
-
     send_xbee();
 
     /*if (timer_detailed_voltages.check()) {
@@ -280,6 +220,77 @@ void loop() {
      * We then multiply this value by 100 to get 10mV units
      */
     rcu_status.set_glv_battery_voltage((uint16_t) (analogRead(SENSE_12VSUPPLY) * 1.477));
+}
+
+void parse_can_message() {
+    while (CAN.read(msg)) {
+        if (msg.id == ID_FCU_STATUS) {
+            fcu_status.load(msg.buf);
+            digitalWrite(SSR_BRAKE_LIGHT, fcu_status.get_brake_pedal_active());
+        }
+        if (msg.id == ID_RCU_RESTART_MC) { // Restart inverter when the FCU restarts
+            if (millis() > 1000) { // Ignore restart messages when this microcontroller has also just booted up
+                inverter_restart = true;
+                digitalWrite(SSR_INVERTER, LOW);
+                timer_restart_inverter.reset();
+                rcu_status.set_inverter_powered(false);
+            }
+        }
+       /*if ((msg.id == ID_MC_TEMPERATURES_1 && timer_debug_rms_temperatures_1.check())
+               || (msg.id == ID_MC_TEMPERATURES_3 && timer_debug_rms_temperatures_3.check())
+               || (msg.id == ID_MC_MOTOR_POSITION_INFORMATION && timer_debug_rms_motor_position_information.check())
+               || (msg.id == ID_MC_CURRENT_INFORMATION && timer_debug_rms_current_information.check())
+               || (msg.id == ID_MC_VOLTAGE_INFORMATION && timer_debug_rms_voltage_information.check())
+               || (msg.id == ID_MC_INTERNAL_STATES && timer_debug_rms_internal_states.check())
+               || (msg.id == ID_MC_FAULT_CODES && timer_debug_rms_fault_codes.check())
+               || (msg.id == ID_MC_TORQUE_TIMER_INFORMATION && timer_debug_rms_torque_timer_information.check())
+               || (msg.id == ID_BMS_VOLTAGES && timer_debug_bms_voltages.check())
+               || (msg.id == ID_BMS_TEMPERATURES && timer_debug_bms_temperatures.check())
+               || (msg.id == ID_BMS_STATUS && timer_debug_bms_status.check())
+               || (msg.id == ID_FCU_STATUS && timer_debug_fcu_status.check())) {
+           write_xbee_data();
+       }*/
+       if (msg.id == ID_MC_COMMAND_MESSAGE) {
+           mc_command_message.load(msg.buf);
+       }
+       if (msg.id == ID_MC_TEMPERATURES_1) {
+           mc_temperatures_1.load(msg.buf);
+       }
+       if (msg.id == ID_MC_TEMPERATURES_3) {
+           mc_temperatures_3.load(msg.buf);
+       }
+       if (msg.id == ID_MC_MOTOR_POSITION_INFORMATION) {
+           mc_motor_position_information.load(msg.buf);
+       }
+       if (msg.id == ID_MC_CURRENT_INFORMATION) {
+           mc_current_information.load(msg.buf);
+       }
+       if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
+           mc_voltage_information.load(msg.buf);
+       }
+       if (msg.id == ID_MC_INTERNAL_STATES) {
+           mc_internal_states.load(msg.buf);
+       }
+       if (msg.id == ID_MC_FAULT_CODES) {
+           mc_fault_codes.load(msg.buf);
+       }
+       if (msg.id == ID_MC_TORQUE_TIMER_INFORMATION) {
+           mc_torque_timer_information.load(msg.buf);
+       }
+       if (msg.id == ID_BMS_VOLTAGES) {
+           bms_voltages.load(msg.buf);
+       }
+       if (msg.id == ID_BMS_TEMPERATURES) {
+           bms_temperatures.load(msg.buf);
+       }
+       if (msg.id == ID_BMS_STATUS) {
+           bms_status.load(msg.buf);
+       }
+       if (msg.id == ID_BMS_DETAILED_VOLTAGES) {
+           BMS_detailed_voltages temp = BMS_detailed_voltages(msg.buf);
+           bms_detailed_voltages[temp.get_ic_id()][temp.get_group_id()].load(msg.buf);
+       }
+    }
 }
 
 /**
