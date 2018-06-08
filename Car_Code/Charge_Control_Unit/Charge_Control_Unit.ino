@@ -28,8 +28,8 @@ void setup() {
     Serial.println("CAN system and serial communication initialized");
 
     ccu_status.set_charger_enabled(false);
-	digitalWrite(10, OUTPUT);
-	digitalWrite(13, OUTPUT);
+	digitalWrite(10, HIGH);
+	digitalWrite(13, HIGH);
 }
 
 void loop() {
