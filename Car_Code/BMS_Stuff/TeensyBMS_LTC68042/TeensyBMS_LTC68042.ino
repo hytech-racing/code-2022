@@ -61,7 +61,6 @@
 #define IGNORE_FAULT_THRESHOLD 10       // Number of fault-worthy values to read in succession before faulting
 #define CURRENT_FAULT_THRESHOLD 5       // Number of fault-worthy electrical current values to read in succession before faulting
 #define SHUTDOWN_HIGH_THRESHOLD 1500    // Value returned by ADC above which the shutdown circuit is considered powered (balancing not allowed when AIRs open)
-#define DC_BUS_HIGH_THRESHOLD 500       // Current in A * 10 required to consider TS active
 
 /*
  * Current Sensor ADC Channel definitions
@@ -82,6 +81,7 @@ Metro timer_can_update_slow = Metro(1000);
 Metro timer_process_cells_fast = Metro(100);
 Metro timer_process_cells_slow = Metro(1000);
 Metro timer_watchdog_timer = Metro(250);
+Metro timer_charge_enable_limit = Metro(60000); // Don't allow charger to re-enable more than once a minute
 Metro timer_charge_timeout = Metro(1000);
 
 /*
@@ -106,8 +106,7 @@ uint8_t consecutive_faults_undervoltage = 0;
 uint8_t consecutive_faults_total_voltage_high = 0;
 uint8_t consecutive_faults_thermistor = 0;
 uint8_t consecutive_faults_current = 0;
-bool fh_watchdog_test = false;
-
+bool default_charge_mode = true; // enter charge mode by default
 
 uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages. Numbers are stored in 0.1 mV units.
 uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
@@ -154,10 +153,10 @@ BMS_detailed_temperatures bms_detailed_temperatures[TOTAL_IC];
 BMS_onboard_temperatures bms_onboard_temperatures;
 BMS_onboard_detailed_temperatures bms_onboard_detailed_temperatures[TOTAL_IC];
 BMS_voltages bms_voltages;
-MC_voltage_information mc_voltage_info;
+bool fh_watchdog_test = false;
 bool watchdog_high = true;
-bool disable_balance = false;
 bool balance_cycle = true;
+bool charge_mode_entered = false;
 
 int minVoltageICIndex;
 int minVoltageCellIndex;
@@ -194,7 +193,12 @@ void setup() {
     init_cfg(); // Initialize and write configuration registers to LTC6804 chips
     poll_cell_voltage();
     memcpy(cell_delta_voltage, cell_voltages, 2 * TOTAL_IC * CELLS_PER_IC);
-    bms_status.set_state(BMS_STATE_DISCHARGING);
+    if (default_charge_mode) {
+        charge_mode_entered = true;
+        bms_status.set_state(BMS_STATE_CHARGING);
+    } else {
+        bms_status.set_state(BMS_STATE_DISCHARGING);
+    }
     Serial.println("Setup Complete!");
 
     // Initialize the ic/group IDs for detailed voltage and temperature CAN messages
@@ -222,7 +226,7 @@ void setup() {
  * Main BMS Control Loop
  */
 void loop() {
-    if (timer_charge_timeout.check() && bms_status.get_state() > BMS_STATE_DISCHARGING) { // 1 second timeout - if timeout is reached, disable charging
+    if (timer_charge_timeout.check() && bms_status.get_state() > BMS_STATE_DISCHARGING && !default_charge_mode) { // 1 second timeout - if timeout is reached, disable charging
         Serial.println("Disabling charge mode - CCU timeout");
         bms_status.set_state(BMS_STATE_DISCHARGING);
     }
@@ -233,16 +237,17 @@ void loop() {
 
     if (timer_process_cells_slow.check()) {
         process_voltages(); // poll controller and store data in bms_voltages object.
-        balance_cells();
         process_cell_temps(); // poll controller and store data in bms_temperatures and bms_detailed_temperatures
         process_onboard_temps(); // poll controller and store data in bms_onboard_temperatures and bms_onboard_detailed_temperatures
+        balance_cells();
         print_uptime();
         print_temperatures();
 
         Serial.print("State: ");
         if (bms_status.get_state() == BMS_STATE_DISCHARGING) {Serial.println("DISCHARGING");}
-        if (bms_status.get_state() == BMS_STATE_CHARGE_ENABLED) {Serial.println("CHARGE ENABLED");}
-        if (bms_status.get_state() == BMS_STATE_CHARGE_DISABLED) {Serial.println("CHARGE DISABLED");}
+        if (bms_status.get_state() == BMS_STATE_CHARGING) {Serial.println("CHARGING");}
+        if (bms_status.get_state() == BMS_STATE_BALANCING) {Serial.println("BALANCING");}
+        if (bms_status.get_state() == BMS_STATE_BALANCING_OVERHEATED) {Serial.println("BALANCING_OVERHEATED");}
 
         if (bms_status.get_error_flags()) { // BMS error - drive BMS_OK signal low
             Serial.println("STATUS NOT GOOD!!!!!!!!!!!!!!!");
@@ -406,11 +411,12 @@ void balance_cells() {
     int shutdown_circuit_voltage = ADC.read_adc(CH_SHUTDOWN);
     initialize(); // Reconfigure SPI pins after reading ADC so LTC communication is successful
     balance_cycle = !balance_cycle; // Only allow balancing on odd cycles
+    bool cells_balancing = false;
     if (bms_voltages.get_low() > voltage_cutoff_low
-        && mc_voltage_info.get_dc_bus_voltage() >= DC_BUS_HIGH_THRESHOLD
-        && !disable_balance
         && balance_cycle
-        && bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED
+        && !bms_status.get_error_flags()
+        && bms_status.get_state() >= BMS_STATE_CHARGING
+        && bms_status.get_state() <= BMS_STATE_BALANCING
         && shutdown_circuit_voltage > SHUTDOWN_HIGH_THRESHOLD) {
         for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
             for (int cell = 0; cell < CELLS_PER_IC; cell++) { // Loop through cells
@@ -420,11 +426,18 @@ void balance_cells() {
                         if (cell_voltage < bms_voltages.get_low() + voltage_difference_threshold - 6) {
                             modify_discharge_config(ic, cell, false);
                         }
-                    }
-                    else if (cell_voltage > bms_voltages.get_low() + voltage_difference_threshold) {
+                    } else if (cell_voltage > bms_voltages.get_low() + voltage_difference_threshold) {
                             modify_discharge_config(ic, cell, true);
+                            cells_balancing = true;
                     }
                 }
+            }
+        }
+        if (cells_balancing) { // Cells currently balancing
+            bms_status.set_state(BMS_STATE_BALANCING);
+        } else { // Balancing allowed, but no cells currently balancing
+            if (timer_charge_enable_limit.check()) {
+                bms_status.set_state(BMS_STATE_CHARGING);
             }
         }
         wakeup_idle();
@@ -500,7 +513,7 @@ void process_voltages() {
     bms_status.set_total_voltage_high(false);
 
     if (bms_voltages.get_high() > voltage_cutoff_high) {
-        if (consecutive_faults_overvoltage==IGNORE_FAULT_THRESHOLD) {
+        if (consecutive_faults_overvoltage >= IGNORE_FAULT_THRESHOLD) {
             bms_status.set_overvoltage(true);
         } else {
             consecutive_faults_overvoltage += 1;
@@ -513,9 +526,9 @@ void process_voltages() {
     }
 
     if (bms_voltages.get_low() < voltage_cutoff_low) {
-        if (consecutive_faults_undervoltage==IGNORE_FAULT_THRESHOLD) {
+        if (consecutive_faults_undervoltage >= IGNORE_FAULT_THRESHOLD) {
             bms_status.set_undervoltage(true);
-        }else {
+        } else {
             consecutive_faults_undervoltage += 1;
         }
         Serial.println("VOLTAGE FAULT too low!!!!!!!!!!!!!!!!!!!");
@@ -526,13 +539,13 @@ void process_voltages() {
     }
 
     if (bms_voltages.get_total() > total_voltage_cutoff) {
-        if (consecutive_faults_total_voltage_high==IGNORE_FAULT_THRESHOLD) {
+        if (consecutive_faults_total_voltage_high >= IGNORE_FAULT_THRESHOLD) {
             bms_status.set_total_voltage_high(true);
-        }else {
+        } else {
             consecutive_faults_total_voltage_high += 1;
         }
         Serial.println("VOLTAGE FAULT!!!!!!!!!!!!!!!!!!!");
-    }else{ 
+    }else { 
         consecutive_faults_total_voltage_high = 0;
     }
 
@@ -600,18 +613,18 @@ void process_cell_temps() { // TODO make work with signed int8_t CAN message (ye
     bms_status.set_discharge_overtemp(false); // RESET these values, then check below if they should be set again
     bms_status.set_charge_overtemp(false);
 
-    if (bms_status.get_state() == BMS_STATE_DISCHARGING) { // Discharging
+    if (bms_status.get_state() == BMS_STATE_DISCHARGING) { // Check temperatures if discharging
         if (bms_temperatures.get_high_temperature() > discharge_temp_cell_critical_high) {
-            if (consecutive_faults_thermistor == IGNORE_FAULT_THRESHOLD) {
+            if (consecutive_faults_thermistor >= IGNORE_FAULT_THRESHOLD) {
                 bms_status.set_discharge_overtemp(true);
                 Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!"); 
             } else {
                 consecutive_faults_thermistor++;
             }
         }
-    } else if (bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED) { // Charging
+    } else if (bms_status.get_state() >= BMS_STATE_CHARGING) { // Check temperatures if charging
         if (bms_temperatures.get_high_temperature() > charge_temp_cell_critical_high) {
-            if (consecutive_faults_thermistor == IGNORE_FAULT_THRESHOLD) {
+            if (consecutive_faults_thermistor >= IGNORE_FAULT_THRESHOLD) {
                 bms_status.set_charge_overtemp(true);
                 Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
             } else {
@@ -697,43 +710,29 @@ void process_onboard_temps() {
     bms_onboard_temperatures.set_high_temperature((int16_t) highTemp);
     bms_onboard_temperatures.set_average_temperature((int16_t) avgTemp);
 
-    // TODO don't fault the BMS based on onboard thermistors, but do disable balancing
-
     bms_status.set_onboard_overtemp(false); // RESET this value, then check below if they should be set
 
-    //marker
-    if (bms_status.get_state() == BMS_STATE_DISCHARGING) { // Discharging
-        if (bms_onboard_temperatures.get_high_temperature() > onboard_temp_critical_high) {
-            if (consecutive_faults_thermistor == IGNORE_FAULT_THRESHOLD) {
-                bms_status.set_onboard_overtemp(true);
-                Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
-            } else {
-                consecutive_faults_thermistor++;
-            }
-        }
-    } else if (bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED) { // Charging
-        if (bms_onboard_temperatures.get_high_temperature() > onboard_temp_critical_high) {
-            if (consecutive_faults_thermistor == IGNORE_FAULT_THRESHOLD) {
-                bms_status.set_onboard_overtemp(true);
-                disable_balance = true;
-                Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
-            } else {
-                consecutive_faults_thermistor++;
-            }
-        } else if (bms_onboard_temperatures.get_high_temperature() >= onboard_temp_balance_disable) {
-            bms_status.set_state(BMS_STATE_CHARGE_DISABLED);
-            disable_balance = true;
-            Serial.println("WARNING: Onboard temperature too high; disabling balancing");
-        }
-    } else if (bms_status.get_state() == BMS_STATE_CHARGE_DISABLED) {
-        if (bms_onboard_temperatures.get_high_temperature() < onboard_temp_balance_reenable) {
-            bms_status.set_state(BMS_STATE_CHARGE_ENABLED);
-            disable_balance = false;
-            Serial.println("CLEARED: Onboard temperature OK; reenabling balancing");
-            consecutive_faults_thermistor = 0;
+    if (bms_onboard_temperatures.get_high_temperature() > onboard_temp_critical_high) {
+        if (consecutive_faults_thermistor >= IGNORE_FAULT_THRESHOLD) {
+            bms_status.set_onboard_overtemp(true);
+            Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
+        } else {
+            consecutive_faults_thermistor++;
         }
     } else {
         consecutive_faults_thermistor = 0;
+    }
+
+    if (bms_status.get_state() == BMS_STATE_BALANCING) {
+        if (bms_onboard_temperatures.get_high_temperature() >= onboard_temp_balance_disable) {
+            bms_status.set_state(BMS_STATE_BALANCING_OVERHEATED);
+            Serial.println("WARNING: Onboard temperature too high; disabling balancing");
+        }
+    } else if (bms_status.get_state() == BMS_STATE_BALANCING_OVERHEATED) {
+        if (bms_onboard_temperatures.get_high_temperature() < onboard_temp_balance_reenable) {
+            bms_status.set_state(BMS_STATE_BALANCING);
+            Serial.println("CLEARED: Onboard temperature OK; reenabling balancing");
+        }
     }
 
     Serial.print("Low Temp: ");
@@ -790,14 +789,14 @@ void process_current() {
     bms_status.set_charge_overcurrent(false); // RESET these values, then check below if they should be set again
     bms_status.set_discharge_overcurrent(false);
     if (bms_status.get_current() < charge_current_constant_high) {
-        if (consecutive_faults_current == CURRENT_FAULT_THRESHOLD) {
+        if (consecutive_faults_current >= CURRENT_FAULT_THRESHOLD) {
             bms_status.set_charge_overcurrent(true);
             Serial.println("CHARGE CURRENT HIGH FAULT!!!!!!!!!!!!!!!!!!!");
         } else {
             consecutive_faults_current++;
         }
     } else if (bms_status.get_current() > discharge_current_constant_high) {
-        if (consecutive_faults_current == CURRENT_FAULT_THRESHOLD) {
+        if (consecutive_faults_current >= CURRENT_FAULT_THRESHOLD) {
             bms_status.set_discharge_overcurrent(true);
             Serial.println("DISCHARGE CURRENT HIGH FAULT!!!!!!!!!!!!!!!!!!!");
         } else {
@@ -933,20 +932,18 @@ void cfg_set_undervoltage_comparison_voltage(uint16_t voltage) {
 
 void parse_can_message() {
     while (CAN.read(msg)) {
-        if (msg.id == ID_CCU_STATUS) { // Enable charger if CCU status message is received
-            if (bms_status.get_state() == BMS_STATE_CHARGE_DISABLED) {
-                bms_status.set_state(BMS_STATE_CHARGE_ENABLED);
+        if (msg.id == ID_CCU_STATUS) { // Leave discharging mode if CCU status message is received
+            if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
+                if (timer_charge_enable_limit.check() || !charge_mode_entered) {
+                    charge_mode_entered = true;
+                    bms_status.set_state(BMS_STATE_CHARGING);
+                }
             }
             timer_charge_timeout.reset();
         }
 
         if (msg.id == ID_FH_WATCHDOG_TEST) { // stop sending pulse to watchdog timer
             fh_watchdog_test = true;
-        }
-
-        // Need MC voltage info to determine if MC is receiving tractive system voltage
-        if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
-            mc_voltage_info.load(msg.buf);
         }
     }
 }
