@@ -157,6 +157,7 @@ BMS_voltages bms_voltages;
 MC_voltage_information mc_voltage_info;
 bool watchdog_high = true;
 bool disable_balance = false;
+bool balance_cycle = true;
 
 int minVoltageICIndex;
 int minVoltageCellIndex;
@@ -338,12 +339,8 @@ void init_cfg() {
     LTC6804_wrcfg(TOTAL_IC, tx_cfg); // Write configuration to ICs
 }
 
-void discharge_cell(int ic, int cell) {
-    cell_discharging[ic][cell] = true;
-    discharge_cell(ic, cell, true);
-}
-
-void discharge_cell(int ic, int cell, bool setDischarge) {
+void modify_discharge_config(int ic, int cell, bool setDischarge) {
+    cell_discharging[ic][cell] = setDischarge;
     if (ic < TOTAL_IC && cell < CELLS_PER_IC) {
         if (cell > 4) {
             cell++; // Increment cell, skipping the disconnected C5. This abstracts the missing cell from the rest of the program.
@@ -362,6 +359,14 @@ void discharge_cell(int ic, int cell, bool setDischarge) {
             }
         }
     }
+}
+
+void discharge_cell(int ic, int cell) {
+    discharge_cell(ic, cell, true);
+}
+
+void discharge_cell(int ic, int cell, bool setDischarge) {
+    modify_discharge_config(ic, cell, setDischarge);
     wakeup_idle();
     //delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54
     LTC6804_wrcfg(TOTAL_IC, tx_cfg);
@@ -369,6 +374,9 @@ void discharge_cell(int ic, int cell, bool setDischarge) {
 
 void discharge_all() {
     for (int i = 0; i < TOTAL_IC; i++) {
+        for (int j = 0; j < CELLS_PER_IC; j++) {
+            cell_discharging[i][j] = true;
+        }
         tx_cfg[i][4] = 0b11111111;
         tx_cfg[i][5] = tx_cfg[i][5] | 0b00001111;
     }
@@ -378,12 +386,14 @@ void discharge_all() {
 }
 
 void stop_discharge_cell(int ic, int cell) {
-    cell_discharging[ic][cell] = false;
     discharge_cell(ic, cell, false);
 }
 
 void stop_discharge_all() {
     for (int i = 0; i < TOTAL_IC; i++) {
+        for (int j = 0; j < CELLS_PER_IC; j++) {
+            cell_discharging[i][j] = false;
+        }
         tx_cfg[i][4] = 0b0;
         tx_cfg[i][5] = 0b0;
     }
@@ -395,9 +405,11 @@ void stop_discharge_all() {
 void balance_cells() {
     int shutdown_circuit_voltage = ADC.read_adc(CH_SHUTDOWN);
     initialize(); // Reconfigure SPI pins after reading ADC so LTC communication is successful
-    if (bms_voltages.get_low() > voltage_cutoff_low 
+    balance_cycle = !balance_cycle; // Only allow balancing on odd cycles
+    if (bms_voltages.get_low() > voltage_cutoff_low
         && mc_voltage_info.get_dc_bus_voltage() >= DC_BUS_HIGH_THRESHOLD
         && !disable_balance
+        && balance_cycle
         && bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED
         && shutdown_circuit_voltage > SHUTDOWN_HIGH_THRESHOLD) {
         for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
@@ -406,15 +418,17 @@ void balance_cells() {
                     uint16_t cell_voltage = cell_voltages[ic][cell]; // current cell voltage in mV
                     if (cell_discharging[ic][cell]) {
                         if (cell_voltage < bms_voltages.get_low() + voltage_difference_threshold - 6) {
-                            stop_discharge_cell(ic, cell); // TODO this is inefficient, should rewrite config once after making all changes
+                            modify_discharge_config(ic, cell, false);
                         }
                     }
                     else if (cell_voltage > bms_voltages.get_low() + voltage_difference_threshold) {
-                            discharge_cell(ic, cell);
+                            modify_discharge_config(ic, cell, true);
                     }
                 }
             }
         }
+        wakeup_idle();
+        LTC6804_wrcfg(TOTAL_IC, tx_cfg); // Write the new discharge configuration to the LTC6804s
     }
     else {
         Serial.println("Not Balancing!");
