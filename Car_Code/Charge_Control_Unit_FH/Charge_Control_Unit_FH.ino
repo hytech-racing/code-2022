@@ -1,12 +1,12 @@
 /*
- * HyTech 2018 Vehicle Charge Control Unit
+ * HyTech 2018 Formula Hybrid Vehicle Charge Control Unit
  */
 
 #include <FlexCAN.h>
 #include "HyTech17.h"
 #include <Metro.h>
 
-#define CHARGE_ENABLE A1
+#define CHARGE_ENABLE 10
 
 /*
  * Global variables
@@ -18,9 +18,7 @@ static CAN_message_t msg;
 Metro timer_update_CAN = Metro(265);
 
 void setup() {
-	pinMode(CHARGE_ENABLE, OUTPUT);
-	pinMode(10, OUTPUT);
-	pinMode(13, OUTPUT);
+    pinMode(CHARGE_ENABLE, OUTPUT);
 
     Serial.begin(115200); // Init serial for PC communication
     CAN.begin(); // Init CAN for vehicle communication
@@ -28,8 +26,6 @@ void setup() {
     Serial.println("CAN system and serial communication initialized");
 
     ccu_status.set_charger_enabled(false);
-	digitalWrite(10, HIGH);
-	digitalWrite(13, HIGH);
 }
 
 void loop() {
@@ -41,7 +37,7 @@ void loop() {
             BMS_status bms_status = BMS_status(msg.buf);
             Serial.print("BMS state: ");
             Serial.println(bms_status.get_state());
-            ccu_status.set_charger_enabled(bms_status.get_state() == BMS_STATE_CHARGE_ENABLED);
+            ccu_status.set_charger_enabled(bms_status.get_state() == BMS_STATE_CHARGING);
             digitalWrite(CHARGE_ENABLE, ccu_status.get_charger_enabled());
         }
     }
