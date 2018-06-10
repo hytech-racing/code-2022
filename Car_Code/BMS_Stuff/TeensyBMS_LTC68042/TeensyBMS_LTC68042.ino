@@ -1,7 +1,7 @@
 /*
  * HyTech 2018 BMS Control Unit
  * Init 2017-04-11
- * Configured for HV Board Rev 3
+ * Configured for HV Board Rev 4
  * Monitors cell voltages and temperatures, sends BMS_OK signal to close Shutdown Circuit
  */
 
@@ -60,7 +60,7 @@
 #define TOTAL_CELL_THERMISTORS 24       // Number of non-ignored cell thermistors (used for calculating averages)
 #define IGNORE_FAULT_THRESHOLD 10       // Number of fault-worthy values to read in succession before faulting
 #define CURRENT_FAULT_THRESHOLD 5       // Number of fault-worthy electrical current values to read in succession before faulting
-#define SHUTDOWN_HIGH_THRESHOLD 2
+#define SHUTDOWN_HIGH_THRESHOLD 1500    // Value returned by ADC above which the shutdown circuit is considered powered (balancing not allowed when AIRs open)
 #define DC_BUS_HIGH_THRESHOLD 500       // Current in A * 10 required to consider TS active
 
 /*
@@ -196,6 +196,7 @@ void setup() {
     bms_status.set_state(BMS_STATE_DISCHARGING);
     Serial.println("Setup Complete!");
 
+    // Initialize the ic/group IDs for detailed voltage and temperature CAN messages
     for (int i = 0; i < TOTAL_IC; i++) {
         for (int j = 0; j < 3; j++) {
             bms_detailed_voltages[i][j].set_ic_id(i);
@@ -249,7 +250,7 @@ void loop() {
             error_flags_history |= bms_status.get_error_flags();
 
             digitalWrite(BMS_OK, LOW);
-        }else {
+        } else {
             digitalWrite(BMS_OK, HIGH);
             if (error_flags_history) {
                 Serial.println("An Error Occured But Has Been Cleared");
@@ -392,11 +393,13 @@ void stop_discharge_all() {
 }
 
 void balance_cells() {
+    int shutdown_circuit_voltage = ADC.read_adc(CH_SHUTDOWN);
+    initialize(); // Reconfigure SPI pins after reading ADC so LTC communication is successful
     if (bms_voltages.get_low() > voltage_cutoff_low 
         && mc_voltage_info.get_dc_bus_voltage() >= DC_BUS_HIGH_THRESHOLD
         && !disable_balance
-        && bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED) {
-
+        && bms_status.get_state() >= BMS_STATE_CHARGE_ENABLED
+        && shutdown_circuit_voltage > SHUTDOWN_HIGH_THRESHOLD) {
         for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
             for (int cell = 0; cell < CELLS_PER_IC; cell++) { // Loop through cells
                 if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell

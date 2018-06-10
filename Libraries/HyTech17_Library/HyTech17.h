@@ -37,6 +37,7 @@
 #define ID_BMS_TEMPERATURES 0xD9
 #define ID_BMS_DETAILED_TEMPERATURES 0xDA
 #define ID_BMS_STATUS 0xDB
+#define ID_BMS_BALANCING_STATUS 0xDE
 #define ID_FH_WATCHDOG_TEST 0xDC
 #define ID_CCU_STATUS 0xDD
 #define ID_MC_TEMPERATURES_1 0xA0
@@ -358,6 +359,29 @@ class BMS_status {
         void set_current(int16_t current);
     private:
         CAN_message_bms_status_t message;
+};
+
+typedef struct CAN_message_bms_balancing_status_t {
+	uint8_t balancing_status[5];
+} CAN_message_bms_balancing_status_t;
+
+class BMS_balancing_status {
+    public:
+        BMS_balancing_status();
+        BMS_balancing_status(uint8_t buf[]);
+        void load(uint8_t buf[]);
+        void write(uint8_t buf[]);
+        uint8_t get_group_id();
+        uint64_t get_balancing_status();
+        uint32_t get_segment_balancing_status(uint8_t segment_id);
+        bool get_cell_balancing_status(uint8_t segment_id, uint16_t cell_id);
+
+        void set_group_id(uint8_t group_id);
+        void set_balancing_status(uint64_t balancing_status);
+        void set_segment_balancing_status(uint8_t segment_id, uint32_t balancing_status);
+        void set_cell_balancing_status(uint8_t segment_id, uint8_t cell_id, bool balancing_status);
+    private:
+        CAN_message_bms_balancing_status_t message;
 };
 
 typedef struct CAN_message_ccu_status_t {
