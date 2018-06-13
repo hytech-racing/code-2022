@@ -94,11 +94,11 @@ uint16_t discharge_current_constant_high = 22000; // 220.00A
 int16_t charge_current_constant_high = -10000; // 100.00A // TODO take into account max charge allowed for regen, 100A is NOT NOMINALLY ALLOWED!
 uint16_t charge_temp_cell_critical_high = 4400; // 44.00C
 uint16_t discharge_temp_cell_critical_high = 6000; // 60.00C
-uint16_t onboard_temp_balance_disable = 5000;  // TODO fill this in with real numbers
-uint16_t onboard_temp_balance_reenable = 4000; // TODO fill this in with real numbers
-uint16_t onboard_temp_critical_high = 6000; // TODO fill this in with real numbers
+uint16_t onboard_temp_balance_disable = 6000;  // 60.00C
+uint16_t onboard_temp_balance_reenable = 5000; // 50.00C
+uint16_t onboard_temp_critical_high = 7000; // 70.00C
 uint16_t temp_critical_low = 0; // 0C
-uint16_t voltage_difference_threshold = 500; // 0.0500V
+uint16_t voltage_difference_threshold = 150; // 0.0500V
 
 uint8_t error_flags_history = 0; // will not be reset with BMS_OK if a fault has occured
 uint8_t consecutive_faults_overvoltage = 0;// keep track of how many consecutive faults occured
@@ -106,7 +106,7 @@ uint8_t consecutive_faults_undervoltage = 0;
 uint8_t consecutive_faults_total_voltage_high = 0;
 uint8_t consecutive_faults_thermistor = 0;
 uint8_t consecutive_faults_current = 0;
-bool default_charge_mode = true; // enter charge mode by default
+bool default_charge_mode = false; // enter charge mode by default
 
 uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages. Numbers are stored in 0.1 mV units.
 uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
@@ -240,6 +240,7 @@ void loop() {
         process_cell_temps(); // poll controller and store data in bms_temperatures and bms_detailed_temperatures
         process_onboard_temps(); // poll controller and store data in bms_onboard_temperatures and bms_onboard_detailed_temperatures
         balance_cells();
+        print_cells(); // Print the cell voltages and balancing status to serial
         print_uptime();
         print_temperatures();
 
@@ -352,15 +353,15 @@ void modify_discharge_config(int ic, int cell, bool setDischarge) {
         }
         if (cell < 8) {
             if(setDischarge) {
-                tx_cfg[ic][4] = tx_cfg[ic][4] | (0b1 << cell); 
+                tx_cfg[ic][4] = tx_cfg[ic][4] | (0b1 << cell);
             } else {
-                tx_cfg[ic][4] = tx_cfg[ic][4] & ~(0b1 << cell ); 
+                tx_cfg[ic][4] = tx_cfg[ic][4] & ~(0b1 << cell );
             }
         } else {
             if (setDischarge) {
-                tx_cfg[ic][5] = tx_cfg[ic][5] | (0b1 << (cell - 8)); 
+                tx_cfg[ic][5] = tx_cfg[ic][5] | (0b1 << (cell - 8));
             } else {
-                tx_cfg[ic][5] = tx_cfg[ic][5] & ~(0b1 << (cell - 8)); 
+                tx_cfg[ic][5] = tx_cfg[ic][5] & ~(0b1 << (cell - 8));
             }
         }
     }
@@ -444,7 +445,6 @@ void balance_cells() {
         LTC6804_wrcfg(TOTAL_IC, tx_cfg); // Write the new discharge configuration to the LTC6804s
     }
     else {
-        Serial.println("Not Balancing!");
         stop_discharge_all(); // Make sure none of the cells are discharging
     }
 }
@@ -466,7 +466,6 @@ void poll_cell_voltage() {
             cell_voltages[i][j-1] = cell_voltages[i][j];
         }
     }
-    print_cells(); // Print the cell voltages to Serial.
 }
 
 void process_voltages() {
@@ -671,7 +670,6 @@ double calculate_cell_temp(double aux_voltage, double v_ref) {
 }
 
 void process_onboard_temps() {
-    Serial.println("Process onboard temps");
     double avgTemp, lowTemp, highTemp, totalTemp, thermTemp;
     poll_aux_voltage();
     totalTemp = 0;
@@ -693,7 +691,9 @@ void process_onboard_temps() {
                 bms_onboard_detailed_temperatures[ic].set_temperature(j, thermTemp * 10000); // Populate CAN message struct
                 totalTemp += thermTemp;
 
-                Serial.print("PCB thermistor ");
+                Serial.print("IC ");
+                Serial.print(ic);
+                Serial.print(" PCB Thermistor ");
                 Serial.print(j);
                 Serial.print(": ");
                 Serial.print(thermTemp / 100, 2);
@@ -703,8 +703,8 @@ void process_onboard_temps() {
                 Serial.println(j);
             }
         }
-        Serial.println("----------------------\n");
     }
+    Serial.println();
     avgTemp = (int16_t) (totalTemp / ((TOTAL_IC) * PCB_THERM_PER_IC));
     bms_onboard_temperatures.set_low_temperature((int16_t) lowTemp);
     bms_onboard_temperatures.set_high_temperature((int16_t) highTemp);
@@ -844,6 +844,7 @@ int update_constraints(uint8_t address, uint16_t value) {
 
 void print_cells() {
     for (int current_ic = 0; current_ic < TOTAL_IC; current_ic++) {
+        Serial.println();
         Serial.print("IC: ");
         Serial.println(current_ic);
         for (int i = 0; i < CELLS_PER_IC; i++) {
@@ -852,7 +853,7 @@ void print_cells() {
                 Serial.print(" IGNORED CELL");
             }
             Serial.print(": ");
-            float voltage = cell_voltages[current_ic][i] * 0.0001;
+            double voltage = cell_voltages[current_ic][i] * 0.0001;
             Serial.print(voltage, 4);
             Serial.print(" Discharging: ");
             Serial.print(cell_discharging[current_ic][i]); 
@@ -861,7 +862,6 @@ void print_cells() {
             Serial.print(" Delta To Threshold: ");
             Serial.println((cell_voltages[current_ic][i]-bms_voltages.get_low())-voltage_difference_threshold);
         }
-        Serial.println();
     }
 }
 
