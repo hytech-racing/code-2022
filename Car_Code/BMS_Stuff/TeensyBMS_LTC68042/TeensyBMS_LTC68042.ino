@@ -57,7 +57,7 @@
 #define PCB_THERM_PER_IC 2              // Number of PCB thermistors per IC
 #define TOTAL_CELLS 72                  // Number of non-ignored cells (used for calculating averages)
 #define TOTAL_PCB_THERMISTORS 16        // Number of non-ignored PCB thermistors (used for calculating averages)
-#define TOTAL_CELL_THERMISTORS 24       // Number of non-ignored cell thermistors (used for calculating averages)
+#define TOTAL_CELL_THERMISTORS 23       // Number of non-ignored cell thermistors (used for calculating averages)
 #define IGNORE_FAULT_THRESHOLD 10       // Number of fault-worthy values to read in succession before faulting
 #define CURRENT_FAULT_THRESHOLD 5       // Number of fault-worthy electrical current values to read in succession before faulting
 #define SHUTDOWN_HIGH_THRESHOLD 1500    // Value returned by ADC above which the shutdown circuit is considered powered (balancing not allowed when AIRs open)
@@ -217,6 +217,7 @@ void setup() {
     //     }
     // }
     // DEBUG insert PCB thermistors to ignore here
+    ignore_cell_therm[6][2] = true; // Ignore IC 6 cell thermistor 2
     // DEBUG insert cell thermistors to ignore here
 }
 
@@ -241,10 +242,9 @@ void loop() {
         process_voltages(); // poll controller and store data in bms_voltages object.
         process_cell_temps(); // poll controller and store data in bms_temperatures and bms_detailed_temperatures
         process_onboard_temps(); // poll controller and store data in bms_onboard_temperatures and bms_onboard_detailed_temperatures
-        balance_cells();
+        //balance_cells(); // TODO fix SPI issue with ADC when this function is called
         print_cells(); // Print the cell voltages and balancing status to serial
         print_uptime();
-        print_temperatures();
 
         Serial.print("State: ");
         if (bms_status.get_state() == BMS_STATE_DISCHARGING) {Serial.println("DISCHARGING");}
@@ -253,14 +253,15 @@ void loop() {
         if (bms_status.get_state() == BMS_STATE_BALANCING_OVERHEATED) {Serial.println("BALANCING_OVERHEATED");}
 
         if (bms_status.get_error_flags()) { // BMS error - drive BMS_OK signal low
-            Serial.println("STATUS NOT GOOD!!!!!!!!!!!!!!!");
-            Serial.print("Error code: 0x");
-            Serial.println(bms_status.get_error_flags(), HEX);
+            Serial.print("---------- STATUS NOT GOOD * Error Code 0x");
+            Serial.print(bms_status.get_error_flags(), HEX);
+            Serial.println(" ----------");
             error_flags_history |= bms_status.get_error_flags();
 
             digitalWrite(BMS_OK, LOW);
         } else {
             digitalWrite(BMS_OK, HIGH);
+            Serial.println("---------- STATUS GOOD ----------");
             if (error_flags_history) {
                 Serial.println("An Error Occured But Has Been Cleared");
                 Serial.print("Error code: 0x");
@@ -458,8 +459,7 @@ void balance_cells() {
 void poll_cell_voltage() {
     wakeup_sleep(); // Wake up LTC6804 ADC core
     LTC6804_adcv(); // Start cell ADC conversion
-    delay(205); // Need to wait at least 201.317ms for conversion to finish, due to filtered sampling mode (26Hz) - See LTC6804 Datasheet Table 5
-    //wakeup_sleep(); // TODO testing since every once in a while we still get 6.5535 issue with below 2 lines
+    delay(202); // Need to wait at least 201.317ms for conversion to finish, due to filtered sampling mode (26Hz) - See LTC6804 Datasheet Table 5
     wakeup_idle(); // Wake up isoSPI
     delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54
     uint8_t error = LTC6804_rdcv(0, TOTAL_IC, cell_voltages); // Reads voltages from ADC registers and stores in cell_voltages.
@@ -554,10 +554,10 @@ void process_voltages() {
         consecutive_faults_total_voltage_high = 0;
     }
 
-    Serial.print("Average: "); Serial.println(avgVolt / (double) 1e4, 4);
-    Serial.print("Total: "); Serial.println(totalVolts / (double) 1e2, 4);
-    Serial.print("Min: "); Serial.println(minVolt / (double) 1e4, 4);
-    Serial.print("Max: "); Serial.println(maxVolt / (double) 1e4, 4);
+    Serial.print("Average cell voltage: "); Serial.println(avgVolt / (double) 1e4, 4);
+    Serial.print("Total pack voltage:   "); Serial.println(totalVolts / (double) 1e2, 4);
+    Serial.print("Min cell voltage:     "); Serial.println(minVolt / (double) 1e4, 4);
+    Serial.print("Max cell voltage:     "); Serial.println(maxVolt / (double) 1e4, 4);
     Serial.println();
 }
 
@@ -565,7 +565,7 @@ void poll_aux_voltage() {
     wakeup_sleep();
     //delayMicroseconds(200) // TODO try this if we are still having intermittent 6.5535 issues, maybe the last ADC isn't being given enough time to wake up
     LTC6804_adax(); // Start GPIO ADC conversion
-    delay(205); // Need to wait at least 201.317ms for conversion to finish, due to filtered sampling mode (26Hz) - See LTC6804 Datasheet Table 5
+    delay(202); // Need to wait at least 201.317ms for conversion to finish, due to filtered sampling mode (26Hz) - See LTC6804 Datasheet Table 5
     wakeup_idle(); // Wake up isoSPI
     delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54
     uint8_t error = LTC6804_rdaux(0, TOTAL_IC, aux_voltages);
@@ -598,22 +598,28 @@ void process_cell_temps() { // TODO make work with signed int8_t CAN message (ye
                 bms_detailed_temperatures[ic].set_temperature(j, thermTemp); // Populate CAN message struct
                 totalTemp += thermTemp;
 
-                Serial.print("Thermistor ");
+                Serial.print("IC ");
+                Serial.print(ic);
+                Serial.print(" CELL Thermistor ");
                 Serial.print(j);
                 Serial.print(": ");
                 Serial.print(thermTemp / 100, 2);
                 Serial.println(" C");
             } else {
-                Serial.print("Ignored thermistor ");
-                Serial.println(j);
+                Serial.print("IC ");
+                Serial.print(ic);
+                Serial.print(" CELL Thermistor ");
+                Serial.print(j);
+                Serial.println(": IGNORED");
             }
         }
-        Serial.println("----------------------\n");
     }
     avgTemp = (int16_t) (totalTemp / TOTAL_CELL_THERMISTORS);
     bms_temperatures.set_low_temperature((int16_t) lowTemp);
     bms_temperatures.set_high_temperature((int16_t) highTemp);
     bms_temperatures.set_average_temperature((int16_t) avgTemp);
+
+    print_cell_temperatures();
 
     bms_status.set_discharge_overtemp(false); // RESET these values, then check below if they should be set again
     bms_status.set_charge_overtemp(false);
@@ -639,13 +645,6 @@ void process_cell_temps() { // TODO make work with signed int8_t CAN message (ye
     } else {
         consecutive_faults_thermistor = 0;
     }
-
-    Serial.print("Low Temp: ");
-    Serial.println(lowTemp / 100);
-    Serial.print("High Temp: ");
-    Serial.println(highTemp / 100);
-    Serial.print("Average Temp: ");
-    Serial.println(avgTemp / 100);
 }
 
 double calculate_cell_temp(double aux_voltage, double v_ref) {
@@ -710,11 +709,12 @@ void process_onboard_temps() {
             }
         }
     }
-    Serial.println();
     avgTemp = (int16_t) (totalTemp / ((TOTAL_IC) * PCB_THERM_PER_IC));
     bms_onboard_temperatures.set_low_temperature((int16_t) lowTemp);
     bms_onboard_temperatures.set_high_temperature((int16_t) highTemp);
     bms_onboard_temperatures.set_average_temperature((int16_t) avgTemp);
+
+    print_onboard_temperatures();
 
     bms_status.set_onboard_overtemp(false); // RESET this value, then check below if they should be set
 
@@ -740,14 +740,6 @@ void process_onboard_temps() {
             Serial.println("CLEARED: Onboard temperature OK; reenabling balancing");
         }
     }
-
-    Serial.print("Low Temp: ");
-    Serial.println(lowTemp / 100);
-    Serial.print("High Temp: ");
-    Serial.println(highTemp / 100);
-    Serial.print("Average Temp: ");
-    Serial.println(avgTemp / 100);
-    return;
 }
 
 double calculate_onboard_temp(double aux_voltage, double v_ref) {
@@ -790,7 +782,7 @@ void process_current() {
     double current = (voltage - 2.5) * (double) 150;
     Serial.print("\nCurrent Sensor: ");
     Serial.print(current, 2);
-    Serial.println("A");
+    Serial.println("A\n");
     bms_status.set_current((int16_t) (current * 100));
     bms_status.set_charge_overcurrent(false); // RESET these values, then check below if they should be set again
     bms_status.set_discharge_overcurrent(false);
@@ -884,15 +876,27 @@ void print_aux() {
     }
 }
 
-void print_temperatures() {
-    Serial.print("\nAverage temperature: ");
+void print_cell_temperatures() {
+    Serial.print("\nAverage cell temperature: ");
     Serial.print(bms_temperatures.get_average_temperature() / (double) 100, 2);
     Serial.println(" C");
-    Serial.print("Low temperature: ");
+    Serial.print("Low cell temperature: ");
     Serial.print(bms_temperatures.get_low_temperature() / (double) 100, 2);
     Serial.println(" C");
-    Serial.print("High temperature: ");
+    Serial.print("High cell temperature: ");
     Serial.print(bms_temperatures.get_high_temperature() / (double) 100, 2);
+    Serial.println(" C\n");
+}
+
+void print_onboard_temperatures() {
+    Serial.print("\nAverage onboard temperature: ");
+    Serial.print(bms_onboard_temperatures.get_average_temperature() / (double) 100, 2);
+    Serial.println(" C");
+    Serial.print("Low onboard temperature: ");
+    Serial.print(bms_onboard_temperatures.get_low_temperature() / (double) 100, 2);
+    Serial.println(" C");
+    Serial.print("High onboard temperature: ");
+    Serial.print(bms_onboard_temperatures.get_high_temperature() / (double) 100, 2);
     Serial.println(" C\n");
 }
 

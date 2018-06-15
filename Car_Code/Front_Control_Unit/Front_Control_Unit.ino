@@ -378,12 +378,10 @@ void loop() {
     /*
      * Open shutdown circuit if we detect a BMS or IMD fault; this is in addition to the latching relay hardware
      */
-    noInterrupts();
     //digitalWrite(SOFTWARE_SHUTDOWN_RELAY, !(bms_status.get_error_flags() || !rcu_status.get_bms_ok_high() || !rcu_status.get_imd_okhs_high()));
     digitalWrite(LED_BMS, bms_status.get_error_flags() || !rcu_status.get_bms_ok_high());
     digitalWrite(LED_IMD, !rcu_status.get_imd_okhs_high());
     digitalWrite(LED_POWER, rcu_status.get_bms_imd_latched());
-    interrupts();
     if (debug && timer_bms_imd_print_fault.check()) {
         if (!rcu_status.get_bms_ok_high() || bms_status.get_error_flags()) {
             Serial.println("RCU BMS FAULT: detected");
