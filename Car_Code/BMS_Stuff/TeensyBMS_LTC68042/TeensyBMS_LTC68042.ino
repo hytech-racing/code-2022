@@ -177,10 +177,10 @@ void setup() {
     CAN.begin(); // Init CAN for vehicle communication
 
     /* Configure CAN rx interrupt */
-    interrupts();
+    /*interrupts();
     NVIC_ENABLE_IRQ(IRQ_CAN_MESSAGE);
     attachInterruptVector(IRQ_CAN_MESSAGE,parse_can_message);
-    FLEXCAN0_IMASK1 = FLEXCAN_IMASK1_BUF5M;
+    FLEXCAN0_IMASK1 = FLEXCAN_IMASK1_BUF5M;*/
     /* Configure CAN rx interrupt */
 
     delay(100);
@@ -226,6 +226,8 @@ void setup() {
  * Main BMS Control Loop
  */
 void loop() {
+    parse_can_message();
+    
     if (timer_charge_timeout.check() && bms_status.get_state() > BMS_STATE_DISCHARGING && !default_charge_mode) { // 1 second timeout - if timeout is reached, disable charging
         Serial.println("Disabling charge mode - CCU timeout");
         bms_status.set_state(BMS_STATE_DISCHARGING);
@@ -268,6 +270,7 @@ void loop() {
     }
 
     if (timer_can_update_fast.check()) {
+        noInterrupts(); // Disable interrupts
         msg.timeout = 4; // Use blocking mode, wait up to 4ms to send each message instead of immediately failing (keep in mind this is slower)
 
         bms_status.write(msg.buf);
@@ -276,9 +279,11 @@ void loop() {
         CAN.write(msg);
 
         msg.timeout = 0;
+        interrupts(); // Enable interrupts
     }
 
     if (timer_can_update_slow.check()) {
+        noInterrupts(); // Disable interrupts
         msg.timeout = 4; // Use blocking mode, wait up to 4ms to send each message instead of immediately failing (keep in mind this is slower)
 
         bms_voltages.write(msg.buf);
@@ -308,6 +313,7 @@ void loop() {
         }
 
         msg.timeout = 0;
+        interrupts(); // Enable interrupts
     }
 
     if (timer_watchdog_timer.check() && !fh_watchdog_test) { // Send alternating keepalive signal to watchdog timer   
@@ -779,7 +785,7 @@ void process_current() {
      * voltage = read_adc() * 5 / 4095
      * current = (voltage - 2.5) * 300 / 2
      */
-    double voltage = ADC.read_adc(CH_CUR_SENSE_1) / (double) 819;
+    double voltage = ADC.read_adc(CH_CUR_SENSE_2) / (double) 819;
     initialize(); // Reconfigure SPI pins after reading ADC so LTC communication is successful
     double current = (voltage - 2.5) * (double) 150;
     Serial.print("\nCurrent Sensor: ");

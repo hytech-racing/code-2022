@@ -57,6 +57,8 @@ Metro timer_debug_raw_torque = Metro(200);
 Metro timer_debug_torque = Metro(200);
 Metro timer_ramp_torque = Metro(100);
 Metro timer_inverter_enable = Metro(2000); // Timeout failed inverter enable
+Metro timer_led_mode_blink_fast = Metro(150);
+Metro timer_led_mode_blink_slow = Metro(400);
 Metro timer_led_start_blink_fast = Metro(150);
 Metro timer_led_start_blink_slow = Metro(400);
 Metro timer_motor_controller_send = Metro(50);
@@ -80,13 +82,16 @@ bool btn_mode_pressed = true;
 bool btn_cycle_debouncing = false;
 bool btn_cycle_pressed = false;
 bool debug = true;
+bool led_mode_active = false;
 bool led_start_active = false;
 bool regen_active = false;
-bool low_torque = false;
+uint8_t torque_mode = 0;
+uint8_t led_mode_type = 0;
 uint8_t led_start_type = 0; // 0 for off, 1 for steady, 2 for fast blink, 3 for slow blink
 float rampRatio = 1;
 
-int MAX_TORQUE = 1600; // Torque in Nm * 10
+uint16_t MAX_TORQUE = 1600; // Torque in Nm * 10
+int16_t MAX_REGEN_TORQUE = 0;
 
 ADC_SPI ADC(ADC_SPI_CS);
 FlexCAN CAN(500000);
@@ -119,6 +124,7 @@ void setup() {
 
     set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
     reset_inverter();
+    digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH); // Always stay closed
 }
 
 void loop() {
@@ -126,6 +132,8 @@ void loop() {
      * Send state over CAN
      */
     if (timer_can_update.check()) {
+        noInterrupts(); // Disable interrupts
+
         // Send Front Control Unit message
         fcu_status.set_accelerator_boost_mode(0);
         fcu_status.write(msg.buf);
@@ -139,6 +147,8 @@ void loop() {
         msg.id = ID_FCU_READINGS;
         msg.len = sizeof(CAN_message_fcu_readings_t);
         CAN.write(msg);
+
+        interrupts(); // Enable interrupts
     }
 
     /*
@@ -220,9 +230,9 @@ void loop() {
                         calculated_torque = 0;
                     }
                     // if regen is active and pedal is not pressed, send negative torque for regen
-                    // if (regen_active && calculated_torque == 0) {
-                    //     calculated_torque = -20;
-                    // }
+                    if (regen_active && calculated_torque == 0) {
+                        calculated_torque = MAX_REGEN_TORQUE;
+                    }
                 }
             }
 
@@ -328,7 +338,28 @@ void loop() {
     if (btn_mode_debouncing && timer_btn_mode.check()) {                        // debounce period finishes
         btn_mode_pressed = !btn_mode_pressed;
         if (btn_mode_pressed) {
-            low_torque = !low_torque;
+            torque_mode = (torque_mode + 1) % 3;
+            if (torque_mode == 0) {
+                set_mode_led(0);
+                MAX_TORQUE = 1600;
+                MAX_REGEN_TORQUE = 0;
+                regen_active = false;
+            } else if (torque_mode == 1) {
+                set_mode_led(1);
+                MAX_TORQUE = 1500;
+                MAX_REGEN_TORQUE = 0;
+                regen_active = false;
+            } else if (torque_mode == 2) {
+                set_mode_led(2);
+                MAX_TORQUE = 1500;
+                MAX_REGEN_TORQUE = -200;
+                regen_active = true;
+            } else if (torque_mode == 3) {
+                set_mode_led(3);
+                MAX_TORQUE = 1500;
+                MAX_REGEN_TORQUE = -100;
+                regen_active = true;
+            }
         }
     }
 
@@ -345,23 +376,14 @@ void loop() {
     }
 
     /*
-     * Handle torque mode toggling after button pressed
-     */
-    if (low_torque) {
-        digitalWrite(LED_MODE, HIGH);
-        MAX_TORQUE = 1500;
-    } else {
-        digitalWrite(LED_MODE, LOW);
-        MAX_TORQUE = 1600;
-    }
-
-    /*
      * Open shutdown circuit if we detect a BMS or IMD fault; this is in addition to the latching relay hardware
      */
-    digitalWrite(SOFTWARE_SHUTDOWN_RELAY, !(bms_status.get_error_flags() || !rcu_status.get_bms_ok_high() || !rcu_status.get_imd_okhs_high()));
+    noInterrupts();
+    //digitalWrite(SOFTWARE_SHUTDOWN_RELAY, !(bms_status.get_error_flags() || !rcu_status.get_bms_ok_high() || !rcu_status.get_imd_okhs_high()));
     digitalWrite(LED_BMS, bms_status.get_error_flags() || !rcu_status.get_bms_ok_high());
     digitalWrite(LED_IMD, !rcu_status.get_imd_okhs_high());
     digitalWrite(LED_POWER, rcu_status.get_bms_imd_latched());
+    interrupts();
     if (debug && timer_bms_imd_print_fault.check()) {
         if (!rcu_status.get_bms_ok_high() || bms_status.get_error_flags()) {
             Serial.println("RCU BMS FAULT: detected");
@@ -426,6 +448,43 @@ void read_values() {
         Serial.println(fcu_status.get_state());
     }
     // TODO calculate temperature
+}
+
+/*
+ * Set the Mode LED
+ */
+void set_mode_led(uint8_t type) {
+    if (led_mode_type != type) {
+        led_mode_type = type;
+
+        if (type == 0) {
+            digitalWrite(LED_MODE, LOW);
+            led_mode_active = false;
+            if (debug) {
+                Serial.println("FCU Setting Mode LED off");
+            }
+            return;
+        }
+
+        digitalWrite(LED_MODE, HIGH);
+        led_mode_active = true;
+
+        if (type == 1) {
+            if (debug) {
+                Serial.println("FCU Setting Mode LED solid on");
+            }
+        } else if (type == 2) {
+            timer_led_mode_blink_fast.reset();
+            if (debug) {
+                Serial.println("FCU Setting Mode LED fast blink");
+            }
+        } else if (type == 3) {
+            timer_led_mode_blink_slow.reset();
+            if (debug) {
+                Serial.println("FCU Setting Mode LED slow blink");
+            }
+        }
+    }
 }
 
 /*

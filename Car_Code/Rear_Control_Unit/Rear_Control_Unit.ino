@@ -144,10 +144,14 @@ void loop() {
      * Send status over CAN and XBee
      */
     if (timer_status_send.check()) {
+        noInterrupts(); // Disable interrupts
+
         rcu_status.write(msg.buf);
         msg.id = ID_RCU_STATUS;
         msg.len = sizeof(CAN_message_rcu_status_t);
         CAN.write(msg);
+
+        interrupts(); // Enable interrupts
         //write_xbee_data();
     }
 
