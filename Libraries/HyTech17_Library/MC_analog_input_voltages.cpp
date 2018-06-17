@@ -21,6 +21,13 @@ void MC_analog_input_voltages::load(uint8_t buf[8]) {
     memcpy(&(message.analog_input_4), &buf[6], sizeof(int16_t));
 }
 
+void MC_analog_input_voltages::write(uint8_t buf[8]) {
+    memcpy(&buf[0], &(message.analog_input_1), sizeof(int16_t));
+    memcpy(&buf[2], &(message.analog_input_2), sizeof(int16_t));
+    memcpy(&buf[4], &(message.analog_input_3), sizeof(int16_t));
+    memcpy(&buf[6], &(message.analog_input_4), sizeof(int16_t));
+}
+
 int16_t MC_analog_input_voltages::get_analog_input_1() {
     return message.analog_input_1;
 }

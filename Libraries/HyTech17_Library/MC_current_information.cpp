@@ -21,6 +21,13 @@ void MC_current_information::load(uint8_t buf[8]) {
     memcpy(&(message.dc_bus_current), &buf[6], sizeof(int16_t));
 }
 
+void MC_current_information::write(uint8_t buf[8]) {
+    memcpy(&buf[0], &(message.phase_a_current), sizeof(int16_t));
+    memcpy(&buf[2], &(message.phase_b_current), sizeof(int16_t));
+    memcpy(&buf[4], &(message.phase_c_current), sizeof(int16_t));
+    memcpy(&buf[6], &(message.dc_bus_current), sizeof(int16_t));
+}
+
 int16_t MC_current_information::get_phase_a_current() {
     return message.phase_a_current;
 }

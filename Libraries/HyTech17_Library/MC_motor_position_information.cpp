@@ -21,6 +21,13 @@ void MC_motor_position_information::load(uint8_t buf[8]) {
     memcpy(&(message.delta_resolver_filtered), &buf[6], sizeof(int16_t));
 }
 
+void MC_motor_position_information::write(uint8_t buf[8]) {
+    memcpy(&buf[0], &(message.motor_angle), sizeof(int16_t));
+    memcpy(&buf[2], &(message.motor_speed), sizeof(int16_t));
+    memcpy(&buf[4], &(message.electrical_output_frequency), sizeof(int16_t));
+    memcpy(&buf[6], &(message.delta_resolver_filtered), sizeof(int16_t));
+}
+
 int16_t MC_motor_position_information::get_motor_angle() {
     return message.motor_angle;
 }

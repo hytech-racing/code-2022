@@ -21,6 +21,13 @@ void MC_voltage_information::load(uint8_t buf[8]) {
     memcpy(&(message.phase_bc_voltage), &buf[6], sizeof(int16_t));
 }
 
+void MC_voltage_information::write(uint8_t buf[8]) {
+    memcpy(&buf[0], &(message.dc_bus_voltage), sizeof(int16_t));
+    memcpy(&buf[2], &(message.output_voltage), sizeof(int16_t));
+    memcpy(&buf[4], &(message.phase_ab_voltage), sizeof(int16_t));
+    memcpy(&buf[6], &(message.phase_bc_voltage), sizeof(int16_t));
+}
+
 int16_t MC_voltage_information::get_dc_bus_voltage() {
     return message.dc_bus_voltage;
 }
