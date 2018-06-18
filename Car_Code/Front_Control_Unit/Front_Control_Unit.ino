@@ -270,10 +270,12 @@ void loop() {
             
             mc_command_message.set_torque_command(calculated_torque);
 
+            noInterrupts(); // Disable interrupts
             mc_command_message.write(msg.buf);
             msg.id = ID_MC_COMMAND_MESSAGE;
             msg.len = 8;
             CAN.write(msg);
+            interrupts(); // Enable interrupts
         }
         break;
     }
@@ -286,10 +288,12 @@ void loop() {
         if (fcu_status.get_state() >= FCU_STATE_ENABLING_INVERTER) {
             mc_command_message.set_inverter_enable(true);
         }
+        noInterrupts(); // Disable interrupts
         mc_command_message.write(msg.buf);
         msg.id = ID_MC_COMMAND_MESSAGE;
         msg.len = 8;
         CAN.write(msg);
+        interrupts(); // Enable interrupts
     }
 
     /*
@@ -528,9 +532,11 @@ void set_start_led(uint8_t type) {
  * Also used manually by the driver to clear other motor controller faults
  */
 void reset_inverter() {
+    noInterrupts(); // Disable interrupts
     msg.id = ID_RCU_RESTART_MC;
     msg.len = 1;
     CAN.write(msg);
+    interrupts(); // Enable interrupts
 }
 
 /*
@@ -551,6 +557,7 @@ void set_state(uint8_t new_state) {
     if (new_state == FCU_STATE_ENABLING_INVERTER) {
         set_start_led(1);
         Serial.println("FCU Enabling inverter");
+        noInterrupts(); // Disable interrupts
         MC_command_message mc_command_message = MC_command_message(0, 0, 0, 1, 0, 0);
         msg.id = 0xC0;
         msg.len = 8;
@@ -566,6 +573,7 @@ void set_state(uint8_t new_state) {
             mc_command_message.write(msg.buf); // many more enable commands
             CAN.write(msg);
         }
+        interrupts(); // Enable interrupts
         Serial.println("FCU Sent enable command");
         timer_inverter_enable.reset();
     }
