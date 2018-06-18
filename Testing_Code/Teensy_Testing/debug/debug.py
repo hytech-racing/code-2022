@@ -63,18 +63,20 @@ def main():
     screen.addstr(3,105,'REAR CONTROL UNIT')
     screen.addstr(4,105,'RCU UPTIME: ')
     screen.addstr(5,105,'RCU STATE: ')
-    screen.addstr(6,105,'BMS FAULT: ')
-    screen.addstr(7,105,'IMD FAULT: ')
-    screen.addstr(8,105,'BMS AVERAGE TEMPERATURE: ')
-    screen.addstr(9,105,'BMS LOW TEMPERATURE: ')
-    screen.addstr(10,105,'BMS HIGH TEMPERATURE: ')
-    screen.addstr(11,105,'BMS STATE: ')
-    screen.addstr(12,105,'BMS ERROR FLAGS: ')
-    screen.addstr(13,105,'BMS CURRENT: ')
-    screen.addstr(14,105,'BMS VOLTAGE AVERAGE: ')
-    screen.addstr(15,105,'BMS VOLTAGE LOW: ')
-    screen.addstr(16,105,'BMS VOLTAGE HIGH: ')
-    screen.addstr(17,105,'BMS VOLTAGE TOTAL: ')
+    screen.addstr(6,105,'RCU FLAGS: ')
+    screen.addstr(7,105,'GLV BATT VOLTAGE: ')
+    screen.addstr(8,105,'BMS FAULT: ')
+    screen.addstr(9,105,'IMD FAULT: ')
+    screen.addstr(10,105,'BMS AVERAGE TEMPERATURE: ')
+    screen.addstr(11,105,'BMS LOW TEMPERATURE: ')
+    screen.addstr(12,105,'BMS HIGH TEMPERATURE: ')
+    screen.addstr(13,105,'BMS STATE: ')
+    screen.addstr(14,105,'BMS ERROR FLAGS: ')
+    screen.addstr(15,105,'BMS CURRENT: ')
+    screen.addstr(16,105,'BMS VOLTAGE AVERAGE: ')
+    screen.addstr(17,105,'BMS VOLTAGE LOW: ')
+    screen.addstr(18,105,'BMS VOLTAGE HIGH: ')
+    screen.addstr(19,105,'BMS VOLTAGE TOTAL: ')
     curses.wrapper(live)
     curses.endwin()
 
@@ -90,9 +92,10 @@ def live(screen):
         if len(data) > 0:
             incomingLine += data
             if ('\n' in incomingLine):
+                line = incomingLine[0:incomingLine.find('\n')]
                 with open(filename, "a") as f:
-                    f.write(str(datetime.datetime.now()) + ' ' + incomingLine)
-                updateScreen(screen, incomingLine[0:incomingLine.find('\n')])
+                    f.write(str(datetime.datetime.now()) + ' ' + line + '\n')
+                updateScreen(screen, line)
                 incomingLine = incomingLine[incomingLine.find('\n') + 1:]
 
 def updateScreen(screen, incomingLine):
@@ -240,42 +243,48 @@ def updateScreen(screen, incomingLine):
     if ('RCU STATE' in incomingLine):
         clearLine(5,105)
         screen.addstr(5,105,incomingLine)
-    if ('RCU BMS FAULT' in incomingLine):
+    if ('RCU FLAGS' in incomingLine):
         clearLine(6,105)
         screen.addstr(6,105,incomingLine)
-    if ('RCU IMD FAULT' in incomingLine):
+    if ('GLV BATT VOLTAGE' in incomingLine):
         clearLine(7,105)
         screen.addstr(7,105,incomingLine)
-    if ('BMS AVERAGE TEMPERATURE' in incomingLine):
+    if ('RCU BMS FAULT' in incomingLine):
         clearLine(8,105)
         screen.addstr(8,105,incomingLine)
-    if ('BMS LOW TEMPERATURE' in incomingLine):
+    if ('RCU IMD FAULT' in incomingLine):
         clearLine(9,105)
         screen.addstr(9,105,incomingLine)
-    if ('BMS HIGH TEMPERATURE' in incomingLine):
+    if ('BMS AVERAGE TEMPERATURE' in incomingLine):
         clearLine(10,105)
         screen.addstr(10,105,incomingLine)
-    if ('BMS STATE' in incomingLine):
+    if ('BMS LOW TEMPERATURE' in incomingLine):
         clearLine(11,105)
         screen.addstr(11,105,incomingLine)
-    if ('BMS ERROR FLAGS' in incomingLine):
+    if ('BMS HIGH TEMPERATURE' in incomingLine):
         clearLine(12,105)
         screen.addstr(12,105,incomingLine)
-    if ('BMS CURRENT' in incomingLine):
+    if ('BMS STATE' in incomingLine):
         clearLine(13,105)
         screen.addstr(13,105,incomingLine)
-    if ('BMS VOLTAGE AVERAGE' in incomingLine):
+    if ('BMS ERROR FLAGS' in incomingLine):
         clearLine(14,105)
         screen.addstr(14,105,incomingLine)
-    if ('BMS VOLTAGE LOW' in incomingLine):
+    if ('BMS CURRENT' in incomingLine):
         clearLine(15,105)
         screen.addstr(15,105,incomingLine)
-    if ('BMS VOLTAGE HIGH' in incomingLine):
+    if ('BMS VOLTAGE AVERAGE' in incomingLine):
         clearLine(16,105)
         screen.addstr(16,105,incomingLine)
-    if ('BMS VOLTAGE TOTAL' in incomingLine):
+    if ('BMS VOLTAGE LOW' in incomingLine):
         clearLine(17,105)
         screen.addstr(17,105,incomingLine)
+    if ('BMS VOLTAGE HIGH' in incomingLine):
+        clearLine(18,105)
+        screen.addstr(18,105,incomingLine)
+    if ('BMS VOLTAGE TOTAL' in incomingLine):
+        clearLine(19,105)
+        screen.addstr(19,105,incomingLine)
     screen.refresh()
 
 def clearLine(y, x):
