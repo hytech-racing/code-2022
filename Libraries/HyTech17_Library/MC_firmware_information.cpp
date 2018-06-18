@@ -21,6 +21,13 @@ void MC_firmware_information::load(uint8_t buf[8]) {
     memcpy(&(message.date_code_yyyy), &buf[6], sizeof(uint16_t));
 }
 
+void MC_firmware_information::write(uint8_t buf[8]) {
+    memcpy(&buf[0], &(message.eeprom_version_project_code), sizeof(uint16_t));
+    memcpy(&buf[2], &(message.software_version), sizeof(uint16_t));
+    memcpy(&buf[4], &(message.date_code_mmdd), sizeof(uint16_t));
+    memcpy(&buf[6], &(message.date_code_yyyy), sizeof(uint16_t));
+}
+
 uint16_t MC_firmware_information::get_eeprom_version_project_code() {
     return message.eeprom_version_project_code;
 }
