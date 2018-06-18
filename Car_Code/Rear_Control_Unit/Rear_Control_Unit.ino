@@ -41,19 +41,21 @@
  * Timers
  */
 Metro timer_bms_print_fault = Metro(500);
-Metro timer_debug_bms_status = Metro(200);
+Metro timer_debug_bms_status = Metro(1000);
 Metro timer_debug_bms_temperatures = Metro(3000);
 Metro timer_debug_bms_voltages = Metro(1000);
+Metro timer_debug_bms_detailed_voltages = Metro(1000);
 Metro timer_debug_rms_command_message = Metro(200);
-Metro timer_debug_rms_current_information = Metro(2000);
+Metro timer_debug_rms_current_information = Metro(200);
 Metro timer_debug_rms_fault_codes = Metro(2000);
 Metro timer_debug_rms_internal_states = Metro(2000);
 Metro timer_debug_rms_motor_position_information = Metro(200);
 Metro timer_debug_rms_temperatures_1 = Metro(3000);
 Metro timer_debug_rms_temperatures_3 = Metro(3000);
 Metro timer_debug_rms_torque_timer_information = Metro(200);
-Metro timer_debug_rms_voltage_information = Metro(2000);
+Metro timer_debug_rms_voltage_information = Metro(200);
 Metro timer_debug_fcu_status = Metro(2000);
+Metro timer_debug_fcu_readings = Metro(200);
 Metro timer_detailed_voltages = Metro(1000);
 Metro timer_imd_print_fault = Metro(500);
 Metro timer_restart_inverter = Metro(500); // Allow the FCU to restart the inverter
@@ -78,6 +80,7 @@ BMS_detailed_voltages bms_detailed_voltages[8][3];
 BMS_temperatures bms_temperatures;
 BMS_status bms_status;
 FCU_status fcu_status;
+FCU_readings fcu_readings;
 
 boolean bms_faulting = false;
 boolean imd_faulting = false;
@@ -237,6 +240,9 @@ void parse_can_message() {
             fcu_status.load(msg.buf);
             digitalWrite(SSR_BRAKE_LIGHT, fcu_status.get_brake_pedal_active());
         }
+        if (msg.id == ID_FCU_READINGS) {
+            fcu_readings.load(msg.buf);
+        }
         if (msg.id == ID_RCU_RESTART_MC) { // Restart inverter when the FCU restarts
             if (millis() > 1000) { // Ignore restart messages when this microcontroller has also just booted up
                 inverter_restart = true;
@@ -341,7 +347,7 @@ int write_xbee_data() {
 
 void send_xbee() {
     if (timer_debug_rms_temperatures_1.check()) {
-        /*mc_temperatures_1.write(xb_msg.buf);
+        mc_temperatures_1.write(xb_msg.buf);
         xb_msg.len = sizeof(CAN_message_mc_temperatures_1_t);
         xb_msg.id = ID_MC_TEMPERATURES_1;
         write_xbee_data();
@@ -356,10 +362,10 @@ void send_xbee() {
     }
 
     if (timer_debug_rms_temperatures_3.check()) {
-        /*mc_temperatures_3.write(xb_msg.buf);
+        mc_temperatures_3.write(xb_msg.buf);
         xb_msg.len = sizeof(CAN_message_mc_temperatures_3_t);
         xb_msg.id = ID_MC_TEMPERATURES_3;
-        write_xbee_data();*/
+        write_xbee_data();
         /*//XB.print("RTD 4 TEMP: "); // These aren't needed since we aren't using RTDs
         //XB.println(mc_temperatures_3.get_rtd_4_temperature());
         //XB.print("RTD 5 TEMP: ");
@@ -371,7 +377,7 @@ void send_xbee() {
     }
 
     if (timer_debug_rms_motor_position_information.check()) {
-        /*mc_motor_position_information.write(xb_msg.buf);
+        mc_motor_position_information.write(xb_msg.buf);
         xb_msg.len = sizeof(CAN_message_mc_motor_position_information_t);
         xb_msg.id = ID_MC_MOTOR_POSITION_INFORMATION;
         write_xbee_data();
@@ -386,7 +392,7 @@ void send_xbee() {
     }
 
     if (timer_debug_rms_current_information.check()) {
-        /*mc_current_information.write(xb_msg.buf);
+        mc_current_information.write(xb_msg.buf);
         xb_msg.len = sizeof(CAN_message_mc_current_information_t);
         xb_msg.id = ID_MC_CURRENT_INFORMATION;
         write_xbee_data();
@@ -401,7 +407,7 @@ void send_xbee() {
     }
 
     if (timer_debug_rms_voltage_information.check()) {
-        /*mc_voltage_information.write(xb_msg.buf);
+        mc_voltage_information.write(xb_msg.buf);
         xb_msg.len = sizeof(CAN_message_mc_voltage_information_t);
         xb_msg.id = ID_MC_VOLTAGE_INFORMATION;
         write_xbee_data();
@@ -416,7 +422,7 @@ void send_xbee() {
     }
 
     if (timer_debug_rms_internal_states.check()) {
-        /*mc_internal_states.write(xb_msg.buf);
+        mc_internal_states.write(xb_msg.buf);
         xb_msg.len = sizeof(CAN_message_mc_internal_states_t);
         xb_msg.id = ID_MC_INTERNAL_STATES;
         write_xbee_data();
@@ -439,7 +445,7 @@ void send_xbee() {
     }
 
     if (timer_debug_rms_fault_codes.check()) {
-        /*mc_fault_codes.write(xb_msg.buf);
+        mc_fault_codes.write(xb_msg.buf);
         xb_msg.len = sizeof(CAN_message_mc_fault_codes_t);
         xb_msg.id = ID_MC_FAULT_CODES;
         write_xbee_data();
@@ -454,7 +460,7 @@ void send_xbee() {
     }
 
     if (timer_debug_rms_torque_timer_information.check()) {
-        /*mc_torque_timer_information.write(xb_msg.buf);
+        mc_torque_timer_information.write(xb_msg.buf);
         xb_msg.len = sizeof(CAN_message_mc_torque_timer_information_t);
         xb_msg.id = ID_MC_TORQUE_TIMER_INFORMATION;
         write_xbee_data();
@@ -479,6 +485,17 @@ void send_xbee() {
         XB.println(bms_voltages.get_high() / (double) 10000, 4);
         XB.print("BMS VOLTAGE TOTAL: ");
         XB.println(bms_voltages.get_total() / (double) 100, 2);*/
+    }
+
+    if (timer_debug_bms_detailed_voltages.check()) {
+        for (int ic = 0; ic < 8; ic++) {
+            for (int group = 0; group < 3; group++) {
+                bms_detailed_voltages[ic][group].write(xb_msg.buf);
+                xb_msg.len = sizeof(CAN_message_bms_detailed_voltages_t);
+                xb_msg.id = ID_BMS_DETAILED_VOLTAGES;
+                write_xbee_data();
+            }
+        }
     }
 
     if (timer_debug_bms_temperatures.check()) {
@@ -516,6 +533,13 @@ void send_xbee() {
         XB.println(fcu_status.get_brake_pedal_active());
         XB.print("FCU STATE: ");
         XB.println(fcu_status.get_state());*/
+    }
+
+    if (timer_debug_fcu_readings.check()) {
+        fcu_readings.write(xb_msg.buf);
+        xb_msg.len = sizeof(CAN_message_fcu_readings_t);
+        xb_msg.id = ID_FCU_READINGS;
+        write_xbee_data();
     }
 
     if (timer_debug_rms_command_message.check()) {

@@ -297,6 +297,18 @@ void loop() {
     }
 
     /*
+     * Blink mode led
+     */
+    if ((led_mode_type == 2 && timer_led_mode_blink_fast.check()) || (led_mode_type == 3 && timer_led_mode_blink_slow.check())) {
+        if (led_mode_active) {
+            digitalWrite(LED_MODE, LOW);
+        } else {
+            digitalWrite(LED_MODE, HIGH);
+        }
+        led_mode_active = !led_mode_active;
+    }
+
+    /*
      * Blink start led
      */
     if ((led_start_type == 2 && timer_led_start_blink_fast.check()) || (led_start_type == 3 && timer_led_start_blink_slow.check())) {
@@ -342,7 +354,7 @@ void loop() {
     if (btn_mode_debouncing && timer_btn_mode.check()) {                        // debounce period finishes
         btn_mode_pressed = !btn_mode_pressed;
         if (btn_mode_pressed) {
-            torque_mode = (torque_mode + 1) % 3;
+            torque_mode = (torque_mode + 1) % 4;
             if (torque_mode == 0) {
                 set_mode_led(0);
                 MAX_TORQUE = 1600;
