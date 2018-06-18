@@ -43,8 +43,9 @@
 Metro timer_bms_print_fault = Metro(500);
 Metro timer_debug_bms_status = Metro(1000);
 Metro timer_debug_bms_temperatures = Metro(3000);
+Metro timer_debug_bms_detailed_temperatures = Metro(5000);
 Metro timer_debug_bms_voltages = Metro(1000);
-Metro timer_debug_bms_detailed_voltages = Metro(1000);
+Metro timer_debug_bms_detailed_voltages = Metro(5000);
 Metro timer_debug_rms_command_message = Metro(200);
 Metro timer_debug_rms_current_information = Metro(200);
 Metro timer_debug_rms_fault_codes = Metro(2000);
@@ -78,6 +79,7 @@ MC_torque_timer_information mc_torque_timer_information;
 BMS_voltages bms_voltages;
 BMS_detailed_voltages bms_detailed_voltages[8][3];
 BMS_temperatures bms_temperatures;
+BMS_detailed_temperatures bms_detailed_temperatures[8];
 BMS_status bms_status;
 FCU_status fcu_status;
 FCU_readings fcu_readings;
@@ -283,6 +285,10 @@ void parse_can_message() {
         }
         if (msg.id == ID_BMS_TEMPERATURES) {
             bms_temperatures.load(msg.buf);
+        }
+        if (msg.id == ID_BMS_DETAILED_TEMPERATURES) {
+            BMS_detailed_temperatures temp = BMS_detailed_temperatures(msg.buf);
+            bms_detailed_temperatures[temp.get_ic_id()].load(msg.buf);
         }
         if (msg.id == ID_BMS_STATUS) {
             bms_status.load(msg.buf);
@@ -509,6 +515,15 @@ void send_xbee() {
         XB.println(bms_temperatures.get_low_temperature() / (double) 100, 2);
         XB.print("BMS HIGH TEMPERATURE: ");
         XB.println(bms_temperatures.get_high_temperature() / (double) 100, 2);*/
+    }
+
+    if (timer_debug_bms_detailed_temperatures.check()) {
+        for (int ic = 0; ic < 8; ic++) {
+            bms_detailed_temperatures[ic].write(xb_msg.buf);
+            xb_msg.len = sizeof(CAN_message_bms_detailed_temperatures_t);
+            xb_msg.id = ID_BMS_DETAILED_TEMPERATURES;
+            write_xbee_data();
+        }
     }
 
     if (timer_debug_bms_status.check()) {
