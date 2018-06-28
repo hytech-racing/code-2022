@@ -209,14 +209,15 @@ void loop() {
                     fcu_status.set_accelerator_implausibility(true);
                     Serial.print("ACCEL IMPLAUSIBILITY: COMPARISON FAILED");
                 } else {
-                    calculated_torque = (int) (min(torque1, torque2) * rampRatio);
+                    calculated_torque = (int) (min(torque1, torque2)/* * rampRatio*/);
 
-                    if (rampRatio < 1 && timer_ramp_torque.check()) {
+                    //TODO: fix this
+                    /*if (rampRatio < 1 && timer_ramp_torque.check()) {
                         rampRatio += 0.1;
                         if (rampRatio > 1) {
                             rampRatio = 1;
                         }
-                    }
+                    }*/
                     if (debug && timer_debug_raw_torque.check()) {
                         Serial.print("TORQUE REQUEST DELTA PERCENT: "); // Print the % difference between the 2 accelerator sensor requests
                         Serial.println(abs(torque1 - torque2) / (double) MAX_TORQUE * 100);
@@ -241,7 +242,7 @@ void loop() {
                 fcu_status.set_brake_implausibility(false); // Clear implausibility
             }
             if (fcu_status.get_brake_pedal_active() && calculated_torque > (MAX_TORQUE / 4)) {
-                //fcu_status.set_brake_implausibility(true); // TODO temporarily commented out to test BSPD functionality
+                fcu_status.set_brake_implausibility(true);
             }
 
             if (fcu_status.get_brake_implausibility() || fcu_status.get_accelerator_implausibility()) {
@@ -362,18 +363,18 @@ void loop() {
                 regen_active = false;
             } else if (torque_mode == 1) {
                 set_mode_led(1);
-                MAX_TORQUE = 1500;
-                MAX_REGEN_TORQUE = 0;
+                MAX_TORQUE = 1600;
+                MAX_REGEN_TORQUE = -100;
                 regen_active = false;
             } else if (torque_mode == 2) {
                 set_mode_led(2);
-                MAX_TORQUE = 1500;
+                MAX_TORQUE = 1600;
                 MAX_REGEN_TORQUE = -200;
                 regen_active = true;
             } else if (torque_mode == 3) {
                 set_mode_led(3);
-                MAX_TORQUE = 1500;
-                MAX_REGEN_TORQUE = -100;
+                MAX_TORQUE = 1600;
+                MAX_REGEN_TORQUE = -300;
                 regen_active = true;
             }
         }
