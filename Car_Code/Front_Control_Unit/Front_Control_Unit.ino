@@ -161,18 +161,14 @@ void setupAccelerometer() {
 }
 
 void accelerometerTest() {
-  for (int i=0; i<100; i++) {
   /* Get a new sensor event */ 
   sensors_event_t event; 
   accel.getEvent(&event);
   
+  Serial.print("\n\nACCELEROMETER DATA\n\n");
   Serial.print(event.acceleration.x); Serial.print(", ");
   Serial.print(event.acceleration.y); Serial.print(", ");
-  Serial.print(event.acceleration.z); Serial.println("");
-  
-  Serial.println(i);
-  delay(200);
-  }
+  Serial.print(event.acceleration.z); Serial.println("\n\n");
 }
 
 void loop() {
