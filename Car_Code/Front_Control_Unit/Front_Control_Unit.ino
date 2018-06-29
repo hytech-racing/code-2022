@@ -11,6 +11,9 @@
 #include <Metro.h>
 
 //TESTINGTESTINGTESTING
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_ADXL345_U.h>
 
 /*
  * Pin definitions
@@ -99,6 +102,9 @@ ADC_SPI ADC(ADC_SPI_CS);
 FlexCAN CAN(500000);
 static CAN_message_t msg;
 
+//TESTINGTESTINGTESTING
+Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
+
 void setup() {
     pinMode(BTN_CYCLE, INPUT_PULLUP);
     pinMode(BTN_MODE, INPUT_PULLUP);
@@ -127,9 +133,52 @@ void setup() {
     set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
     reset_inverter();
     digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH); // Always stay closed
+
+    //TESTINGTESTINGTESTING
+    setupAccelerometer();
+}
+
+void setupAccelerometer() {
+  #ifndef ESP8266
+  while (!Serial); // for Leonardo/Micro/Zero
+#endif
+  Serial.begin(9600);
+  Serial.println("Accelerometer Data"); Serial.println("");
+    
+  /* Initialise the sensor */
+  if(!accel.begin())
+  {
+    /* There was a problem detecting the ADXL345 ... check your connections */
+    Serial.println("Sensor not detected!!!!!");
+    while(1);
+  }
+
+  /* Set the range to whatever is appropriate for your project */
+  accel.setRange(ADXL345_RANGE_4_G);
+  // displaySetRange(ADXL345_RANGE_8_G);
+  // displaySetRange(ADXL345_RANGE_4_G);
+  // displaySetRange(ADXL345_RANGE_2_G);
+}
+
+void accelerometerTest() {
+  for (int i=0; i<100; i++) {
+  /* Get a new sensor event */ 
+  sensors_event_t event; 
+  accel.getEvent(&event);
+  
+  Serial.print(event.acceleration.x); Serial.print(", ");
+  Serial.print(event.acceleration.y); Serial.print(", ");
+  Serial.print(event.acceleration.z); Serial.println("");
+  
+  Serial.println(i);
+  delay(200);
+  }
 }
 
 void loop() {
+
+    accelerometerTest();
+      
     /*
      * Send state over CAN
      */
