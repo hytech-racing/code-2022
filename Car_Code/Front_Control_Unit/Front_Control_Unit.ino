@@ -69,6 +69,8 @@ Metro timer_led_start_blink_slow = Metro(400);
 Metro timer_motor_controller_send = Metro(50);
 Metro timer_ready_sound = Metro(2000); // Time to play RTD sound
 Metro timer_can_update = Metro(100);
+//testing
+Metro timer_accel = Metro(200);
 
 /*
  * Global variables
@@ -135,7 +137,7 @@ void setup() {
     digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH); // Always stay closed
 
     //TESTINGTESTINGTESTING
-    setupAccelerometer();
+    //setupAccelerometer();
 }
 
 void setupAccelerometer() {
@@ -172,8 +174,9 @@ void accelerometerTest() {
 }
 
 void loop() {
-
-    accelerometerTest();
+    if (timer_accel.check()) {
+     //accelerometerTest(); 
+    }
       
     /*
      * Send state over CAN
