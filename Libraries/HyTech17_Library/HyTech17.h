@@ -14,8 +14,9 @@
 #define FCU_STATE_READY_TO_DRIVE 5
 
 #define BMS_STATE_DISCHARGING 1
-#define BMS_STATE_CHARGE_ENABLED 2
-#define BMS_STATE_CHARGE_DISABLED 3
+#define BMS_STATE_CHARGING 2
+#define BMS_STATE_BALANCING 3
+#define BMS_STATE_BALANCING_OVERHEATED 4
 
 /*
 #define CCU_STATE_NOT_CHARGING 1
@@ -37,6 +38,7 @@
 #define ID_BMS_TEMPERATURES 0xD9
 #define ID_BMS_DETAILED_TEMPERATURES 0xDA
 #define ID_BMS_STATUS 0xDB
+#define ID_BMS_BALANCING_STATUS 0xDE
 #define ID_FH_WATCHDOG_TEST 0xDC
 #define ID_CCU_STATUS 0xDD
 #define ID_MC_TEMPERATURES_1 0xA0
@@ -360,6 +362,29 @@ class BMS_status {
         CAN_message_bms_status_t message;
 };
 
+typedef struct CAN_message_bms_balancing_status_t {
+	uint8_t balancing_status[5];
+} CAN_message_bms_balancing_status_t;
+
+class BMS_balancing_status {
+    public:
+        BMS_balancing_status();
+        BMS_balancing_status(uint8_t buf[]);
+        void load(uint8_t buf[]);
+        void write(uint8_t buf[]);
+        uint8_t get_group_id();
+        uint64_t get_balancing_status();
+        uint32_t get_segment_balancing_status(uint8_t segment_id);
+        bool get_cell_balancing_status(uint8_t segment_id, uint16_t cell_id);
+
+        void set_group_id(uint8_t group_id);
+        void set_balancing_status(uint64_t balancing_status);
+        void set_segment_balancing_status(uint8_t segment_id, uint32_t balancing_status);
+        void set_cell_balancing_status(uint8_t segment_id, uint8_t cell_id, bool balancing_status);
+    private:
+        CAN_message_bms_balancing_status_t message;
+};
+
 typedef struct CAN_message_ccu_status_t {
     bool charger_enabled;
 } CAN_message_ccu_status_t;
@@ -388,6 +413,7 @@ class MC_temperatures_1 {
         MC_temperatures_1();
         MC_temperatures_1(uint8_t buf[8]);
         void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
         int16_t get_module_a_temperature();
         int16_t get_module_b_temperature();
         int16_t get_module_c_temperature();
@@ -408,6 +434,7 @@ class MC_temperatures_2 {
         MC_temperatures_2();
         MC_temperatures_2(uint8_t buf[8]);
         void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
         int16_t get_control_board_temperature();
         int16_t get_rtd_1_temperature();
         int16_t get_rtd_2_temperature();
@@ -428,6 +455,7 @@ class MC_temperatures_3 {
         MC_temperatures_3();
         MC_temperatures_3(uint8_t buf[8]);
         void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
         int16_t get_rtd_4_temperature();
         int16_t get_rtd_5_temperature();
         int16_t get_motor_temperature();
@@ -448,6 +476,7 @@ class MC_analog_input_voltages {
         MC_analog_input_voltages();
         MC_analog_input_voltages(uint8_t buf[8]);
         void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
         int16_t get_analog_input_1();
         int16_t get_analog_input_2();
         int16_t get_analog_input_3();
@@ -472,6 +501,7 @@ class MC_digital_input_status {
         MC_digital_input_status();
         MC_digital_input_status(uint8_t buf[]);
         void load(uint8_t buf[]);
+        void write(uint8_t buf[]);
         bool get_digital_input_1();
         bool get_digital_input_2();
         bool get_digital_input_3();
@@ -496,6 +526,7 @@ class MC_motor_position_information {
         MC_motor_position_information();
         MC_motor_position_information(uint8_t buf[8]);
         void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
         int16_t get_motor_angle();
         int16_t get_motor_speed();
         int16_t get_electrical_output_frequency();
@@ -516,6 +547,7 @@ class MC_current_information {
         MC_current_information();
         MC_current_information(uint8_t buf[8]);
         void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
         int16_t get_phase_a_current();
         int16_t get_phase_b_current();
         int16_t get_phase_c_current();
@@ -536,6 +568,7 @@ class MC_voltage_information {
         MC_voltage_information();
         MC_voltage_information(uint8_t buf[8]);
         void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
         int16_t get_dc_bus_voltage();
         int16_t get_output_voltage();
         int16_t get_phase_ab_voltage();
@@ -559,6 +592,7 @@ class MC_internal_states {
         MC_internal_states();
         MC_internal_states(uint8_t buf[8]);
         void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
         uint8_t get_vsm_state();
         uint8_t get_inverter_state();
         bool get_relay_active_1();
@@ -589,6 +623,7 @@ class MC_fault_codes {
         MC_fault_codes();
         MC_fault_codes(uint8_t buf[8]);
         void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
         uint16_t get_post_fault_lo();
         uint16_t get_post_fault_hi();
         uint16_t get_run_fault_lo();
@@ -672,6 +707,7 @@ class MC_torque_timer_information {
         MC_torque_timer_information();
         MC_torque_timer_information(uint8_t buf[8]);
         void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
         int16_t get_commanded_torque();
         int16_t get_torque_feedback();
         uint32_t get_power_on_timer();
@@ -691,6 +727,7 @@ class MC_modulation_index_flux_weakening_output_information {
         MC_modulation_index_flux_weakening_output_information();
         MC_modulation_index_flux_weakening_output_information(uint8_t buf[8]);
         void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
         uint16_t get_modulation_index();
         int16_t get_flux_weakening_output();
         int16_t get_id_command();
@@ -711,6 +748,7 @@ class MC_firmware_information {
         MC_firmware_information();
         MC_firmware_information(uint8_t buf[8]);
         void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
         uint16_t get_eeprom_version_project_code();
         uint16_t get_software_version();
         uint16_t get_date_code_mmdd();
@@ -786,6 +824,7 @@ class MC_read_write_parameter_response {
         MC_read_write_parameter_response();
         MC_read_write_parameter_response(uint8_t buf[8]);
         void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
         uint16_t get_parameter_address();
         bool get_write_success();
         uint32_t get_data();

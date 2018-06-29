@@ -1,5 +1,5 @@
 /*
- * HyTech 2018 Vehicle Charge Control Unit
+ * HyTech 2018 Formula Hybrid Vehicle Charge Control Unit
  */
 
 #include <FlexCAN.h>
@@ -37,7 +37,7 @@ void loop() {
             BMS_status bms_status = BMS_status(msg.buf);
             Serial.print("BMS state: ");
             Serial.println(bms_status.get_state());
-            ccu_status.set_charger_enabled(bms_status.get_state() == BMS_STATE_CHARGE_ENABLED);
+            ccu_status.set_charger_enabled(bms_status.get_state() == BMS_STATE_CHARGING);
             digitalWrite(CHARGE_ENABLE, ccu_status.get_charger_enabled());
         }
     }

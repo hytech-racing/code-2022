@@ -24,6 +24,16 @@ void MC_internal_states::load(uint8_t buf[8]) {
     memcpy(&(message.direction_command), &buf[7], sizeof(uint8_t));
 }
 
+void MC_internal_states::write(uint8_t buf[8]) {
+    memcpy(&buf[0], &(message.vsm_state), sizeof(uint16_t));
+    memcpy(&buf[2], &(message.inverter_state), sizeof(uint8_t));
+    memcpy(&buf[3], &(message.relay_state), sizeof(uint8_t));
+    memcpy(&buf[4], &(message.inverter_run_mode_discharge_state), sizeof(uint8_t));
+    memcpy(&buf[5], &(message.inverter_command_mode), sizeof(uint8_t));
+    memcpy(&buf[6], &(message.inverter_enable), sizeof(uint8_t));
+    memcpy(&buf[7], &(message.direction_command), sizeof(uint8_t));
+}
+
 uint8_t MC_internal_states::get_vsm_state() {
     return message.vsm_state;
 }

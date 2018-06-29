@@ -2,6 +2,10 @@ import curses
 import serial
 import sys
 import datetime
+import binascii
+from cobs import cobs
+import codecs
+import struct
 
 def main():
     if len(sys.argv) != 2:
@@ -195,26 +199,47 @@ def main():
     screen.addstr(16,180,'IC 7 THERM 0: ')
     screen.addstr(17,180,'IC 7 THERM 1: ')
     screen.addstr(18,180,'IC 7 THERM 2: ')
+
     curses.wrapper(live)
     curses.endwin()
 
 def live(screen):
-    filename = str(datetime.datetime.now()) + ".txt"
+    timestamp = str(datetime.datetime.now())
+    filename = timestamp + ".txt"
+    filenameRaw = "raw " + timestamp + ".csv"
     ser = serial.Serial(sys.argv[1], 115200)
-    incomingLine = ''
+    incomingFrame = ''
     screen.nodelay(True)
+    countGoodFrames = 0
+    countBadFrames = 0
+    with open(filenameRaw, "a") as f:
+        f.write("timestamp,CAN ID,msg\n")
     char = screen.getch()
     while char != ord('q') and char != ord('Q'):
         char = screen.getch()
         data = ser.read()
         if len(data) > 0:
-            incomingLine += data
-            if ('\n' in incomingLine):
-                line = incomingLine[0:incomingLine.find('\n')]
-                with open(filename, "a") as f:
-                    f.write(str(datetime.datetime.now()) + ' ' + line + '\n')
-                updateScreen(screen, line)
-                incomingLine = incomingLine[incomingLine.find('\n') + 1:]
+            incomingFrame += binascii.hexlify(data) + ' '
+            if ('00' in incomingFrame):
+                frame = incomingFrame[0:incomingFrame.find("00")]
+                msg = unpack(frame)
+                if msg != -1:
+                    with open(filenameRaw, "a") as f:
+                        size = ord(msg[4])
+                        raw = binascii.hexlify(msg[0]).upper() + "," + binascii.hexlify(msg[5:5 + size]).upper()
+                        f.write(str(datetime.datetime.now()) + ',' + raw + "\n")
+                    countGoodFrames += 1
+                    lines = decode(msg)
+                    with open(filename, "a") as f:
+                        timestamp = str(datetime.datetime.now())
+                        for line in lines:
+                            updateScreen(screen, line)
+                            f.write(timestamp + ' ' + line + '\n')
+                else:
+                    countBadFrames += 1
+                incomingFrame = incomingFrame[incomingFrame.find('00 ') + 3:]
+    with open(filename, "a") as f:
+        f.write("Processed " + str(countGoodFrames) + " good frames - ignored " + str(countBadFrames) + " bad frames")
 
 def updateScreen(screen, incomingLine):
     if ('MODULE A TEMP' in incomingLine):
@@ -476,5 +501,169 @@ def clearLine(y, x):
 def clearLineShort(y, x):
     blanks = '                      '
     screen.addstr(y,x,blanks)
+
+def unpack(frame):
+    #print("----------------")
+    frame = ''.join(char for char in frame if char.isalnum())
+    if (len(frame) != 32):
+        #print("Malformed frame len " + str(len(frame)) + " encountered - skipping")
+        return -1
+    '''frameprint = ''
+    odd = False
+    for char in frame:
+        frameprint += char
+        if odd:
+            frameprint += " "
+        odd = not odd
+    print("Encoded frame: " + frameprint.upper())'''
+    try:
+        decoded = cobs.decode(binascii.unhexlify(frame.strip("\n\r")))
+    except Exception as e:
+        #print("Decode failed: " + str(e))
+        return -1
+    # Calculate checksum
+    checksum = fletcher16(decoded[0:13])
+    cs_calc = binascii.hexlify(chr(checksum >> 8)).upper() + " " + binascii.hexlify(chr(checksum & 0xFF)).upper()
+    cs_rcvd = binascii.hexlify(decoded[14]).upper() + " " + binascii.hexlify(decoded[13]).upper()
+    if cs_calc != cs_rcvd:
+        #print("Decode failed: Checksum mismatch - calc: " + cs_calc + " - rcvd: " + cs_rcvd)
+        return -1
+    '''out = "Decoded frame: "
+    for char in decoded:
+        out += binascii.hexlify(char).upper() + " "
+    print(out)'''
+    return decoded
+
+def decode(msg):
+    ret = []
+    id = ord(msg[0])
+    #print("CAN ID:        0x" + binascii.hexlify(msg[0]).upper())
+    size = ord(msg[4])
+    #print("MSG LEN:       " + str(size))
+    if (id == 0xA0):
+        ret.append("MODULE A TEMP: " + str(b2i16(msg[5:7]) / 10.) + " C")
+        ret.append("MODULE B TEMP: " + str(b2i16(msg[7:9]) / 10.) + " C")
+        ret.append("MODULE C TEMP: " + str(b2i16(msg[9:11]) / 10.) + " C")
+        ret.append("GATE DRIVER BOARD TEMP: " + str(b2i16(msg[11:13]) / 10.) + " C")
+    if (id == 0xA2):
+        ret.append("RTD 4 TEMP: " + str(b2i16(msg[5:7]) / 10.) + " C")
+        ret.append("RTD 5 TEMP: " + str(b2i16(msg[7:9]) / 10.) + " C")
+        ret.append("MOTOR TEMP: " + str(b2i16(msg[9:11]) / 10.) + " C")
+        ret.append("TORQUE SHUDDER: " + str(b2i16(msg[11:13]) / 10.) + " Nm")
+    if (id == 0xA5):
+        ret.append("MOTOR ANGLE: " + str(b2i16(msg[5:7]) / 10.))
+        ret.append("MOTOR SPEED: " + str(b2i16(msg[7:9])) + " RPM")
+        ret.append("ELEC OUTPUT FREQ: " + str(b2i16(msg[9:11]) / 10.))
+        ret.append("DELTA RESOLVER FILT: " + str(b2i16(msg[11:13])))
+    if (id == 0xA6):
+        ret.append("PHASE A CURRENT: " + str(b2i16(msg[5:7]) / 10.) + " A")
+        ret.append("PHASE B CURRENT: " + str(b2i16(msg[7:9]) / 10.) + " A")
+        ret.append("PHASE C CURRENT: " + str(b2i16(msg[9:11]) / 10.) + " A")
+        ret.append("DC BUS CURRENT: " + str(b2i16(msg[11:13]) / 10.) + " A")
+    if (id == 0xA7):
+        ret.append("DC BUS VOLTAGE: " + str(b2i16(msg[5:7]) / 10.) + " V")
+        ret.append("OUTPUT VOLTAGE: " + str(b2i16(msg[7:9]) / 10.) + " V")
+        ret.append("PHASE AB VOLTAGE: " + str(b2i16(msg[9:11]) / 10.) + " V")
+        ret.append("PHASE BC VOLTAGE: " + str(b2i16(msg[11:13]) / 10.) + " V")
+    if (id == 0xAA):
+        ret.append("VSM STATE: " + str(b2ui16(msg[5:7])))
+        ret.append("INVERTER STATE: " + str(ord(msg[7])))
+        ret.append("INVERTER RUN MODE: " + str(ord(msg[9]) & 0x1))
+        ret.append("INVERTER ACTIVE DISCHARGE STATE: " + str((ord(msg[9]) & 0xE0) >> 5))
+        ret.append("INVERTER COMMAND MODE: " + str(ord(msg[10])))
+        ret.append("INVERTER ENABLE: " + str(ord(msg[11]) & 0x1))
+        ret.append("INVERTER LOCKOUT: " + str((ord(msg[11]) & 0x80) >> 7))
+        ret.append("DIRECTION COMMAND: " + str(ord(msg[12])))
+    if (id == 0xAB):
+        ret.append("POST FAULT LO: 0x" + binascii.hexlify(msg[6]).upper() + binascii.hexlify(msg[5]).upper())
+        ret.append("POST FAULT HI: 0x" + binascii.hexlify(msg[8]).upper() + binascii.hexlify(msg[7]).upper())
+        ret.append("RUN FAULT LO: 0x" + binascii.hexlify(msg[10]).upper() + binascii.hexlify(msg[9]).upper())
+        ret.append("RUN FAULT HI: 0x" + binascii.hexlify(msg[12]).upper() + binascii.hexlify(msg[11]).upper())
+    if (id == 0xAC):
+        ret.append("COMMANDED TORQUE: " + str(b2i16(msg[5:7]) / 10.) + " Nm")
+        ret.append("TORQUE FEEDBACK: " + str(b2i16(msg[7:9]) / 10.) + " Nm")
+        ret.append("RMS UPTIME: " + str(int(b2ui32(msg[9:13]) * .003)) + " s")
+    if (id == 0xC0):
+        ret.append("FCU REQUESTED TORQUE: " + str(b2i16(msg[5:7]) / 10.) + " N")
+        #ret.append("FCU REQUESTED INVERTER ENABLE: " + str(ord(msg[10]) & 0x1))
+    if (id == 0xD0):
+        ret.append("RCU STATE: " + str(ord(msg[5])))
+        ret.append("RCU FLAGS: 0x" + binascii.hexlify(msg[6]).upper())
+        ret.append("GLV BATT VOLTAGE: " + str(b2ui16(msg[7:9]) / 100.) + " V")
+        ret.append("RCU BMS FAULT: " + str(not ord(msg[6]) & 0x1))
+        ret.append("RCU IMD FAULT: " + str(not (ord(msg[6]) & 0x2) >> 1))
+    if (id == 0xD2):
+        ret.append("FCU STATE: " + str(ord(msg[5])))
+        ret.append("FCU FLAGS: 0x" + binascii.hexlify(msg[6]).upper())
+        ret.append("FCU START BUTTON ID: " + str(ord(msg[7])))
+        ret.append("FCU BRAKE ACT: " + str((ord(msg[6]) & 0x8) >> 3))
+        ret.append("FCU IMPLAUS ACCEL: " + str(ord(msg[6]) & 0x1))
+        ret.append("FCU IMPLAUS BRAKE: " + str((ord(msg[6]) & 0x4) >> 2))
+    if (id == 0xD3):
+        ret.append("FCU PEDAL ACCEL 1: " + str(b2ui16(msg[5:7])))
+        ret.append("FCU PEDAL ACCEL 2: " + str(b2ui16(msg[7:9])))
+        ret.append("FCU PEDAL BRAKE: " + str(b2ui16(msg[9:11])))
+    if (id == 0xD7):
+        ret.append("BMS VOLTAGE AVERAGE: " + str(b2ui16(msg[5:7]) / 10e3) + " V")
+        ret.append("BMS VOLTAGE LOW: " + str(b2ui16(msg[7:9]) / 10e3) + " V")
+        ret.append("BMS VOLTAGE HIGH: " + str(b2ui16(msg[9:11]) / 10e3) + " V")
+        ret.append("BMS VOLTAGE TOTAL: " + str(b2ui16(msg[11:13]) / 100.) + " V")
+    if (id == 0xD8):
+        ic = ord(msg[5]) & 0xF
+        group = (ord(msg[5]) & 0xF0) >> 4
+        ret.append("IC " + str(ic) + " CELL " + str(group * 3) + ": " + '%.4f' % (b2ui16(msg[6:8]) / 10e3) + " V")
+        ret.append("IC " + str(ic) + " CELL " + str(group * 3 + 1) + ": " + '%.4f' % (b2ui16(msg[8:10]) / 10e3) + " V")
+        ret.append("IC " + str(ic) + " CELL " + str(group * 3 + 2) + ": " + '%.4f' % (b2ui16(msg[10:12]) / 10e3) + " V")
+    if (id == 0xD9):
+        ret.append("BMS AVERAGE TEMPERATURE: " + str(b2i16(msg[5:7]) / 100.) + " C")
+        ret.append("BMS LOW TEMPERATURE: " + str(b2i16(msg[7:9]) / 100.) + " C")
+        ret.append("BMS HIGH TEMPERATURE: " + str(b2i16(msg[9:11]) / 100.) + " C")
+    if (id == 0xDA):
+        ic = ord(msg[5])
+        ret.append("IC " + str(ic) + " THERM 0: " + '%.2f' % (b2ui16(msg[6:8]) / 100.) + " C")
+        ret.append("IC " + str(ic) + " THERM 1: " + '%.2f' % (b2ui16(msg[8:10]) / 100.) + " C")
+        ret.append("IC " + str(ic) + " THERM 2: " + '%.2f' % (b2ui16(msg[10:12]) / 100.) + " C")
+    if (id == 0xDB):
+        ret.append("BMS STATE: " + str(ord(msg[5])))
+        ret.append("BMS ERROR FLAGS: 0x" + binascii.hexlify(msg[7]).upper() + binascii.hexlify(msg[6]).upper())
+        ret.append("BMS CURRENT: " + str(b2i16(msg[8:10]) / 100.) + " A")
+    return ret
+
+def b2i8(data):
+    return struct.unpack("<1b", chr(ord(data[0])))[0]
+
+def b2i16(data):
+    return struct.unpack("<1h", chr(ord(data[0])) + chr(ord(data[1])))[0]
+
+def b2ui16(data):
+    return struct.unpack("<1H", chr(ord(data[0])) + chr(ord(data[1])))[0]
+
+def b2ui32(data):
+    return struct.unpack("<1I", chr(ord(data[0])) + chr(ord(data[1])) + chr(ord(data[2])) + chr(ord(data[3])))[0]
+
+def fletcher16(data):
+    d = map(ord,data)
+    index = 0
+    c0 = 0
+    c1 = 0
+    i = 0
+    length = len(d)
+    while length >= 5802:
+        for i in range(5802):
+            c0 += d[index]
+            c1 += c0
+            index += 1
+        c0 %= 255
+        c1 %= 255
+        length -= 5802
+    
+    index = 0
+    for i in range(len(data)):
+        c0 += d[index]
+        c1 += c0
+        index += 1
+    c0 %= 255
+    c1 %= 255
+    return (c1 << 8 | c0)
 
 main()

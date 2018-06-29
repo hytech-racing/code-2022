@@ -21,6 +21,13 @@ void MC_temperatures_1::load(uint8_t buf[8]) {
     memcpy(&(message.gate_driver_board_temperature), &buf[6], sizeof(int16_t));
 }
 
+void MC_temperatures_1::write(uint8_t buf[8]) {
+    memcpy(&buf[0], &(message.module_a_temperature), sizeof(int16_t));
+    memcpy(&buf[2], &(message.module_b_temperature), sizeof(int16_t));
+    memcpy(&buf[4], &(message.module_c_temperature), sizeof(int16_t));
+    memcpy(&buf[6], &(message.gate_driver_board_temperature), sizeof(int16_t));
+}
+
 int16_t MC_temperatures_1::get_module_a_temperature() {
     return message.module_a_temperature;
 }

@@ -11,7 +11,7 @@
  * Initialize ADC SPI using default CS pin
  */
 ADC_SPI::ADC_SPI() {
-	ADC_SPI(DEFAULT_SPI_CS);
+	init(DEFAULT_SPI_CS);
 }
 
 /*
@@ -19,6 +19,13 @@ ADC_SPI::ADC_SPI() {
  * param CS Pin to use for Chip Select
  */
 ADC_SPI::ADC_SPI(int CS) {
+	init(CS);
+}
+
+/*
+ * Initialization helper
+ */
+void ADC_SPI::init(int CS) {
 	ADC_SPI_CS = CS;
 
 	pinMode(ADC_SPI_CS, OUTPUT);

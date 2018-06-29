@@ -15,7 +15,7 @@ void loop() {
     Serial.print(i);
     Serial.print(": ");
     Serial.print(val);
-    Serial.print("/t");
+    Serial.print(" - ");
   }
   Serial.println();
   delay(1000);

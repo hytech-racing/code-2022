@@ -21,6 +21,13 @@ void MC_fault_codes::load(uint8_t buf[8]) {
     memcpy(&(message.run_fault_hi), &buf[6], sizeof(int16_t));
 }
 
+void MC_fault_codes::write(uint8_t buf[8]) {
+    memcpy(&buf[0], &(message.post_fault_lo), sizeof(int16_t));
+    memcpy(&buf[2], &(message.post_fault_hi), sizeof(int16_t));
+    memcpy(&buf[4], &(message.run_fault_lo), sizeof(int16_t));
+    memcpy(&buf[6], &(message.run_fault_hi), sizeof(int16_t));
+}
+
 uint16_t MC_fault_codes::get_post_fault_lo() {
     return message.post_fault_lo;
 }
