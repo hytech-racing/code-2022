@@ -137,13 +137,13 @@ void setup() {
     digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH); // Always stay closed
 
     //TESTINGTESTINGTESTING
-    //setupAccelerometer();
+    setupAccelerometer();
 }
 
 void setupAccelerometer() {
-  #ifndef ESP8266
-  while (!Serial); // for Leonardo/Micro/Zero
-#endif
+  //#ifndef ESP8266
+  //while (!Serial); // for Leonardo/Micro/Zero
+//#endif
   Serial.begin(9600);
   Serial.println("Accelerometer Data"); Serial.println("");
     
@@ -175,7 +175,7 @@ void accelerometerTest() {
 
 void loop() {
     if (timer_accel.check()) {
-     //accelerometerTest(); 
+     accelerometerTest(); 
     }
       
     /*
