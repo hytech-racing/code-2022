@@ -79,6 +79,8 @@ BMS_status bms_status;
 FCU_status fcu_status;
 FCU_readings fcu_readings;
 RCU_status rcu_status;
+//TESTINGTESTINGTESTING
+accelerometer_values accelerometer_data;
 
 bool btn_start_debouncing = false;
 uint8_t btn_start_new = 0;
@@ -162,10 +164,12 @@ void setupAccelerometer() {
   // displaySetRange(ADXL345_RANGE_2_G);
 }
 
-void accelerometerTest() {
+void processAccelerometer() {
   /* Get a new sensor event */ 
   sensors_event_t event; 
   accel.getEvent(&event);
+
+  accelerometer_data.setValues(event.acceleration.x, event.acceleration.y, event.acceleration.z);
   
   Serial.print("\n\nACCELEROMETER DATA\n\n");
   Serial.print(event.acceleration.x); Serial.print(", ");
@@ -174,8 +178,9 @@ void accelerometerTest() {
 }
 
 void loop() {
+    //TESTINGTESTINGTESTING
     if (timer_accel.check()) {
-     accelerometerTest(); 
+     processAccelerometer(); 
     }
       
     /*
