@@ -168,8 +168,21 @@ void processAccelerometer() {
   /* Get a new sensor event */ 
   sensors_event_t event; 
   accel.getEvent(&event);
-
+  
+  /* Read accelerometer values into accelerometer struct */
   accelerometer_data.setValues(event.acceleration.x, event.acceleration.y, event.acceleration.z);
+
+  //Now that I think of it, the way in which the process is implemented is a bit redundant.
+  //The accelerometer values are read into the Teensy, and they are processed into the defined datatype, and in turn the write() function below copies this data into the CAN msg buffer.
+  //Isn't it more efficient to write it directly into the CAN msg buffer?
+
+  /* Send msg over CAN */
+  noInterrupts();
+  accelerometer_data.write(msg.buf);
+  msg.id = ID_ACCELEROMETER;
+  msg.len = sizeof(CAN_message_accelerometer_values_t);
+  CAN.write(msg);
+  interrupts();
   
   Serial.print("\n\nACCELEROMETER DATA\n\n");
   Serial.print(event.acceleration.x); Serial.print(", ");

@@ -844,6 +844,8 @@ class accelerometer_values {
       short getX();
       short getY();
       short getZ();
+      void load(uint8_t buf[8]);
+      void write(uint8_t buf[8]);
       void setValues(short, short, short);
    private:
       CAN_message_accelerometer_values_t message;
