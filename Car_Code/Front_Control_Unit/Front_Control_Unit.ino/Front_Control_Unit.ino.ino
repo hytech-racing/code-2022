@@ -146,7 +146,6 @@ void setupAccelerometer() {
   //#ifndef ESP8266
   //while (!Serial); // for Leonardo/Micro/Zero
 //#endif
-  Serial.begin(9600);
   Serial.println("Accelerometer Data"); Serial.println("");
     
   /* Initialise the sensor */
@@ -191,11 +190,12 @@ void processAccelerometer() {
 }
 
 void loop() {
+
     //TESTINGTESTINGTESTING
     if (timer_accel.check()) {
      processAccelerometer(); 
     }
-      
+    
     /*
      * Send state over CAN
      */
