@@ -173,7 +173,6 @@ void processAccelerometer() {
 
 void loop() {
 
-    //TESTINGTESTINGTESTING
     if (timer_accel.check()) {
      processAccelerometer(); 
     }
