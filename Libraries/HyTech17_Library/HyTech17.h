@@ -833,7 +833,6 @@ class MC_read_write_parameter_response {
         CAN_message_mc_read_write_parameter_response_t message;
 };
 
-//TESTINGTESTINGTESTING
 typedef struct CAN_message_accelerometer_values_t {
    short XValue_x100;
    short YValue_x100;

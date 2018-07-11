@@ -1,4 +1,5 @@
 // Created by Soohyun Kim
+// For packaging and sending accelerometer values over CAN
 
 #include "HyTech17.h"
 
@@ -11,15 +12,15 @@ accelerometer_values::accelerometer_values(uint8_t buf[8]) {
 }
 
 short accelerometer_values::getX() {
-   return this->message.XValue_x100;
+   return message.XValue_x100;
 }
 
 short accelerometer_values::getY() {
-   return this->message.YValue_x100;
+   return message.YValue_x100;
 }
 
 short accelerometer_values::getZ() {
-   return this->message.ZValue_x100;
+   return message.ZValue_x100;
 }
 
 void accelerometer_values::write(uint8_t buf[8]) {
@@ -37,7 +38,7 @@ void accelerometer_values::load(uint8_t buf[8]) {
 
 void accelerometer_values::setValues(short x, short y, short z) {
     message = {};
-    this->message.XValue_x100 = x;
-    this->message.YValue_x100 = y;
-    this->message.ZValue_x100 = z;
+    message.XValue_x100 = x;
+    message.YValue_x100 = y;
+    message.ZValue_x100 = z;
 }

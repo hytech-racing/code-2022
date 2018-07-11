@@ -9,8 +9,6 @@
 #include <HyTech17.h>
 #include <kinetis_flexcan.h>
 #include <Metro.h>
-
-//TESTINGTESTINGTESTING
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_ADXL345_U.h>
@@ -69,8 +67,7 @@ Metro timer_led_start_blink_slow = Metro(400);
 Metro timer_motor_controller_send = Metro(50);
 Metro timer_ready_sound = Metro(2000); // Time to play RTD sound
 Metro timer_can_update = Metro(100);
-//testing
-Metro timer_accel = Metro(200);
+Metro timer_accel = Metro(100);
 
 /*
  * Global variables
@@ -79,7 +76,6 @@ BMS_status bms_status;
 FCU_status fcu_status;
 FCU_readings fcu_readings;
 RCU_status rcu_status;
-//TESTINGTESTINGTESTING
 accelerometer_values accelerometer_data;
 
 bool btn_start_debouncing = false;
@@ -105,8 +101,6 @@ int16_t MAX_REGEN_TORQUE = 0;
 ADC_SPI ADC(ADC_SPI_CS);
 FlexCAN CAN(500000);
 static CAN_message_t msg;
-
-//TESTINGTESTINGTESTING
 Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
 
 void setup() {
@@ -138,29 +132,21 @@ void setup() {
     reset_inverter();
     digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH); // Always stay closed
 
-    //TESTINGTESTINGTESTING
+    /* setup accelerometer */
     setupAccelerometer();
 }
 
 void setupAccelerometer() {
-  //#ifndef ESP8266
-  //while (!Serial); // for Leonardo/Micro/Zero
-//#endif
-  Serial.println("Accelerometer Data"); Serial.println("");
-    
+      
   /* Initialise the sensor */
   if(!accel.begin())
   {
     /* There was a problem detecting the ADXL345 ... check your connections */
     Serial.println("Sensor not detected!!!!!");
-    while(1);
   }
-
-  /* Set the range to whatever is appropriate for your project */
-  accel.setRange(ADXL345_RANGE_4_G);
-  // displaySetRange(ADXL345_RANGE_8_G);
-  // displaySetRange(ADXL345_RANGE_4_G);
-  // displaySetRange(ADXL345_RANGE_2_G);
+  else {
+    accel.setRange(ADXL345_RANGE_4_G);
+  }
 }
 
 void processAccelerometer() {
@@ -171,14 +157,10 @@ void processAccelerometer() {
   /* Read accelerometer values into accelerometer struct */
   accelerometer_data.setValues(event.acceleration.x, event.acceleration.y, event.acceleration.z);
 
-  //Now that I think of it, the way in which the process is implemented is a bit redundant.
-  //The accelerometer values are read into the Teensy, and they are processed into the defined datatype, and in turn the write() function below copies this data into the CAN msg buffer.
-  //Isn't it more efficient to write it directly into the CAN msg buffer?
-
   /* Send msg over CAN */
   noInterrupts();
   accelerometer_data.write(msg.buf);
-  msg.id = ID_ACCELEROMETER;
+  msg.id = ID_FCU_ACCELEROMETER;
   msg.len = sizeof(CAN_message_accelerometer_values_t);
   CAN.write(msg);
   interrupts();
