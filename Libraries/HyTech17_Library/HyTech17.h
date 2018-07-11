@@ -30,6 +30,7 @@
 #define ID_RCU_STATUS 0xD0
 #define ID_FCU_STATUS 0xD2
 #define ID_FCU_READINGS 0xD3
+#define ID_ACCELEROMETER 0xDF
 #define ID_RCU_RESTART_MC 0xD4
 #define ID_BMS_ONBOARD_TEMPERATURES 0xD5
 #define ID_BMS_ONBOARD_DETAILED_TEMPERATURES 0xD6
@@ -841,6 +842,8 @@ typedef struct CAN_message_accelerometer_values_t {
 
 class accelerometer_values {
    public:
+      accelerometer_values();
+      accelerometer_values(uint8_t buf[8]);
       short getX();
       short getY();
       short getZ();
@@ -849,6 +852,6 @@ class accelerometer_values {
       void setValues(short, short, short);
    private:
       CAN_message_accelerometer_values_t message;
-}
+};
 
 #endif
