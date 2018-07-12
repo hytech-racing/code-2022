@@ -4,14 +4,14 @@
  * Read pedal sensor values and communicate with motor controller.
  * Configured for Front Control Unit rev7
  */
+#include <Adafruit_Sensor.h>
+#include <Adafruit_ADXL345_U.h>
 #include <ADC_SPI.h>
 #include <FlexCAN.h>
 #include <HyTech17.h>
 #include <kinetis_flexcan.h>
 #include <Metro.h>
 #include <Wire.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_ADXL345_U.h>
 
 /*
  * Pin definitions
@@ -51,6 +51,7 @@
 /*
  * Timers
  */
+Metro timer_accelerometer = Metro(100);
 Metro timer_bms_imd_print_fault = Metro(500);
 Metro timer_btn_cycle = Metro(10);
 Metro timer_btn_mode = Metro(10);
@@ -67,7 +68,6 @@ Metro timer_led_start_blink_slow = Metro(400);
 Metro timer_motor_controller_send = Metro(50);
 Metro timer_ready_sound = Metro(2000); // Time to play RTD sound
 Metro timer_can_update = Metro(100);
-Metro timer_accel = Metro(100);
 
 /*
  * Global variables
@@ -76,7 +76,7 @@ BMS_status bms_status;
 FCU_status fcu_status;
 FCU_readings fcu_readings;
 RCU_status rcu_status;
-accelerometer_values accelerometer_data;
+FCU_accelerometer_values fcu_accelerometer_data;
 
 bool btn_start_debouncing = false;
 uint8_t btn_start_new = 0;
@@ -155,13 +155,13 @@ void processAccelerometer() {
   accel.getEvent(&event);
   
   /* Read accelerometer values into accelerometer struct */
-  accelerometer_data.setValues(event.acceleration.x, event.acceleration.y, event.acceleration.z);
+  fcu_accelerometer_data.set_values(event.acceleration.x, event.acceleration.y, event.acceleration.z);
 
   /* Send msg over CAN */
   noInterrupts();
-  accelerometer_data.write(msg.buf);
+  fcu_accelerometer_data.write(msg.buf);
   msg.id = ID_FCU_ACCELEROMETER;
-  msg.len = sizeof(CAN_message_accelerometer_values_t);
+  msg.len = sizeof(CAN_message_fcu_accelerometer_values_t);
   CAN.write(msg);
   interrupts();
   
@@ -172,9 +172,10 @@ void processAccelerometer() {
 }
 
 void loop() {
-
-    if (timer_accel.check()) {
-     processAccelerometer(); 
+  
+    /* periodically process accelerometer values */
+    if (timer_accelerometer.check()) {
+        processAccelerometer(); 
     }
     
     /*

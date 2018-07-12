@@ -833,24 +833,24 @@ class MC_read_write_parameter_response {
         CAN_message_mc_read_write_parameter_response_t message;
 };
 
-typedef struct CAN_message_accelerometer_values_t {
+typedef struct CAN_message_fcu_accelerometer_values_t {
    short XValue_x100;
    short YValue_x100;
    short ZValue_x100;
-} CAN_message_accelerometer_values_t;
+} CAN_message_fcu_accelerometer_values_t;
 
-class accelerometer_values {
+class FCU_accelerometer_values {
    public:
-      accelerometer_values();
-      accelerometer_values(uint8_t buf[8]);
+      FCU_accelerometer_values();
+      FCU_accelerometer_values(uint8_t buf[8]);
+      void load(uint8_t buf[8]);
+      void write(uint8_t buf[8]);
       short getX();
       short getY();
       short getZ();
-      void load(uint8_t buf[8]);
-      void write(uint8_t buf[8]);
-      void setValues(short, short, short);
+      void set_values(short, short, short);
    private:
-      CAN_message_accelerometer_values_t message;
+      CAN_message_fcu_accelerometer_values_t message;
 };
 
 #endif
