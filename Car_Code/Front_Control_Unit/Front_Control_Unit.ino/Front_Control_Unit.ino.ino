@@ -76,7 +76,7 @@ BMS_status bms_status;
 FCU_status fcu_status;
 FCU_readings fcu_readings;
 RCU_status rcu_status;
-FCU_accelerometer_values fcu_accelerometer_data;
+FCU_accelerometer_values fcu_accelerometer_values;
 
 bool btn_start_debouncing = false;
 uint8_t btn_start_new = 0;
@@ -155,11 +155,11 @@ void processAccelerometer() {
   accel.getEvent(&event);
   
   /* Read accelerometer values into accelerometer struct */
-  fcu_accelerometer_data.set_values(event.acceleration.x, event.acceleration.y, event.acceleration.z);
+  fcu_accelerometer_values.set_values(event.acceleration.x, event.acceleration.y, event.acceleration.z);
 
   /* Send msg over CAN */
   noInterrupts();
-  fcu_accelerometer_data.write(msg.buf);
+  fcu_accelerometer_values.write(msg.buf);
   msg.id = ID_FCU_ACCELEROMETER;
   msg.len = sizeof(CAN_message_fcu_accelerometer_values_t);
   CAN.write(msg);

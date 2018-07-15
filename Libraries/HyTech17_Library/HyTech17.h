@@ -845,9 +845,9 @@ class FCU_accelerometer_values {
       FCU_accelerometer_values(uint8_t buf[8]);
       void load(uint8_t buf[8]);
       void write(uint8_t buf[8]);
-      short getX();
-      short getY();
-      short getZ();
+      short get_x();
+      short get_y();
+      short get_z();
       void set_values(short, short, short);
    private:
       CAN_message_fcu_accelerometer_values_t message;

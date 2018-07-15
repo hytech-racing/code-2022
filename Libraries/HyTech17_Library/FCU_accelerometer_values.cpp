@@ -26,15 +26,15 @@ void FCU_accelerometer_values::write(uint8_t buf[8]) {
     memcpy(&buf[4], &(message.ZValue_x100), sizeof(short));
 }
 
-short FCU_accelerometer_values::getX() {
+short FCU_accelerometer_values::get_x() {
    return message.XValue_x100;
 }
 
-short FCU_accelerometer_values::getY() {
+short FCU_accelerometer_values::get_y() {
    return message.YValue_x100;
 }
 
-short FCU_accelerometer_values::getZ() {
+short FCU_accelerometer_values::get_z() {
    return message.ZValue_x100;
 }
 
