@@ -30,6 +30,7 @@
 #define ID_RCU_STATUS 0xD0
 #define ID_FCU_STATUS 0xD2
 #define ID_FCU_READINGS 0xD3
+#define ID_FCU_ACCELEROMETER 0xDF
 #define ID_RCU_RESTART_MC 0xD4
 #define ID_BMS_ONBOARD_TEMPERATURES 0xD5
 #define ID_BMS_ONBOARD_DETAILED_TEMPERATURES 0xD6
@@ -830,6 +831,26 @@ class MC_read_write_parameter_response {
         uint32_t get_data();
     private:
         CAN_message_mc_read_write_parameter_response_t message;
+};
+
+typedef struct CAN_message_fcu_accelerometer_values_t {
+   short XValue_x100;
+   short YValue_x100;
+   short ZValue_x100;
+} CAN_message_fcu_accelerometer_values_t;
+
+class FCU_accelerometer_values {
+   public:
+      FCU_accelerometer_values();
+      FCU_accelerometer_values(uint8_t buf[8]);
+      void load(uint8_t buf[8]);
+      void write(uint8_t buf[8]);
+      short get_x();
+      short get_y();
+      short get_z();
+      void set_values(short, short, short);
+   private:
+      CAN_message_fcu_accelerometer_values_t message;
 };
 
 #endif

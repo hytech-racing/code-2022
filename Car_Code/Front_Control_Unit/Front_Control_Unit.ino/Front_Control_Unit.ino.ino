@@ -4,11 +4,14 @@
  * Read pedal sensor values and communicate with motor controller.
  * Configured for Front Control Unit rev7
  */
+#include <Adafruit_Sensor.h>
+#include <Adafruit_ADXL345_U.h>
 #include <ADC_SPI.h>
 #include <FlexCAN.h>
 #include <HyTech17.h>
 #include <kinetis_flexcan.h>
 #include <Metro.h>
+#include <Wire.h>
 
 /*
  * Pin definitions
@@ -48,6 +51,7 @@
 /*
  * Timers
  */
+Metro timer_accelerometer = Metro(100);
 Metro timer_bms_imd_print_fault = Metro(500);
 Metro timer_btn_cycle = Metro(10);
 Metro timer_btn_mode = Metro(10);
@@ -72,6 +76,7 @@ BMS_status bms_status;
 FCU_status fcu_status;
 FCU_readings fcu_readings;
 RCU_status rcu_status;
+FCU_accelerometer_values fcu_accelerometer_values;
 
 bool btn_start_debouncing = false;
 uint8_t btn_start_new = 0;
@@ -96,6 +101,7 @@ int16_t MAX_REGEN_TORQUE = 0;
 ADC_SPI ADC(ADC_SPI_CS);
 FlexCAN CAN(500000);
 static CAN_message_t msg;
+Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
 
 void setup() {
     pinMode(BTN_CYCLE, INPUT_PULLUP);
@@ -125,9 +131,53 @@ void setup() {
     set_state(FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
     reset_inverter();
     digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH); // Always stay closed
+
+    /* setup accelerometer */
+    setupAccelerometer();
+}
+
+void setupAccelerometer() {
+      
+  /* Initialise the sensor */
+  if(!accel.begin())
+  {
+    /* There was a problem detecting the ADXL345 ... check your connections */
+    Serial.println("Sensor not detected!!!!!");
+  }
+  else {
+    accel.setRange(ADXL345_RANGE_4_G);
+  }
+}
+
+void processAccelerometer() {
+  /* Get a new sensor event */ 
+  sensors_event_t event; 
+  accel.getEvent(&event);
+  
+  /* Read accelerometer values into accelerometer struct */
+  fcu_accelerometer_values.set_values(event.acceleration.x, event.acceleration.y, event.acceleration.z);
+
+  /* Send msg over CAN */
+  noInterrupts();
+  fcu_accelerometer_values.write(msg.buf);
+  msg.id = ID_FCU_ACCELEROMETER;
+  msg.len = sizeof(CAN_message_fcu_accelerometer_values_t);
+  CAN.write(msg);
+  interrupts();
+  
+  Serial.print("\n\nACCELEROMETER DATA\n\n");
+  Serial.print(event.acceleration.x); Serial.print(", ");
+  Serial.print(event.acceleration.y); Serial.print(", ");
+  Serial.print(event.acceleration.z); Serial.println("\n\n");
 }
 
 void loop() {
+  
+    /* periodically process accelerometer values */
+    if (timer_accelerometer.check()) {
+        processAccelerometer(); 
+    }
+    
     /*
      * Send state over CAN
      */
