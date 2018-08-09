@@ -19,14 +19,15 @@
     * _"In teaching others, we teach ourselves"_
 
 ## Organization
-* `Archive/` Older code that have either been phased out due to design changes or code from older cars
-* `Car_Code/` Code for the current car design we have
 * `Libraries/` Library files that are needed to compile our code (you can create a symlink from your Arduino libraries folder to this)
+* `Playground/` Location for testing and proof of concept code
 * `Resources/` Files that might help you as you work on HyTech software projects
-* `Testing_Code/` Files that are used to either test components of the car or different hardware (such as the CAN Bus)
+* `Telemetry/` Telemetry visualization and logging software
+* `Utilities/` Software utilities for testing and programming various systems
+* `Vehicle/` Code for the vehicle's onboard systems
 
 ## More Information
 * [Wiki](https://hytechracing.me.gatech.edu/wiki/Main_Page)
-* [Home Webpage](https://hytechracing.gatech.edu/)
+* [Team site](https://hytechracing.gatech.edu/)
 * [Orgsync](https://orgsync.com/136388/chapter)
 * [Facebook](https://www.facebook.com/HyTechRacing/)
