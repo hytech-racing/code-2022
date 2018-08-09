@@ -1,5 +1,5 @@
-#ifndef __HYTECH17_H__
-#define __HYTECH17_H__
+#ifndef __HYTECH_CAN_H__
+#define __HYTECH_CAN_H__
 
 #include <string.h>
 #include <stdint.h>

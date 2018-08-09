@@ -3,7 +3,7 @@
  * Created by Ryan Gallaway, December 1, 2016.
  */
 
-#include "HyTech17.h"
+#include "HyTech_CAN.h"
 
 MC_digital_input_status::MC_digital_input_status() {
     message = {};

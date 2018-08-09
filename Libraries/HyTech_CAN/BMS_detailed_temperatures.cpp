@@ -3,7 +3,7 @@
  * Created by Nathan Cheek, December 17, 2017.
  */
 
-#include "HyTech17.h"
+#include "HyTech_CAN.h"
 
 BMS_detailed_temperatures::BMS_detailed_temperatures() {
     message = {};

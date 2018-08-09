@@ -3,7 +3,7 @@
  * Created by Shrivathsav Seshan, February 7, 2017.
  */
 
-#include "HyTech17.h"
+#include "HyTech_CAN.h"
 
 BMS_temperatures::BMS_temperatures() {
     message = {};

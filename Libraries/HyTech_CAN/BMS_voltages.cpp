@@ -3,7 +3,7 @@
  * Created by Shrivathsav Seshan, January 10, 2017.
  */
 
-#include "HyTech17.h"
+#include "HyTech_CAN.h"
 
 BMS_voltages::BMS_voltages() {
     message = {};

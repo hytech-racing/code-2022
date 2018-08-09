@@ -31,7 +31,7 @@
 #include <ADC_SPI.h>
 #include <Arduino.h>
 #include <FlexCAN.h>
-#include <HyTech17.h>
+#include <HyTech_CAN.h>
 #include <kinetis_flexcan.h>
 #include <LT_SPI.h>
 #include <LTC68042.h>

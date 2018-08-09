@@ -5,7 +5,7 @@
  */
 
 #include <FlexCAN.h>
-#include <HyTech17.h>
+#include <HyTech_CAN.h>
 
 FlexCAN CAN(500000);
 static CAN_message_t msg_tx;

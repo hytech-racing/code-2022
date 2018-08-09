@@ -3,7 +3,7 @@
  * Created by Ryan Gallaway, December 1, 2016.
  */
 
-#include "HyTech17.h"
+#include "HyTech_CAN.h"
 
 MC_analog_input_voltages::MC_analog_input_voltages() {
     message = {};

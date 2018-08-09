@@ -3,7 +3,7 @@
  * Created by Charith (Karvin) Dassanayake, March 10, 2017.
  */
 
-#include "HyTech17.h"
+#include "HyTech_CAN.h"
 
 /*  Blank Constructor for FCU_readings
  *

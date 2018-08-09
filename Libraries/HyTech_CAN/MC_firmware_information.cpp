@@ -3,7 +3,7 @@
  * Created by Nathan Cheek, November 23, 2016.
  */
 
-#include "HyTech17.h"
+#include "HyTech_CAN.h"
 
 MC_firmware_information::MC_firmware_information() {
     message = {};

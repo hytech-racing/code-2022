@@ -3,7 +3,7 @@
  */
 
 #include <FlexCAN.h>
-#include "HyTech17.h"
+#include "HyTech_CAN.h"
 #include <Metro.h>
 
 #define CHARGE_ENABLE A1

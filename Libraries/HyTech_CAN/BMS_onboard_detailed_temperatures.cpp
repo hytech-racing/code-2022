@@ -3,7 +3,7 @@
  * Created by Yvonne Yeh, February 8, 2018.
  */
 
-#include "HyTech17.h"
+#include "HyTech_CAN.h"
 
 BMS_onboard_detailed_temperatures::BMS_onboard_detailed_temperatures() {
     message = {};

@@ -8,7 +8,7 @@
 #include <Adafruit_ADXL345_U.h>
 #include <ADC_SPI.h>
 #include <FlexCAN.h>
-#include <HyTech17.h>
+#include <HyTech_CAN.h>
 #include <kinetis_flexcan.h>
 #include <Metro.h>
 #include <Wire.h>

@@ -3,7 +3,7 @@
  * Created by Nathan Cheek, December 20, 2017.
  */
 
-#include "HyTech17.h"
+#include "HyTech_CAN.h"
 
 BMS_detailed_voltages::BMS_detailed_voltages() {
     message = {};

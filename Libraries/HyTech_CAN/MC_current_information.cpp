@@ -3,7 +3,7 @@
  * Created by Nathan Cheek, November 20, 2016.
  */
 
-#include "HyTech17.h"
+#include "HyTech_CAN.h"
 
 MC_current_information::MC_current_information() {
     message = {};

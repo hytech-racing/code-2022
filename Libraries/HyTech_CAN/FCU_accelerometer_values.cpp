@@ -3,7 +3,7 @@
  * Created by Soohyun Kim, July 12, 2018.
  */
 
-#include "HyTech17.h"
+#include "HyTech_CAN.h"
 
 FCU_accelerometer_values::FCU_accelerometer_values() {
    message = {};

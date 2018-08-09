@@ -3,7 +3,7 @@
  * Created by Shrivathsav Seshan, Feb 16, 2017.
  */
 
-#include "HyTech17.h"
+#include "HyTech_CAN.h"
 
 BMS_status::BMS_status() {
     message = {};

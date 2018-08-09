@@ -3,7 +3,7 @@
  * Created by Nathan Cheek, December 22, 2017.
  */
 
-#include "HyTech17.h"
+#include "HyTech_CAN.h"
 
 FCU_status::FCU_status() {
     message = {};

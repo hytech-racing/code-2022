@@ -1,6 +1,6 @@
 ![HyTech logo](https://hytechracing.gatech.edu/images/hytech_logo_small.png)
 
-# HyTech17 Library
+# HyTech_CAN Library
 This library serves as a central location for ECU state IDs, CAN message IDs, and CAN message parsers.
 ## Getting started
 You will need to add this directory to your Arduino libraries directory. The preferred way to do this is with a symlink to this directory's location in the cloned repository. This way it will be updated whenever you pull updates from this repository.

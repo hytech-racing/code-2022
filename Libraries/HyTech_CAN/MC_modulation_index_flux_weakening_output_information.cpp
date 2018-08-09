@@ -3,7 +3,7 @@
  * Created by Ryan Gallaway, December 1, 2016.
  */
 
-#include "HyTech17.h"
+#include "HyTech_CAN.h"
 
 MC_modulation_index_flux_weakening_output_information::MC_modulation_index_flux_weakening_output_information() {
     message = {};

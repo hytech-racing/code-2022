@@ -1,5 +1,5 @@
 #include <FlexCAN.h>
-#include "HyTech17.h"
+#include "HyTech_CAN.h"
 #include "UserInterface.h"
 
 FlexCAN CAN(500000);

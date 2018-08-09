@@ -3,7 +3,7 @@
  * Created by Nathan Cheek, November 22, 2016.
  */
 
-#include "HyTech17.h"
+#include "HyTech_CAN.h"
 
 MC_motor_position_information::MC_motor_position_information() {
     message = {};
