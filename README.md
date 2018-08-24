@@ -1,6 +1,6 @@
 ![HyTech logo](https://hytechracing.gatech.edu/images/hytech_logo_small.png)
 
-# 2018 Code
+# 2019 Code
 
 ## Getting Started with this git repository
 1. Download and install [Github Desktop](https://desktop.github.com/) (basic) or [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) (advanced)
@@ -12,21 +12,22 @@
 2. Create a Github account if you don't already have one
 3. Talk to your subteam lead to be added to your respective team on the Github organization
 4. Clone this repository to your computer
-    * SSH: git@github.com:hytech-racing/code-2018.git
-    * HTTPS: https://github.com/hytech-racing/code-2018.git
+    * SSH: git@github.com:hytech-racing/code-2019.git
+    * HTTPS: https://github.com/hytech-racing/code-2019.git
 5. Make sure to refer to and contribute to the repository Wiki whenever you can
     * This is accessible in the repo toolbar (in between _Projects_ and _Pulse_)
     * _"In teaching others, we teach ourselves"_
 
 ## Organization
-* `Archive/` Older code that have either been phased out due to design changes or code from older cars
-* `Car_Code/` Code for the current car design we have
 * `Libraries/` Library files that are needed to compile our code (you can create a symlink from your Arduino libraries folder to this)
+* `Playground/` Location for testing and proof of concept code
 * `Resources/` Files that might help you as you work on HyTech software projects
-* `Testing_Code/` Files that are used to either test components of the car or different hardware (such as the CAN Bus)
+* `Telemetry/` Telemetry visualization and logging software
+* `Utilities/` Software utilities for testing and programming various systems
+* `Vehicle/` Code for the vehicle's onboard systems
 
 ## More Information
 * [Wiki](https://hytechracing.me.gatech.edu/wiki/Main_Page)
-* [Home Webpage](https://hytechracing.gatech.edu/)
-* [Org Sync](https://orgsync.com/136388/chapter)
-* [Our Facebook](https://www.facebook.com/HyTechRacing/)
+* [Team site](https://hytechracing.gatech.edu/)
+* [Orgsync](https://orgsync.com/136388/chapter)
+* [Facebook](https://www.facebook.com/HyTechRacing/)

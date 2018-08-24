@@ -1,1 +1,0 @@
-/usr/bin/c++  -g   CMakeFiles/BlinkUnitTesting.dir/main.cpp.o CMakeFiles/BlinkUnitTesting.dir/Blink.cpp.o  -o BlinkUnitTesting 
