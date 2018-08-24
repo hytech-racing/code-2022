@@ -30,7 +30,7 @@ void parse_can_message() {                                              // ISR
   logger.print(msg.id, HEX);
   logger.print(", ");
   for (int i=0; i<8; i++) {
-    logger.print(msg.buf[0], HEX);
+    logger.print(msg.buf[i], HEX);
     logger.print(" ");
   }
   logger.println();
