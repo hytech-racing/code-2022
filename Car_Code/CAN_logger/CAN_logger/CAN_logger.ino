@@ -14,17 +14,20 @@ void setup() {
     attachInterruptVector(IRQ_CAN_MESSAGE, parse_can_message);          // Attaches parse_can_message() as ISR
     FLEXCAN0_IMASK1 = FLEXCAN_IMASK1_BUF5M;                             // Allows "CAN message arrived" bit in flag register to throw interrupt
 
+    Serial.begin(9600);
     CAN.begin();                                                        // Begin CAN
     SD.begin();                                                         // Begin Arduino SD API
     pinMode(10, OUTPUT);                                                // Initialize pin 10 as output; this is necessary for the SD Library
     logger = SD.open("sample.txt", FILE_WRITE);                         // Open file for writing.  Code revision necessary to record distinct sessions
     logger.println("time (uS), msg.id, data");                          // Print heading to the file.
+    logger.flush();
 }
 
 void loop() {
 }
 
 void parse_can_message() {                                              // ISR
+  Serial.println("Received!!");
   CAN.read(msg);
   logger.printf("%d, ", micros());
   logger.print(msg.id, HEX);
