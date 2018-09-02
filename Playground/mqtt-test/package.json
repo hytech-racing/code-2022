@@ -1,0 +1,22 @@
+{
+  "name": "mqtt-test",
+  "version": "1.0.0",
+  "description": "Test server for viewing MQTT messages",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hytech-racing/code-2019.git"
+  },
+  "author": "Ryan Gallaway",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hytech-racing/code-2019/issues"
+  },
+  "homepage": "https://github.com/hytech-racing/code-2019#readme",
+  "dependencies": {
+    "mqtt": "^2.18.8"
+  }
+}
