@@ -33,8 +33,6 @@ void loop() {
             Serial.print(" ");
         }
         Serial.println();
-        digitalWrite(13, HIGH);
-        timer_light.reset();
     }
     while (Can0.read(msg)) { // Receive a message on CAN
         Serial.print("Received 0x");
