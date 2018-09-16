@@ -7,7 +7,7 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_ADXL345_U.h>
 #include <ADC_SPI.h>
-#include <FlexCAN.h>
+#include <HyTech_FlexCAN.h>
 #include <HyTech_CAN.h>
 #include <kinetis_flexcan.h>
 #include <Metro.h>

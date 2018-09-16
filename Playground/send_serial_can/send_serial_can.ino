@@ -1,4 +1,4 @@
-#include <FlexCAN.h>
+#include <HyTech_FlexCAN.h>
 #include "HyTech17.h"
 
 #define XBEE_PKT_LEN 15

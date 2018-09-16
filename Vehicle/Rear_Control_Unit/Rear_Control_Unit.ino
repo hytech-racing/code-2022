@@ -5,7 +5,7 @@
  * Send wireless telemetry data via XBee.
  * Configured for Rear Control Unit rev5
  */
-#include <FlexCAN.h>
+#include <HyTech_FlexCAN.h>
 #include <HyTech_CAN.h>
 #include <kinetis_flexcan.h>
 #include <Metro.h>

@@ -14,7 +14,7 @@
 //#include <stdint.h>
 //#include <ctype.h>
 
-#include <FlexCAN.h>
+#include <HyTech_FlexCAN.h>
 #include <HyTech17.h>
 
 //#ifndef TRUE

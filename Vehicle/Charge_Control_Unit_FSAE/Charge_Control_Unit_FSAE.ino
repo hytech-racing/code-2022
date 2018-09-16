@@ -2,7 +2,7 @@
  * HyTech 2018 FSAE Vehicle Charge Control Unit
  */
 
-#include <FlexCAN.h>
+#include <HyTech_FlexCAN.h>
 #include "HyTech_CAN.h"
 #include <Metro.h>
 

@@ -30,7 +30,7 @@
 
 #include <ADC_SPI.h>
 #include <Arduino.h>
-#include <FlexCAN.h>
+#include <HyTech_FlexCAN.h>
 #include <HyTech_CAN.h>
 #include <kinetis_flexcan.h>
 #include <LT_SPI.h>
