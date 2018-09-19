@@ -1,11 +1,11 @@
 /*
- * HyTech 2018 Vehicle Rear Control Unit
+ * HyTech 2019 Vehicle Rear Control Unit
  * Monitor Shutdown Circuit initialization.
  * Control power to motor controller, fans, and pump.
  * Send wireless telemetry data via XBee.
  * Configured for Rear Control Unit rev5
  */
-#include <FlexCAN.h>
+#include <HyTech_FlexCAN.h>
 #include <HyTech_CAN.h>
 #include <kinetis_flexcan.h>
 #include <Metro.h>
@@ -100,8 +100,9 @@ void setup() {
     pinMode(SSR_BRAKE_LIGHT, OUTPUT);
     pinMode(SSR_INVERTER, OUTPUT);
 
-    Serial.begin(115200);
-    CAN.begin();
+    Serial.begin(115200); // Init serial for PC communication
+    XB.begin(115200); // Init serial for XBee communication
+    CAN.begin(); // Init CAN for vehicle communication
 
     /* Configure CAN rx interrupt */
     interrupts();
@@ -110,7 +111,6 @@ void setup() {
     FLEXCAN0_IMASK1 = FLEXCAN_IMASK1_BUF5M;
     /* Configure CAN rx interrupt */
 
-    XB.begin(115200);
     delay(100);
     Serial.println("CAN system, serial communication, and XBee initialized");
 
@@ -166,18 +166,6 @@ void loop() {
         xb_msg.len = sizeof(CAN_message_rcu_status_t);
         xb_msg.id = ID_RCU_STATUS;
         write_xbee_data();
-        /*if (!rcu_status.get_bms_ok_high() && millis() > 3500) {
-            XB.println("RCU BMS FAULT: detected");
-        }
-        if (!rcu_status.get_imd_okhs_high() && millis() > 3500) {
-            XB.println("RCU IMD FAULT: detected");
-        }
-        XB.print("RCU STATE: ");
-        XB.println(rcu_status.get_state());
-        XB.print("GLV BATT VOLTAGE: ");
-        XB.println(rcu_status.get_glv_battery_voltage() / (double) 100, 2);
-        XB.print("BMS IMD LATCHED: ");
-        XB.println(rcu_status.get_bms_imd_latched());*/
     }
 
     /*
@@ -357,14 +345,6 @@ void send_xbee() {
         xb_msg.len = sizeof(CAN_message_mc_temperatures_1_t);
         xb_msg.id = ID_MC_TEMPERATURES_1;
         write_xbee_data();
-        /*XB.print("MODULE A TEMP: ");
-        XB.println(mc_temperatures_1.get_module_a_temperature() / (double) 10, 1);
-        XB.print("MODULE B TEMP: ");
-        XB.println(mc_temperatures_1.get_module_b_temperature() / (double) 10, 1);
-        XB.print("MODULE C TEMP: ");
-        XB.println(mc_temperatures_1.get_module_c_temperature() / (double) 10, 1);
-        XB.print("GATE DRIVER BOARD TEMP: ");
-        XB.println(mc_temperatures_1.get_gate_driver_board_temperature() / (double) 10, 1);*/
     }
 
     if (timer_debug_rms_temperatures_3.check()) {
@@ -372,14 +352,6 @@ void send_xbee() {
         xb_msg.len = sizeof(CAN_message_mc_temperatures_3_t);
         xb_msg.id = ID_MC_TEMPERATURES_3;
         write_xbee_data();
-        /*//XB.print("RTD 4 TEMP: "); // These aren't needed since we aren't using RTDs
-        //XB.println(mc_temperatures_3.get_rtd_4_temperature());
-        //XB.print("RTD 5 TEMP: ");
-        //XB.println(mc_temperatures_3.get_rtd_5_temperature());
-        XB.print("MOTOR TEMP: ");
-        XB.println(mc_temperatures_3.get_motor_temperature() / (double) 10, 1);
-        XB.print("TORQUE SHUDDER: ");
-        XB.println(mc_temperatures_3.get_torque_shudder() / (double) 10, 1);*/
     }
 
     if (timer_debug_rms_motor_position_information.check()) {
@@ -387,14 +359,6 @@ void send_xbee() {
         xb_msg.len = sizeof(CAN_message_mc_motor_position_information_t);
         xb_msg.id = ID_MC_MOTOR_POSITION_INFORMATION;
         write_xbee_data();
-        /*XB.print("MOTOR ANGLE: ");
-        XB.println(mc_motor_position_information.get_motor_angle());
-        XB.print("MOTOR SPEED: ");
-        XB.println(mc_motor_position_information.get_motor_speed());
-        XB.print("ELEC OUTPUT FREQ: ");
-        XB.println(mc_motor_position_information.get_electrical_output_frequency());
-        XB.print("DELTA RESOLVER FILT: ");
-        XB.println(mc_motor_position_information.get_delta_resolver_filtered());*/
     }
 
     if (timer_debug_rms_current_information.check()) {
@@ -402,14 +366,6 @@ void send_xbee() {
         xb_msg.len = sizeof(CAN_message_mc_current_information_t);
         xb_msg.id = ID_MC_CURRENT_INFORMATION;
         write_xbee_data();
-        /*XB.print("PHASE A CURRENT: ");
-        XB.println(mc_current_information.get_phase_a_current() / (double) 10, 1);
-        XB.print("PHASE B CURRENT: ");
-        XB.println(mc_current_information.get_phase_b_current() / (double) 10, 1);
-        XB.print("PHASE C CURRENT: ");
-        XB.println(mc_current_information.get_phase_c_current() / (double) 10, 1);
-        XB.print("DC BUS CURRENT: ");
-        XB.println(mc_current_information.get_dc_bus_current() / (double) 10, 1);*/
     }
 
     if (timer_debug_rms_voltage_information.check()) {
@@ -417,14 +373,6 @@ void send_xbee() {
         xb_msg.len = sizeof(CAN_message_mc_voltage_information_t);
         xb_msg.id = ID_MC_VOLTAGE_INFORMATION;
         write_xbee_data();
-        /*XB.print("DC BUS VOLTAGE: ");
-        XB.println(mc_voltage_information.get_dc_bus_voltage() / (double) 10, 1);
-        XB.print("OUTPUT VOLTAGE: ");
-        XB.println(mc_voltage_information.get_output_voltage() / (double) 10, 1);
-        XB.print("PHASE AB VOLTAGE: ");
-        XB.println(mc_voltage_information.get_phase_ab_voltage() / (double) 10, 1);
-        XB.print("PHASE BC VOLTAGE: ");
-        XB.println(mc_voltage_information.get_phase_bc_voltage() / (double) 10, 1);*/
     }
 
     if (timer_debug_rms_internal_states.check()) {
@@ -432,22 +380,6 @@ void send_xbee() {
         xb_msg.len = sizeof(CAN_message_mc_internal_states_t);
         xb_msg.id = ID_MC_INTERNAL_STATES;
         write_xbee_data();
-        /*XB.print("VSM STATE: ");
-        XB.println(mc_internal_states.get_vsm_state());
-        XB.print("INVERTER STATE: ");
-        XB.println(mc_internal_states.get_inverter_state());
-        XB.print("INVERTER RUN MODE: ");
-        XB.println(mc_internal_states.get_inverter_run_mode());
-        XB.print("INVERTER ACTIVE DISCHARGE STATE: ");
-        XB.println(mc_internal_states.get_inverter_active_discharge_state());
-        XB.print("INVERTER COMMAND MODE: ");
-        XB.println(mc_internal_states.get_inverter_command_mode());
-        XB.print("INVERTER ENABLE: ");
-        XB.println(mc_internal_states.get_inverter_enable_state());
-        XB.print("INVERTER LOCKOUT: ");
-        XB.println(mc_internal_states.get_inverter_enable_lockout());
-        XB.print("DIRECTION COMMAND: ");
-        XB.println(mc_internal_states.get_direction_command());*/
     }
 
     if (timer_debug_rms_fault_codes.check()) {
@@ -455,14 +387,6 @@ void send_xbee() {
         xb_msg.len = sizeof(CAN_message_mc_fault_codes_t);
         xb_msg.id = ID_MC_FAULT_CODES;
         write_xbee_data();
-        /*XB.print("POST FAULT LO: 0x");
-        XB.println(mc_fault_codes.get_post_fault_lo(), HEX);
-        XB.print("POST FAULT HI: 0x");
-        XB.println(mc_fault_codes.get_post_fault_hi(), HEX);
-        XB.print("RUN FAULT LO: 0x");
-        XB.println(mc_fault_codes.get_run_fault_lo(), HEX);
-        XB.print("RUN FAULT HI: 0x");
-        XB.println(mc_fault_codes.get_run_fault_hi(), HEX);*/
     }
 
     if (timer_debug_rms_torque_timer_information.check()) {
@@ -470,12 +394,6 @@ void send_xbee() {
         xb_msg.len = sizeof(CAN_message_mc_torque_timer_information_t);
         xb_msg.id = ID_MC_TORQUE_TIMER_INFORMATION;
         write_xbee_data();
-        /*XB.print("COMMANDED TORQUE: ");
-        XB.println(mc_torque_timer_information.get_commanded_torque() / (double) 10, 1);
-        XB.print("TORQUE FEEDBACK: ");
-        XB.println(mc_torque_timer_information.get_torque_feedback());
-        XB.print("RMS UPTIME: ");
-        XB.println(mc_torque_timer_information.get_power_on_timer() * .003, 0);*/
     }
 
     if (timer_debug_bms_voltages.check()) {
@@ -483,14 +401,6 @@ void send_xbee() {
         xb_msg.len = sizeof(CAN_message_bms_voltages_t);
         xb_msg.id = ID_BMS_VOLTAGES;
         write_xbee_data();
-        /*XB.print("BMS VOLTAGE AVERAGE: ");
-        XB.println(bms_voltages.get_average() / (double) 10000, 4);
-        XB.print("BMS VOLTAGE LOW: ");
-        XB.println(bms_voltages.get_low() / (double) 10000, 4);
-        XB.print("BMS VOLTAGE HIGH: ");
-        XB.println(bms_voltages.get_high() / (double) 10000, 4);
-        XB.print("BMS VOLTAGE TOTAL: ");
-        XB.println(bms_voltages.get_total() / (double) 100, 2);*/
     }
 
     if (timer_debug_bms_detailed_voltages.check()) {
@@ -509,12 +419,6 @@ void send_xbee() {
         xb_msg.len = sizeof(CAN_message_bms_temperatures_t);
         xb_msg.id = ID_BMS_TEMPERATURES;
         write_xbee_data();
-        /*XB.print("BMS AVERAGE TEMPERATURE: ");
-        XB.println(bms_temperatures.get_average_temperature() / (double) 100, 2);
-        XB.print("BMS LOW TEMPERATURE: ");
-        XB.println(bms_temperatures.get_low_temperature() / (double) 100, 2);
-        XB.print("BMS HIGH TEMPERATURE: ");
-        XB.println(bms_temperatures.get_high_temperature() / (double) 100, 2);*/
     }
 
     if (timer_debug_bms_detailed_temperatures.check()) {
@@ -531,12 +435,6 @@ void send_xbee() {
         xb_msg.len = sizeof(CAN_message_bms_status_t);
         xb_msg.id = ID_BMS_STATUS;
         write_xbee_data();
-        /*XB.print("BMS STATE: ");
-        XB.println(bms_status.get_state());
-        XB.print("BMS ERROR FLAGS: 0x");
-        XB.println(bms_status.get_error_flags(), HEX);
-        XB.print("BMS CURRENT: ");
-        XB.println(bms_status.get_current() / (double) 100, 2);*/
     }
 
     if (timer_debug_fcu_status.check()) {
@@ -544,10 +442,6 @@ void send_xbee() {
         xb_msg.len = sizeof(CAN_message_fcu_status_t);
         xb_msg.id = ID_FCU_STATUS;
         write_xbee_data();
-        /*XB.print("FCU BRAKE ACT: ");
-        XB.println(fcu_status.get_brake_pedal_active());
-        XB.print("FCU STATE: ");
-        XB.println(fcu_status.get_state());*/
     }
 
     if (timer_debug_fcu_readings.check()) {
@@ -562,17 +456,5 @@ void send_xbee() {
         xb_msg.len = sizeof(CAN_message_mc_command_message_t);
         xb_msg.id = ID_MC_COMMAND_MESSAGE;
         write_xbee_data();
-        /*XB.print("CMD_MSG TORQUE COMMAND: ");
-        XB.println(mc_command_message.get_torque_command() / (double) 10, 1);
-        XB.print("CMD_MSG ANGULAR VELOCITY: ");
-        XB.println(mc_command_message.get_angular_velocity());
-        XB.print("CMD_MSG DIRECTION: ");
-        XB.println(mc_command_message.get_direction());
-        XB.print("CMD_MSG INVERTER ENABLE: ");
-        XB.println(mc_command_message.get_inverter_enable());
-        XB.print("CMD_MSG DISCHARGE ENABLE: ");
-        XB.println(mc_command_message.get_discharge_enable());
-        XB.print("CMD_MSG COMMANDED TORQUE LIMIT: ");
-        XB.println(mc_command_message.get_commanded_torque_limit() / (double) 10, 1);*/
     }
 }

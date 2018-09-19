@@ -1,5 +1,5 @@
 /*
- * HyTech 2018 Vehicle Front Control Unit
+ * HyTech 2019 Vehicle Front Control Unit
  * Interface with dashboard lights, buttons, and buzzer.
  * Read pedal sensor values and communicate with motor controller.
  * Configured for Front Control Unit rev7
@@ -7,7 +7,7 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_ADXL345_U.h>
 #include <ADC_SPI.h>
-#include <FlexCAN.h>
+#include <HyTech_FlexCAN.h>
 #include <HyTech_CAN.h>
 #include <kinetis_flexcan.h>
 #include <Metro.h>
