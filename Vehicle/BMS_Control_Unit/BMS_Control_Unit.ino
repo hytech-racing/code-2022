@@ -1,5 +1,5 @@
 /*
- * HyTech 2018 BMS Control Unit
+ * HyTech 2019 BMS Control Unit
  * Init 2017-04-11
  * Configured for HV Board Rev 4
  * Monitors cell voltages and temperatures, sends BMS_OK signal to close Shutdown Circuit
@@ -30,7 +30,7 @@
 
 #include <ADC_SPI.h>
 #include <Arduino.h>
-#include <FlexCAN.h>
+#include <HyTech_FlexCAN.h>
 #include <HyTech_CAN.h>
 #include <kinetis_flexcan.h>
 #include <LT_SPI.h>

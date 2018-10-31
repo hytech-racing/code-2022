@@ -2,7 +2,7 @@
  * Test program that sends and receives CAN messages. Use this to test if CAN Bus is operational.
  * Created by Nathan Cheek, December 20, 2017
  */
-#include <FlexCAN.h>
+#include <HyTech_FlexCAN.h>
 #include <Metro.h>
 
 FlexCAN CAN(500000);
@@ -30,19 +30,17 @@ void loop() {
         Serial.print(msg.id, HEX);
         Serial.print(": ");
         for (unsigned int i = 0; i < msg.len; i++) {
-            Serial.print(msg.buf[i], HEX);
+            Serial.print(msg.buf[i]);
             Serial.print(" ");
         }
         Serial.println();
-        digitalWrite(13, HIGH);
-        timer_light.reset();
     }
     while (CAN.read(msg)) { // Receive a message on CAN
         Serial.print("Received 0x");
         Serial.print(msg.id, HEX);
         Serial.print(": ");
         for (unsigned int i = 0; i < msg.len; i++) {
-            Serial.print(msg.buf[i], HEX);
+            Serial.print(msg.buf[i]);
             Serial.print(" ");
         }
         Serial.println();
