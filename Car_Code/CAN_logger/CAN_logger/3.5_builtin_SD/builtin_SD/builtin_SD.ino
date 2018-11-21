@@ -15,7 +15,7 @@ void setup()
 {
 
   // Open serial communications and wait for port to open:
-  Serial.begin(9600);
+  Serial.begin(115200);
   CAN.begin();
   SD.begin(BUILTIN_SDCARD);
   logger = SD.open("test.txt", FILE_WRITE);

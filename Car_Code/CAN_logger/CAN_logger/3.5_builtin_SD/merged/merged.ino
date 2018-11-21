@@ -1,39 +1,33 @@
-/*
- * HyTech 2018 Vehicle Rear Control Unit
- * Monitor Shutdown Circuit initialization.
- * Control power to motor controller, fans, and pump.
- * Send wireless telemetry data via XBee.
- * Configured for Rear Control Unit rev5
- */
-#include <HyTech_CAN.h>
+#include <SD.h>
+#include <SPI.h>
 #include <HyTech_FlexCAN.h>
+#include <HyTech_CAN.h>
 #include <kinetis_flexcan.h>
+#include <Wire.h>
+#include <SD.h>
+#include <TimeLib.h>
 #include <Metro.h>
 #include <XBTools.h>
 
-/*
- * Pin definitions
- */
 #define SENSE_12VSUPPLY A3
 #define SENSE_BMS A1
 #define SENSE_IMD A0
 #define SENSE_SHUTDOWN_OUT A2
 #define THERMISTOR A5 // TODO add temperature monitoring
-
-#define XB Serial2
-
-/*
- * Constant definitions
- */
 #define BMS_HIGH 134 // ~3V on BMS_OK line
 #define IMD_HIGH 134 // ~3V on OKHS line
 #define SHUTDOWN_OUT_HIGH 350 // ~5V on SHUTDOWN_C line
 #define XBEE_PKT_LEN 15
 
+#define XB Serial2
+
 Metro timer = Metro(3000);
-/*
- * Global variables
- */
+
+File logger;
+FlexCAN CAN(500000);
+static CAN_message_t msg;
+static CAN_message_t xb_msg;
+
 RCU_status rcu_status;
 MC_command_message mc_command_message;
 MC_temperatures_1 mc_temperatures_1;
@@ -52,47 +46,52 @@ BMS_status bms_status;
 FCU_status fcu_status;
 FCU_readings fcu_readings;
 
-boolean bms_faulting = false;
-boolean imd_faulting = false;
+void setup()
+{
 
-boolean inverter_restart = false; // True when restarting the inverter
+  // Open serial communications and wait for port to open:
+  Serial.begin(115200);
+  CAN.begin();
+  SD.begin(BUILTIN_SDCARD);
+  logger = SD.open("test.txt", FILE_WRITE);
+  XB.begin(115200);
+  delay(100);
 
-FlexCAN CAN(500000);
-static CAN_message_t msg;
-static CAN_message_t xb_msg;
-
-void setup() {
-    
-    Serial.begin(115200);
-    CAN.begin();
-
-    XB.begin(115200);
-    delay(100);
-    Serial.println("CAN system, serial communication, and XBee initialized");
+  //Teensy3Clock.set(xxxxxxx);
+  setSyncProvider(getTeensy3Time);
 }
 
-void loop() {
+void loop()
+{
+  if (CAN.available()) {
+    CAN.read(msg);
+    timestampWrite();
+    logger.print(msg.id, HEX);
+    logger.print(", ");
+    //Serial.print(msg.id, HEX);
+    //Serial.print(", ");
+    
+    for (int i = 0; i < 8; i++) {
+      logger.print(msg.buf[i], HEX);
+      logger.print(" ");
+      //Serial.print(msg.buf[i], HEX);
+      //Serial.print(" ");
+    }
+    
+    logger.println();
+    //Serial.println();
+    logger.flush();
 
-    if (CAN.available()) {
-      parse_can_message();
-    }
-    /*
-     * Handle incoming CAN messages
-     */
-    if (timer.check()) {
+    parse_can_message();
+  }
+  
+  if (timer.check()) {
       send_xbee();
+      rcu_status.write(xb_msg.buf);
+      xb_msg.len = sizeof(CAN_message_rcu_status_t);
+      xb_msg.id = ID_RCU_STATUS;
+      write_xbee_data();
     }
-    /*
-     * Send status over CAN and XBee
-     */
-    
-    if (timer.check()) {
-        rcu_status.write(xb_msg.buf);
-        xb_msg.len = sizeof(CAN_message_rcu_status_t);
-        xb_msg.id = ID_RCU_STATUS;
-        write_xbee_data();
-    }
-    
 }
 
 void parse_can_message() {
@@ -148,57 +147,6 @@ void parse_can_message() {
             bms_detailed_voltages[temp.get_ic_id()][temp.get_group_id()].load(msg.buf);
         }
     }
-}
-
-/**
- * Writes data currently in global xb_msg variable to the Xbee serial bus.
- * Calculates Fletcher checksum and byte-stuffs so that messages are
- * delimited by 0x0 bytes.
- * 
- * returns: number of bytes written to the Xbee serial bus
- */
-int write_xbee_data() {
-    /*
-     * DECODED FRAME STRUCTURE:
-     * [ msg id (4) | msg len (1) | msg contents (8) | checksum (2) ]
-     * ENCODED FRAME STRUCTURE:
-     * [ fletcher (1) | msg id (4) | msg len (1) | msg contents (8) | checksum (2) | delimiter (1) ]
-     */
-    uint8_t xb_buf[XBEE_PKT_LEN];
-    memcpy(xb_buf, &xb_msg.id, sizeof(xb_msg.id));        // msg id
-    memcpy(xb_buf + sizeof(xb_msg.id), &xb_msg.len, sizeof(uint8_t));     // msg len
-    memcpy(xb_buf + sizeof(xb_msg.id) + sizeof(uint8_t), xb_msg.buf, xb_msg.len); // msg contents
-
-    // calculate checksum
-    uint16_t checksum = fletcher16(xb_buf, XBEE_PKT_LEN - 2);
-    Serial.print("CHECKSUM: ");
-    Serial.println(checksum, HEX);
-    memcpy(&xb_buf[XBEE_PKT_LEN - 2], &checksum, sizeof(uint16_t));
-
-    for (int i = 0; i < XBEE_PKT_LEN; i++) {
-      Serial.print(xb_buf[i], HEX);
-      Serial.print(" ");
-    }
-    Serial.println();
-
-    uint8_t cobs_buf[2 + XBEE_PKT_LEN];
-    cobs_encode(xb_buf, XBEE_PKT_LEN, cobs_buf);
-    cobs_buf[XBEE_PKT_LEN+1] = 0x0;
-
-    for (int i = 0; i < XBEE_PKT_LEN+2; i++) {
-      Serial.print(cobs_buf[i], HEX);
-      Serial.print(" ");
-    }
-    Serial.println();
-
-    int written = XB.write(cobs_buf, 2 + XBEE_PKT_LEN);
-    Serial.print("Wrote ");
-    Serial.print(written);
-    Serial.println(" bytes");
-
-    memset(xb_buf, 0, sizeof(CAN_message_t));
-
-    return written;
 }
 
 void send_xbee() {
@@ -426,3 +374,74 @@ void send_xbee() {
         XB.println(mc_command_message.get_commanded_torque_limit() / (double) 10, 1);*/
     
 }
+
+void timestampWrite() {
+  logger.print(hour());
+  writeDigits(minute());
+  writeDigits(second());
+  logger.print(" ");
+  logger.print(day());
+  logger.print(" ");
+  logger.print(month());
+  logger.print(" ");
+  logger.print(year());
+  logger.print("   ");
+}
+
+time_t getTeensy3Time()
+{
+  return Teensy3Clock.get();
+}
+
+void writeDigits(int digits) {
+  // utility function for digital clock display: prints preceding colon and leading 0
+  logger.print(":");
+  if (digits < 10)
+    logger.print('0');
+  logger.print(digits);
+}
+
+int write_xbee_data() {
+    /*
+     * DECODED FRAME STRUCTURE:
+     * [ msg id (4) | msg len (1) | msg contents (8) | checksum (2) ]
+     * ENCODED FRAME STRUCTURE:
+     * [ fletcher (1) | msg id (4) | msg len (1) | msg contents (8) | checksum (2) | delimiter (1) ]
+     */
+    uint8_t xb_buf[XBEE_PKT_LEN];
+    memcpy(xb_buf, &xb_msg.id, sizeof(xb_msg.id));        // msg id
+    memcpy(xb_buf + sizeof(xb_msg.id), &xb_msg.len, sizeof(uint8_t));     // msg len
+    memcpy(xb_buf + sizeof(xb_msg.id) + sizeof(uint8_t), xb_msg.buf, xb_msg.len); // msg contents
+
+    // calculate checksum
+    uint16_t checksum = fletcher16(xb_buf, XBEE_PKT_LEN - 2);
+    Serial.print("CHECKSUM: ");
+    Serial.println(checksum, HEX);
+    memcpy(&xb_buf[XBEE_PKT_LEN - 2], &checksum, sizeof(uint16_t));
+
+    for (int i = 0; i < XBEE_PKT_LEN; i++) {
+      Serial.print(xb_buf[i], HEX);
+      Serial.print(" ");
+    }
+    Serial.println();
+
+    uint8_t cobs_buf[2 + XBEE_PKT_LEN];
+    cobs_encode(xb_buf, XBEE_PKT_LEN, cobs_buf);
+    cobs_buf[XBEE_PKT_LEN+1] = 0x0;
+
+    for (int i = 0; i < XBEE_PKT_LEN+2; i++) {
+      Serial.print(cobs_buf[i], HEX);
+      Serial.print(" ");
+    }
+    Serial.println();
+
+    int written = XB.write(cobs_buf, 2 + XBEE_PKT_LEN);
+    Serial.print("Wrote ");
+    Serial.print(written);
+    Serial.println(" bytes");
+
+    memset(xb_buf, 0, sizeof(CAN_message_t));
+
+    return written;
+}
+
