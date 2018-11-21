@@ -1,5 +1,7 @@
-#include <FlexCAN.h>
-#include <HyTech17.h>
+#include <SD.h>
+#include <SPI.h>
+#include <HyTech_FlexCAN.h>
+#include <HyTech_CAN.h>
 #include <kinetis_flexcan.h>
 #include <Wire.h>
 #include <SD.h>
