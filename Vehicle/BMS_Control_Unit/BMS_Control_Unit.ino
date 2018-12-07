@@ -136,7 +136,8 @@ uint8_t tx_cfg[TOTAL_IC][6]; // data defining how data will be written to daisy 
  * CAN Variables
  */
 FlexCAN CAN(500000);
-static CAN_message_t msg;
+static CAN_message_t rx_msg;
+static CAN_message_t tx_msg;
 
 /**
  * ADC Declaration
@@ -272,48 +273,48 @@ void loop() {
 
     if (timer_can_update_fast.check()) {
 
-        msg.timeout = 4; // Use blocking mode, wait up to 4ms to send each message instead of immediately failing (keep in mind this is slower)
+        tx_msg.timeout = 4; // Use blocking mode, wait up to 4ms to send each message instead of immediately failing (keep in mind this is slower)
 
-        bms_status.write(msg.buf);
-        msg.id = ID_BMS_STATUS;
-        msg.len = sizeof(CAN_message_bms_status_t);
+        bms_status.write(tx_msg.buf);
+        tx_msg.id = ID_BMS_STATUS;
+        tx_msg.len = sizeof(CAN_message_bms_status_t);
         CAN.write(msg);
 
-        msg.timeout = 0;
+        tx_msg.timeout = 0;
 
     }
 
     if (timer_can_update_slow.check()) {
 
-        msg.timeout = 4; // Use blocking mode, wait up to 4ms to send each message instead of immediately failing (keep in mind this is slower)
+        tx_msg.timeout = 4; // Use blocking mode, wait up to 4ms to send each message instead of immediately failing (keep in mind this is slower)
 
-        bms_voltages.write(msg.buf);
-        msg.id = ID_BMS_VOLTAGES;
-        msg.len = sizeof(CAN_message_bms_voltages_t);
-        CAN.write(msg);
+        bms_voltages.write(tx_msg.buf);
+        tx_msg.id = ID_BMS_VOLTAGES;
+        tx_msg.len = sizeof(CAN_message_bms_voltages_t);
+        CAN.write(tx_msg);
 
-        bms_temperatures.write(msg.buf);
-        msg.id = ID_BMS_TEMPERATURES;
-        msg.len = sizeof(CAN_message_bms_temperatures_t);
-        CAN.write(msg);
+        bms_temperatures.write(tx_msg.buf);
+        tx_msg.id = ID_BMS_TEMPERATURES;
+        tx_msg.len = sizeof(CAN_message_bms_temperatures_t);
+        CAN.write(tx_msg);
 
-        msg.id = ID_BMS_DETAILED_VOLTAGES;
-        msg.len = sizeof(CAN_message_bms_detailed_voltages_t);
+        tx_msg.id = ID_BMS_DETAILED_VOLTAGES;
+        tx_msg.len = sizeof(CAN_message_bms_detailed_voltages_t);
         for (int i = 0; i < TOTAL_IC; i++) {
             for (int j = 0; j < 3; j++) {
-                bms_detailed_voltages[i][j].write(msg.buf);
-                CAN.write(msg);
+                bms_detailed_voltages[i][j].write(tx_msg.buf);
+                CAN.write(tx_msg);
             }
         }
 
-        msg.id = ID_BMS_DETAILED_TEMPERATURES;
-        msg.len = sizeof(CAN_message_bms_detailed_temperatures_t);
+        tx_msg.id = ID_BMS_DETAILED_TEMPERATURES;
+        tx_msg.len = sizeof(CAN_message_bms_detailed_temperatures_t);
         for (int i = 0; i < TOTAL_IC; i++) {
-            bms_detailed_temperatures[i].write(msg.buf);
+            bms_detailed_temperatures[i].write(tx_msg.buf);
             CAN.write(msg);
         }
 
-        msg.timeout = 0;
+        tx_msg.timeout = 0;
 
     }
 
@@ -941,8 +942,8 @@ void cfg_set_undervoltage_comparison_voltage(uint16_t voltage) {
 }
 
 void parse_can_message() {
-    while (CAN.read(msg)) {
-        if (msg.id == ID_CCU_STATUS) { // Leave discharging mode if CCU status message is received
+    while (CAN.read(rx_msg)) {
+        if (rx_msg.id == ID_CCU_STATUS) { // Leave discharging mode if CCU status message is received
             if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
                 if (timer_charge_enable_limit.check() || !charge_mode_entered) {
                     charge_mode_entered = true;
@@ -952,7 +953,7 @@ void parse_can_message() {
             timer_charge_timeout.reset();
         }
 
-        if (msg.id == ID_FH_WATCHDOG_TEST) { // stop sending pulse to watchdog timer
+        if (rx_msg.id == ID_FH_WATCHDOG_TEST) { // stop sending pulse to watchdog timer
             fh_watchdog_test = true;
         }
     }
