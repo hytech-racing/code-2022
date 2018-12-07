@@ -228,7 +228,7 @@ void setup() {
  */
 void loop() {
     parse_can_message();
-    
+
     if (timer_charge_timeout.check() && bms_status.get_state() > BMS_STATE_DISCHARGING && !default_charge_mode) { // 1 second timeout - if timeout is reached, disable charging
         Serial.println("Disabling charge mode - CCU timeout");
         bms_status.set_state(BMS_STATE_DISCHARGING);
@@ -271,7 +271,7 @@ void loop() {
     }
 
     if (timer_can_update_fast.check()) {
-        noInterrupts(); // Disable interrupts
+
         msg.timeout = 4; // Use blocking mode, wait up to 4ms to send each message instead of immediately failing (keep in mind this is slower)
 
         bms_status.write(msg.buf);
@@ -280,11 +280,11 @@ void loop() {
         CAN.write(msg);
 
         msg.timeout = 0;
-        interrupts(); // Enable interrupts
+
     }
 
     if (timer_can_update_slow.check()) {
-        noInterrupts(); // Disable interrupts
+
         msg.timeout = 4; // Use blocking mode, wait up to 4ms to send each message instead of immediately failing (keep in mind this is slower)
 
         bms_voltages.write(msg.buf);
@@ -314,10 +314,10 @@ void loop() {
         }
 
         msg.timeout = 0;
-        interrupts(); // Enable interrupts
+
     }
 
-    if (timer_watchdog_timer.check() && !fh_watchdog_test) { // Send alternating keepalive signal to watchdog timer   
+    if (timer_watchdog_timer.check() && !fh_watchdog_test) { // Send alternating keepalive signal to watchdog timer
         watchdog_high = !watchdog_high;
         digitalWrite(WATCHDOG, watchdog_high);
     }
@@ -550,7 +550,7 @@ void process_voltages() {
             consecutive_faults_total_voltage_high += 1;
         }
         Serial.println("VOLTAGE FAULT!!!!!!!!!!!!!!!!!!!");
-    }else { 
+    }else {
         consecutive_faults_total_voltage_high = 0;
     }
 
@@ -586,15 +586,15 @@ void process_cell_temps() { // TODO make work with signed int8_t CAN message (ye
         for (int j = 0; j < THERMISTORS_PER_IC; j++) {
             if (!ignore_cell_therm[ic][j]) {
                 thermTemp = calculate_cell_temp(aux_voltages[ic][j], aux_voltages[ic][5]); // TODO: replace 3 with aux_voltages[ic][5]?
-                
+
                 if (thermTemp < lowTemp) {
                     lowTemp = thermTemp;
                 }
-                
+
                 if (thermTemp > highTemp) {
                     highTemp = thermTemp;
                 }
-                
+
                 bms_detailed_temperatures[ic].set_temperature(j, thermTemp); // Populate CAN message struct
                 totalTemp += thermTemp;
 
@@ -628,7 +628,7 @@ void process_cell_temps() { // TODO make work with signed int8_t CAN message (ye
         if (bms_temperatures.get_high_temperature() > discharge_temp_cell_critical_high) {
             if (consecutive_faults_thermistor >= IGNORE_FAULT_THRESHOLD) {
                 bms_status.set_discharge_overtemp(true);
-                Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!"); 
+                Serial.println("TEMPERATURE FAULT!!!!!!!!!!!!!!!!!!!");
             } else {
                 consecutive_faults_thermistor++;
             }
@@ -648,7 +648,7 @@ void process_cell_temps() { // TODO make work with signed int8_t CAN message (ye
 }
 
 double calculate_cell_temp(double aux_voltage, double v_ref) {
-   /* aux_voltage = (R/(10k+R))*v_ref 
+   /* aux_voltage = (R/(10k+R))*v_ref
     * R = 10k * aux_voltage / (v_ref - aux_voltage)
     */
     aux_voltage /= 10000;
@@ -656,10 +656,10 @@ double calculate_cell_temp(double aux_voltage, double v_ref) {
     //Serial.println(aux_voltage);
     v_ref /= 10000;
     //Serial.print("v ref: ");
-    //Serial.println(v_ref); 
-    double thermistor_resistance = 1e4 * aux_voltage / (v_ref - aux_voltage); 
+    //Serial.println(v_ref);
+    double thermistor_resistance = 1e4 * aux_voltage / (v_ref - aux_voltage);
     //Serial.print("thermistor resistance: ");
-    //Serial.println(thermistor_resistance);  
+    //Serial.println(thermistor_resistance);
    /*
      * Temperature equation (in Kelvin) based on resistance is the following:
      * 1/T = 1/T0 + (1/B) * ln(R/R0)      (R = thermistor resistance)
@@ -670,7 +670,7 @@ double calculate_cell_temp(double aux_voltage, double v_ref) {
      double R0 = 10000;  // Resistance of thermistor at 25C
      double temperature = 1 / ((1 / T0) + (1 / b) * log(thermistor_resistance / R0)) - (double) 273.15;
      //Serial.print("temperature: ");
-     //Serial.println(temperature); 
+     //Serial.println(temperature);
      return (int16_t)(temperature * 100);
 }
 
@@ -688,11 +688,11 @@ void process_onboard_temps() {
                 if (thermTemp < lowTemp) {
                     lowTemp = thermTemp;
                 }
-                
+
                 if (thermTemp > highTemp) {
                     highTemp = thermTemp;
                 }
-                
+
                 bms_onboard_detailed_temperatures[ic].set_temperature(j, thermTemp * 10000); // Populate CAN message struct
                 totalTemp += thermTemp;
 
@@ -702,7 +702,7 @@ void process_onboard_temps() {
                 Serial.print(j);
                 Serial.print(": ");
                 Serial.print(thermTemp / 100, 2);
-                Serial.println(" C"); 
+                Serial.println(" C");
             } else {
                 Serial.print("Ignored PCB thermistor ");
                 Serial.println(j);
@@ -743,7 +743,7 @@ void process_onboard_temps() {
 }
 
 double calculate_onboard_temp(double aux_voltage, double v_ref) {
-   /* aux_voltage = (R/(10k+R))*v_ref 
+   /* aux_voltage = (R/(10k+R))*v_ref
     * R = 10k * aux_voltage / (v_ref - aux_voltage)
     */
     aux_voltage /= 10000;
@@ -751,8 +751,8 @@ double calculate_onboard_temp(double aux_voltage, double v_ref) {
     //Serial.println(aux_voltage);
     v_ref /= 10000;
     //Serial.print("v ref: ");
-    //Serial.println(v_ref); 
-    double thermistor_resistance = 1e4 * aux_voltage / (v_ref - aux_voltage); 
+    //Serial.println(v_ref);
+    double thermistor_resistance = 1e4 * aux_voltage / (v_ref - aux_voltage);
     /*Serial.print("thermistor resistance: ");
     Serial.println(thermistor_resistance); */
    /*
@@ -773,7 +773,7 @@ void process_current() {
      * Maximum positive current (300A) corresponds to 4.5V signal
      * Maximum negative current (-300A) corresponds to 0.5V signal
      * 0A current corresponds to 2.5V signal
-     * 
+     *
      * voltage = read_adc() * 5 / 4095
      * current = (voltage - 2.5) * 300 / 2
      */
@@ -854,7 +854,7 @@ void print_cells() {
             double voltage = cell_voltages[current_ic][i] * 0.0001;
             Serial.print(voltage, 4);
             Serial.print(" Discharging: ");
-            Serial.print(cell_discharging[current_ic][i]); 
+            Serial.print(cell_discharging[current_ic][i]);
             Serial.print(" Voltage difference: ");
             Serial.print(cell_voltages[current_ic][i]-bms_voltages.get_low());
             Serial.print(" Delta To Threshold: ");
