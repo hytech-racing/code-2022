@@ -100,7 +100,8 @@ int16_t MAX_REGEN_TORQUE = 0;
 
 ADC_SPI ADC(ADC_SPI_CS);
 FlexCAN CAN(500000);
-static CAN_message_t msg;
+static CAN_message_t rx_msg;
+static CAN_message_t tx_msg;
 Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
 
 void setup() {
@@ -137,7 +138,7 @@ void setup() {
 }
 
 void setupAccelerometer() {
-      
+
   /* Initialise the sensor */
   if(!accel.begin())
   {
@@ -150,21 +151,19 @@ void setupAccelerometer() {
 }
 
 void processAccelerometer() {
-  /* Get a new sensor event */ 
-  sensors_event_t event; 
+  /* Get a new sensor event */
+  sensors_event_t event;
   accel.getEvent(&event);
-  
+
   /* Read accelerometer values into accelerometer struct */
   fcu_accelerometer_values.set_values(event.acceleration.x, event.acceleration.y, event.acceleration.z);
 
   /* Send msg over CAN */
-  noInterrupts();
-  fcu_accelerometer_values.write(msg.buf);
-  msg.id = ID_FCU_ACCELEROMETER;
-  msg.len = sizeof(CAN_message_fcu_accelerometer_values_t);
-  CAN.write(msg);
-  interrupts();
-  
+  fcu_accelerometer_values.write(tx_msg.buf);
+  tx_msg.id = ID_FCU_ACCELEROMETER;
+  tx_msg.len = sizeof(CAN_message_fcu_accelerometer_values_t);
+  CAN.write(tx_msg);
+
   Serial.print("\n\nACCELEROMETER DATA\n\n");
   Serial.print(event.acceleration.x); Serial.print(", ");
   Serial.print(event.acceleration.y); Serial.print(", ");
@@ -172,33 +171,31 @@ void processAccelerometer() {
 }
 
 void loop() {
-  
+
     /* periodically process accelerometer values */
     if (timer_accelerometer.check()) {
-        processAccelerometer(); 
+        processAccelerometer();
     }
-    
+
     /*
      * Send state over CAN
      */
     if (timer_can_update.check()) {
-        noInterrupts(); // Disable interrupts
 
         // Send Front Control Unit message
         fcu_status.set_accelerator_boost_mode(0);
-        fcu_status.write(msg.buf);
-        msg.id = ID_FCU_STATUS;
-        msg.len = sizeof(CAN_message_fcu_status_t);
-        CAN.write(msg);
+        fcu_status.write(tx_msg.buf);
+        tx_msg.id = ID_FCU_STATUS;
+        tx_msg.len = sizeof(CAN_message_fcu_status_t);
+        CAN.write(tx_msg);
 
         // Send second Front Control Unit message
         read_values(); // Calculate new values to send
-        fcu_readings.write(msg.buf);
-        msg.id = ID_FCU_READINGS;
-        msg.len = sizeof(CAN_message_fcu_readings_t);
-        CAN.write(msg);
+        fcu_readings.write(tx_msg.buf);
+        tx_msg.id = ID_FCU_READINGS;
+        tx_msg.len = sizeof(CAN_message_fcu_readings_t);
+        CAN.write(tx_msg);
 
-        interrupts(); // Enable interrupts
     }
 
     /*
@@ -305,11 +302,11 @@ void loop() {
             if (!rcu_status.get_bms_ok_high()) {
                 calculated_torque = 0;
             }
-            
+
             if (!rcu_status.get_imd_okhs_high()) {
                 calculated_torque = 0;
             }
-            
+
             if (debug && timer_debug_torque.check()) {
                 Serial.print("FCU REQUESTED TORQUE: ");
                 Serial.println(calculated_torque);
@@ -318,15 +315,13 @@ void loop() {
                 Serial.print("FCU IMPLAUS BRAKE: ");
                 Serial.println(fcu_status.get_brake_implausibility());
             }
-            
+
             mc_command_message.set_torque_command(calculated_torque);
 
-            noInterrupts(); // Disable interrupts
-            mc_command_message.write(msg.buf);
-            msg.id = ID_MC_COMMAND_MESSAGE;
-            msg.len = 8;
-            CAN.write(msg);
-            interrupts(); // Enable interrupts
+            mc_command_message.write(tx_msg.buf);
+            tx_msg.id = ID_MC_COMMAND_MESSAGE;
+            tx_msg.len = 8;
+            CAN.write(tx_msg);
         }
         break;
     }
@@ -339,12 +334,10 @@ void loop() {
         if (fcu_status.get_state() >= FCU_STATE_ENABLING_INVERTER) {
             mc_command_message.set_inverter_enable(true);
         }
-        noInterrupts(); // Disable interrupts
-        mc_command_message.write(msg.buf);
-        msg.id = ID_MC_COMMAND_MESSAGE;
-        msg.len = 8;
-        CAN.write(msg);
-        interrupts(); // Enable interrupts
+        mc_command_message.write(tx_tx_msg.buf);
+        tx_msg.id = ID_MC_COMMAND_MESSAGE;
+        tx_msg.len = 8;
+        CAN.write(tx_msg);
     }
 
     /*
@@ -460,13 +453,13 @@ void loop() {
 }
 
 void parse_can_message() {
-    while (CAN.read(msg)) {
-        if (msg.id == ID_RCU_STATUS) {
-            rcu_status.load(msg.buf);
+    while (CAN.read(rx_msg)) {
+        if (rx_msg.id == ID_RCU_STATUS) {
+            rcu_status.load(rx_msg.buf);
         }
 
-        if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
-            MC_voltage_information mc_voltage_information = MC_voltage_information(msg.buf);
+        if (rx_msg.id == ID_MC_VOLTAGE_INFORMATION) {
+            MC_voltage_information mc_voltage_information = MC_voltage_information(rx_msg.buf);
             if (mc_voltage_information.get_dc_bus_voltage() >= MIN_HV_VOLTAGE && fcu_status.get_state() == FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
                 set_state(FCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
             }
@@ -475,15 +468,15 @@ void parse_can_message() {
             }
         }
 
-        if (msg.id == ID_MC_INTERNAL_STATES) {
-            MC_internal_states mc_internal_states = MC_internal_states(msg.buf);
+        if (rx_msg.id == ID_MC_INTERNAL_STATES) {
+            MC_internal_states mc_internal_states = MC_internal_states(rx_msg.buf);
             if (mc_internal_states.get_inverter_enable_state() && fcu_status.get_state() == FCU_STATE_ENABLING_INVERTER) {
                 set_state(FCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
             }
         }
 
-        if (msg.id == ID_BMS_STATUS) {
-            bms_status.load(msg.buf);
+        if (rx_msg.id == ID_BMS_STATUS) {
+            bms_status.load(rx_msg.buf);
         }
     }
 }
@@ -595,11 +588,9 @@ void set_start_led(uint8_t type) {
  * Also used manually by the driver to clear other motor controller faults
  */
 void reset_inverter() {
-    noInterrupts(); // Disable interrupts
-    msg.id = ID_RCU_RESTART_MC;
-    msg.len = 1;
-    CAN.write(msg);
-    interrupts(); // Enable interrupts
+    tx_msg.id = ID_RCU_RESTART_MC;
+    tx_msg.len = 1;
+    CAN.write(tx_msg);
 }
 
 /*
@@ -622,19 +613,19 @@ void set_state(uint8_t new_state) {
         Serial.println("FCU Enabling inverter");
         noInterrupts(); // Disable interrupts
         MC_command_message mc_command_message = MC_command_message(0, 0, 0, 1, 0, 0);
-        msg.id = 0xC0;
-        msg.len = 8;
+        tx_msg.id = 0xC0;
+        tx_msg.len = 8;
         for(int i = 0; i < 10; i++) {
-            mc_command_message.write(msg.buf); // many enable commands
-            CAN.write(msg);
+            mc_command_message.write(tx_msg.buf); // many enable commands
+            CAN.write(tx_msg);
         }
         mc_command_message.set_inverter_enable(false);
-        mc_command_message.write(msg.buf); // disable command
-        CAN.write(msg);
+        mc_command_message.write(tx_msg.buf); // disable command
+        CAN.write(tx_msg);
         for(int i = 0; i < 10; i++) {
             mc_command_message.set_inverter_enable(true);
-            mc_command_message.write(msg.buf); // many more enable commands
-            CAN.write(msg);
+            mc_command_message.write(tx_msg.buf); // many more enable commands
+            CAN.write(tx_msg);
         }
         interrupts(); // Enable interrupts
         Serial.println("FCU Sent enable command");
