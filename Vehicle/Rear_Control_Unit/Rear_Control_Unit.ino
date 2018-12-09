@@ -90,7 +90,8 @@ boolean imd_faulting = false;
 boolean inverter_restart = false; // True when restarting the inverter
 
 FlexCAN CAN(500000);
-static CAN_message_t msg;
+static CAN_message_t rx_msg;
+static CAN_message_t tx_msg;
 static CAN_message_t xb_msg;
 
 void setup() {
@@ -153,10 +154,10 @@ void loop() {
     if (timer_status_send.check()) {
         noInterrupts(); // Disable interrupts
 
-        rcu_status.write(msg.buf);
-        msg.id = ID_RCU_STATUS;
-        msg.len = sizeof(CAN_message_rcu_status_t);
-        CAN.write(msg);
+        rcu_status.write(tx_msg.buf);
+        tx_msg.id = ID_RCU_STATUS;
+        tx_msg.len = sizeof(CAN_message_rcu_status_t);
+        CAN.write(tx_msg);
 
         interrupts(); // Enable interrupts
     }
@@ -225,15 +226,15 @@ void loop() {
 }
 
 void parse_can_message() {
-    while (CAN.read(msg)) {
-        if (msg.id == ID_FCU_STATUS) {
-            fcu_status.load(msg.buf);
+    while (CAN.read(rx_msg)) {
+        if (rx_msg.id == ID_FCU_STATUS) {
+            fcu_status.load(rx_msg.buf);
             digitalWrite(SSR_BRAKE_LIGHT, fcu_status.get_brake_pedal_active());
         }
-        if (msg.id == ID_FCU_READINGS) {
-            fcu_readings.load(msg.buf);
+        if (rx_msg.id == ID_FCU_READINGS) {
+            fcu_readings.load(rx_msg.buf);
         }
-        if (msg.id == ID_RCU_RESTART_MC) { // Restart inverter when the FCU restarts
+        if (rx_msg.id == ID_RCU_RESTART_MC) { // Restart inverter when the FCU restarts
             if (millis() > 1000) { // Ignore restart messages when this microcontroller has also just booted up
                 inverter_restart = true;
                 digitalWrite(SSR_INVERTER, LOW);
@@ -241,49 +242,49 @@ void parse_can_message() {
                 rcu_status.set_inverter_powered(false);
             }
         }
-        if (msg.id == ID_MC_COMMAND_MESSAGE) {
-            mc_command_message.load(msg.buf);
+        if (rx_msg.id == ID_MC_COMMAND_MESSAGE) {
+            mc_command_message.load(rx_msg.buf);
         }
-        if (msg.id == ID_MC_TEMPERATURES_1) {
-            mc_temperatures_1.load(msg.buf);
+        if (rx_msg.id == ID_MC_TEMPERATURES_1) {
+            mc_temperatures_1.load(rx_msg.buf);
         }
-        if (msg.id == ID_MC_TEMPERATURES_3) {
-            mc_temperatures_3.load(msg.buf);
+        if (rx_msg.id == ID_MC_TEMPERATURES_3) {
+            mc_temperatures_3.load(rx_msg.buf);
         }
-        if (msg.id == ID_MC_MOTOR_POSITION_INFORMATION) {
-            mc_motor_position_information.load(msg.buf);
+        if (rx_msg.id == ID_MC_MOTOR_POSITION_INFORMATION) {
+            mc_motor_position_information.load(rx_msg.buf);
         }
-        if (msg.id == ID_MC_CURRENT_INFORMATION) {
-            mc_current_information.load(msg.buf);
+        if (rx_msg.id == ID_MC_CURRENT_INFORMATION) {
+            mc_current_information.load(rx_msg.buf);
         }
-        if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
-            mc_voltage_information.load(msg.buf);
+        if (rx_msg.id == ID_MC_VOLTAGE_INFORMATION) {
+            mc_voltage_information.load(rx_msg.buf);
         }
-        if (msg.id == ID_MC_INTERNAL_STATES) {
-            mc_internal_states.load(msg.buf);
+        if (rx_msg.id == ID_MC_INTERNAL_STATES) {
+            mc_internal_states.load(rx_msg.buf);
         }
-        if (msg.id == ID_MC_FAULT_CODES) {
-            mc_fault_codes.load(msg.buf);
+        if (rx_msg.id == ID_MC_FAULT_CODES) {
+            mc_fault_codes.load(rx_msg.buf);
         }
-        if (msg.id == ID_MC_TORQUE_TIMER_INFORMATION) {
-            mc_torque_timer_information.load(msg.buf);
+        if (rx_msg.id == ID_MC_TORQUE_TIMER_INFORMATION) {
+            mc_torque_timer_information.load(rx_msg.buf);
         }
-        if (msg.id == ID_BMS_VOLTAGES) {
-            bms_voltages.load(msg.buf);
+        if (rx_msg.id == ID_BMS_VOLTAGES) {
+            bms_voltages.load(rx_msg.buf);
         }
-        if (msg.id == ID_BMS_TEMPERATURES) {
-            bms_temperatures.load(msg.buf);
+        if (rx_msg.id == ID_BMS_TEMPERATURES) {
+            bms_temperatures.load(rx_msg.buf);
         }
-        if (msg.id == ID_BMS_DETAILED_TEMPERATURES) {
-            BMS_detailed_temperatures temp = BMS_detailed_temperatures(msg.buf);
-            bms_detailed_temperatures[temp.get_ic_id()].load(msg.buf);
+        if (rx_msg.id == ID_BMS_DETAILED_TEMPERATURES) {
+            BMS_detailed_temperatures temp = BMS_detailed_temperatures(rx_msg.buf);
+            bms_detailed_temperatures[temp.get_ic_id()].load(rx_msg.buf);
         }
-        if (msg.id == ID_BMS_STATUS) {
-            bms_status.load(msg.buf);
+        if (rx_msg.id == ID_BMS_STATUS) {
+            bms_status.load(rx_msg.buf);
         }
-        if (msg.id == ID_BMS_DETAILED_VOLTAGES) {
-            BMS_detailed_voltages temp = BMS_detailed_voltages(msg.buf);
-            bms_detailed_voltages[temp.get_ic_id()][temp.get_group_id()].load(msg.buf);
+        if (rx_msg.id == ID_BMS_DETAILED_VOLTAGES) {
+            BMS_detailed_voltages temp = BMS_detailed_voltages(rx_msg.buf);
+            bms_detailed_voltages[temp.get_ic_id()][temp.get_group_id()].load(rx_msg.buf);
         }
     }
 }
@@ -292,7 +293,7 @@ void parse_can_message() {
  * Writes data currently in global xb_msg variable to the Xbee serial bus.
  * Calculates Fletcher checksum and byte-stuffs so that messages are
  * delimited by 0x0 bytes.
- * 
+ *
  * returns: number of bytes written to the Xbee serial bus
  */
 int write_xbee_data() {
