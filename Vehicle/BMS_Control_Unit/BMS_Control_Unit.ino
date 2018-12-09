@@ -278,7 +278,7 @@ void loop() {
         bms_status.write(tx_msg.buf);
         tx_msg.id = ID_BMS_STATUS;
         tx_msg.len = sizeof(CAN_message_bms_status_t);
-        CAN.write(msg);
+        CAN.write(tx_msg);
 
         tx_msg.timeout = 0;
 
@@ -311,7 +311,7 @@ void loop() {
         tx_msg.len = sizeof(CAN_message_bms_detailed_temperatures_t);
         for (int i = 0; i < TOTAL_IC; i++) {
             bms_detailed_temperatures[i].write(tx_msg.buf);
-            CAN.write(msg);
+            CAN.write(tx_msg);
         }
 
         tx_msg.timeout = 0;

@@ -334,7 +334,7 @@ void loop() {
         if (fcu_status.get_state() >= FCU_STATE_ENABLING_INVERTER) {
             mc_command_message.set_inverter_enable(true);
         }
-        mc_command_message.write(tx_tx_msg.buf);
+        mc_command_message.write(tx_msg.buf);
         tx_msg.id = ID_MC_COMMAND_MESSAGE;
         tx_msg.len = 8;
         CAN.write(tx_msg);
