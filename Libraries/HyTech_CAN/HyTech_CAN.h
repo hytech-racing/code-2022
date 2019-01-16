@@ -73,6 +73,14 @@
  * TODO: If you make changes here, make sure to update https://hytechracing.me.gatech.edu/wiki/CAN_Data_Formats
  */
 
+// For compatibility with C.
+#ifndef __cplusplus
+typedef enum {
+    false = 0,
+    true = 1
+} bool;
+#endif
+
 /*
  * CAN message structs and classes
  */
