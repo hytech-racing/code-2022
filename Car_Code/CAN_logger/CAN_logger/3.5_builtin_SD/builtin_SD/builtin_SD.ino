@@ -19,6 +19,7 @@ void setup()
   CAN.begin();
   SD.begin(BUILTIN_SDCARD);
   logger = SD.open("test.txt", FILE_WRITE);
+  logger.print("Hello!");
 
   //Teensy3Clock.set(xxxxxxx);
   setSyncProvider(getTeensy3Time);

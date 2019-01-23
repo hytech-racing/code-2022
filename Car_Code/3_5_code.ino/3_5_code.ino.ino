@@ -77,7 +77,7 @@ void setup() {
 
     Serial.begin(115200);
     CAN.begin();                                                        // Begin CAN
-    SD.begin();                                                         // Begin Arduino SD API
+    SD.begin(BUILTIN_SDCARD);                                           // Begin Arduino SD API
     pinMode(10, OUTPUT);                                                // Initialize pin 10 as output; this is necessary for the SD Library
     logger = SD.open("sample.txt", FILE_WRITE);                         // Open file for writing.  Code revision necessary to record distinct sessions
     logger.println("time (uS), msg.id, data");                          // Print heading to the file.
@@ -274,10 +274,10 @@ void processAccelerometer() {
   CAN.write(msg);
   interrupts();
   
-  Serial.print("\n\nACCELEROMETER DATA\n\n");
-  Serial.print(event.acceleration.x); Serial.print(", ");
-  Serial.print(event.acceleration.y); Serial.print(", ");
-  Serial.print(event.acceleration.z); Serial.println("\n\n");
+  //Serial.print("\n\nACCELEROMETER DATA\n\n");
+  //Serial.print(event.acceleration.x); Serial.print(", ");
+  //Serial.print(event.acceleration.y); Serial.print(", ");
+  //Serial.print(event.acceleration.z); Serial.println("\n\n");
 }
 
 int write_xbee_data() {
