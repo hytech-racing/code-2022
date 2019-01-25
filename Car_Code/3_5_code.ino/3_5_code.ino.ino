@@ -63,6 +63,7 @@ Metro timer_detailed_voltages = Metro(1000);
 Metro timer_status_send = Metro(100);
 Metro timer_status_send_xbee = Metro(2000);
 
+Metro timer_debug_RTC = Metro(1000);
 
 /*
  * To correctly push this code onto the Teensy, you must push this code TWICE: first with the Teensy3Clock.set([time]) function below uncommented and the current epoch time inserted as the parameter [time].  This is to set the current time onto the RTC onboard.
@@ -74,6 +75,7 @@ void setup() {
     NVIC_ENABLE_IRQ(IRQ_CAN0_MESSAGE);                                   // Enables interrupts on the teensy for CAN messages
     attachInterruptVector(IRQ_CAN0_MESSAGE, parse_can_message);          // Attaches parse_can_message() as ISR
     FLEXCAN0_IMASK1 = FLEXCAN_IMASK1_BUF5M;                             // Allows "CAN message arrived" bit in flag register to throw interrupt
+    CAN0_MCR &= 0xFFFDFFFF;                                             // Enables CAN message self-reception
 
     Serial.begin(115200);
     CAN.begin();                                                        // Begin CAN
@@ -96,6 +98,10 @@ void setup() {
 
 void loop() {
     send_xbee();
+
+    if (timer_debug_RTC.check()) {
+      digitalClockDisplay();
+    }
     
     if (timer_accelerometer.check()) {
         processAccelerometer(); 
@@ -294,30 +300,30 @@ int write_xbee_data() {
 
     // calculate checksum
     uint16_t checksum = fletcher16(xb_buf, XBEE_PKT_LEN - 2);
-    Serial.print("CHECKSUM: ");
-    Serial.println(checksum, HEX);
+    //Serial.print("CHECKSUM: ");
+    //Serial.println(checksum, HEX);
     memcpy(&xb_buf[XBEE_PKT_LEN - 2], &checksum, sizeof(uint16_t));
 
     for (int i = 0; i < XBEE_PKT_LEN; i++) {
-      Serial.print(xb_buf[i], HEX);
-      Serial.print(" ");
+      //Serial.print(xb_buf[i], HEX);
+      //Serial.print(" ");
     }
-    Serial.println();
+    //Serial.println();
 
     uint8_t cobs_buf[2 + XBEE_PKT_LEN];
     cobs_encode(xb_buf, XBEE_PKT_LEN, cobs_buf);
     cobs_buf[XBEE_PKT_LEN+1] = 0x0;
 
     for (int i = 0; i < XBEE_PKT_LEN+2; i++) {
-      Serial.print(cobs_buf[i], HEX);
-      Serial.print(" ");
+      //Serial.print(cobs_buf[i], HEX);
+      //Serial.print(" ");
     }
-    Serial.println();
+    //Serial.println();
 
     int written = XB.write(cobs_buf, 2 + XBEE_PKT_LEN);
-    Serial.print("Wrote ");
-    Serial.print(written);
-    Serial.println(" bytes");
+    //Serial.print("Wrote ");
+    //Serial.print(written);
+    //Serial.println(" bytes");
 
     memset(xb_buf, 0, sizeof(CAN_message_t));
 
