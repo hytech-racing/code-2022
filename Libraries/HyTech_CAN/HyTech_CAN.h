@@ -69,7 +69,7 @@
  *
  * A GENERAL_NOTE: The write functions in these classes take a byte array that is meant to be populated
  * with the data contained in the object. The byte array can then be used as the raw CAN buffer.
- * 
+ *
  * TODO: If you make changes here, make sure to update https://hytechracing.me.gatech.edu/wiki/CAN_Data_Formats
  */
 

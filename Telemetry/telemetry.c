@@ -1,38 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "../Libraries/HyTech_CAN/HyTech_CAN.h"
+#include "../Libraries/XBTools/XBTools.h"
 #include <MQTTClient.h>
-
-/**
- * This is an exact translation of the Python code. It doesn't precisely match
- * what I'm reading online about Fletcher's checksum (where for example does the
- * constant 5802 come from?), but I suppose that the Python code is what worked.
- */
-static short fletcher16(const void *data, const size_t len)
-{
-    const char *bytes = data;
-    short c0 = 0, c1 = 0;
-    size_t rem = len;
-    const char *b = bytes;
-    while (rem >= 5802) {
-        for (int i = 0; i < 5802; i++) {
-            c0 += *b++;
-            c1 += c0;
-        }
-        c0 %= 255;
-        c1 %= 255;
-        rem -= 5802;
-    }
-
-    for (b = bytes; b < bytes + len; b++) {
-        c0 += *b;
-        c1 += c0;
-    }
-    c0 %= 255;
-    c1 %= 255;
-
-    return (c1 << 8) | c0;
-}
 
 #define ADDRESS     "tcp://localhost:1883"
 #define CLIENTID    "ExampleClientPub"
@@ -83,14 +53,15 @@ static void process_message(uint64_t timestamp, CAN_message_t *msg)
     switch (msg->msg_id) {
         case ID_RCU_STATUS:
         {
-            CAN_message_rcu_status_t *data = &msg->contents.rcu_status;
+            CAN_msg_rcu_status *data = &msg->contents.rcu_status;
             printf("RCU STATE: %hhu\n"
                    "RCU FLAGS: 0x%hhX\n"
-                   "GLV BATT VOLTAGE: %f\n"
+                   "GLV BATT VOLTAGE: %f V\n"
                    "RCU BMS FAULT: %hhu\n"
                    "RCU IMD FAULT: %hhu\n",
                    data->state,
-                   data->glv_battery_voltage,
+                   data->flags,
+                   data->glv_battery_voltage / 100.0,
                    (char)(!(data->flags & 1)),
                    (char)(!(data->flags & 2)));
             current_status.rcu_status = *data;
@@ -98,7 +69,7 @@ static void process_message(uint64_t timestamp, CAN_message_t *msg)
         }
         case ID_FCU_STATUS:
         {
-            CAN_message_fcu_status_t *data = &msg->contents.fcu_status;
+            CAN_msg_fcu_status *data = &msg->contents.fcu_status;
             printf("FCU STATE: %hhu\n"
                    "FCU FLAGS: %hhX\n"
                    "FCU START BUTTON ID: %hhu\n"
@@ -116,7 +87,7 @@ static void process_message(uint64_t timestamp, CAN_message_t *msg)
         }
         case ID_FCU_READINGS:
         {
-            CAN_message_fcu_readings_t *data = &msg->contents.fcu_readings;
+            CAN_msg_fcu_readings *data = &msg->contents.fcu_readings;
             printf("FCU PEDAL ACCEL 1: %hu\n"
                    "FCU PEDAL ACCEL 2: %hu\n"
                    "FCU PEDAL BRAKE: %hu\n",
@@ -228,11 +199,8 @@ static void process_message(uint64_t timestamp, CAN_message_t *msg)
             current_status.mc_temperatures_3 = *data;
             break;
         }
-        case ID_MC_ANALOG_INPUTS_VOLTAGES: {
-            CAN_mesage_mc_analog_input_voltages_t *data =
-                &msg->contents.mc_analog_input_voltages;
-            printf();
-            current_status.mc_analog_input_voltages = *data;
+        case ID_MC_ANALOG_INPUTS_VOLTAGES:
+        {
             break;
         }
         case ID_MC_DIGITAL_INPUT_STATUS:
@@ -350,11 +318,9 @@ static void process_message(uint64_t timestamp, CAN_message_t *msg)
         case ID_MC_READ_WRITE_PARAMETER_RESPONSE:
             break;
         default:
+            fprintf(stderr, "Error: unknown message type\n");
     }
 }
-
-
-
 
 static void connection_lost(void *context, char *cause)
 {
@@ -377,8 +343,16 @@ static void msg_arrived(void *context, char *topic_name, int topic_len,
         if (payload_str[i] == ',') {
             payload_str[i] = 0;
             uint64_t timestamp = atoll(payload_str);
-            payload = (CAN_message_t *)&payload_str[i + 1];
-            process_message(timestamp, payload);
+            CAN_message_t payload;
+            cobs_decode(&payload_str[i + 1], 32, (uint8_t *)&payload);
+            uint16_t checksum_calc = fletcher16(&payload, sizeof(payload));
+            if (payload.checksum != checksum_calc) {
+                fprintf(stderr, "Error: checksum mismatch: "
+                        "calculated: %hu received: %hu\n",
+                        checksum_calc, payload.checksum);
+                return;
+            }
+            process_message(timestamp, &payload);
         }
     }
     fprintf(stderr, "Message formatted improperly\n");
@@ -386,33 +360,5 @@ static void msg_arrived(void *context, char *topic_name, int topic_len,
 
 int main(int argc, char* argv[])
 {
-	MQTTClient client;
-	MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
-
-	MQTTClient_create(&client, ADDRESS, CLIENTID,
-			MQTTCLIENT_PERSISTENCE_NONE, NULL);
-	conn_opts.keepAliveInterval = 20;
-	conn_opts.cleansession = 1;
-
-    MQTTClient_setCallbacks(client, NULL, connection_lost, msg_arrived,
-            msg_delivered);
-
-	if ((rc = MQTTClient_connect(client, &conn_opts)) != MQTTCLIENT_SUCCESS)
-	{
-		printf("Failed to connect, return code %d\n", rc);
-		exit(-1);
-	}
-	pubmsg.payload = PAYLOAD;
-	pubmsg.payloadlen = strlen(PAYLOAD);
-	pubmsg.qos = QOS;
-	pubmsg.retained = 0;
-	MQTTClient_publishMessage(client, TOPIC, &pubmsg, &token);
-	printf("Waiting for up to %d seconds for publication of %s\n"
-			"on topic %s for client with ClientID: %s\n",
-			(int)(TIMEOUT/1000), PAYLOAD, TOPIC, CLIENTID);
-	rc = MQTTClient_waitForCompletion(client, token, TIMEOUT);
-	printf("Message with delivery token %d delivered\n", token);
-	MQTTClient_disconnect(client, 10000);
-	MQTTClient_destroy(&client);
-	return rc;
+    return 0;
 }
