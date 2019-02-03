@@ -79,7 +79,7 @@ struct {
 static void process_message(uint64_t timestamp, CAN_message_t *msg)
 {
     // Do logging stuff.
-    
+
     switch (msg->msg_id) {
         case ID_RCU_STATUS:
         {
@@ -115,13 +115,79 @@ static void process_message(uint64_t timestamp, CAN_message_t *msg)
             break;
         }
         case ID_FCU_READINGS:
+        {
+            CAN_message_fcu_readings_t *data = &msg->contents.fcu_readings;
+            printf("FCU PEDAL ACCEL 1: %hu\n"
+                   "FCU PEDAL ACCEL 2: %hu\n"
+                   "FCU PEDAL BRAKE: %hu\n",
+                   data->accelerator_pedal_raw_1,
+                   data->accelerator_pedal_raw_2,
+                   data->brake_pedal_raw);
+            current_status.fcu_readings = *data;
+            break;
+        }
         case ID_FCU_ACCELEROMETER:
+        {
+            break;  // TODO
+        }
         case ID_RCU_RESTART_MC:
+        {
+            break;  // TODO
+        }
         case ID_BMS_ONBOARD_TEMPERATURES:
+        case ID_BMS_ONBOARD_DETAILED_TEMPERATURES:
+        case ID_BMS_VOLTAGES:
+        {
+            CAN_message_bms_voltages_t *data = &msg->contents.bms_voltages;
+            printf("BMS VOLTAGE AVERAGE: %f V\n"
+                   "BMS VOLTAGE LOW: %f V\n"
+                   "BMS VOLTAGE HIGH: %f V\n"
+                   "BMS VOLTAGE TOTAL: %f V\n",
+                   data->average_voltage / 1000.0,
+                   data->low_voltage / 1000.0,
+                   data->high_voltage / 1000.0,
+                   data->total_voltage / 100.0);
+            current_status.bms_voltages = *data;
+            break;
+        }
+        case ID_BMS_DETAILED_VOLTAGES:
+        {
+            break;  // TODO need to check docs
+        }
+        case ID_BMS_TEMPERATURES:
+        {
+            CAN_message_bms_temperatures_t *data = &msg->contents.bms_temperatures;
+            printf("BMS AVERAGE TEMPERATURE: %f C\n"
+                   "BMS LOW TEMPERATURE: %f C\n"
+                   "BMS HIGH TEMPERATURE: %f C\n",
+                   data->average_temperature / 100.0,
+                   data->low_temperature / 100.0,
+                   data->high_temperature / 100.0);
+            current_status.bms_temperatures = *data;
+            break;
+        }
+        case ID_BMS_DETAILED_TEMPERATURES:
+        {
+            break;  // TODO need to check docs
+        }
         case ID_BMS_STATUS:
+        {
+            CAN_message_bms_status_t *data = &msg->contents.bms_status;
+            printf("BMS STATE: %hhu\n"
+                   "BMS ERROR FLAGS: 0x%hX\n"
+                   "BMS CURRENT: %f A\n",
+                   data->state,
+                   data->error_flags,
+                   data->current / 100.0);
+            current_status.bms_status = *data;
+            break;
+        }
         case ID_BMS_BALANCING_STATUS:
+            break;
         case ID_FH_WATCHDOG_TEST:
+            break;
         case ID_CCU_STATUS:
+            break;
         case ID_MC_TEMPERATURES_1: {
             CAN_message_mc_temperatures_1_t *data = &msg->contents.mc_temperatures_1;
             printf("[%llu] MODULE A TEMP: %f C\n"
@@ -129,8 +195,8 @@ static void process_message(uint64_t timestamp, CAN_message_t *msg)
                    "MODULE C TEMP: %f C\n"
                    "GATE DRIVER BOARD TEMP: %f C\n",
                     timestamp,
-                    data->module_a_temperature / 10.
-                    data->module_b_temperature / 10.
+                    data->module_a_temperature / 10.,
+                    data->module_b_temperature / 10.,
                     data->module_c_temperature / 10.,
                     data->gate_driver_board_temperature / 10.);
             current_status.mc_temperatures_1 = *data;
@@ -142,8 +208,8 @@ static void process_message(uint64_t timestamp, CAN_message_t *msg)
                    "RTD 1 TEMP: %f C\n"
                    "RTD 2 TEMP: %f C\n"
                    "RTD 3 TEMP: %f C\n",
-                    data->control_board_temperature / 10.
-                    data->rtd_1_temperature / 10.
+                    data->control_board_temperature / 10.,
+                    data->rtd_1_temperature / 10.,
                     data->rtd_2_temperature / 10.,
                     data->rtd_3_temperature / 10.);
             current_status.mc_temperatures_2 = *data;
@@ -190,7 +256,7 @@ static void process_message(uint64_t timestamp, CAN_message_t *msg)
         {
             CAN_message_mc_current_information_t *data = &msg->contents.mc_current_information;
             printf("PHASE A CURRENT: %f A\n"
-                   "PHASE B CURRENT: %f A\n" 
+                   "PHASE B CURRENT: %f A\n"
                    "PHASE C CURRENT: %f A\n"
                    "DC BUS CURRENT: %f A\n",
                    data->phase_a_current / 10.,
