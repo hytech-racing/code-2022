@@ -106,7 +106,7 @@ uint8_t consecutive_faults_undervoltage = 0;
 uint8_t consecutive_faults_total_voltage_high = 0;
 uint8_t consecutive_faults_thermistor = 0;
 uint8_t consecutive_faults_current = 0;
-bool default_charge_mode = false; // enter charge mode by default
+bool default_charge_mode = true; // enter charge mode by default
 
 uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages. Numbers are stored in 0.1 mV units.
 uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
@@ -420,11 +420,11 @@ void balance_cells() {
     // int shutdown_circuit_voltage = ADC.read_adc(CH_SHUTDOWN);
     initialize(); // Reconfigure SPI pins after reading ADC so LTC communication is successful
     balance_cycle = !balance_cycle; // Only allow balancing on odd cycles
-    bool cells_balancing = false;
+    bool cells_balancing = true;
     if (bms_voltages.get_low() > voltage_cutoff_low
         && balance_cycle
         && !bms_status.get_error_flags()
-        && bms_status.get_state() >= BMS_STATE_CHARGING
+        //&& bms_status.get_state() >= BMS_STATE_CHARGING
         && bms_status.get_state() <= BMS_STATE_BALANCING) {
         // && shutdown_circuit_voltage > SHUTDOWN_HIGH_THRESHOLD) {
         for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
@@ -432,6 +432,10 @@ void balance_cells() {
 
                 // ignore all ICs except for 10 and 11 (rev7 board 11)
                 if (ic < 10 || ic > 11) {
+                    ignore_cell[ic][cell] = 1;
+                }
+
+                if ((cell == 7 || cell == 8) && ic == 11) {
                     ignore_cell[ic][cell] = 1;
                 }
 
@@ -700,8 +704,9 @@ void process_onboard_temps() {
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         for (int j = 0; j < PCB_THERM_PER_IC; j++) {
 
-            ignore_pcb_therm[ic][j] = 1;  // ignore all thermistors because they are not used on the cell charging board
-
+            if (ic != 10 || ic != 11) {
+              ignore_pcb_therm[ic][j] = 1;  // ignore all thermistors because they are not used on the cell charging board
+            }
             if (!ignore_pcb_therm[ic][j]) {
                 thermTemp = calculate_onboard_temp(aux_voltages[ic][j+3], aux_voltages[ic][5]);
                 if (thermTemp < lowTemp) {
@@ -802,26 +807,26 @@ void process_current() {
     Serial.print("\nCurrent Sensor: ");
     Serial.print(current, 2);
     Serial.println("A\n");
-    bms_status.set_current((int16_t) (current * 100));
-    bms_status.set_charge_overcurrent(false); // RESET these values, then check below if they should be set again
-    bms_status.set_discharge_overcurrent(false);
-    if (bms_status.get_current() < charge_current_constant_high) {
-        if (consecutive_faults_current >= CURRENT_FAULT_THRESHOLD) {
-            bms_status.set_charge_overcurrent(true);
-            Serial.println("CHARGE CURRENT HIGH FAULT!!!!!!!!!!!!!!!!!!!");
-        } else {
-            consecutive_faults_current++;
-        }
-    } else if (bms_status.get_current() > discharge_current_constant_high) {
-        if (consecutive_faults_current >= CURRENT_FAULT_THRESHOLD) {
-            bms_status.set_discharge_overcurrent(true);
-            Serial.println("DISCHARGE CURRENT HIGH FAULT!!!!!!!!!!!!!!!!!!!");
-        } else {
-            consecutive_faults_current++;
-        }
-    } else {
-        consecutive_faults_current = 0;
-    }
+//    bms_status.set_current((int16_t) (current * 100));
+//    bms_status.set_charge_overcurrent(false); // RESET these values, then check below if they should be set again
+//    bms_status.set_discharge_overcurrent(false);
+//    if (bms_status.get_current() < charge_current_constant_high) {
+//        if (consecutive_faults_current >= CURRENT_FAULT_THRESHOLD) {
+//            bms_status.set_charge_overcurrent(true);
+//            Serial.println("CHARGE CURRENT HIGH FAULT!!!!!!!!!!!!!!!!!!!");
+//        } else {
+//            consecutive_faults_current++;
+//        }
+//    } else if (bms_status.get_current() > discharge_current_constant_high) {
+//        if (consecutive_faults_current >= CURRENT_FAULT_THRESHOLD) {
+//            bms_status.set_discharge_overcurrent(true);
+//            Serial.println("DISCHARGE CURRENT HIGH FAULT!!!!!!!!!!!!!!!!!!!");
+//        } else {
+//            consecutive_faults_current++;
+//        }
+//    } else {
+//        consecutive_faults_current = 0;
+//    }
 }
 
 /*

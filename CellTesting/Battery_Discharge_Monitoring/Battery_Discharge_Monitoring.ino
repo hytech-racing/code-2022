@@ -51,8 +51,10 @@ const int DONE = 2;
 // create an adc object
 ADC_SPI adc;
 
-// create a metro timer object
-Metro timer = Metro(20, 1); // return true 50 times per second; ignore missed calls;
+// create a metro timer objects
+Metro read_timer = Metro(20, 1);           // return true 50 times per second; ignore missed calls;
+Metro pulse_start_timer = Metro(30000, 1); // return true evey 5 mins; ignore missed calls;
+Metro pulsing_timer = Metro(3000, 1);      // return true every 30 seconds; ignore missed calls;
 
 void setup() {
   adc = ADC_SPI();
@@ -89,7 +91,7 @@ void loop() {
 
       cell_voltage[i] = getBatteryVoltage(i); // read cell's voltage
 
-      if (timer.check()) {
+      if (read_timer.check()) {
         if (cell_voltage[i] > END_VOLTAGE && state[i] != DONE) { // check if the cell is above end voltage and it is not already done discharging
           // if the current state is WAIT, change the state to DISCHARGE
           if (state[i] == WAIT) {
