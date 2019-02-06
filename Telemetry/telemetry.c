@@ -4,13 +4,6 @@
 #include "../Libraries/XBTools/XBTools.h"
 #include <MQTTClient.h>
 
-#define ADDRESS     "tcp://localhost:1883"
-#define CLIENTID    "ExampleClientPub"
-#define TOPIC       "MQTT Examples"
-#define PAYLOAD     "Hello World!"
-#define QOS         1
-#define TIMEOUT     10000L
-
 struct {
     CAN_msg_rcu_status                      rcu_status;
     CAN_msg_fcu_status                      fcu_status;
@@ -322,43 +315,74 @@ static void process_message(uint64_t timestamp, CAN_message_t *msg)
     }
 }
 
+#define ADDRESS     "tcp://hytech-telemetry.ryangallaway.me:1883"
+#define CLIENTID    "HyTechCANReceiver"
+#define TOPIC       "hytech_car/telemetry"
+#define QOS         1
+#define TIMEOUT     10000L
+
 static void connection_lost(void *context, char *cause)
 {
     printf("Connection lost: %s\n", cause);
 }
 
-static void msg_delivered(void *context, char *topic_name, int topic_len,
-        MQTTClient_message *msg)
+static void msg_delivered(void *context, MQTTClient_deliveryToken dt)
 {
     // Do nothing for now.
 }
 
-static void msg_arrived(void *context, char *topic_name, int topic_len,
+static int msg_arrived(void *context, char *topic_name, int topic_len,
         MQTTClient_message *msg)
 {
     char *payload_str = msg->payload;
     int payload_len = msg->payloadlen;
-    // TODO cobs
     for (int i = 0; payload_str[i] != 0; i++) {
         if (payload_str[i] == ',') {
             payload_str[i] = 0;
             uint64_t timestamp = atoll(payload_str);
             CAN_message_t payload;
-            cobs_decode(&payload_str[i + 1], 32, (uint8_t *)&payload);
-            uint16_t checksum_calc = fletcher16(&payload, sizeof(payload));
+            cobs_decode((uint8_t *)&payload_str[i + 1], 32, (uint8_t *)&payload);
+            uint16_t checksum_calc = fletcher16((uint8_t *)&payload, sizeof(payload));
             if (payload.checksum != checksum_calc) {
                 fprintf(stderr, "Error: checksum mismatch: "
                         "calculated: %hu received: %hu\n",
                         checksum_calc, payload.checksum);
-                return;
+                goto cleanup;
             }
             process_message(timestamp, &payload);
+            goto cleanup;
         }
     }
     fprintf(stderr, "Message formatted improperly\n");
+
+cleanup:
+    MQTTClient_freeMessage(&msg);
+    MQTTClient_free(topic_name);
+    return 1;
 }
 
 int main(int argc, char* argv[])
 {
-    return 0;
+    MQTTClient client;
+    MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
+    int rc;
+    int ch;
+    MQTTClient_create(&client, ADDRESS, CLIENTID,
+        MQTTCLIENT_PERSISTENCE_NONE, NULL);
+    conn_opts.keepAliveInterval = 20;
+    conn_opts.cleansession = 1;
+    MQTTClient_setCallbacks(client, NULL, connection_lost,
+                            msg_arrived, msg_delivered);
+    if ((rc = MQTTClient_connect(client, &conn_opts)) != MQTTCLIENT_SUCCESS)
+    {
+        printf("Failed to connect, return code %d\n", rc);
+        exit(EXIT_FAILURE);
+    }
+    printf("Subscribing to topic %s\nfor client %s using QoS%d\n\n"
+           "Press Q<Enter> to quit\n\n", TOPIC, CLIENTID, QOS);
+    MQTTClient_subscribe(client, TOPIC, QOS);
+    while (1) if (getchar() == 'q') break;
+    MQTTClient_disconnect(client, 10000);
+    MQTTClient_destroy(&client);
+    return rc;
 }
