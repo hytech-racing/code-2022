@@ -107,8 +107,12 @@ void loop() {
         processAccelerometer(); 
     }
     if (timer_current.check()) {
-      short current_ecu = (((double)(analogRead(A13)))/1023*5)/0.185;
-      short current_cooling = (((double)(analogRead(A12)))/1023*5)/0.185;
+      double current_ecu = (((double)(analogRead(A13)))/1023*3.3)/0.185;
+      double current_cooling = (((double)(analogRead(A12)))/1023*3.3)/0.185;
+
+      Serial.println(current_cooling);
+      Serial.println(current_ecu);
+      /*
       CAN_current_sensor_readings.set_ecu_current_value(current_ecu);
       CAN_current_sensor_readings.set_cooling_current_value(current_cooling);
 
@@ -123,6 +127,7 @@ void loop() {
       xb_msg.len = sizeof(CAN_current_sensor_readings_t);
       write_xbee_data();
       interrupts();
+      */
     }
     /*
     if (timer_current_ecu.check()) {
@@ -141,7 +146,7 @@ void parse_can_message() {                                              // ISR
     timestampWrite();
     logger.print(msg.id, HEX);
     logger.print(", ");
-    for (int i=0; i<8; i++) {
+    for (int i=0; i<msg.len; i++) {
       logger.print(msg.buf[i], HEX);
       logger.print(" ");
     }
@@ -279,11 +284,12 @@ void processAccelerometer() {
   msg.len = sizeof(CAN_message_fcu_accelerometer_values_t);
   CAN.write(msg);
   interrupts();
-  
-  //Serial.print("\n\nACCELEROMETER DATA\n\n");
-  //Serial.print(event.acceleration.x); Serial.print(", ");
-  //Serial.print(event.acceleration.y); Serial.print(", ");
-  //Serial.print(event.acceleration.z); Serial.println("\n\n");
+  /*
+  Serial.print("\n\nACCELEROMETER DATA\n\n");
+  Serial.print(event.acceleration.x); Serial.print(", ");
+  Serial.print(event.acceleration.y); Serial.print(", ");
+  Serial.print(event.acceleration.z); Serial.println("\n\n");
+  */
 }
 
 int write_xbee_data() {
