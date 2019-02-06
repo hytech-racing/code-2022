@@ -106,11 +106,11 @@ void loop() {
 
           // record current and internal resistance
           cell_current[i] = getBatteryCurrent(i);
-          cell_resistance[i] = cell_voltage[i] / cell_current[i] - R;
+          // cell_resistance[i] = cell_voltage[i] / cell_current[i] - R;
 
-          // print data to Serial in the format "CH#,V,I,R,t"
+          // print data to Serial in the format "CH#,V,I,t"
           Serial.print(i + 1); Serial.print(", "); Serial.print(cell_voltage[i]); Serial.print(", "); Serial.print(cell_current[i]);
-          Serial.print(", "); Serial.print(cell_resistance[i]); Serial.print(", "); Serial.println(millis() - start_millis);
+          Serial.print(", "); /*Serial.print(cell_resistance[i]); Serial.print(", ");*/ Serial.println(millis() - start_millis);
 
         // check if the cell voltage is below the end voltage
         } else if (cell_voltage[i] < END_VOLTAGE) {
