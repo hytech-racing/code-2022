@@ -18,15 +18,29 @@
 #include <Metro.h>
 
 int timestep = 20; //datalog timestep (milliseconds)
-bool pulsing = false; // if pulsing should be used in middle of cycle
-int pulses = 4; // if pulsing is set to TRUE, then number of pulses to be included in cycle
+
+
+bool pulsing_on = false; // if pulsing should be used in middle of cycle
+int pulses_completed = 0; //keeping track of pulses
+int num_pulses = 4; // if pulsing is set to TRUE, then number of pulses to be included in cycle
+double pulsing_threshold = 0.050; // Volts/second
+int pulse_int = 1000 * 10; // milliseconds
 
 // arrays for storing information about cells
 double cell_voltage[4];    // cells' voltage reading
 double cell_current[4];    // cells' current reading
+
+
+double cell_prev_voltage[4];    // cells' voltage reading at last timestep
+double cell_prev_current[4];    // cells' current reading at last timestep
+double cell_now_voltage[4];    // cells' voltage reading at current timestep
+double cell_now_current[4];    // cells' current reading at current timestep
+
+double cell_dvdt[4];       // Numerical derivative of voltage change
+double cell_didt[4];       // Numerical derivative of current change
 double cell_resistance[4]; // cells' resistance
 double cell_OCV[4];        // Calculated cell OCV
-double cell_dvdt[4];       // Numerical derivative of voltage change
+
 double cell_Ah_inst[4];    // One-timestep coulomb counting
 double cell_Ah[4];         // Running total of coulomb count for total amp-hours
 double cell_Wh_inst[4];    // One-timestep watt-hours
@@ -63,8 +77,8 @@ double current_conversion_factor = 150 / 1.5;  // L01Z150S05 current sensor outp
 
 bool contactor_voltage_high = false; // indicates whether the contactor is powered or not (true = powered)
 unsigned int contactor_voltage = 0; // reading on the CONTACTOR_PWR_SENSE (the value is between 0 and 1023, it is NOT in volts)
-unsigned long start_millis = 0; // stores the value of millis() when the discharging started
-unsigned long end_millis = 0; // stores the value of millis() when the discharging ended
+unsigned long start_millis[4] = {0}; // stores the value of millis() when the discharging started
+unsigned long end_millis[4] = {0}; // stores the value of millis() when the discharging ended
 bool millis_started = false;    // stores whether start_millis has been recorded or not
 
 
@@ -74,6 +88,21 @@ ADC_SPI adc;
 // create a metro timer object
 Metro timer = Metro(timestep, 1); // return true 50 times per second; ignore missed calls;
 
+
+void CellDataCalc(int channel) {
+  if (timer.check()) {
+      cell_prev_voltage[i] = cell_now_voltage[i];
+      cell_prev_current[i] = cell_now_current[i];
+
+      cell_now_voltage[i] = cell_voltage[i];
+      cell_now_current[i] = cell_current[i];
+
+      cell_dvdt[i] = (cell_now_voltage - cell_prev_voltage) / (timestep/1000);
+      cell_didt[i] = (cell_now_current - cell_prev_current) / (timestep/1000);
+      
+    }
+}
+
 void CellDataLog(int channel) {
   if (timer.check()) {
     // print data to Serial in the format "CH#,V,I,R,t"
@@ -82,7 +111,7 @@ void CellDataLog(int channel) {
     Serial.print(cell_current[i]);      Serial.print(", ");
     Serial.print(test_resistance[i]);   Serial.print(", ");
     Serial.print(contactor_command[i]); Serial.print(", ");
-    Serial.println(millis() - start_millis);
+    Serial.println(millis() - start_millis[i]);
   }
 }
 
@@ -119,6 +148,12 @@ void setup() {
   // set the default state for all cells as WAIT
   for (int i = 0; i < 4; i++) {
     state[i] = WAIT;
+    cell_voltage[i] = getBatteryVoltage(i); // read cell's voltage
+    cell_current[i] = getBatteryCurrent(i);
+    cell_prev_voltage[i] = cell_voltage[i]; // save cell's voltage (initialize)
+    cell_prev_current[i] = cell_current[i];
+    cell_now_voltage[i] = cell_voltage[i]; // save cell's voltage (initialize)
+    cell_now_current[i] = cell_current[i];
   }
 }
 
@@ -136,8 +171,10 @@ void loop() {
 
     if (cell_voltage[i] <= END_VOLTAGE) { // END CONDITION: set to end if read voltage low
       state[i] = DONE;
-      end_millis = millis();
+      end_millis[i] = millis();
     }
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    CellDataCalc(i);
     ///////////////////////////////////////////////////////////////////////////////////////////
 
     // Decide action based on state cell is in
@@ -145,7 +182,7 @@ void loop() {
       contactor_command[i] = 0;
       digitalWrite(SWITCH[i], contactor_command[i]);
       //record data for 10 seconds after finished
-      if (millis() - end_millis <= end_delay) {
+      if (millis() - end_millis[i] <= end_delay) {
         CellDataLog(i);
       }
     }
@@ -158,20 +195,28 @@ void loop() {
       }
       else if (contactor_voltage >= CONTACTOR_VLT_THRESHOLD) {
         state[i] = DISCHARGE;
-        start_millis = millis();
+        start_millis[i] = millis();
       }
     }
 
     else if (state[i] == DISCHARGE) {
 
-      if (millis() - start_millis <= start_delay) { // wait for start delay before closing relay
+      if (millis() - start_millis[i] <= start_delay) { // wait for start delay before closing relay
         contactor_command[i] = 0;
         digitalWrite(SWITCH[i], contactor_command[i]);
       }
 
       else {
+        
+        if (!pulsing_on){
         contactor_command[i] = 1;
         digitalWrite(SWITCH[i], contactor_command[i]);
+        }
+
+        else if (pulsing_on){
+          
+        }
+        
       }
 
       CellDataLog(i);
