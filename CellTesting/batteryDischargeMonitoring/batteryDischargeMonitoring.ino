@@ -14,121 +14,138 @@
   DONE state, the relay is opened, and the printing of data is stopped.
   data r
 */
-#include <ADC_SPI.h>
-#include <Metro.h>
 
-int timestep = 20; //datalog timestep (milliseconds)
+//*****************************************************************************************
+//********CONFIGURATION********************************************************************
+//*****************************************************************************************
+
+double END_VOLTAGE = 3.000;      // voltage threshold for end of test
+
+int    timestep   = 20;          //datalog timestep (milliseconds)
+bool   pulsing_on = false;       // if pulsing should be used in middle of cycle
+
+int    start_delay = 5 * 1000;   // time to log data before start milliseconds
+int    end_delay   = 10 * 1000;  // time to log data after end milliseconds
+
+//*****************************************************************************************
+//********CONFIGURATION********************************************************************
+//*****************************************************************************************
 
 
-bool pulsing_on = false; // if pulsing should be used in middle of cycle
-int pulses_completed = 0; //keeping track of pulses
-int num_pulses = 4; // if pulsing is set to TRUE, then number of pulses to be included in cycle
-double pulsing_threshold = 0.050; // Volts/second
-int pulse_int = 1000 * 10; // milliseconds
-
-// arrays for storing information about cells
-double cell_voltage[4];    // cells' voltage reading
-double cell_current[4];    // cells' current reading
+//////////Pulsing setup////////////////////////////////////////////////////////////////////
+int     pulses_completed  = 0;        //keeping track of pulses
+double  pulsing_threshold = 0.050;    // Volts/second threshold used to determine linear rgion
+int     pulse_int         = 30 * 1000; // milliseconds to wait for pulse off cycle
+int     num_pulses        = 4;        // if pulsing is set to TRUE, then number of pulses to be included in cycle
+//////////Pulsing setup////////////////////////////////////////////////////////////////////
 
 
+//////////Data Storage/////////////////////////////////////////////////////////////////////
+//////////Arrays for storing information about cells
+
+//////////Realatime Parameters
+double cell_voltage[4];         // cells' voltage reading
+double cell_current[4];         // cells' current reading
+double test_resistance[4];      // Calculated resistance of the discharge power resistor
+int    contactor_command[4];    // Digital high/low used for contactor (used for post-processing)
+
+//////////Calculated Parameters
 double cell_prev_voltage[4];    // cells' voltage reading at last timestep
 double cell_prev_current[4];    // cells' current reading at last timestep
-double cell_now_voltage[4];    // cells' voltage reading at current timestep
-double cell_now_current[4];    // cells' current reading at current timestep
+double cell_now_voltage[4];     // cells' voltage reading at current timestep
+double cell_now_current[4];     // cells' current reading at current timestep
 
-double cell_dvdt[4];       // Numerical derivative of voltage change
-double cell_didt[4];       // Numerical derivative of current change
-double cell_resistance[4]; // cells' resistance
-double cell_OCV[4];        // Calculated cell OCV
+double cell_dvdt[4];            // Numerical derivative of voltage change
+double cell_didt[4];            // Numerical derivative of current change
+double cell_resistance[4];      // cells' resistance
+double cell_OCV[4];             // Calculated cell OCV
 
-double cell_Ah_inst[4];    // One-timestep coulomb counting
-double cell_Ah[4];         // Running total of coulomb count for total amp-hours
-double cell_Wh_inst[4];    // One-timestep watt-hours
-double cell_Wh[4];         // Running total of watt-hours
-
-double test_resistance[4]; // Calculated resistance of the discharge power resistor
-
-const double R = 1; // the value of the resistor hooked up to cells
+double cell_Ah_inst[4];         // One-timestep coulomb counting
+double cell_Ah[4];              // Running total of coulomb count for total amp-hours
+double cell_Wh_inst[4];         // One-timestep watt-hours
+double cell_Wh[4];              // Running total of watt-hours
+//////////Data Storage/////////////////////////////////////////////////////////////////////
 
 
-// the process of testing can be in 3 states: WAIT, DISCHARGE, and DONE. The following vatriables are used to keep track of the state of each cell.
-int state[4]; // stores the state of each cell
-const int WAIT = 0; //
-const int DISCHARGE = 1;
-const int DONE = 2;
-int contactor_command[4];
-
-int start_delay = 5000; // milliseconds
-int end_delay = 10000; // milliseconds
-
-
-// assign teensy pins
-const int CONTACTOR_PWR_SENSE = 20;
-const int SWITCH[4] = {15, 16, 17, 18};
-const int CONTACTOR_VLT_THRESHOLD = 474; // 7 V
-const double END_VOLTAGE = 3;
-
-
-// conversion factors for calculating voltage and current
+//////////State Machine/////////////////////////////////////////////////////////////////////
+//////////Each channel can be in 4 states: WAIT -> DISCHARGE -> DONE | NOCELL
+//////////The following vatriables are used to keep track of the state of each cell.
 int i = 0;
-double voltage_conversion_factor = 5.0 / 4095; // determined by testing
-double current_conversion_factor = 150 / 1.5;  // L01Z150S05 current sensor outputs 4 V at 150 A, and 2.5 V at 0 A
+int state[4]; // stores the state of each cell
+
+const int WAIT        = 0;
+const int DISCHARGE   = 1;
+const int DONE        = 2;
+const int NOCELL      = 3;
+
+bool            contactor_voltage_high  = false;   // indicates whether the contactor is powered or not (true = powered)
+unsigned int    contactor_voltage       = 0;       // reading on the CONTACTOR_PWR_SENSE (the value is between 0 and 1023, it is NOT in volts)
+
+bool            started[4]              = {false}  // stores if channel has started testing
+unsigned long   test_time[4]            = {0};     // stores whether start_millis has been recorded or not
+unsigned long   start_millis[4]         = {0};     // stores the value of millis() when the discharging started
+unsigned long   end_millis[4]           = {0};     // stores the value of millis() when the discharging ended
+//////////State Machine/////////////////////////////////////////////////////////////////////
 
 
-bool contactor_voltage_high = false; // indicates whether the contactor is powered or not (true = powered)
-unsigned int contactor_voltage = 0; // reading on the CONTACTOR_PWR_SENSE (the value is between 0 and 1023, it is NOT in volts)
-unsigned long start_millis[4] = {0}; // stores the value of millis() when the discharging started
-unsigned long end_millis[4] = {0}; // stores the value of millis() when the discharging ended
-bool millis_started = false;    // stores whether start_millis has been recorded or not
-
-
-// create an adc object
+//////////Hardware Config/////////////////////////////////////////////////////////////////////
+#include <ADC_SPI.h>
+#include <Metro.h>
+//////////Create an adc object
 ADC_SPI adc;
+//////////Create a metro timer object
+Metro timer  = Metro(timestep, 1); // return true based on timestep period; ignore missed calls;
+Metro timer2 = Metro(timestep, 1); // return true based on timestep period; ignore missed calls;
 
-// create a metro timer object
-Metro timer = Metro(timestep, 1); // return true 50 times per second; ignore missed calls;
+//////////Assign teensy pins
+const int CONTACTOR_PWR_SENSE = 20;
+const int SWITCH[4] = {A1, A2, A3, A4}; //{15, 16, 17, 18};
+const int CONTACTOR_VLT_THRESHOLD = 474; // 7 V
+
+//////////Conversion factors for calculating voltage and current
+double voltage_conversion_factor = 5.000 / 4095;   // determined by testing
+double current_conversion_factor = 150   / 1.500;  // L01Z150S05 current sensor outputs 4 V at 150 A, and 2.5 V at 0 A
+int    current_vref[10]          = {2048};            // Used to determine the zero current offset of the current senesor, by default it is 2.500V
+//////////Hardware Config/////////////////////////////////////////////////////////////////////
 
 
+//////////Functions///////////////////////////////////////////////////////////////////////////
 void CellDataCalc(int channel) {
-  if (timer.check()) {
-      cell_prev_voltage[i] = cell_now_voltage[i];
-      cell_prev_current[i] = cell_now_current[i];
+  if (timer2.check()) {
+    cell_prev_voltage[i] = cell_now_voltage[i];
+    cell_prev_current[i] = cell_now_current[i];
 
-      cell_now_voltage[i] = cell_voltage[i];
-      cell_now_current[i] = cell_current[i];
+    cell_now_voltage[i] = cell_voltage[i];
+    cell_now_current[i] = cell_current[i];
 
-      cell_dvdt[i] = (cell_now_voltage - cell_prev_voltage) / (timestep/1000);
-      cell_didt[i] = (cell_now_current - cell_prev_current) / (timestep/1000);
-      
-    }
-}
+    cell_dvdt[i] = (cell_now_voltage - cell_prev_voltage) / (timestep / 1000);
+    cell_didt[i] = (cell_now_current - cell_prev_current) / (timestep / 1000);
 
-void CellDataLog(int channel) {
-  if (timer.check()) {
-    // print data to Serial in the format "CH#,V,I,R,t"
-    Serial.print(i + 1);                Serial.print(", ");
-    Serial.print(cell_voltage[i]);      Serial.print(", ");
-    Serial.print(cell_current[i]);      Serial.print(", ");
-    Serial.print(test_resistance[i]);   Serial.print(", ");
-    Serial.print(contactor_command[i]); Serial.print(", ");
-    Serial.println(millis() - start_millis[i]);
   }
 }
 
-// method to read the cell voltage in VOLTS
-// Arguments: channel (Note: in the code, channels are numbered 0-3, when on the board they are 1-4)
+void CellDataLog(int channel) {
+  if (timer.check()) {  // print data to Serial in the format "CH#,t,V,I,R,Com,State"
+//    Serial.print("Channel");Serial.print(", ");    Serial.print("C1 Time");Serial.print(", ");     Serial.print("C1 Voltage");Serial.print(", ");    Serial.print("C1 Current"); Serial.print(", ");   Serial.print("C1 Test Resistance");Serial.print(", ");  Serial.print("C1 Contactor"); Serial.print(", ");      Serial.print("C1 State"); Serial.print(", ");
+      Serial.print(channel]);Serial.print(",");      Serial.print(test_time[i]);Serial.print(",");   Serial.print(cell_voltage[i]);Serial.print(", "); Serial.print(cell_current[i]);Serial.print(", "); Serial.print(test_resistance[i]);Serial.print(", ");    Serial.print(contactor_command[i]);Serial.print(", "); Serial.println("C1 State");// Serial.print(", ");
+  }
+}
+
 double getBatteryVoltage(int channel) {
+  // Method to read the cell voltage in VOLTS
+  // Arguments: channel (Note: in the code, channels are numbered 0-3, when on the board they are 1-4)
   double voltage_reading = ((double) adc.read_adc(channel)) * voltage_conversion_factor;
   return voltage_reading;
 }
 
-// method to read the cell current in Amps
-// Arguments: channel (Note: in the code, channels are numbered 0-3, when on the board they are 1-4)
 double getBatteryCurrent(int channel) {
+  // Method to read the cell current in Amps
+  // Arguments: channel (Note: in the code, channels are numbered 0-3, when on the board they are 1-4)
   double voltage_reading = ((double) adc.read_adc(channel + 4)) * voltage_conversion_factor;
   double current_reading = (voltage_reading - 2.5) * current_conversion_factor;
   return current_reading;
 }
+//////////Functions///////////////////////////////////////////////////////////////////////////
 
 
 void setup() {
@@ -155,24 +172,28 @@ void setup() {
     cell_now_voltage[i] = cell_voltage[i]; // save cell's voltage (initialize)
     cell_now_current[i] = cell_current[i];
   }
+
+ // Print Column Headers
+ Serial.print("Channel");Serial.print(", ");    Serial.print("Time");Serial.print(", ");    Serial.print("Voltage");Serial.print(", ");   Serial.print("Current"); Serial.print(", ");   Serial.print("Test Resistance");Serial.print(", ");    Serial.print("Contactor"); Serial.print(", "); Serial.println("State");// Serial.print(", ");
 }
 
 void loop() {
 
-  ///////////////////////////////////////////////////////////////////////////////////////////
-  // Read Inputs
+  //////////Get Data///////////////////////////////////////////////////////////////////////////
   contactor_voltage = analogRead(CONTACTOR_PWR_SENSE); // read contactor voltage
 
   for (int i = 0; i < 4; i++) {
+  //////////Get Data///////////////////////////////////////////////////////////////////////////
+    test_time[i]        = millis() - start_millis();
+    cell_voltage[i]     = getBatteryVoltage(i); // read cell's voltage
+    cell_current[i]     = getBatteryCurrent(i);
+    test_resistance[i]  = cell_voltage[i] / cell_current[i];
 
-    cell_voltage[i] = getBatteryVoltage(i); // read cell's voltage
-    cell_current[i] = getBatteryCurrent(i);
-    test_resistance[i] = cell_voltage[i] / cell_current[i];
-
-    if (cell_voltage[i] <= END_VOLTAGE) { // END CONDITION: set to end if read voltage low
+    if (cell_voltage[i] <= END_VOLTAGE && state[i] != DONE) { // END CONDITION: set to end if read voltage low
       state[i] = DONE;
       end_millis[i] = millis();
     }
+    
     ///////////////////////////////////////////////////////////////////////////////////////////
     CellDataCalc(i);
     ///////////////////////////////////////////////////////////////////////////////////////////
@@ -207,18 +228,15 @@ void loop() {
       }
 
       else {
-        
-        if (!pulsing_on){
-        contactor_command[i] = 1;
-        digitalWrite(SWITCH[i], contactor_command[i]);
+        if      (!pulsing_on) {
+          contactor_command[i] = 1;
+          digitalWrite(SWITCH[i], contactor_command[i]);
         }
+        else if (pulsing_on)  {
 
-        else if (pulsing_on){
-          
         }
-        
       }
-
+      
       CellDataLog(i);
 
     }
