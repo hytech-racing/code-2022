@@ -23,6 +23,7 @@ double END_VOLTAGE = 3.000;      // voltage threshold for end of test
 
 int    timestep   = 20;          //datalog timestep (milliseconds)
 bool   pulsing_on = false;       // if pulsing should be used in middle of cycle
+bool   rolling_avg = true;       // use rolling average for end condition
 
 int    start_delay = 5 * 1000;   // time to log data before start milliseconds
 int    end_delay   = 10 * 1000;  // time to log data after end milliseconds
@@ -42,36 +43,41 @@ int     num_pulses        = 4;        // if pulsing is set to TRUE, then number 
 
 //////////Data Storage/////////////////////////////////////////////////////////////////////
 //////////Arrays for storing information about cells
-
+int    channels   = 4;
+int    rollingwin = 25;
 //////////Realatime Parameters
-double cell_voltage[4];         // cells' voltage reading
-double cell_current[4];         // cells' current reading
-double test_resistance[4];      // Calculated resistance of the discharge power resistor
-int    contactor_command[4]     // Digital high/low used for contactor (used for post-processing)
+double v_read[channels]                         // cells' voltage reading overwritten per iteration
+double i_read[channels]                         // cells' current reading overwritten per iteration
+
+double cell_voltage[channels][rollingwin];      // cells' voltage reading w/ history per timestep
+double cell_current[channels][rollingwin];      // cells' current reading w/ history per timestep
+
+double cell_voltage2[channels][rollingwin];     // cells' voltage reading (temp array for shifting)
+double cell_current2[channels][rollingwin];     // cells' current reading (temp array for shifting)
+double v_avg = 0;                               // used for calculating rolling avg
+double i_avg = 0;                               // used for calculating rolling avg
+
+double test_resistance[channels];      // Calculated resistance of the discharge power resistor
+int    contactor_command[channels]     // Digital high/low used for contactor (used for post-processing)
 
 //////////Calculated Parameters
-double cell_prev_voltage[4];    // cells' voltage reading at last timestep
-double cell_prev_current[4];    // cells' current reading at last timestep
-double cell_now_voltage[4];     // cells' voltage reading at current timestep
-double cell_now_current[4];     // cells' current reading at current timestep
+double cell_dvdt[channels];            // Numerical derivative of voltage change
+double cell_didt[channels];            // Numerical derivative of current change
+double cell_resistance[channels];      // cells' resistance
+double cell_OCV[channels];             // Calculated cell OCV
 
-double cell_dvdt[4];            // Numerical derivative of voltage change
-double cell_didt[4];            // Numerical derivative of current change
-double cell_resistance[4];      // cells' resistance
-double cell_OCV[4];             // Calculated cell OCV
-
-double cell_Ah_inst[4];         // One-timestep coulomb counting
-double cell_Ah[4];              // Running total of coulomb count for total amp-hours
-double cell_Wh_inst[4];         // One-timestep watt-hours
-double cell_Wh[4];              // Running total of watt-hours
+double cell_Ah_inst[channels];         // One-timestep coulomb counting
+double cell_Ah[channels];              // Running total of coulomb count for total amp-hours
+double cell_Wh_inst[channels];         // One-timestep watt-hours
+double cell_Wh[channels];              // Running total of watt-hours
 //////////Data Storage/////////////////////////////////////////////////////////////////////
 
 
 //////////State Machine/////////////////////////////////////////////////////////////////////
 //////////Each channel can be in 4 states: WAIT -> DISCHARGE -> DONE | NOCELL
 //////////The following vatriables are used to keep track of the state of each cell.
-int i = 0;
-int state[4]; // stores the state of each cell
+int state[channels]; // stores the state of each cell
+int low_v[channels]
 
 const int WAIT        = 0;
 const int DISCHARGE   = 1;
@@ -81,10 +87,10 @@ const int NOCELL      = 3;
 bool            contactor_voltage_high  = false;   // indicates whether the contactor is powered or not (true = powered)
 unsigned int    contactor_voltage       = 0;       // reading on the CONTACTOR_PWR_SENSE (the value is between 0 and 1023, it is NOT in volts)
 
-bool            started[4]              = {false}  // stores if channel has started testing
-unsigned long   test_time[4]            = {0};     // stores whether start_millis has been recorded or not
-unsigned long   start_millis[4]         = {0};     // stores the value of millis() when the discharging started
-unsigned long   end_millis[4]           = {0};     // stores the value of millis() when the discharging ended
+bool            started[channels]              = {false}  // stores if channel has started testing
+unsigned long   test_time[channels]            = {0};     // stores whether start_millis has been recorded or not
+unsigned long   start_millis[channels]         = {0};     // stores the value of millis() when the discharging started
+unsigned long   end_millis[channels]           = {0};     // stores the value of millis() when the discharging ended
 //////////State Machine/////////////////////////////////////////////////////////////////////
 
 
@@ -99,7 +105,7 @@ Metro timer2 = Metro(timestep, 1); // return true based on timestep period; igno
 
 //////////Assign teensy pins
 const int CONTACTOR_PWR_SENSE = 20;
-const int SWITCH[4] = {A1, A2, A3, A4}; //{15, 16, 17, 18};
+const int SWITCH[channels] = {A1, A2, A3, A4}; //{15, 16, 17, 18};
 const int CONTACTOR_VLT_THRESHOLD = 474; // 7 V
 
 //////////Conversion factors for calculating voltage and current
@@ -110,13 +116,8 @@ int    current_vref[10]          = {2048};            // Used to determine the z
 
 
 //////////Functions///////////////////////////////////////////////////////////////////////////
-void CellDataCalc(int channel) {
+void CellDataCalc(int i) {
   if (timer2.check()) {
-    cell_prev_voltage[i] = cell_now_voltage[i];
-    cell_prev_current[i] = cell_now_current[i];
-
-    cell_now_voltage[i] = cell_voltage[i];
-    cell_now_current[i] = cell_current[i];
 
     cell_dvdt[i] = (cell_now_voltage - cell_prev_voltage) / (timestep / 1000);
     cell_didt[i] = (cell_now_current - cell_prev_current) / (timestep / 1000);
@@ -124,10 +125,36 @@ void CellDataCalc(int channel) {
   }
 }
 
-void CellDataLog(int channel) {
-  if (timer.check()) {  // print data to Serial in the format "CH#,t,V,I,R,Com,State"
-//    Serial.print("Channel");Serial.print(", ");    Serial.print("C1 Time");Serial.print(", ");     Serial.print("C1 Voltage");Serial.print(", ");    Serial.print("C1 Current"); Serial.print(", ");   Serial.print("C1 Test Resistance");Serial.print(", ");  Serial.print("C1 Contactor"); Serial.print(", ");      Serial.print("C1 State"); Serial.print(", ");
-      Serial.print(channel]);Serial.print(",");      Serial.print(test_time[i]);Serial.print(",");   Serial.print(cell_voltage[i]);Serial.print(", "); Serial.print(cell_current[i]);Serial.print(", "); Serial.print(test_resistance[i]);Serial.print(", ");    Serial.print(contactor_command[i]);Serial.print(", "); Serial.println("C1 State");// Serial.print(", ");
+void CellDataLog(int i) {
+
+  if (timer.check()) {
+
+    // Make a copy of the array to prepare for shifting
+    for (int j = 0; j < rollingwin; j++) {
+      cell_voltage2[i][j] = cell_voltage[i][j];
+      cell_current2[i][j] = cell_current[i][j];
+    }
+    // Shift array by one index at every timestep
+    for (int j = 0; j < rollingwin - 1; j++) {
+      cell_voltage[i][j + 1] = cell_voltage2[i][j];
+      cell_current[i][j + 1] = cell_current2[i][j];
+    }
+    cell_voltage[i][0] = v_read[i]; // update first value
+    cell_current[i][0] = i_read[i];
+    
+    // Calculating rolling average
+    v_avg = 0;
+    i_avg = 0;
+    for (int j = 0; j < rollingwin; j++) {
+      v_avg = v_avg + cell_voltage[i][j];
+      i_avg = i_avg + cell_current[i][j];
+    }
+    v_avg = v_avg / rollingwin;
+    i_avg = i_avg / rollingwin;
+
+    //Print data to Serial in the format "CH#,t,V,I,R,Com,State"
+    //Serial.print("Channel");Serial.print(", ");    Serial.print("C1 Time");Serial.print(", ");     Serial.print("C1 Voltage");Serial.print(", ");    Serial.print("C1 Current"); Serial.print(", ");   Serial.print("C1 Test Resistance");Serial.print(", ");  Serial.print("C1 Contactor"); Serial.print(", ");      Serial.print("C1 State"); Serial.print(", ");
+    Serial.print(i); Serial.print(",");             Serial.print(test_time[i]); Serial.print(",");   Serial.print(cell_voltage[i][0]); Serial.print(", "); Serial.print(cell_current[i][0]); Serial.print(", "); Serial.print(test_resistance[i]); Serial.print(", ");    Serial.print(contactor_command[i]); Serial.print(", "); Serial.println("C1 State"); // Serial.print(", ");
   }
 }
 
@@ -147,7 +174,6 @@ double getBatteryCurrent(int channel) {
 }
 //////////Functions///////////////////////////////////////////////////////////////////////////
 
-
 void setup() {
   adc = ADC_SPI();
   Serial.begin(115200);
@@ -156,7 +182,7 @@ void setup() {
   // Set the contactor pin as INPUT
   pinMode(CONTACTOR_PWR_SENSE, INPUT);
 
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < channels; i++) {
 
     // Set the mode for SWITCH pins and set them to LOW. When SWITCH pins are low, the relays are open, and cells are not discharging
     contactor_command[i] = 0;
@@ -165,40 +191,44 @@ void setup() {
 
     // Set the default state for all cells as WAIT
     state[i] = WAIT;
-    cell_voltage[i] = getBatteryVoltage(i); // read cell's voltage
-    cell_current[i] = getBatteryCurrent(i);
-    cell_prev_voltage[i] = cell_voltage[i]; // save cell's voltage (initialize)
-    cell_prev_current[i] = cell_current[i];
-    cell_now_voltage[i] = cell_voltage[i]; // save cell's voltage (initialize)
-    cell_now_current[i] = cell_current[i];
+    for int j = 0; j < rollingwin; j++) { // fill entire array with same value
+      cell_voltage[i][j]         = getBatteryVoltage(i); // read cell's voltage
+      cell_current[i][j]         = getBatteryCurrent(i);
+      cell_voltage2[i][j]        = cell_voltage[i][j]; // save in temp array
+      cell_current2[i][j]        = cell_current[i][j];
+    }
   }
 
- // Print Column Headers
- Serial.print("Channel");Serial.print(", ");    Serial.print("Time");Serial.print(", ");    Serial.print("Voltage");Serial.print(", ");   Serial.print("Current"); Serial.print(", ");   Serial.print("Test Resistance");Serial.print(", ");    Serial.print("Contactor"); Serial.print(", "); Serial.println("State");// Serial.print(", ");
+  // Print Column Headers
+  Serial.print("Channel"); Serial.print(", ");    Serial.print("Time"); Serial.print(", ");    Serial.print("Voltage"); Serial.print(", ");   Serial.print("Current"); Serial.print(", ");   Serial.print("Test Resistance"); Serial.print(", ");    Serial.print("Contactor"); Serial.print(", "); Serial.println("State"); // Serial.print(", ");
 }
 
 void loop() {
 
-  //////////Get Data///////////////////////////////////////////////////////////////////////////
   contactor_voltage = analogRead(CONTACTOR_PWR_SENSE); // read contactor voltage
 
-  for (int i = 0; i < 4; i++) {
-  //////////Get Data///////////////////////////////////////////////////////////////////////////
+  for (int i = 0; i < channels; i++) {
+    //////////Get Data///////////////////////////////////////////////////////////////////////////
     test_time[i]        = millis() - start_millis();
-    cell_voltage[i]     = getBatteryVoltage(i); // read cell's voltage
-    cell_current[i]     = getBatteryCurrent(i);
+
+    v_read[i]     = getBatteryVoltage(i); // read cell's voltage
+    i_read[i]     = getBatteryCurrent(i); // read cell's current
     test_resistance[i]  = cell_voltage[i] / cell_current[i];
 
-    if (cell_voltage[i] <= END_VOLTAGE && state[i] != DONE) { // END CONDITION: set to end if read voltage low
+    if (v_read[i] <= END_VOLTAGE && state[i] != DONE && !rolling_avg) { // END CONDITION: set to end if read voltage low (instantaneous reading)
       state[i] = DONE;
       end_millis[i] = millis();
     }
-    
+    if (v_avg[i] <= END_VOLTAGE && state[i] != DONE  &&  rolling_avg) { // END CONDITION: set to end if read voltage low (rolling average reading)
+      state[i] = DONE;
+      end_millis[i] = millis();
+    }
+
     ///////////////////////////////////////////////////////////////////////////////////////////
     CellDataCalc(i);
+    
     ///////////////////////////////////////////////////////////////////////////////////////////
-
-    // Decide action based on state cell is in
+    //////////Decide action based on state cell is in
     if (state[i] == DONE) {
       contactor_command[i] = 0;
       digitalWrite(SWITCH[i], contactor_command[i]);
@@ -236,7 +266,7 @@ void loop() {
 
         }
       }
-      
+
       CellDataLog(i);
 
     }
