@@ -47,7 +47,7 @@ int     num_pulses        = 4;        // if pulsing is set to TRUE, then number 
 double cell_voltage[4];         // cells' voltage reading
 double cell_current[4];         // cells' current reading
 double test_resistance[4];      // Calculated resistance of the discharge power resistor
-int    contactor_command[4];    // Digital high/low used for contactor (used for post-processing)
+int    contactor_command[4]     // Digital high/low used for contactor (used for post-processing)
 
 //////////Calculated Parameters
 double cell_prev_voltage[4];    // cells' voltage reading at last timestep
@@ -153,17 +153,17 @@ void setup() {
   Serial.begin(115200);
   delay(1000); // need a delay after Serial.begin()
 
-  // set the mode for SWITCH pins and set them to LOW. When SWITCH pins are low, the relays are open, and cells are not discharging
+  // Set the contactor pin as INPUT
+  pinMode(CONTACTOR_PWR_SENSE, INPUT);
+
   for (int i = 0; i < 4; i++) {
-    pinMode(SWITCH[i], OUTPUT);
+
+    // Set the mode for SWITCH pins and set them to LOW. When SWITCH pins are low, the relays are open, and cells are not discharging
     contactor_command[i] = 0;
+    pinMode(SWITCH[i], OUTPUT);
     digitalWrite(SWITCH[i], contactor_command[i]);
-  }
 
-  pinMode(CONTACTOR_PWR_SENSE, INPUT); // set the contactor pin as INPUT
-
-  // set the default state for all cells as WAIT
-  for (int i = 0; i < 4; i++) {
+    // Set the default state for all cells as WAIT
     state[i] = WAIT;
     cell_voltage[i] = getBatteryVoltage(i); // read cell's voltage
     cell_current[i] = getBatteryCurrent(i);
