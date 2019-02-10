@@ -19,14 +19,14 @@
 //********CONFIGURATION********************************************************************
 //*****************************************************************************************
 
-double END_VOLTAGE = 3.000;      // voltage threshold for end of test
+double END_VOLTAGE  = 3.000;      // voltage threshold for end of test
 
-int    timestep   = 20;          //datalog timestep (milliseconds)
-bool   pulsing_on = false;       // if pulsing should be used in middle of cycle
-bool   rolling_avg = true;       // use rolling average for end condition
+int    timestep     = 20;         //datalog timestep (milliseconds)
+bool   pulsing_on   = false;      // if pulsing should be used in middle of cycle
+bool   rolling_avg  = true;       // use rolling average for end condition
 
-int    start_delay = 5 * 1000;   // time to log data before start milliseconds
-int    end_delay   = 10 * 1000;  // time to log data after end milliseconds
+int    start_delay  = 5 * 1000;   // time to log data before start milliseconds
+int    end_delay    = 10 * 1000;  // time to log data after end milliseconds
 
 //*****************************************************************************************
 //********CONFIGURATION********************************************************************
@@ -34,10 +34,12 @@ int    end_delay   = 10 * 1000;  // time to log data after end milliseconds
 
 
 //////////Pulsing setup////////////////////////////////////////////////////////////////////
-int     pulses_completed  = 0;        //keeping track of pulses
-double  pulsing_threshold = 0.050;    // Volts/second threshold used to determine linear rgion
-int     pulse_int         = 30 * 1000; // milliseconds to wait for pulse off cycle
-int     num_pulses        = 4;        // if pulsing is set to TRUE, then number of pulses to be included in cycle
+int     num_pulses        = 4;         // if pulsing is set to TRUE, then number of pulses to be included in cycle
+int     pulse_int         = 30 * 1000; // milliseconds to wait for pulse off cycle // pulse interval will likely need to be greater than rolling average window
+double  pulsing_threshold = 0.020;     // Volts/second threshold used to determine linear region; steep region is approx 0.1 V/s
+int     pulses_completed  = 0;         // keeping track of pulses
+bool    pulsing           = false;      // pulsing flag
+unsigned long pulse_time  = 0;         // for timing purposes
 //////////Pulsing setup////////////////////////////////////////////////////////////////////
 
 
@@ -116,15 +118,6 @@ int    current_vref[10]          = {2048};            // Used to determine the z
 
 
 //////////Functions///////////////////////////////////////////////////////////////////////////
-void CellDataCalc(int i) {
-  if (timer2.check()) {
-
-    cell_dvdt[i] = (cell_now_voltage - cell_prev_voltage) / (timestep / 1000);
-    cell_didt[i] = (cell_now_current - cell_prev_current) / (timestep / 1000);
-
-  }
-}
-
 void CellDataLog(int i) {
 
   if (timer.check()) {
@@ -141,7 +134,7 @@ void CellDataLog(int i) {
     }
     cell_voltage[i][0] = v_read[i]; // update first value
     cell_current[i][0] = i_read[i];
-    
+
     // Calculating rolling average
     v_avg = 0;
     i_avg = 0;
@@ -151,6 +144,9 @@ void CellDataLog(int i) {
     }
     v_avg = v_avg / rollingwin;
     i_avg = i_avg / rollingwin;
+
+    cell_dvdt[i] = (cell_voltage[0] - cell_voltage[rollingwin - 1]) / (timestep * rollingwin / 1000);
+    cell_didt[i] = (cell_current[0] - cell_current[rollingwin - 1]) / (timestep * rollingwin / 1000);
 
     //Print data to Serial in the format "CH#,t,V,I,R,Com,State"
     //Serial.print("Channel");Serial.print(", ");    Serial.print("C1 Time");Serial.print(", ");     Serial.print("C1 Voltage");Serial.print(", ");    Serial.print("C1 Current"); Serial.print(", ");   Serial.print("C1 Test Resistance");Serial.print(", ");  Serial.print("C1 Contactor"); Serial.print(", ");      Serial.print("C1 State"); Serial.print(", ");
@@ -192,7 +188,7 @@ void setup() {
     // Set the default state for all cells as WAIT
     state[i] = WAIT;
     for int j = 0; j < rollingwin; j++) { // fill entire array with same value
-      cell_voltage[i][j]         = getBatteryVoltage(i); // read cell's voltage
+    cell_voltage[i][j]         = getBatteryVoltage(i); // read cell's voltage
       cell_current[i][j]         = getBatteryCurrent(i);
       cell_voltage2[i][j]        = cell_voltage[i][j]; // save in temp array
       cell_current2[i][j]        = cell_current[i][j];
@@ -226,7 +222,7 @@ void loop() {
 
     ///////////////////////////////////////////////////////////////////////////////////////////
     CellDataCalc(i);
-    
+
     ///////////////////////////////////////////////////////////////////////////////////////////
     //////////Decide action based on state cell is in
     if (state[i] == DONE) {
@@ -263,13 +259,32 @@ void loop() {
           digitalWrite(SWITCH[i], contactor_command[i]);
         }
         else if (pulsing_on)  {
+          if      (pulses == 0 && millis() - start_delay - start_millis[i] <= rollingwin * timestep) { // allow enough time for one full rolling average window to populate
+            contactor_command[i] = 1;
+            digitalWrite(SWITCH[i], contactor_command[i]);
+          }
+          // pulse interval will likely need to be greater than rolling average window
+          else if (!pulsing && pulses_completed < num_pulses && abs(cell_dvdt) <= pulsing_threshold && millis() - pulse_time > pulse_int) { // if not in a pulse, and have pulses left, and in linear cell discharge region
+            pulsing = true;
+            contactor_command[i] = 0;
+            digitalWrite(SWITCH[i], contactor_command[i]);
+            pulse_time = millis();
+            pulses++;;
+          }
+          else if (pulsing && millis()-pulse_time >= pulse_int ) { // if in the middle of a pulse and exceeded the time
+            pulsing = false;
+            contactor_command[i] = 1;
+            digitalWrite(SWITCH[i], contactor_command[i]);
+            pulse_time = millis();
 
+          }
         }
       }
-
-      CellDataLog(i);
-
     }
   }
+
+  CellDataLog(i);
+
 }
-///////////////////////////////////////////////////////////////////////////////////////////
+}
+}
