@@ -27,7 +27,7 @@ int   V_end        = 2;          // 0 = instantaneous voltage ends cycle, 1 = ro
 bool   manual_offset = false;     // use manual offset for current sensor voltage offset
 
 int    start_delay  = 5 * 1000;   // time to log data before start milliseconds
-int    end_delay    = 10 * 1000;  // time to log data after end milliseconds
+int    end_delay    = 45 * 1000;  // time to log data after end milliseconds
 
 const int    channels   = 4;
 const int    rollingwin = 50;     // rolling average window needs to be small compared to pulse time & battery time constant for IR calculations
@@ -40,8 +40,8 @@ const int    delimiter = 1;       // 0 for comma (CSV), 1 for tab
 
 
 //////////Pulsing setup////////////////////////////////////////////////////////////////////
-const int     num_pulses        = 4;         // if pulsing is set to TRUE, then number of pulses to be included in cycle
-int     pulse_int         = 5 * 1000; // milliseconds to wait for pulse off cycle // pulse interval will likely need to be greater than rolling average window
+const int     num_pulses        = 5;         // if pulsing is set to TRUE, then number of pulses to be included in cycle
+int     pulse_int         = 30 * 1000; // milliseconds to wait for pulse off cycle // pulse interval will likely need to be greater than rolling average window
 double  pulsing_threshold = 0.020;     // Volts/second threshold used to determine linear region; steep region is approx 0.1 V/s
 int     pulses_completed  = 0;         // keeping track of pulses
 bool    pulsing           = false;      // pulsing flag
