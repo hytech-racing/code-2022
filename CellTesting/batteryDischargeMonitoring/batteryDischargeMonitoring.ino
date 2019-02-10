@@ -100,7 +100,7 @@ unsigned int    contactor_voltage       = 0;       // reading on the CONTACTOR_P
 bool            started[channels]              = {false};  // stores if channel has started testing
 unsigned long   test_time[channels]            = {0};     // stores whether start_millis has been recorded or not
 unsigned long   start_millis[channels]         = {1306,1306,1306,1306};     // stores the value of millis() when the discharging started
-unsigned long   end_millis[channels]           = {0};     // stores the value of millis() when the discharging ended
+signed long   end_millis[channels]           = {0};     // stores the value of millis() when the discharging ended
 //////////State Machine/////////////////////////////////////////////////////////////////////
 
 
@@ -254,16 +254,25 @@ void loop() {
     test_resistance[i]  = v_read[i] / i_read[i];
 
     if (V_end == 0 && v_read[i] <= END_VOLTAGE && state[i] != DONE) { // END CONDITION: set to end if read voltage low (instantaneous reading)
-      state[i] = DONE;
       end_millis[i] = millis();
+      if (state[i] == WAIT){
+        end_millis[i] = -1*end_delay;
+      }
+      state[i] = DONE; 
     }
     if (V_end == 1 && v_avg[i] <= END_VOLTAGE && state[i] != DONE) { // END CONDITION: set to end if read voltage low (rolling average reading)
-      state[i] = DONE;
       end_millis[i] = millis();
+      if (state[i] == WAIT){
+        end_millis[i] = -1*end_delay;
+      }
+      state[i] = DONE; 
     }
     if (V_end == 2 && cell_OCV[i] <= END_VOLTAGE && state[i] != DONE) { // END CONDITION: set to end if read voltage low (rolling average reading)
-      state[i] = DONE;
       end_millis[i] = millis();
+      if (state[i] == WAIT){
+        end_millis[i] = -1*end_delay;
+      }
+      state[i] = DONE; 
     }
 
 
