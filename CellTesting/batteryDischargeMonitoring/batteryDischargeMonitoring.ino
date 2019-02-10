@@ -24,6 +24,7 @@ double END_VOLTAGE  = 3.000;      // voltage threshold for end of test
 int    timestep     = 20;         //datalog timestep (milliseconds)
 bool   pulsing_on   = true;       // if pulsing should be used in middle of cycle
 bool   rolling_avg  = true;       // use rolling average for end condition
+bool   manual_offset = false;     // use manual offset for current sensor voltage offset
 
 int    start_delay  = 5 * 1000;   // time to log data before start milliseconds
 int    end_delay    = 10 * 1000;  // time to log data after end milliseconds
@@ -114,10 +115,10 @@ const int SWITCH[channels] = {A1, A2, A3, A4}; //{15, 16, 17, 18};
 const int CONTACTOR_VLT_THRESHOLD = 474; // 7 V
 
 //////////Conversion factors for calculating voltage and current
-double voltage_conversion_factor = 5.000 / 4095;   // determined by testing
-double current_conversion_factor = 150   / 1.500;  // L01Z150S05 current sensor outputs 4 V at 150 A, and 2.5 V at 0 A
-int    current_vref[10]          = {2048};            // Used to determine the zero current offset of the current senesor, by default it is 2.500V
-
+double voltage_conversion_factor      = 5.000 / 4095;   // determined by testing
+double current_conversion_factor      = 150   / 1.500;  // L01Z150S05 current sensor outputs 4 V at 150 A, and 2.5 V at 0 A
+long int    current_offset[4]         = {0,0,0,0};      // Used to determine the zero current offset of the current senesor, by default it is 2.500V
+int    calibration_reads              = 500;            // number of readings for 0 offset calibration
 
 //////////Hardware Config/////////////////////////////////////////////////////////////////////
 
@@ -158,27 +159,27 @@ void CellDataLog(int i) {
 
     //Comma Delimited:
     if      (delimiter == 0){
-      Serial.print(i+1); Serial.print(",");Serial.print(cell_dvdt[i]); Serial.print(",");            Serial.print(test_time[i]); Serial.print(",");   Serial.print(cell_voltage[i][0],4); Serial.print(","); Serial.print(cell_current[i][0]); Serial.print(","); Serial.print(test_resistance[i]); Serial.print(",");    Serial.print(contactor_command[i]); Serial.print(","); Serial.println(state[i]); // Serial.print(",");
+      Serial.print(i+1); Serial.print(",");Serial.print(test_time[i]); Serial.print(",");   Serial.print(cell_voltage[i][0],4); Serial.print(","); Serial.print(cell_current[i][0]); Serial.print(","); Serial.print(test_resistance[i]); Serial.print(",");    Serial.print(contactor_command[i]); Serial.print(","); Serial.println(state[i]); // Serial.print(",");
     }
     //Tab Delimited:
     else if (delimiter == 1){
-      Serial.print(i+1); Serial.print("\t");Serial.print(cell_dvdt[i]); Serial.print("\t");            Serial.print(test_time[i]); Serial.print("\t");   Serial.print(cell_voltage[i][0],4); Serial.print("\t"); Serial.print(cell_current[i][0]); Serial.print("\t"); Serial.print(test_resistance[i]); Serial.print("\t");    Serial.print(contactor_command[i]); Serial.print("\t"); Serial.println(state[i]); // Serial.print(",");
+      Serial.print(i+1); Serial.print("\t");Serial.print(test_time[i]); Serial.print("\t");   Serial.print(cell_voltage[i][0],4); Serial.print("\t"); Serial.print(cell_current[i][0]); Serial.print("\t"); Serial.print(test_resistance[i]); Serial.print("\t");    Serial.print(contactor_command[i]); Serial.print("\t"); Serial.println(state[i]); // Serial.print(",");
     }
   }
 }
 
 double getBatteryVoltage(int channel) {
   // Method to read the cell voltage in VOLTS
-  // Arguments: channel (Note: in the code, channels are numbered 0-3, when on the board they are 1-4)
+  // Arguments: channel (Note: in the code, channels are numbered 0-3, when on the board they are 1-4, used for voltage sense)
   double voltage_reading = ((double) adc.read_adc(channel)) * voltage_conversion_factor;
   return voltage_reading;
 }
 
 double getBatteryCurrent(int channel) {
   // Method to read the cell current in Amps
-  // Arguments: channel (Note: in the code, channels are numbered 0-3, when on the board they are 1-4)
+  // Arguments: channel (Note: in the code, channels are numbered 0-3, when on the board they are 4-7 which are designated as current sense)
   double voltage_reading = ((double) adc.read_adc(channel + 4)) * voltage_conversion_factor;
-  double current_reading = (voltage_reading - 2.5) * current_conversion_factor;
+  double current_reading = (voltage_reading - (current_offset[channel]*voltage_conversion_factor)) * current_conversion_factor;
   return current_reading;
 }
 //////////Functions///////////////////////////////////////////////////////////////////////////
@@ -200,6 +201,19 @@ void setup() {
 
     // Set the default state for all cells as WAIT
     state[i] = WAIT;
+
+    // Used to find the 0 A offset for the current sensors
+    for (int j = 0; j < calibration_reads; j++){
+     current_offset[i] = current_offset[i] + adc.read_adc(i + 4);
+    }
+    current_offset[i] = round(current_offset[i] / (double)calibration_reads);
+
+    if (manual_offset){
+    current_offset[i] = 2048;
+    }
+
+
+    
     for (int j = 0; j < rollingwin; j++) { // fill entire array with same value
       cell_voltage[i][j]         = getBatteryVoltage(i); // read cell's voltage
       cell_current[i][j]         = getBatteryCurrent(i);
@@ -217,7 +231,7 @@ void setup() {
     Serial.print("Channel"); Serial.print(",");    Serial.print("Time"); Serial.print(",");    Serial.print("Voltage"); Serial.print(",");   Serial.print("Current"); Serial.print(",");   Serial.print("Test Resistance"); Serial.print(",");    Serial.print("Contactor"); Serial.print(","); Serial.println("State"); // Serial.print(", ");
   }
   else if (delimiter == 1){
-    Serial.print("Channel"); Serial.print(", ");    Serial.print("Time"); Serial.print("\t");    Serial.print("Voltage"); Serial.print("\t");   Serial.print("Current"); Serial.print("\t");   Serial.print("Test Resistance"); Serial.print("\t");    Serial.print("Contactor"); Serial.print("\t"); Serial.println("State"); // Serial.print(", ");
+    Serial.print("Channel"); Serial.print("\t");    Serial.print("Time"); Serial.print("\t");    Serial.print("Voltage"); Serial.print("\t");   Serial.print("Current"); Serial.print("\t");   Serial.print("Test Resistance"); Serial.print("\t");    Serial.print("Contactor"); Serial.print("\t"); Serial.println("State"); // Serial.print(", ");
   }
 }
 
