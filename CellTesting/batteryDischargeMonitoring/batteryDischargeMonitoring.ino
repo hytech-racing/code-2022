@@ -23,7 +23,7 @@ double END_VOLTAGE  = 3.000;      // voltage threshold for end of test
 
 const int    timestep     = 20;         //datalog timestep (milliseconds)
 bool   pulsing_on   = true;       // if pulsing should be used in middle of cycle
-bool   V_end        = 2;       // 0 = instantaneous voltage ends cycle, 1 = rolling average window ends cycle, 2 = predicted OCV ends cycle
+int   V_end        = 2;          // 0 = instantaneous voltage ends cycle, 1 = rolling average window ends cycle, 2 = predicted OCV ends cycle
 bool   manual_offset = false;     // use manual offset for current sensor voltage offset
 
 int    start_delay  = 5 * 1000;   // time to log data before start milliseconds
@@ -163,11 +163,11 @@ void CellDataLog(int i) {
 
     //Comma Delimited:
     if      (delimiter == 0){
-      Serial.print(i+1); Serial.print(",");Serial.print(test_time[i]); Serial.print(",");   Serial.print(cell_voltage[i][0],4); Serial.print(","); Serial.print(cell_current[i][0]); Serial.print(","); Serial.print(cell_OCV[i]); Serial.print(",");    Serial.print(cell_IR_avg[i]); Serial.print(",");Serial.print(contactor_command[i]); Serial.print(","); Serial.println(state[i]); // Serial.print(",");
+      Serial.print(i+1); Serial.print(",");Serial.print(test_time[i]); Serial.print(",");   Serial.print(cell_voltage[i][0],4); Serial.print(","); Serial.print(cell_current[i][0]); Serial.print(","); Serial.print(cell_OCV[i],4); Serial.print(",");    Serial.print(cell_IR_avg[i],4); Serial.print(",");Serial.print(contactor_command[i]); Serial.print(","); Serial.println(state[i]); // Serial.print(",");
     }
     //Tab Delimited:
     else if (delimiter == 1){
-      Serial.print(i+1); Serial.print("\t");Serial.print(test_time[i]); Serial.print("\t");   Serial.print(cell_voltage[i][0],4); Serial.print("\t"); Serial.print(cell_current[i][0]); Serial.print("\t"); Serial.print(cell_OCV[i]); Serial.print("\t");   Serial.print(cell_IR_avg[i]); Serial.print("\t"); Serial.print(contactor_command[i]); Serial.print("\t"); Serial.println(state[i]); // Serial.print(",");
+      Serial.print(i+1); Serial.print("\t");Serial.print(test_time[i]); Serial.print("\t");   Serial.print(cell_voltage[i][0],4); Serial.print("\t"); Serial.print(cell_current[i][0]); Serial.print("\t"); Serial.print(cell_OCV[i],4); Serial.print("\t");   Serial.print(cell_IR_avg[i],4); Serial.print("\t"); Serial.print(contactor_command[i]); Serial.print("\t"); Serial.println(state[i]); // Serial.print(",");
     }
   }
 }
@@ -216,7 +216,6 @@ void setup() {
     current_offset[i] = 2048;
     }
 
-
     
     for (int j = 0; j < rollingwin; j++) { // fill entire array with same value
       cell_voltage[i][j]         = getBatteryVoltage(i); // read cell's voltage
@@ -227,6 +226,8 @@ void setup() {
 
     v_avg[i] = cell_voltage[i][0];
     i_avg[i] = cell_current[i][0];
+
+    cell_OCV[i] = v_avg[i]; // initialize OCV estimate
     
   }
 
@@ -260,7 +261,7 @@ void loop() {
       state[i] = DONE;
       end_millis[i] = millis();
     }
-    if (V_end == 2 && v_avg[i] <= END_VOLTAGE && state[i] != DONE) { // END CONDITION: set to end if read voltage low (rolling average reading)
+    if (V_end == 2 && cell_OCV[i] <= END_VOLTAGE && state[i] != DONE) { // END CONDITION: set to end if read voltage low (rolling average reading)
       state[i] = DONE;
       end_millis[i] = millis();
     }
@@ -330,7 +331,7 @@ void loop() {
             for (int k = 0; k < pulses_completed; k++){
               cell_IR_avg[i] = cell_IR_avg[i] + cell_IR[i][k];
             }
-            cell_IR_avg[i] = cell_IR_avg[i] / pulses_completed;
+            cell_IR_avg[i] = (cell_IR_avg[i] / pulses_completed); // resistance must be positive
             
             pulsing = false;
             contactor_command[i] = 1;
