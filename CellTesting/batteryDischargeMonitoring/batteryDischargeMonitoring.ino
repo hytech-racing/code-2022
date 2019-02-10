@@ -30,7 +30,7 @@ int    start_delay  = 5 * 1000;   // time to log data before start milliseconds
 int    end_delay    = 45 * 1000;  // time to log data after end milliseconds
 
 const int    channels   = 4;
-const int    rollingwin = 50;     // rolling average window needs to be small compared to pulse time & battery time constant for IR calculations
+const int    rollingwin = 100;     // rolling average window needs to be small compared to pulse time & battery time constant for IR calculations
 
 const int    delimiter = 1;       // 0 for comma (CSV), 1 for tab
 
@@ -270,7 +270,7 @@ void loop() {
     if (V_end == 2 && cell_OCV[i] <= END_VOLTAGE && state[i] != DONE) { // END CONDITION: set to end if read voltage low (rolling average reading)
       end_millis[i] = millis();
       if (state[i] == WAIT){
-        end_millis[i] = -1*end_delay;
+       end_millis[i] = -1*end_delay;
       }
       state[i] = DONE; 
     }
