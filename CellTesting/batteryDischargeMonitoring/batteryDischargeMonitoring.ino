@@ -21,7 +21,7 @@
 
 double END_VOLTAGE  = 3.000;      // voltage threshold for end of test
 
-int    timestep     = 20;         //datalog timestep (milliseconds)
+const int    timestep     = 20;         //datalog timestep (milliseconds)
 bool   pulsing_on   = true;       // if pulsing should be used in middle of cycle
 bool   V_end        = 2;       // 0 = instantaneous voltage ends cycle, 1 = rolling average window ends cycle, 2 = predicted OCV ends cycle
 bool   manual_offset = false;     // use manual offset for current sensor voltage offset
@@ -40,7 +40,7 @@ const int    delimiter = 1;       // 0 for comma (CSV), 1 for tab
 
 
 //////////Pulsing setup////////////////////////////////////////////////////////////////////
-int     num_pulses        = 4;         // if pulsing is set to TRUE, then number of pulses to be included in cycle
+const int     num_pulses        = 4;         // if pulsing is set to TRUE, then number of pulses to be included in cycle
 int     pulse_int         = 5 * 1000; // milliseconds to wait for pulse off cycle // pulse interval will likely need to be greater than rolling average window
 double  pulsing_threshold = 0.020;     // Volts/second threshold used to determine linear region; steep region is approx 0.1 V/s
 int     pulses_completed  = 0;         // keeping track of pulses
@@ -326,11 +326,11 @@ void loop() {
             v_last[i] = v_avg[i] - v_last[i]; //difference from before, assume 0 current when contactor is open
             cell_IR[i][pulses_completed-1] = v_last[i] / i_last[i];
 
-            cell_IR_avg = 0;
+            cell_IR_avg[i] = 0;
             for (int k = 0; k < pulses_completed; k++){
               cell_IR_avg[i] = cell_IR_avg[i] + cell_IR[i][k];
             }
-            cell_IR_avg = cell_IR_avg / pulses_completed;
+            cell_IR_avg[i] = cell_IR_avg[i] / pulses_completed;
             
             pulsing = false;
             contactor_command[i] = 1;
