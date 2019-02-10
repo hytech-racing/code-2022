@@ -22,14 +22,16 @@
 double END_VOLTAGE  = 3.000;      // voltage threshold for end of test
 
 int    timestep     = 20;         //datalog timestep (milliseconds)
-bool   pulsing_on   = false;      // if pulsing should be used in middle of cycle
+bool   pulsing_on   = true;       // if pulsing should be used in middle of cycle
 bool   rolling_avg  = true;       // use rolling average for end condition
 
 int    start_delay  = 5 * 1000;   // time to log data before start milliseconds
 int    end_delay    = 10 * 1000;  // time to log data after end milliseconds
 
 const int    channels   = 4;
-const int    rollingwin = 25;
+const int    rollingwin = 50;
+
+const int    delimiter = 1;       // 0 for comma (CSV), 1 for tab
 
 //*****************************************************************************************
 //********CONFIGURATION********************************************************************
@@ -38,7 +40,7 @@ const int    rollingwin = 25;
 
 //////////Pulsing setup////////////////////////////////////////////////////////////////////
 int     num_pulses        = 4;         // if pulsing is set to TRUE, then number of pulses to be included in cycle
-int     pulse_int         = 30 * 1000; // milliseconds to wait for pulse off cycle // pulse interval will likely need to be greater than rolling average window
+int     pulse_int         = 5 * 1000; // milliseconds to wait for pulse off cycle // pulse interval will likely need to be greater than rolling average window
 double  pulsing_threshold = 0.020;     // Volts/second threshold used to determine linear region; steep region is approx 0.1 V/s
 int     pulses_completed  = 0;         // keeping track of pulses
 bool    pulsing           = false;      // pulsing flag
@@ -115,6 +117,8 @@ const int CONTACTOR_VLT_THRESHOLD = 474; // 7 V
 double voltage_conversion_factor = 5.000 / 4095;   // determined by testing
 double current_conversion_factor = 150   / 1.500;  // L01Z150S05 current sensor outputs 4 V at 150 A, and 2.5 V at 0 A
 int    current_vref[10]          = {2048};            // Used to determine the zero current offset of the current senesor, by default it is 2.500V
+
+
 //////////Hardware Config/////////////////////////////////////////////////////////////////////
 
 
@@ -146,12 +150,20 @@ void CellDataLog(int i) {
     v_avg[i] = v_avg[i] / rollingwin;
     i_avg[i] = i_avg[i] / rollingwin;
 
-    cell_dvdt[i] = (cell_voltage[0] - cell_voltage[rollingwin - 1]) / (timestep * rollingwin / 1000);
-    cell_didt[i] = (cell_current[0] - cell_current[rollingwin - 1]) / (timestep * rollingwin / 1000);
+    cell_dvdt[i] = (cell_voltage[i][0] - cell_voltage[i][rollingwin - 1]) / (timestep * rollingwin / (double)1000);
+    cell_didt[i] = (cell_current[i][0] - cell_current[i][rollingwin - 1]) / (timestep * rollingwin / (double)1000);
 
     //Print data to Serial in the format "CH#,t,V,I,R,Com,State"
     //Serial.print("Channel");Serial.print(", ");    Serial.print("C1 Time");Serial.print(", ");     Serial.print("C1 Voltage");Serial.print(", ");    Serial.print("C1 Current"); Serial.print(", ");   Serial.print("C1 Test Resistance");Serial.print(", ");  Serial.print("C1 Contactor"); Serial.print(", ");      Serial.print("C1 State"); Serial.print(", ");
-    Serial.print(i+1); Serial.print(",");             Serial.print(test_time[i]); Serial.print(",");   Serial.print(cell_voltage[i][0]); Serial.print(", "); Serial.print(cell_current[i][0]); Serial.print(", "); Serial.print(test_resistance[i]); Serial.print(", ");    Serial.print(contactor_command[i]); Serial.print(", "); Serial.println(state[i]); // Serial.print(", ");
+
+    //Comma Delimited:
+    if      (delimiter == 0){
+      Serial.print(i+1); Serial.print(",");Serial.print(cell_dvdt[i]); Serial.print(",");            Serial.print(test_time[i]); Serial.print(",");   Serial.print(cell_voltage[i][0],4); Serial.print(","); Serial.print(cell_current[i][0]); Serial.print(","); Serial.print(test_resistance[i]); Serial.print(",");    Serial.print(contactor_command[i]); Serial.print(","); Serial.println(state[i]); // Serial.print(",");
+    }
+    //Tab Delimited:
+    else if (delimiter == 1){
+      Serial.print(i+1); Serial.print("\t");Serial.print(cell_dvdt[i]); Serial.print("\t");            Serial.print(test_time[i]); Serial.print("\t");   Serial.print(cell_voltage[i][0],4); Serial.print("\t"); Serial.print(cell_current[i][0]); Serial.print("\t"); Serial.print(test_resistance[i]); Serial.print("\t");    Serial.print(contactor_command[i]); Serial.print("\t"); Serial.println(state[i]); // Serial.print(",");
+    }
   }
 }
 
@@ -201,7 +213,12 @@ void setup() {
   }
 
   // Print Column Headers
-  Serial.print("Channel"); Serial.print(", ");    Serial.print("Time"); Serial.print(", ");    Serial.print("Voltage"); Serial.print(", ");   Serial.print("Current"); Serial.print(", ");   Serial.print("Test Resistance"); Serial.print(", ");    Serial.print("Contactor"); Serial.print(", "); Serial.println("State"); // Serial.print(", ");
+  if      (delimiter == 0){
+    Serial.print("Channel"); Serial.print(",");    Serial.print("Time"); Serial.print(",");    Serial.print("Voltage"); Serial.print(",");   Serial.print("Current"); Serial.print(",");   Serial.print("Test Resistance"); Serial.print(",");    Serial.print("Contactor"); Serial.print(","); Serial.println("State"); // Serial.print(", ");
+  }
+  else if (delimiter == 1){
+    Serial.print("Channel"); Serial.print(", ");    Serial.print("Time"); Serial.print("\t");    Serial.print("Voltage"); Serial.print("\t");   Serial.print("Current"); Serial.print("\t");   Serial.print("Test Resistance"); Serial.print("\t");    Serial.print("Contactor"); Serial.print("\t"); Serial.println("State"); // Serial.print(", ");
+  }
 }
 
 void loop() {
@@ -267,12 +284,12 @@ void loop() {
           digitalWrite(SWITCH[i], contactor_command[i]);
         }
         else if (pulsing_on)  {
-          if      (num_pulses == 0 && millis() - start_delay - start_millis[i] <= rollingwin * timestep) { // allow enough time for one full rolling average window to populate
+          if      (pulses_completed == 0 && millis() - start_delay - start_millis[i] <= rollingwin * timestep) { // allow enough time for one full rolling average window to populate
             contactor_command[i] = 1;
             digitalWrite(SWITCH[i], contactor_command[i]);
           }
           // pulse interval will likely need to be greater than rolling average window
-          else if (!pulsing && pulses_completed < num_pulses && abs(cell_dvdt[i]) <= pulsing_threshold && millis() - pulse_time > pulse_int) { // if not in a pulse, and have pulses left, and in linear cell discharge region
+          else if (!pulsing && pulses_completed < num_pulses && abs(cell_dvdt[i]) <= pulsing_threshold && millis() - pulse_time > pulse_int) { // if not in a pulse, and have pulses left, and in linear cell discharge region, and enough time for rolling average window to populate
             pulsing = true;
             contactor_command[i] = 0;
             digitalWrite(SWITCH[i], contactor_command[i]);
