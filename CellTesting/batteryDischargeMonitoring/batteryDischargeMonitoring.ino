@@ -115,7 +115,7 @@ const int SWITCH[channels] = {A1, A2, A3, A4}; //{15, 16, 17, 18};
 const int CONTACTOR_VLT_THRESHOLD = 474; // 7 V
 
 //////////Conversion factors for calculating voltage and current
-double voltage_conversion_factor      = 5.000 / 4095;   // determined by testing
+double voltage_conversion_factor      = 5.033333333333333333 / 4095;   // determined by testing
 double current_conversion_factor      = 150   / 1.500;  // L01Z150S05 current sensor outputs 4 V at 150 A, and 2.5 V at 0 A
 long int    current_offset[4]         = {0,0,0,0};      // Used to determine the zero current offset of the current senesor, by default it is 2.500V
 int    calibration_reads              = 500;            // number of readings for 0 offset calibration
