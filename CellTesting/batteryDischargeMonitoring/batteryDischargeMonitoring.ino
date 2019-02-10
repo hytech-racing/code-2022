@@ -28,6 +28,9 @@ bool   rolling_avg  = true;       // use rolling average for end condition
 int    start_delay  = 5 * 1000;   // time to log data before start milliseconds
 int    end_delay    = 10 * 1000;  // time to log data after end milliseconds
 
+const int    channels   = 4;
+const int    rollingwin = 25;
+
 //*****************************************************************************************
 //********CONFIGURATION********************************************************************
 //*****************************************************************************************
@@ -45,22 +48,21 @@ unsigned long pulse_time  = 0;         // for timing purposes
 
 //////////Data Storage/////////////////////////////////////////////////////////////////////
 //////////Arrays for storing information about cells
-int    channels   = 4;
-int    rollingwin = 25;
-//////////Realatime Parameters
-double v_read[channels]                         // cells' voltage reading overwritten per iteration
-double i_read[channels]                         // cells' current reading overwritten per iteration
+
+//////////Real time Parameters
+double v_read[channels];                         // cells' voltage reading overwritten per iteration
+double i_read[channels];                         // cells' current reading overwritten per iteration
 
 double cell_voltage[channels][rollingwin];      // cells' voltage reading w/ history per timestep
 double cell_current[channels][rollingwin];      // cells' current reading w/ history per timestep
 
 double cell_voltage2[channels][rollingwin];     // cells' voltage reading (temp array for shifting)
 double cell_current2[channels][rollingwin];     // cells' current reading (temp array for shifting)
-double v_avg = 0;                               // used for calculating rolling avg
-double i_avg = 0;                               // used for calculating rolling avg
+double v_avg[channels];                               // used for calculating rolling avg
+double i_avg[channels];                               // used for calculating rolling avg
 
 double test_resistance[channels];      // Calculated resistance of the discharge power resistor
-int    contactor_command[channels]     // Digital high/low used for contactor (used for post-processing)
+int    contactor_command[channels];     // Digital high/low used for contactor (used for post-processing)
 
 //////////Calculated Parameters
 double cell_dvdt[channels];            // Numerical derivative of voltage change
@@ -79,7 +81,7 @@ double cell_Wh[channels];              // Running total of watt-hours
 //////////Each channel can be in 4 states: WAIT -> DISCHARGE -> DONE | NOCELL
 //////////The following vatriables are used to keep track of the state of each cell.
 int state[channels]; // stores the state of each cell
-int low_v[channels]
+int low_v[channels];
 
 const int WAIT        = 0;
 const int DISCHARGE   = 1;
@@ -89,9 +91,9 @@ const int NOCELL      = 3;
 bool            contactor_voltage_high  = false;   // indicates whether the contactor is powered or not (true = powered)
 unsigned int    contactor_voltage       = 0;       // reading on the CONTACTOR_PWR_SENSE (the value is between 0 and 1023, it is NOT in volts)
 
-bool            started[channels]              = {false}  // stores if channel has started testing
+bool            started[channels]              = {false};  // stores if channel has started testing
 unsigned long   test_time[channels]            = {0};     // stores whether start_millis has been recorded or not
-unsigned long   start_millis[channels]         = {0};     // stores the value of millis() when the discharging started
+unsigned long   start_millis[channels]         = {1306,1306,1306,1306};     // stores the value of millis() when the discharging started
 unsigned long   end_millis[channels]           = {0};     // stores the value of millis() when the discharging ended
 //////////State Machine/////////////////////////////////////////////////////////////////////
 
@@ -102,8 +104,7 @@ unsigned long   end_millis[channels]           = {0};     // stores the value of
 //////////Create an adc object
 ADC_SPI adc;
 //////////Create a metro timer object
-Metro timer  = Metro(timestep, 1); // return true based on timestep period; ignore missed calls;
-Metro timer2 = Metro(timestep, 1); // return true based on timestep period; ignore missed calls;
+Metro timer[channels]  = Metro(timestep, 1); // return true based on timestep period; ignore missed calls;
 
 //////////Assign teensy pins
 const int CONTACTOR_PWR_SENSE = 20;
@@ -120,7 +121,7 @@ int    current_vref[10]          = {2048};            // Used to determine the z
 //////////Functions///////////////////////////////////////////////////////////////////////////
 void CellDataLog(int i) {
 
-  if (timer.check()) {
+  if (timer[i].check()) {
 
     // Make a copy of the array to prepare for shifting
     for (int j = 0; j < rollingwin; j++) {
@@ -136,21 +137,21 @@ void CellDataLog(int i) {
     cell_current[i][0] = i_read[i];
 
     // Calculating rolling average
-    v_avg = 0;
-    i_avg = 0;
+    v_avg[i] = 0;
+    i_avg[i] = 0;
     for (int j = 0; j < rollingwin; j++) {
-      v_avg = v_avg + cell_voltage[i][j];
-      i_avg = i_avg + cell_current[i][j];
+      v_avg[i] = v_avg[i] + cell_voltage[i][j];
+      i_avg[i] = i_avg[i] + cell_current[i][j];
     }
-    v_avg = v_avg / rollingwin;
-    i_avg = i_avg / rollingwin;
+    v_avg[i] = v_avg[i] / rollingwin;
+    i_avg[i] = i_avg[i] / rollingwin;
 
     cell_dvdt[i] = (cell_voltage[0] - cell_voltage[rollingwin - 1]) / (timestep * rollingwin / 1000);
     cell_didt[i] = (cell_current[0] - cell_current[rollingwin - 1]) / (timestep * rollingwin / 1000);
 
     //Print data to Serial in the format "CH#,t,V,I,R,Com,State"
     //Serial.print("Channel");Serial.print(", ");    Serial.print("C1 Time");Serial.print(", ");     Serial.print("C1 Voltage");Serial.print(", ");    Serial.print("C1 Current"); Serial.print(", ");   Serial.print("C1 Test Resistance");Serial.print(", ");  Serial.print("C1 Contactor"); Serial.print(", ");      Serial.print("C1 State"); Serial.print(", ");
-    Serial.print(i); Serial.print(",");             Serial.print(test_time[i]); Serial.print(",");   Serial.print(cell_voltage[i][0]); Serial.print(", "); Serial.print(cell_current[i][0]); Serial.print(", "); Serial.print(test_resistance[i]); Serial.print(", ");    Serial.print(contactor_command[i]); Serial.print(", "); Serial.println("C1 State"); // Serial.print(", ");
+    Serial.print(i+1); Serial.print(",");             Serial.print(test_time[i]); Serial.print(",");   Serial.print(cell_voltage[i][0]); Serial.print(", "); Serial.print(cell_current[i][0]); Serial.print(", "); Serial.print(test_resistance[i]); Serial.print(", ");    Serial.print(contactor_command[i]); Serial.print(", "); Serial.println(state[i]); // Serial.print(", ");
   }
 }
 
@@ -187,12 +188,16 @@ void setup() {
 
     // Set the default state for all cells as WAIT
     state[i] = WAIT;
-    for int j = 0; j < rollingwin; j++) { // fill entire array with same value
-    cell_voltage[i][j]         = getBatteryVoltage(i); // read cell's voltage
+    for (int j = 0; j < rollingwin; j++) { // fill entire array with same value
+      cell_voltage[i][j]         = getBatteryVoltage(i); // read cell's voltage
       cell_current[i][j]         = getBatteryCurrent(i);
       cell_voltage2[i][j]        = cell_voltage[i][j]; // save in temp array
       cell_current2[i][j]        = cell_current[i][j];
     }
+
+    v_avg[i] = cell_voltage[i][0];
+    i_avg[i] = cell_current[i][0];
+    
   }
 
   // Print Column Headers
@@ -205,11 +210,12 @@ void loop() {
 
   for (int i = 0; i < channels; i++) {
     //////////Get Data///////////////////////////////////////////////////////////////////////////
-    test_time[i]        = millis() - start_millis();
+    test_time[i]        = millis() - start_millis[i];
+    //Serial.println(start_millis[i]);
 
     v_read[i]     = getBatteryVoltage(i); // read cell's voltage
     i_read[i]     = getBatteryCurrent(i); // read cell's current
-    test_resistance[i]  = cell_voltage[i] / cell_current[i];
+    test_resistance[i]  = v_read[i] / i_read[i];
 
     if (v_read[i] <= END_VOLTAGE && state[i] != DONE && !rolling_avg) { // END CONDITION: set to end if read voltage low (instantaneous reading)
       state[i] = DONE;
@@ -220,8 +226,6 @@ void loop() {
       end_millis[i] = millis();
     }
 
-    ///////////////////////////////////////////////////////////////////////////////////////////
-    CellDataCalc(i);
 
     ///////////////////////////////////////////////////////////////////////////////////////////
     //////////Decide action based on state cell is in
@@ -248,6 +252,10 @@ void loop() {
 
     else if (state[i] == DISCHARGE) {
 
+      if (contactor_voltage < CONTACTOR_VLT_THRESHOLD) {
+        state[i] = WAIT;
+      }
+
       if (millis() - start_millis[i] <= start_delay) { // wait for start delay before closing relay
         contactor_command[i] = 0;
         digitalWrite(SWITCH[i], contactor_command[i]);
@@ -259,17 +267,17 @@ void loop() {
           digitalWrite(SWITCH[i], contactor_command[i]);
         }
         else if (pulsing_on)  {
-          if      (pulses == 0 && millis() - start_delay - start_millis[i] <= rollingwin * timestep) { // allow enough time for one full rolling average window to populate
+          if      (num_pulses == 0 && millis() - start_delay - start_millis[i] <= rollingwin * timestep) { // allow enough time for one full rolling average window to populate
             contactor_command[i] = 1;
             digitalWrite(SWITCH[i], contactor_command[i]);
           }
           // pulse interval will likely need to be greater than rolling average window
-          else if (!pulsing && pulses_completed < num_pulses && abs(cell_dvdt) <= pulsing_threshold && millis() - pulse_time > pulse_int) { // if not in a pulse, and have pulses left, and in linear cell discharge region
+          else if (!pulsing && pulses_completed < num_pulses && abs(cell_dvdt[i]) <= pulsing_threshold && millis() - pulse_time > pulse_int) { // if not in a pulse, and have pulses left, and in linear cell discharge region
             pulsing = true;
             contactor_command[i] = 0;
             digitalWrite(SWITCH[i], contactor_command[i]);
             pulse_time = millis();
-            pulses++;;
+            pulses_completed++;;
           }
           else if (pulsing && millis()-pulse_time >= pulse_int ) { // if in the middle of a pulse and exceeded the time
             pulsing = false;
@@ -280,11 +288,7 @@ void loop() {
           }
         }
       }
+      CellDataLog(i);
     }
   }
-
-  CellDataLog(i);
-
-}
-}
 }
