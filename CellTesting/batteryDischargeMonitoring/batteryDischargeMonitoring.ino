@@ -43,9 +43,9 @@ const int    delimiter = 1;       // 0 for comma (CSV), 1 for tab
 const int     num_pulses        = 5;         // if pulsing is set to TRUE, then number of pulses to be included in cycle
 int     pulse_int         = 30 * 1000; // milliseconds to wait for pulse off cycle // pulse interval will likely need to be greater than rolling average window
 double  pulsing_threshold = 0.020;     // Volts/second threshold used to determine linear region; steep region is approx 0.1 V/s
-int     pulses_completed  = 0;         // keeping track of pulses
-bool    pulsing           = false;      // pulsing flag
-unsigned long pulse_time  = 0;         // for timing purposes
+int     pulses_completed[channels]  = {0,0,0,0};         // keeping track of pulses
+bool    pulsing[channels]           = {false,false,false,false};      // pulsing flag
+unsigned long pulse_time[channels]  = {0,0,0,0};         // for timing purposes
 //////////Pulsing setup////////////////////////////////////////////////////////////////////
 
 
@@ -163,11 +163,11 @@ void CellDataLog(int i) {
 
     //Comma Delimited:
     if      (delimiter == 0){
-      Serial.print(i+1); Serial.print(",");Serial.print(test_time[i]); Serial.print(",");   Serial.print(cell_voltage[i][0],4); Serial.print(","); Serial.print(cell_current[i][0]); Serial.print(","); Serial.print(cell_OCV[i],4); Serial.print(",");    Serial.print(cell_IR_avg[i],4); Serial.print(",");Serial.print(contactor_command[i]); Serial.print(","); Serial.println(state[i]); // Serial.print(",");
+      Serial.print(i+1); Serial.print(",");Serial.print(test_time[i]); Serial.print(",");   Serial.print(cell_voltage[i][0],4); Serial.print(","); Serial.print(cell_current[i][0]); Serial.print(","); Serial.print(cell_OCV[i],4); Serial.print(",");    Serial.print(cell_IR_avg[i]*1000,4); Serial.print(",");Serial.print(contactor_command[i]); Serial.print(","); Serial.println(state[i]); // Serial.print(",");
     }
     //Tab Delimited:
     else if (delimiter == 1){
-      Serial.print(i+1); Serial.print("\t");Serial.print(test_time[i]); Serial.print("\t");   Serial.print(cell_voltage[i][0],4); Serial.print("\t"); Serial.print(cell_current[i][0]); Serial.print("\t"); Serial.print(cell_OCV[i],4); Serial.print("\t");   Serial.print(cell_IR_avg[i],4); Serial.print("\t"); Serial.print(contactor_command[i]); Serial.print("\t"); Serial.println(state[i]); // Serial.print(",");
+      Serial.print(i+1); Serial.print("\t");Serial.print(test_time[i]); Serial.print("\t");   Serial.print(cell_voltage[i][0],4); Serial.print("\t"); Serial.print(cell_current[i][0]); Serial.print("\t"); Serial.print(cell_OCV[i],4); Serial.print("\t");   Serial.print(cell_IR_avg[i]*1000,4); Serial.print("\t"); Serial.print(contactor_command[i]); Serial.print("\t"); Serial.println(state[i]); // Serial.print(",");
     }
   }
 }
@@ -233,10 +233,10 @@ void setup() {
 
   // Print Column Headers
   if      (delimiter == 0){
-    Serial.print("Channel"); Serial.print(",");    Serial.print("Time"); Serial.print(",");    Serial.print("Voltage"); Serial.print(",");   Serial.print("Current"); Serial.print(",");   Serial.print("OCV Predict"); Serial.print(",");    Serial.print("Calculated IR"); Serial.print(",");Serial.print("Contactor"); Serial.print(","); Serial.println("State"); // Serial.print(", ");
+    Serial.print("Channel"); Serial.print(",");    Serial.print("Time"); Serial.print(",");    Serial.print("Voltage"); Serial.print(",");   Serial.print("Current"); Serial.print(",");   Serial.print("OCV Predict"); Serial.print(",");    Serial.print("Calculated IR mOhm"); Serial.print(",");Serial.print("Contactor"); Serial.print(","); Serial.println("State"); // Serial.print(", ");
   }
   else if (delimiter == 1){
-    Serial.print("Channel"); Serial.print("\t");    Serial.print("Time"); Serial.print("\t");    Serial.print("Voltage"); Serial.print("\t");   Serial.print("Current"); Serial.print("\t");   Serial.print("OCV Predict"); Serial.print("\t");   Serial.print("Calculated IR"); Serial.print("\t"); Serial.print("Contactor"); Serial.print("\t"); Serial.println("State"); // Serial.print(", ");
+    Serial.print("Channel"); Serial.print("\t");    Serial.print("Time"); Serial.print("\t");    Serial.print("Voltage"); Serial.print("\t");   Serial.print("Current"); Serial.print("\t");   Serial.print("OCV Predict"); Serial.print("\t");   Serial.print("Calculated IR mOhm"); Serial.print("\t"); Serial.print("Contactor"); Serial.print("\t"); Serial.println("State"); // Serial.print(", ");
   }
 }
 
@@ -316,36 +316,36 @@ void loop() {
           digitalWrite(SWITCH[i], contactor_command[i]);
         }
         else if (pulsing_on)  {
-          if      (pulses_completed == 0 && millis() - start_delay - start_millis[i] <= rollingwin * timestep) { // allow enough time for one full rolling average window to populate
+          if      (pulses_completed[i] == 0 && millis() - start_delay - start_millis[i] <= rollingwin * timestep) { // allow enough time for one full rolling average window to populate
             contactor_command[i] = 1;
             digitalWrite(SWITCH[i], contactor_command[i]);
           }
           // pulse interval will likely need to be greater than rolling average window
-          else if (!pulsing && pulses_completed < num_pulses && abs(cell_dvdt[i]) <= pulsing_threshold && millis() - pulse_time > pulse_int) { // if not in a pulse, and have pulses left, and in linear cell discharge region, and enough time for rolling average window to populate
+          else if (!pulsing[i] && pulses_completed[i] < num_pulses && abs(cell_dvdt[i]) <= pulsing_threshold && millis() - pulse_time[i] > pulse_int) { // if not in a pulse, and have pulses left, and in linear cell discharge region, and enough time for rolling average window to populate
             v_last[i] = v_avg[i]; // rolling average window needs to be small compared to pulse time & battery time constant
             i_last[i] = i_avg[i];
 
 
-            pulsing = true;
+            pulsing[i] = true;
             contactor_command[i] = 0;
             digitalWrite(SWITCH[i], contactor_command[i]);
-            pulse_time = millis();
-            pulses_completed++;;
+            pulse_time[i] = millis();
+            pulses_completed[i]++;;
           }
-          else if (pulsing && millis()-pulse_time >= pulse_int ) { // if in the middle of a pulse and exceeded the time
+          else if (pulsing[i] && millis()-pulse_time[i] >= pulse_int ) { // if in the middle of a pulse and exceeded the time
             v_last[i] = v_avg[i] - v_last[i]; //difference from before, assume 0 current when contactor is open
-            cell_IR[i][pulses_completed-1] = v_last[i] / i_last[i];
+            cell_IR[i][pulses_completed[i]-1] = v_last[i] / i_last[i];
 
             cell_IR_avg[i] = 0;
-            for (int k = 0; k < pulses_completed; k++){
+            for (int k = 0; k < pulses_completed[i]; k++){
               cell_IR_avg[i] = cell_IR_avg[i] + cell_IR[i][k];
             }
-            cell_IR_avg[i] = (cell_IR_avg[i] / pulses_completed); // resistance must be positive
+            cell_IR_avg[i] = (cell_IR_avg[i] / pulses_completed[i]); // resistance must be positive
             
-            pulsing = false;
+            pulsing[i] = false;
             contactor_command[i] = 1;
             digitalWrite(SWITCH[i], contactor_command[i]);
-            pulse_time = millis();        
+            pulse_time[i] = millis();        
           }
         }
       }
