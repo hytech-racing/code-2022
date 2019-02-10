@@ -21,10 +21,10 @@
 
 double END_VOLTAGE  = 3.000;      // voltage threshold for end of test
 
-const int    timestep     = 20;         //datalog timestep (milliseconds)
-bool   pulsing_on   = true;       // if pulsing should be used in middle of cycle
-int   V_end        = 2;          // 0 = instantaneous voltage ends cycle, 1 = rolling average window ends cycle, 2 = predicted OCV ends cycle
-bool   manual_offset = false;     // use manual offset for current sensor voltage offset
+const int    timestep      = 20;         //datalog timestep (milliseconds)
+bool         pulsing_on    = true;       // if pulsing should be used in middle of cycle
+int          V_end         = 2;          // 0 = instantaneous voltage ends cycle, 1 = rolling average window ends cycle, 2 = predicted OCV ends cycle
+bool         manual_offset = false;     // use manual offset for current sensor voltage offset
 
 int    start_delay  = 5 * 1000;   // time to log data before start milliseconds
 int    end_delay    = 45 * 1000;  // time to log data after end milliseconds
