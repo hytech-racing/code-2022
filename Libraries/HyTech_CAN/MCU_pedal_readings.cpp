@@ -39,16 +39,16 @@ MCU_pedal_readings::MCU_pedal_readings(uint8_t buf[8]) {
  *     - Raw voltage readings from brake pedal sensor
  * Param (uint8_t) - Pedal Flags
  *     - Indicators for accelerator/brake implausibility and active brake pedal
- * Param (uint8_t) - Torque Mode
- *     - Torque mode selection
+ * Param (uint8_t) - Torque Map Mode
+ *     - Torque map mode selection
  */
 
-MCU_pedal_readings::MCU_pedal_readings(uint16_t accelerator_pedal_raw_1, uint16_t accelerator_pedal_raw_2, uint16_t brake_pedal_raw, uint8_t pedal_flags, uint8_t torque_mode) {
+MCU_pedal_readings::MCU_pedal_readings(uint16_t accelerator_pedal_raw_1, uint16_t accelerator_pedal_raw_2, uint16_t brake_pedal_raw, uint8_t pedal_flags, uint8_t torque_map_mode) {
     set_accelerator_pedal_raw_1(accelerator_pedal_raw_1);
     set_accelerator_pedal_raw_2(accelerator_pedal_raw_2);
     set_brake_pedal_raw(brake_pedal_raw);
     set_pedal_flags(pedal_flags);
-    set_torque_mode(torque_mode);
+    set_torque_map_mode(torque_map_mode);
 }
 
 /* Load from buffer & write to variable instance
@@ -67,7 +67,7 @@ void MCU_pedal_readings::load(uint8_t buf[8]) {
     memcpy(&(message.accelerator_pedal_raw_2), &buf[2], sizeof(uint16_t));
     memcpy(&(message.brake_pedal_raw), &buf[4], sizeof(uint16_t));
     memcpy(&(message.pedal_flags), &buf[6], sizeof(uint8_t));
-    memcpy(&(message.torque_mode), &buf[7], sizeof(uint8_t));
+    memcpy(&(message.torque_map_mode), &buf[7], sizeof(uint8_t));
 
 }
 
@@ -85,7 +85,7 @@ void MCU_pedal_readings::write(uint8_t buf[8]) {
     memcpy(&buf[2], &(message.accelerator_pedal_raw_2), sizeof(uint16_t));
     memcpy(&buf[4], &(message.brake_pedal_raw), sizeof(uint16_t));
     memcpy(&buf[6], &(message.pedal_flags), sizeof(uint8_t));
-    memcpy(&buf[7], &(message.torque_mode), sizeof(uint8_t));
+    memcpy(&buf[7], &(message.torque_map_mode), sizeof(uint8_t));
 
 }
 
@@ -122,8 +122,8 @@ bool MCU_pedal_readings::get_brake_pedal_active() {
     return (message.flags & 0x04) >> 2;
 }
 
-uint8_t MCU_pedal_readings::get_torque_mode() {
-    return message.torque_mode;
+uint8_t MCU_pedal_readings::get_torque_map_mode() {
+    return message.torque_map_mode;
 }
 
 /* Set functions
@@ -161,6 +161,6 @@ void MCU_pedal_readings::set_brake_pedal_active(bool brake_pedal_active) {
     message.flags = (message.flags & 0xFB) | ((brake_pedal_active & 0x1) << 2);
 }
 
-void MCU_pedal_readings::set_torque_mode(uint8_t torque_mode) {
-    message.torque_mode = torque_mode;
+void MCU_pedal_readings::set_torque_map_mode(uint8_t torque_map_mode) {
+    message.torque_map_mode = torque_map_mode;
 }
