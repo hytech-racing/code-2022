@@ -23,7 +23,7 @@ MCU_pedal_readings::MCU_pedal_readings() {
  */
 
 MCU_pedal_readings::MCU_pedal_readings(uint8_t buf[8]) {
-  load(buf);
+    load(buf);
 }
 
 /* Constructor for MCU_pedal_readings
