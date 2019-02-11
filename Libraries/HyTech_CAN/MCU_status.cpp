@@ -120,6 +120,14 @@ bool MCU_status::get_shutdown_d_above_threshold() {
     return (message.flags & 0x20) >> 5
 }
 
+int16_t MCU_status::get_temperature() {
+    return message.temperature;
+}
+
+uint16_t MCU_status::get_glv_battery_voltage() {
+    return message.glv_battery_voltage;
+}
+
 /* Set functions
  *
  * Used to replace values in this CAN_message_t
