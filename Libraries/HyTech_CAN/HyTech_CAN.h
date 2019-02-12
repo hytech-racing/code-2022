@@ -315,6 +315,8 @@ class MCU_status {
         bool get_shutdown_b_above_threshold();
         bool get_shutdown_c_above_threshold();
         bool get_shutdown_d_above_threshold();
+        bool get_shutdown_e_above_threshold();
+        bool get_shutdown_f_above_threshold();
         int16_t get_temperature();
         uint16_t get_glv_battery_voltage();
         void set_state(uint8_t state);
@@ -325,6 +327,8 @@ class MCU_status {
         void set_shutdown_b_above_threshold(bool shutdown_b_above_threshold);
         void set_shutdown_c_above_threshold(bool shutdown_c_above_threshold);
         void set_shutdown_d_above_threshold(bool shutdown_d_above_threshold);
+        void set_shutdown_e_above_threshold(bool shutdown_e_above_threshold);
+        void set_shutdown_f_above_threshold(bool shutdown_f_above_threshold);
         void set_temperature(int16_t temperature);
         void set_glv_battery_voltage(uint16_t glv_battery_voltage);
     private:

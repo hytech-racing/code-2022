@@ -117,7 +117,15 @@ bool MCU_status::get_shutdown_c_above_threshold() {
 }
 
 bool MCU_status::get_shutdown_d_above_threshold() {
-    return (message.flags & 0x20) >> 5
+    return (message.flags & 0x20) >> 5;
+}
+
+bool MCU_status::get_shutdown_e_above_threshold() {
+    return (message.flags & 0x40) >> 6;
+}
+
+bool MCU_status::get_shutdown_f_above_threshold() {
+    return (message.flags & 0x80) >> 7;
 }
 
 int16_t MCU_status::get_temperature() {
@@ -165,6 +173,14 @@ void MCU_status::set_shutdown_c_above_threshold(bool shutdown_c_above_threshold)
 
 void MCU_status::set_shutdown_d_above_threshold(bool shutdown_d_above_threshold) {
     message.flags = (message.flags & 0xDF) | ((shutdown_d_above_threshold & 0x1) << 5);
+}
+
+void MCU_status::set_shutdown_e_above_threshold(bool shutdown_e_above_threshold) {
+    message.flags = (message.flags & 0xBF) | ((shutdown_e_above_threshold & 0x1) << 6);
+}
+
+void MCU_status::set_shutdown_f_above_threshold(bool shutdown_f_above_threshold) {
+    message.flags = (message.flags & 0x7F) | ((shutdown_f_above_threshold & 0x1) << 7);
 }
 
 void MCU_status::set_temperature(int16_t temperature) {
