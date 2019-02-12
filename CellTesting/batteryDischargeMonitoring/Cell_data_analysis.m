@@ -1,24 +1,11 @@
 %% Import Variables
-
-% files = dir('*.xlsx');
-%
-% data(1).raw = xlsread(files(1).name,'19076');
-% data(2).raw = xlsread(files(1).name,'19077');
-%
-% data(3).raw = xlsread(files(2).name,'19078');
-% data(4).raw = xlsread(files(2).name,'19079');
-
 clear;
 %clc;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% Update Cell List With New Tests %%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-files = dir('*.txt');
-load('Cell_Testing_Data.mat')
-
-if ~exist('CellData','var')
-    CellData = struct;
-end
-
-Cell_List = ... %Cell ID, File Number, Channel Number
+Cell_List = ... %Cell ID, File/Test Number, Channel Number
     {...
     'c19076', 1, 1;...
     'c19077', 1, 2;...
@@ -27,6 +14,16 @@ Cell_List = ... %Cell ID, File Number, Channel Number
     'c19082', 3, 1;...
     'c19083', 3, 2;...
     };
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+files = dir('*.txt');
+load('Cell_Testing_Data.mat')
+
+if ~exist('CellData','var')
+    CellData = struct;
+end
 
 [rows, ~] = size(Cell_List);
 f = waitbar(0, 'Importing Cell Testing Data...');
