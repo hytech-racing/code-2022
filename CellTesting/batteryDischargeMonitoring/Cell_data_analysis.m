@@ -73,7 +73,7 @@ for c = 1:rows
              'Ah: %0.4f\n'],CellSummary.(ID).StartV,CellSummary.(ID).Ah)
     
     scatter(CellSummary.(ID).StartV,CellSummary.(ID).Ah,'Filled','DisplayName',ID); hold on; grid on;legend('Location','NorthWest');
-    CellSummary.V_Ah_table(c,:) = [str2num(ID(2:end)),CellSummary.(ID).StartV,CellSummary.(ID).Ah];
+    CellSummary.V_Ah_table(c,:) = [str2double(ID(2:end)),CellSummary.(ID).StartV,CellSummary.(ID).Ah];
 end
 xlabel('Starting Voltage')
 ylabel('Capacity (Ah)')
