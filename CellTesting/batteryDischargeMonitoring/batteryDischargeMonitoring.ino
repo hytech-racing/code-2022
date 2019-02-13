@@ -51,10 +51,8 @@ const int DONE = 2;
 // create an adc object
 ADC_SPI adc;
 
-// create a metro timer objects
-Metro read_timer = Metro(20, 1);           // return true 50 times per second; ignore missed calls;
-Metro pulse_start_timer = Metro(30000, 1); // return true evey 5 mins; ignore missed calls;
-Metro pulsing_timer = Metro(3000, 1);      // return true every 30 seconds; ignore missed calls;
+// create a metro timer object
+Metro timer = Metro(20, 1); // return true 50 times per second; ignore missed calls;
 
 void setup() {
   adc = ADC_SPI();
@@ -91,7 +89,7 @@ void loop() {
 
       cell_voltage[i] = getBatteryVoltage(i); // read cell's voltage
 
-      if (read_timer.check()) {
+      if (timer.check()) {
         if (cell_voltage[i] > END_VOLTAGE && state[i] != DONE) { // check if the cell is above end voltage and it is not already done discharging
           // if the current state is WAIT, change the state to DISCHARGE
           if (state[i] == WAIT) {
@@ -108,11 +106,11 @@ void loop() {
 
           // record current and internal resistance
           cell_current[i] = getBatteryCurrent(i);
-          // cell_resistance[i] = cell_voltage[i] / cell_current[i] - R;
+          cell_resistance[i] = cell_voltage[i] / cell_current[i] - R;
 
-          // print data to Serial in the format "CH#,V,I,t"
+          // print data to Serial in the format "CH#,V,I,R,t"
           Serial.print(i + 1); Serial.print(", "); Serial.print(cell_voltage[i]); Serial.print(", "); Serial.print(cell_current[i]);
-          Serial.print(", "); /*Serial.print(cell_resistance[i]); Serial.print(", ");*/ Serial.println(millis() - start_millis);
+          Serial.print(", "); Serial.print(cell_resistance[i]); Serial.print(", "); Serial.println(millis() - start_millis);
 
         // check if the cell voltage is below the end voltage
         } else if (cell_voltage[i] < END_VOLTAGE) {
