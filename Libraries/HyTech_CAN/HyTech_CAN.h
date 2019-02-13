@@ -349,7 +349,7 @@ class MCU_pedal_readings {
         bool get_accelerator_implausibility();
         bool get_brake_implausibility();
         bool get_brake_pedal_active();
-        bool get_torque_map_mode();
+        uint8_t get_torque_map_mode();
         void set_accelerator_pedal_raw_1(uint16_t accelerator_pedal_raw_1);
         void set_accelerator_pedal_raw_2(uint16_t accelerator_pedal_raw_2);
         void set_brake_pedal_raw(uint16_t brake_pedal_raw);
@@ -360,7 +360,7 @@ class MCU_pedal_readings {
         void set_torque_map_mode(uint8_t torque_map_mode);
     private:
         CAN_message_mcu_pedal_readings_t message;
-}
+};
 
 class RCU_status {
     public:

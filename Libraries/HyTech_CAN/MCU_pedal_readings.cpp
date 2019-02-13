@@ -111,15 +111,15 @@ uint8_t MCU_pedal_readings::get_pedal_flags() {
 }
 
 bool MCU_pedal_readings::get_accelerator_implausibility() {
-    return message.flags & 0x01;
+    return message.pedal_flags & 0x01;
 }
 
 bool MCU_pedal_readings::get_brake_implausibility() {
-    return (message.flags & 0x02) >> 1;
+    return (message.pedal_flags & 0x02) >> 1;
 }
 
 bool MCU_pedal_readings::get_brake_pedal_active() {
-    return (message.flags & 0x04) >> 2;
+    return (message.pedal_flags & 0x04) >> 2;
 }
 
 uint8_t MCU_pedal_readings::get_torque_map_mode() {
@@ -150,15 +150,15 @@ void MCU_pedal_readings::set_pedal_flags(uint8_t pedal_flags) {
 }
 
 void MCU_pedal_readings::set_accelerator_impausibility(bool accelerator_impausibility) {
-    message.flags = (message.flags & 0xFE) | (accelerator_implausibility & 0x1);
+    message.pedal_flags = (message.pedal_flags & 0xFE) | (accelerator_impausibility & 0x1);
 }
 
 void MCU_pedal_readings::set_brake_implausibility(bool brake_implausibility) {
-    message.flags = (message.flags & 0xFD) | ((brake_implausibility & 0x1) << 1);
+    message.pedal_flags = (message.pedal_flags & 0xFD) | ((brake_implausibility & 0x1) << 1);
 }
 
 void MCU_pedal_readings::set_brake_pedal_active(bool brake_pedal_active) {
-    message.flags = (message.flags & 0xFB) | ((brake_pedal_active & 0x1) << 2);
+    message.pedal_flags = (message.pedal_flags & 0xFB) | ((brake_pedal_active & 0x1) << 2);
 }
 
 void MCU_pedal_readings::set_torque_map_mode(uint8_t torque_map_mode) {
