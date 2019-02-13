@@ -611,7 +611,6 @@ void set_state(uint8_t new_state) {
     if (new_state == FCU_STATE_ENABLING_INVERTER) {
         set_start_led(1);
         Serial.println("FCU Enabling inverter");
-        noInterrupts(); // Disable interrupts
         MC_command_message mc_command_message = MC_command_message(0, 0, 0, 1, 0, 0);
         tx_msg.id = 0xC0;
         tx_msg.len = 8;
@@ -627,7 +626,6 @@ void set_state(uint8_t new_state) {
             mc_command_message.write(tx_msg.buf); // many more enable commands
             CAN.write(tx_msg);
         }
-        interrupts(); // Enable interrupts
         Serial.println("FCU Sent enable command");
         timer_inverter_enable.reset();
     }
