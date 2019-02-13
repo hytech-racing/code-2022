@@ -107,12 +107,11 @@ void loop() {
         processAccelerometer(); 
     }
     if (timer_current.check()) {
-      double current_ecu = (((double)(analogRead(A13)))/1023*3.3)/0.185;
-      double current_cooling = (((double)(analogRead(A12)))/1023*3.3)/0.185;
-
+      double current_ecu = (3.3*(((double)(analogRead(A9))-165)/1024))/0.185;
+      double current_cooling = (3.3*(((double)(analogRead(A9))-165)/1024))/0.185;
       Serial.println(current_cooling);
       Serial.println(current_ecu);
-      /*
+      
       CAN_current_sensor_readings.set_ecu_current_value(current_ecu);
       CAN_current_sensor_readings.set_cooling_current_value(current_cooling);
 
@@ -127,22 +126,14 @@ void loop() {
       xb_msg.len = sizeof(CAN_current_sensor_readings_t);
       write_xbee_data();
       interrupts();
-      */
+     
     }
-    /*
-    if (timer_current_ecu.check()) {
-        process_current(analogRead(A13)); 
-    }
-    if (timer_current_cooling.check()) {
-        process_current(analogRead(A12));
-    }
-    */
 }
 
 void parse_can_message() {                                              // ISR
    while (CAN.read(msg)) {
     
-    Serial.println("Received!!");
+    //Serial.println("Received!!");
     timestampWrite();
     logger.print(msg.id, HEX);
     logger.print(", ");
