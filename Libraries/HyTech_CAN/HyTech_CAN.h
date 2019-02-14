@@ -354,7 +354,7 @@ class MCU_pedal_readings {
         void set_accelerator_pedal_raw_2(uint16_t accelerator_pedal_raw_2);
         void set_brake_pedal_raw(uint16_t brake_pedal_raw);
         void set_pedal_flags(uint8_t pedal_flags);
-        void set_accelerator_impausibility(bool accelerator_impausibility);
+        void set_accelerator_implausibility(bool accelerator_implausibility);
         void set_brake_implausibility(bool brake_implausibility);
         void set_brake_pedal_active(bool brake_pedal_active);
         void set_torque_map_mode(uint8_t torque_map_mode);

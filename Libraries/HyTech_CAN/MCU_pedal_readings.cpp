@@ -149,8 +149,8 @@ void MCU_pedal_readings::set_pedal_flags(uint8_t pedal_flags) {
     message.pedal_flags = pedal_flags;
 }
 
-void MCU_pedal_readings::set_accelerator_impausibility(bool accelerator_impausibility) {
-    message.pedal_flags = (message.pedal_flags & 0xFE) | (accelerator_impausibility & 0x1);
+void MCU_pedal_readings::set_accelerator_implausibility(bool accelerator_implausibility) {
+    message.pedal_flags = (message.pedal_flags & 0xFE) | (accelerator_implausibility & 0x1);
 }
 
 void MCU_pedal_readings::set_brake_implausibility(bool brake_implausibility) {
