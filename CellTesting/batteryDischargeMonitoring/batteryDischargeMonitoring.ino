@@ -73,7 +73,7 @@ double cell_current2[channels][rollingwin];     // cells' current reading (temp 
 double v_avg[channels];                         // used for calculating rolling avg
 double i_avg[channels];                         // used for calculating rolling avg
 double v_last[channels];                        // used for calculating cell IR
-double i_last[channels];                       // used for calculating cell IR
+double i_last[channels];                        // used for calculating cell IR
 
 double test_resistance[channels];      // Calculated resistance of the discharge power resistor
 int    contactor_command[channels];    // Digital high/low used for contactor (used for post-processing)
@@ -178,6 +178,8 @@ void CellDataLog(int i) {
       Serial.print(cell_IR_avg[i]*1000,4);  Serial.print(delimiter); 
       Serial.print(contactor_command[i]);   Serial.print(delimiter); 
       Serial.print(state[i]);               Serial.print(delimiter);
+      Serial.print(v_avg[i]);               Serial.print(delimiter);
+      Serial.print(i_avg[i]);               Serial.print(delimiter);
       Serial.println(pulses_completed[i]);//Serial.print(delimiter);
 
   }
@@ -251,6 +253,8 @@ void setup() {
     Serial.print("Calculated IR mOhm"); Serial.print(delimiter); 
     Serial.print("Contactor");          Serial.print(delimiter); 
     Serial.print("State");              Serial.print(delimiter);
+    Serial.print("V avg");              Serial.print(delimiter);
+    Serial.print("I avg");              Serial.print(delimiter);
     Serial.println("Rest Periods");//   Serial.print(delimiter);
 }
 
