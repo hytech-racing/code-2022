@@ -107,10 +107,10 @@ void loop() {
         processAccelerometer(); 
     }
     if (timer_current.check()) {
-      double current_ecu = (3.3*(((double)(analogRead(A9))-165)/1024))/0.185;
-      double current_cooling = (3.3*(((double)(analogRead(A9))-165)/1024))/0.185;
-      Serial.println(current_cooling);
-      Serial.println(current_ecu);
+      double current_ecu = ((double)(analogRead(A13)-96))*0.029412;
+      double current_cooling = ((double)(analogRead(A12)-96))*0.029412;
+      //Serial.println(current_cooling);
+      //Serial.println(current_ecu);
       
       CAN_current_sensor_readings.set_ecu_current_value(current_ecu);
       CAN_current_sensor_readings.set_cooling_current_value(current_cooling);
