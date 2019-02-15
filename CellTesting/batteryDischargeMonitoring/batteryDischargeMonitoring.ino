@@ -2,13 +2,19 @@
   Leonid Pozdneev
   Created January 2019
 
+  Jeff Ding
+  2-15-19
+
   This code controls Battery Discharge Monitoring Board. It collects voltage, current and internal resistance
-  data from 4 channels on the board and then prints it to Arduino Serial in the format "CH#, Voltage, Current, Resistance, time(milliseconds)"
-  (.csv file format). In order to process the data, the data needs to be copied from the Serial window and saved in a .csv file.
+  data from 4 channels on the board and then prints it to Arduino Serial in a tab or comma delimited format
+  Use TeraTerm to continuously log large serial files directly to .txt
 
   In this code, each of 4 channels of the board can be in 3 states: WAIT, DISCHARGE, DONE.
+  
   All channels are in WAIT state if the contactor is not powered. When the contactor is powered,
-  if the voltage on a channel is above 3 Volts, the channel enters DISCHARGE state. In DISCHARGE state,
+  if the voltage on a channel is above 3 Volts, the channel enters DISCHARGE state. 
+  
+  In DISCHARGE state,
   the contactor relay is closed which allowes cell to runn current and discharge (this is when data is
   printed to the Serial port). Once the voltage on channel goes below the set threshold, it is put into
   DONE state, the relay is opened, and the printing of data is stopped.
@@ -19,20 +25,20 @@
 //********CONFIGURATION********************************************************************
 //*****************************************************************************************
 
-double END_VOLTAGE  = 3.000;      // voltage threshold for end of test
+double       END_VOLTAGE   = 2.750;      // voltage threshold for end of test
 
-const int    timestep      = 20;         //datalog timestep (milliseconds)
+const int    timestep      = 20;         // datalog timestep (milliseconds)
 bool         pulsing_on    = true;       // if pulsing should be used in middle of cycle
-int          V_end         = 2;          // 0 = instantaneous voltage ends cycle, 1 = rolling average window ends cycle, 2 = predicted OCV ends cycle
-bool         manual_offset = false;     // use manual offset for current sensor voltage offset
+int          V_end         = 0;          // 0 = instantaneous voltage ends cycle, 1 = rolling average window ends cycle, 2 = predicted OCV ends cycle
+bool         manual_offset = false;      // use manual offset for current sensor voltage offset
 
-int    start_delay  = 5 * 1000;   // time to log data before start milliseconds
-int    end_delay    = 45 * 1000;  // time to log data after end milliseconds
+int          start_delay   = 5 * 1000;   // time to log data before start milliseconds
+int          end_delay     = 60 * 1000;  // time to log data after end milliseconds
 
-const int    channels   = 4;
-const int    rollingwin = 100;     // rolling average window needs to be small compared to pulse time & battery time constant for IR calculations
+const int    channels      = 4;
+const int    rollingwin    = 100;        // rolling average window needs to be small compared to pulse time & battery time constant for IR calculations
 
-const int    delimiter = 1;       // 0 for comma (CSV), 1 for tab
+char         delimiter     = "\t";          // "," comma for (CSV), "\t" for tab delimited files
 
 //*****************************************************************************************
 //********CONFIGURATION********************************************************************
@@ -40,12 +46,15 @@ const int    delimiter = 1;       // 0 for comma (CSV), 1 for tab
 
 
 //////////Pulsing setup////////////////////////////////////////////////////////////////////
-const int     num_pulses        = 5;         // if pulsing is set to TRUE, then number of pulses to be included in cycle
-int     pulse_int         = 30 * 1000; // milliseconds to wait for pulse off cycle // pulse interval will likely need to be greater than rolling average window
-double  pulsing_threshold = 0.020;     // Volts/second threshold used to determine linear region; steep region is approx 0.1 V/s
-int     pulses_completed[channels]  = {0,0,0,0};         // keeping track of pulses
-bool    pulsing[channels]           = {false,false,false,false};      // pulsing flag
-unsigned long pulse_time[channels]  = {0,0,0,0};         // for timing purposes
+const int     num_pulses       = 50;        // if pulsing is set to TRUE, then number of rest period pulses to be included in cycle;
+
+int     pulse_int_discharge    = 10 * 1000; // milliseconds to wait for pulse discharge cycle // pulse interval will likely need to be greater than rolling average window
+int     pulse_int_rest         = 60 * 1000; // milliseconds to wait for pulse resting cycle // pulse interval will likely need to be greater than rolling average window
+
+double  pulsing_threshold = 0.010;                                // Volts/second threshold used to determine linear region; steep region is approx 0.1 V/s
+int     pulses_completed[channels]  = {0,0,0,0};                  // keeping track of pulses (rest periods)
+bool    pulsing[channels]           = {false,false,false,false};  // pulsing flag; pulsing is true when cell is in rest period
+unsigned long pulse_time[channels]  = {0,0,0,0};                  // for timing purposes
 //////////Pulsing setup////////////////////////////////////////////////////////////////////
 
 
@@ -61,13 +70,13 @@ double cell_current[channels][rollingwin];      // cells' current reading w/ his
 
 double cell_voltage2[channels][rollingwin];     // cells' voltage reading (temp array for shifting)
 double cell_current2[channels][rollingwin];     // cells' current reading (temp array for shifting)
-double v_avg[channels];                               // used for calculating rolling avg
-double i_avg[channels];                               // used for calculating rolling avg
-double v_last[channels];                               // used for calculating cell IR
-double i_last[channels];                               // used for calculating cell IR
+double v_avg[channels];                         // used for calculating rolling avg
+double i_avg[channels];                         // used for calculating rolling avg
+double v_last[channels];                        // used for calculating cell IR
+double i_last[channels];                       // used for calculating cell IR
 
 double test_resistance[channels];      // Calculated resistance of the discharge power resistor
-int    contactor_command[channels];     // Digital high/low used for contactor (used for post-processing)
+int    contactor_command[channels];    // Digital high/low used for contactor (used for post-processing)
 
 //////////Calculated Parameters
 double cell_dvdt[channels];            // Numerical derivative of voltage change
@@ -99,7 +108,7 @@ unsigned int    contactor_voltage       = 0;       // reading on the CONTACTOR_P
 
 bool            started[channels]              = {false};  // stores if channel has started testing
 unsigned long   test_time[channels]            = {0};     // stores whether start_millis has been recorded or not
-unsigned long   start_millis[channels]         = {1306,1306,1306,1306};     // stores the value of millis() when the discharging started
+unsigned long   start_millis[channels]         = {1306,1306,1306,1306};     // stores the value of millis() when the discharging started; emperically derived
 signed long   end_millis[channels]           = {0};     // stores the value of millis() when the discharging ended
 //////////State Machine/////////////////////////////////////////////////////////////////////
 
@@ -159,16 +168,18 @@ void CellDataLog(int i) {
 
     cell_OCV[i] = v_avg[i] + (i_avg[i] * cell_IR_avg[i]); // print calculated OCV
 
-    //Print data to Serial in the format "CH#,t,V,I,R,Com,State
+    //Print data to Serial with delimiters to form columns:
 
-    //Comma Delimited:
-    if      (delimiter == 0){
-      Serial.print(i+1); Serial.print(",");Serial.print(test_time[i]); Serial.print(",");   Serial.print(cell_voltage[i][0],4); Serial.print(","); Serial.print(cell_current[i][0]); Serial.print(","); Serial.print(cell_OCV[i],4); Serial.print(",");    Serial.print(cell_IR_avg[i]*1000,4); Serial.print(",");Serial.print(contactor_command[i]); Serial.print(","); Serial.println(state[i]); // Serial.print(",");
-    }
-    //Tab Delimited:
-    else if (delimiter == 1){
-      Serial.print(i+1); Serial.print("\t");Serial.print(test_time[i]); Serial.print("\t");   Serial.print(cell_voltage[i][0],4); Serial.print("\t"); Serial.print(cell_current[i][0]); Serial.print("\t"); Serial.print(cell_OCV[i],4); Serial.print("\t");   Serial.print(cell_IR_avg[i]*1000,4); Serial.print("\t"); Serial.print(contactor_command[i]); Serial.print("\t"); Serial.println(state[i]); // Serial.print(",");
-    }
+      Serial.print(i+1);                    Serial.print(delimiter);
+      Serial.print(test_time[i]);           Serial.print(delimiter);   
+      Serial.print(cell_voltage[i][0],4);   Serial.print(delimiter); 
+      Serial.print(cell_current[i][0]);     Serial.print(delimiter); 
+      Serial.print(cell_OCV[i],4);          Serial.print(delimiter);   
+      Serial.print(cell_IR_avg[i]*1000,4);  Serial.print(delimiter); 
+      Serial.print(contactor_command[i]);   Serial.print(delimiter); 
+      Serial.print(state[i]);               Serial.print(delimiter);
+      Serial.println(pulses_completed[i]);//Serial.print(delimiter);
+
   }
 }
 
@@ -232,12 +243,15 @@ void setup() {
   }
 
   // Print Column Headers
-  if      (delimiter == 0){
-    Serial.print("Channel"); Serial.print(",");    Serial.print("Time"); Serial.print(",");    Serial.print("Voltage"); Serial.print(",");   Serial.print("Current"); Serial.print(",");   Serial.print("OCV Predict"); Serial.print(",");    Serial.print("Calculated IR mOhm"); Serial.print(",");Serial.print("Contactor"); Serial.print(","); Serial.println("State"); // Serial.print(", ");
-  }
-  else if (delimiter == 1){
-    Serial.print("Channel"); Serial.print("\t");    Serial.print("Time"); Serial.print("\t");    Serial.print("Voltage"); Serial.print("\t");   Serial.print("Current"); Serial.print("\t");   Serial.print("OCV Predict"); Serial.print("\t");   Serial.print("Calculated IR mOhm"); Serial.print("\t"); Serial.print("Contactor"); Serial.print("\t"); Serial.println("State"); // Serial.print(", ");
-  }
+    Serial.print("Channel");            Serial.print(delimiter);    
+    Serial.print("Time");               Serial.print(delimiter);    
+    Serial.print("Voltage");            Serial.print(delimiter);   
+    Serial.print("Current");            Serial.print(delimiter);   
+    Serial.print("OCV Predict");        Serial.print(delimiter);   
+    Serial.print("Calculated IR mOhm"); Serial.print(delimiter); 
+    Serial.print("Contactor");          Serial.print(delimiter); 
+    Serial.print("State");              Serial.print(delimiter);
+    Serial.println("Rest Periods");//   Serial.print(delimiter);
 }
 
 void loop() {
@@ -253,14 +267,14 @@ void loop() {
     i_read[i]     = getBatteryCurrent(i); // read cell's current
     test_resistance[i]  = v_read[i] / i_read[i];
 
-    if (V_end == 0 && v_read[i] <= END_VOLTAGE && state[i] != DONE) { // END CONDITION: set to end if read voltage low (instantaneous reading)
+    if (V_end == 0 && v_read[i]   <= END_VOLTAGE && state[i] != DONE) { // END CONDITION: set to end if read voltage low (instantaneous reading)
       end_millis[i] = millis();
       if (state[i] == WAIT){
         end_millis[i] = -1*end_delay;
       }
       state[i] = DONE; 
     }
-    if (V_end == 1 && v_avg[i] <= END_VOLTAGE && state[i] != DONE) { // END CONDITION: set to end if read voltage low (rolling average reading)
+    if (V_end == 1 && v_avg[i]    <= END_VOLTAGE && state[i] != DONE) { // END CONDITION: set to end if read voltage low (rolling average reading)
       end_millis[i] = millis();
       if (state[i] == WAIT){
         end_millis[i] = -1*end_delay;
@@ -316,12 +330,15 @@ void loop() {
           digitalWrite(SWITCH[i], contactor_command[i]);
         }
         else if (pulsing_on)  {
-          if      (pulses_completed[i] == 0 && millis() - start_delay - start_millis[i] <= rollingwin * timestep) { // allow enough time for one full rolling average window to populate
+          // allow enough time for one full rolling average window to populate
+          if      (pulses_completed[i] == 0 && millis() - start_delay - start_millis[i] <= rollingwin * timestep) {
             contactor_command[i] = 1;
             digitalWrite(SWITCH[i], contactor_command[i]);
           }
           // pulse interval will likely need to be greater than rolling average window
-          else if (!pulsing[i] && pulses_completed[i] < num_pulses && abs(cell_dvdt[i]) <= pulsing_threshold && millis() - pulse_time[i] > pulse_int) { // if not in a pulse, and have pulses left, and in linear cell discharge region, and enough time for rolling average window to populate
+          
+          // if not in a pulse, and have pulses left, and in linear cell discharge region, and enough time for rolling average window to populate
+          else if (!pulsing[i] && pulses_completed[i] < num_pulses && abs(cell_dvdt[i]) <= pulsing_threshold && millis() - pulse_time[i] > pulse_int_discharge) { 
             v_last[i] = v_avg[i]; // rolling average window needs to be small compared to pulse time & battery time constant
             i_last[i] = i_avg[i];
 
@@ -330,9 +347,11 @@ void loop() {
             contactor_command[i] = 0;
             digitalWrite(SWITCH[i], contactor_command[i]);
             pulse_time[i] = millis();
-            pulses_completed[i]++;;
+            pulses_completed[i]++;; // counts rest periods
           }
-          else if (pulsing[i] && millis()-pulse_time[i] >= pulse_int ) { // if in the middle of a pulse and exceeded the time
+
+          // if in the middle of a pulse (cell is resting) and exceeded the time
+          else if (pulsing[i] && millis()-pulse_time[i] >= pulse_int_rest ) { // if in the middle of a pulse and exceeded the time
             v_last[i] = v_avg[i] - v_last[i]; //difference from before, assume 0 current when contactor is open
             cell_IR[i][pulses_completed[i]-1] = v_last[i] / i_last[i];
 
