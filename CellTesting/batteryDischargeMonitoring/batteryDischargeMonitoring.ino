@@ -37,8 +37,7 @@ int          end_delay     = 60 * 1000;  // time to log data after end milliseco
 
 const int    channels      = 4;
 const int    rollingwin    = 100;        // rolling average window needs to be small compared to pulse time & battery time constant for IR calculations
-
-char         delimiter     = "\t";          // "," comma for (CSV), "\t" for tab delimited files
+char*         delimiter     = "\t";          // "," comma for (CSV), "\t" for tab delimited files
 
 //*****************************************************************************************
 //********CONFIGURATION********************************************************************
@@ -108,7 +107,7 @@ unsigned int    contactor_voltage       = 0;       // reading on the CONTACTOR_P
 
 bool            started[channels]              = {false};  // stores if channel has started testing
 unsigned long   test_time[channels]            = {0};     // stores whether start_millis has been recorded or not
-unsigned long   start_millis[channels]         = {1306,1306,1306,1306};     // stores the value of millis() when the discharging started; emperically derived
+unsigned long   start_millis[channels]         = {10306,10306,10306,10306};     // stores the value of millis() when the discharging started; emperically derived
 signed long   end_millis[channels]           = {0};     // stores the value of millis() when the discharging ended
 //////////State Machine/////////////////////////////////////////////////////////////////////
 
@@ -204,7 +203,7 @@ double getBatteryCurrent(int channel) {
 void setup() {
   adc = ADC_SPI();
   Serial.begin(115200);
-  delay(1000); // need a delay after Serial.begin()
+  delay(10000); // need a delay after Serial.begin()
 
   // Set the contactor pin as INPUT
   pinMode(CONTACTOR_PWR_SENSE, INPUT);
