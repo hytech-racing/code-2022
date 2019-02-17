@@ -37,7 +37,7 @@ int          end_delay     = 60 * 1000;  // time to log data after end milliseco
 
 const int    channels      = 4;
 const int    rollingwin    = 100;        // rolling average window needs to be small compared to pulse time & battery time constant for IR calculations
-char*         delimiter     = "\t";          // "," comma for (CSV), "\t" for tab delimited files
+char*        delimiter     = "\t";       // "," comma for (CSV), "\t" for tab delimited files
 
 //*****************************************************************************************
 //********CONFIGURATION********************************************************************
@@ -45,12 +45,14 @@ char*         delimiter     = "\t";          // "," comma for (CSV), "\t" for ta
 
 
 //////////Pulsing setup////////////////////////////////////////////////////////////////////
-const int     num_pulses       = 50;        // if pulsing is set to TRUE, then number of rest period pulses to be included in cycle;
+const int     num_pulses       = 100;        // if pulsing is set to TRUE, then number of rest period pulses to be included in cycle; just set to high enough value to collect data unless pulses are ended prematurely
 
-int     pulse_int_discharge    = 10 * 1000; // milliseconds to wait for pulse discharge cycle // pulse interval will likely need to be greater than rolling average window
+int     pulse_int_discharge    = 30 * 1000; // milliseconds to wait for pulse discharge cycle // pulse interval will likely need to be greater than rolling average window
 int     pulse_int_rest         = 60 * 1000; // milliseconds to wait for pulse resting cycle // pulse interval will likely need to be greater than rolling average window
+double  pulsing_threshold      = 0.250;     // Volts/second threshold used to determine linear region; steep region is approx 0.1 V/s
+double  pulsing_frame_H        = 4.000;     // OCV to start pulsing (Linear IR characterization region)
+double  pulsing_frame_L        = 3.800;     // OCV to stop pulsing (Linear IR characterization region)
 
-double  pulsing_threshold = 0.010;                                // Volts/second threshold used to determine linear region; steep region is approx 0.1 V/s
 int     pulses_completed[channels]  = {0,0,0,0};                  // keeping track of pulses (rest periods)
 bool    pulsing[channels]           = {false,false,false,false};  // pulsing flag; pulsing is true when cell is in rest period
 unsigned long pulse_time[channels]  = {0,0,0,0};                  // for timing purposes
@@ -81,7 +83,7 @@ int    contactor_command[channels];    // Digital high/low used for contactor (u
 double cell_dvdt[channels];            // Numerical derivative of voltage change
 double cell_didt[channels];            // Numerical derivative of current change
 double cell_IR[channels][num_pulses];  // Calculated cell internal resistance for each pulse
-double cell_IR_avg[channels];          // Calculated cell internal resistance (averaged)
+double cell_IR_avg[channels] = {0.0020,0.0020,0.0020,0.0020};// Calculated cell internal resistance (averaged), initialize at 2.0 mOhm
 double cell_OCV[channels];             // Calculated cell open circuit voltage
 
 double cell_Ah_inst[channels];         // One-timestep coulomb counting
@@ -177,7 +179,7 @@ void CellDataLog(int i) {
       Serial.print(cell_IR_avg[i]*1000,4);  Serial.print(delimiter); 
       Serial.print(contactor_command[i]);   Serial.print(delimiter); 
       Serial.print(state[i]);               Serial.print(delimiter);
-      Serial.print(v_avg[i]);               Serial.print(delimiter);
+      Serial.print(v_avg[i],4);             Serial.print(delimiter);
       Serial.print(i_avg[i]);               Serial.print(delimiter);
       Serial.println(pulses_completed[i]);//Serial.print(delimiter);
 
@@ -336,12 +338,13 @@ void loop() {
           // allow enough time for one full rolling average window to populate
           if      (pulses_completed[i] == 0 && millis() - start_delay - start_millis[i] <= rollingwin * timestep) {
             contactor_command[i] = 1;
+            pulse_time[i] = millis(); // ensures time for discharge pulse before contactor opens
             digitalWrite(SWITCH[i], contactor_command[i]);
           }
           // pulse interval will likely need to be greater than rolling average window
           
-          // if not in a pulse, and have pulses left, and in linear cell discharge region, and enough time for rolling average window to populate
-          else if (!pulsing[i] && pulses_completed[i] < num_pulses && abs(cell_dvdt[i]) <= pulsing_threshold && millis() - pulse_time[i] > pulse_int_discharge) { 
+          // if not in a pulse, and have pulses left, and in linear cell discharge region, and enough time for rolling average window to populate, and in IR characterization region
+          else if (!pulsing[i] && pulses_completed[i] < num_pulses && abs(cell_dvdt[i]) <= pulsing_threshold && millis() - pulse_time[i] > pulse_int_discharge && cell_OCV[i] > pulsing_frame_L && cell_OCV[i] < pulsing_frame_H ) { 
             v_last[i] = v_avg[i]; // rolling average window needs to be small compared to pulse time & battery time constant
             i_last[i] = i_avg[i];
 
