@@ -283,7 +283,7 @@ typedef struct CAN_message_fcu_accelerometer_values_t {
 } CAN_message_fcu_accelerometer_values_t;
 
 typedef struct CAN_message {
-    bool cobs_flag;
+    //bool cobs_flag;
     uint32_t msg_id;
     uint8_t length;
     union {

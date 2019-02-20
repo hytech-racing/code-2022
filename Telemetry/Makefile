@@ -4,7 +4,7 @@ CFLAGS = -O2
 LIBS = -lpaho-mqtt3c
 
 receiver: telemetry.o XBTools.o
-	$(LD) $^ $(LIBS)
+	$(LD) -o $@ $^ $(LIBS)
 
 telemetry.o: telemetry.c
 	$(CC) $(CFLAGS) $< -o $@

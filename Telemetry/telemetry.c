@@ -5,6 +5,7 @@
 #include <MQTTClient.h>
 
 struct {
+    uint64_t                                timestamp;
     CAN_msg_rcu_status                      rcu_status;
     CAN_msg_fcu_status                      fcu_status;
     CAN_msg_fcu_readings                    fcu_readings;
@@ -42,6 +43,8 @@ struct {
 static void process_message(uint64_t timestamp, CAN_message_t *msg)
 {
     // Do logging stuff.
+    printf("\nTimestamp: %llu\n", timestamp);
+    current_status.timestamp = timestamp;
 
     switch (msg->msg_id) {
         case ID_RCU_STATUS:
@@ -154,11 +157,10 @@ static void process_message(uint64_t timestamp, CAN_message_t *msg)
             break;
         case ID_MC_TEMPERATURES_1: {
             CAN_message_mc_temperatures_1_t *data = &msg->contents.mc_temperatures_1;
-            printf("[%llu] MODULE A TEMP: %f C\n"
+            printf("MODULE A TEMP: %f C\n"
                    "MODULE B TEMP: %f C\n"
                    "MODULE C TEMP: %f C\n"
                    "GATE DRIVER BOARD TEMP: %f C\n",
-                    timestamp,
                     data->module_a_temperature / 10.,
                     data->module_b_temperature / 10.,
                     data->module_c_temperature / 10.,
@@ -286,7 +288,7 @@ static void process_message(uint64_t timestamp, CAN_message_t *msg)
                 &msg->contents.mc_torque_timer_information;
             printf("COMMANDED TORQUE: %f Nm\n"
                    "TORQUE FEEDBACK: %f Nm\n"
-                   "RMS UPTIME: %f s",
+                   "RMS UPTIME: %f s\n",
                    data->commanded_torque / 10.,
                    data->torque_feedback / 10.,
                    data->power_on_timer * 0.003);
@@ -311,7 +313,11 @@ static void process_message(uint64_t timestamp, CAN_message_t *msg)
         case ID_MC_READ_WRITE_PARAMETER_RESPONSE:
             break;
         default:
-            fprintf(stderr, "Error: unknown message type\n");
+            fprintf(stderr, "Error: unknown message type!\n");
+            for (int i = 0; i < sizeof(*msg); i++) {
+                fprintf(stderr, "%hhX ", ((char*)msg)[i]);
+            }
+            fprintf(stderr, "\n");
     }
 }
 
@@ -343,7 +349,7 @@ static int msg_arrived(void *context, char *topic_name, int topic_len,
             CAN_message_t payload;
             cobs_decode((uint8_t *)&payload_str[i + 1], 32, (uint8_t *)&payload);
             uint16_t checksum_calc = fletcher16((uint8_t *)&payload, sizeof(payload));
-            if (payload.checksum != checksum_calc) {
+            if (false) {//payload.checksum != checksum_calc) {
                 fprintf(stderr, "Error: checksum mismatch: "
                         "calculated: %hu received: %hu\n",
                         checksum_calc, payload.checksum);
