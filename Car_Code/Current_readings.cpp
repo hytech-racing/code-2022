@@ -10,7 +10,7 @@ Current_readings::Current_readings(uint8_t buf[8]) {
     load(buf);
 }
 
-Current_readings::Current_readings(uint8_t ecu_current_value, uint8_t cooling_current_value) {
+Current_readings::Current_readings(short ecu_current_value, short cooling_current_value) {
     set_ecu_current_value(ecu_current_value);
     set_cooling_current_value(cooling_current_value);
 }
@@ -20,15 +20,15 @@ Current_readings::Current_readings(uint8_t ecu_current_value, uint8_t cooling_cu
 void Current_readings::load(uint8_t buf[8]) {
     message = {};
 
-    memcpy(&(message.ecu_current_value), &buf[0], sizeof(uint16_t));
-    memcpy(&(message.cooling_current_value), &buf[2], sizeof(uint16_t));
+    memcpy(&(message.ecu_current_value), &buf[0], sizeof(short));
+    memcpy(&(message.cooling_current_value), &buf[2], sizeof(short));
 }
 
 //Write to buffer
 
 void Current_readings::write(uint8_t buf[8]) {
-    memcpy(&buf[0], &(message.ecu_current_value), sizeof(uint16_t));
-    memcpy(&buf[2], &(message.cooling_current_value), sizeof(uint16_t));
+    memcpy(&buf[0], &(message.ecu_current_value), sizeof(short));
+    memcpy(&buf[2], &(message.cooling_current_value), sizeof(short));
 }
 
 //Get Functions

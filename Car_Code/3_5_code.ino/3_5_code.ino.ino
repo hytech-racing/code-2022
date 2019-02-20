@@ -107,13 +107,14 @@ void loop() {
         processAccelerometer(); 
     }
     if (timer_current.check()) {
+      //self derived
       double current_ecu = ((double)(analogRead(A13)-96))*0.029412;
       double current_cooling = ((double)(analogRead(A12)-96))*0.029412;
-      //Serial.println(current_cooling);
-      //Serial.println(current_ecu);
+      Serial.println(current_cooling);
+      Serial.println(current_ecu);
       
-      CAN_current_sensor_readings.set_ecu_current_value(current_ecu);
-      CAN_current_sensor_readings.set_cooling_current_value(current_cooling);
+      CAN_current_sensor_readings.set_ecu_current_value((short)((int)(current_ecu*100)));
+      CAN_current_sensor_readings.set_cooling_current_value((short)((int)(current_cooling*100)));
 
       noInterrupts();
       CAN_current_sensor_readings.write(msg.buf);
@@ -133,7 +134,7 @@ void loop() {
 void parse_can_message() {                                              // ISR
    while (CAN.read(msg)) {
     
-    //Serial.println("Received!!");
+    Serial.println("Received!!");
     timestampWrite();
     logger.print(msg.id, HEX);
     logger.print(", ");
@@ -262,8 +263,8 @@ void processAccelerometer() {
   accel.getEvent(&event);
   
   /* Read accelerometer values into accelerometer struct */
-  fcu_accelerometer_values.set_values(event.acceleration.x, event.acceleration.y, event.acceleration.z);
-
+  fcu_accelerometer_values.set_values((short)((int)(event.acceleration.x*100)), (short)((int)(event.acceleration.y*100)), (short)((int)(event.acceleration.z*100)));
+  
   /* Send msg over CAN */
   noInterrupts();
   fcu_accelerometer_values.write(xb_msg.buf);
@@ -275,6 +276,14 @@ void processAccelerometer() {
   msg.len = sizeof(CAN_message_fcu_accelerometer_values_t);
   CAN.write(msg);
   interrupts();
+
+  /*
+  // order of bytes of each value is in reverse: buf[1],buf[0] is x value, buf[3],buf[2] is y value, and etc.
+  Serial.println((short)((int)(event.acceleration.x*100)));
+  Serial.print(msg.buf[1], HEX);
+  Serial.println(msg.buf[0], HEX);
+  */
+
   /*
   Serial.print("\n\nACCELEROMETER DATA\n\n");
   Serial.print(event.acceleration.x); Serial.print(", ");
