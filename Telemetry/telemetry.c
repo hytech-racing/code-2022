@@ -40,7 +40,7 @@ struct {
     CAN_message_fcu_accelerometer_values_t  fcu_accelerometer_values;
 } current_status;
 
-static void process_message(uint64_t timestamp, CAN_message_t *msg)
+static void process_message(uint64_t timestamp, Telem_message_t *msg)
 {
     // Do logging stuff.
     printf("\nTimestamp: %llu\n", timestamp);
@@ -346,7 +346,7 @@ static int msg_arrived(void *context, char *topic_name, int topic_len,
         if (payload_str[i] == ',') {
             payload_str[i] = 0;
             uint64_t timestamp = atoll(payload_str);
-            CAN_message_t payload;
+            Telem_message_t payload;
             cobs_decode((uint8_t *)&payload_str[i + 1], 32, (uint8_t *)&payload);
             uint16_t checksum_calc = fletcher16((uint8_t *)&payload, sizeof(payload));
             if (false) {//payload.checksum != checksum_calc) {

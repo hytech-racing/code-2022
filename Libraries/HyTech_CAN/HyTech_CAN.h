@@ -282,7 +282,7 @@ typedef struct CAN_message_fcu_accelerometer_values_t {
    short ZValue_x100;
 } CAN_message_fcu_accelerometer_values_t;
 
-typedef struct CAN_message {
+typedef struct Telem_message {
     //bool cobs_flag;
     uint32_t msg_id;
     uint8_t length;
@@ -321,7 +321,7 @@ typedef struct CAN_message {
         CAN_message_fcu_accelerometer_values_t  fcu_accelerometer_values;
     } contents;
     uint16_t checksum;
-} CAN_message_t;
+} Telem_message_t;
 
 #pragma pack(pop)
 
