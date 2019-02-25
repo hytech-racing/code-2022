@@ -69,13 +69,21 @@
  *
  * A GENERAL_NOTE: The write functions in these classes take a byte array that is meant to be populated
  * with the data contained in the object. The byte array can then be used as the raw CAN buffer.
- * 
+ *
  * TODO: If you make changes here, make sure to update https://hytechracing.me.gatech.edu/wiki/CAN_Data_Formats
  */
+
+// For compatibility with C.
+#ifndef __cplusplus
+#define bool char
+#define true 1
+#define false 0
+#endif
 
 /*
  * CAN message structs and classes
  */
+#pragma pack(push,1)
 typedef struct CAN_message_rcu_status_t {
     uint8_t state;
     uint8_t flags;
@@ -273,6 +281,49 @@ typedef struct CAN_message_fcu_accelerometer_values_t {
    short YValue_x100;
    short ZValue_x100;
 } CAN_message_fcu_accelerometer_values_t;
+
+typedef struct CAN_message {
+    //bool cobs_flag;
+    uint32_t msg_id;
+    uint8_t length;
+    union {
+        CAN_msg_rcu_status                      rcu_status;
+        CAN_msg_fcu_status                      fcu_status;
+        CAN_msg_fcu_readings                    fcu_readings;
+        CAN_message_bms_voltages_t              bms_voltages;
+        CAN_message_bms_detailed_voltages_t     bms_detailed_voltages;
+        CAN_message_bms_temperatures_t          bms_temperatures;
+        CAN_message_bms_detailed_temperatures_t bms_detailed_temperatures;
+        CAN_message_bms_onboard_temperatures_t  bms_onboard_temperatures;
+        CAN_message_bms_onboard_detailed_temperatures_t bms_onboard_detailed_temperatures;
+        CAN_message_bms_status_t                bms_status;
+        CAN_message_bms_balancing_status_t      bms_balancing_status;
+        CAN_message_ccu_status_t                ccu_status;
+        CAN_message_mc_temperatures_1_t         mc_temperatures_1;
+        CAN_message_mc_temperatures_2_t         mc_temperatures_2;
+        CAN_message_mc_temperatures_3_t         mc_temperatures_3;
+        CAN_message_mc_analog_input_voltages_t  mc_analog_input_voltages;
+        CAN_message_mc_digital_input_status_t   mc_digital_input_status;
+        CAN_message_mc_motor_position_information_t mc_motor_position_information;
+        CAN_message_mc_current_information_t    mc_current_information;
+        CAN_message_mc_voltage_information_t    mc_voltage_information;
+        CAN_message_mc_internal_states_t        mc_internal_states;
+        CAN_message_mc_fault_codes_t            mc_fault_codes;
+        CAN_message_mc_torque_timer_information_t mc_torque_timer_information;
+        CAN_message_mc_modulation_index_flux_weakening_output_information_t
+                mc_modulation_index_flux_weakening_output_information;
+        CAN_message_mc_firmware_information_t   mc_firmware_information;
+        CAN_message_mc_command_message_t        mc_command_message;
+        CAN_message_mc_read_write_parameter_command_t
+                mc_read_write_parameter_command;
+        CAN_message_mc_read_write_parameter_response_t
+                mc_read_write_parameter_response;
+        CAN_message_fcu_accelerometer_values_t  fcu_accelerometer_values;
+    } contents;
+    uint16_t checksum;
+} CAN_message_t;
+
+#pragma pack(pop)
 
 #ifdef __cplusplus
 
