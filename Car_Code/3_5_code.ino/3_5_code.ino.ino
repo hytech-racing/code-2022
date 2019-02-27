@@ -10,6 +10,7 @@
 #include <TimeLib.h>
 #include <Metro.h>
 #include <XBTools.h>
+#include <Adafruit_GPS.h>
 
 #define XB Serial2
 
@@ -25,6 +26,7 @@ File logger;
 FCU_accelerometer_values fcu_accelerometer_values;
 ADC_SPI ADC(10);
 Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
+Adafruit_GPS GPS(&Serial1);
 
 MC_command_message mc_command_message;
 MC_temperatures_1 mc_temperatures_1;
@@ -62,13 +64,15 @@ Metro timer_debug_rms_voltage_information = Metro(100);
 Metro timer_detailed_voltages = Metro(1000);
 Metro timer_status_send = Metro(100);
 Metro timer_status_send_xbee = Metro(2000);
-
+Metro gpsTimer_alpha = Metro(500);
+Metro gpsTimer_beta = Metro(500);
 Metro timer_debug_RTC = Metro(1000);
 
 /*
  * To correctly push this code onto the Teensy, you must push this code TWICE: first with the Teensy3Clock.set([time]) function below uncommented and the current epoch time inserted as the parameter [time].  This is to set the current time onto the RTC onboard.
  * Next, comment out the same line and push again.  This ensures that each time the Teensy "wakes", that same time parameter will not be set again. 
  */
+
 
 void setup() {
   // put your setup code here, to run once:
@@ -94,6 +98,12 @@ void setup() {
     pinMode(A13, INPUT);
 
     XB.begin(115200);
+
+    GPS.begin(9600);    // this baud rate is necessary!!!
+
+    GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);     // specify data to be received (minimum + fix)
+    GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);        // set update rate (1Hz)
+    GPS.sendCommand(PGCMD_ANTENNA);                   // report data about antenna
 }
 
 void loop() {
@@ -116,6 +126,7 @@ void loop() {
       CAN_current_sensor_readings.set_ecu_current_value((short)((int)(current_ecu*100)));
       CAN_current_sensor_readings.set_cooling_current_value((short)((int)(current_cooling*100)));
 
+      // order of bytes of each value is in reverse: buf[1],buf[0] is x value, buf[3],buf[2] is y value, and etc.
       noInterrupts();
       CAN_current_sensor_readings.write(msg.buf);
       msg.id = ID_ECU_CURRENT_SENSOR_READINGS;
@@ -129,6 +140,54 @@ void loop() {
       interrupts();
      
     }
+
+    if (gpsTimer_alpha.check()) {
+      GPS.read();
+      if (GPS.newNMEAreceived()) {
+        GPS.parse(GPS.lastNMEA());
+        noInterrupts();
+        msg.id = 0xB7;
+        msg.len = 8;
+        memcpy(&(msg.buf[0]), &(GPS.latitude), sizeof(float));
+        memcpy(&(msg.buf[4]), &(GPS.longitude), sizeof(float));
+
+        timestampWrite();
+        logger.print(msg.id, HEX);
+        logger.print(",");
+        for (int i=0; i<msg.len; i++) {
+          if (msg.buf[i]<16) {
+            logger.print("0");
+          }
+          logger.print(msg.buf[i], HEX);
+          logger.print(" ");
+        }
+        logger.println();
+        logger.flush();    
+        interrupts();
+      }
+    }
+
+    if (gpsTimer_beta.check()) {
+        noInterrupts();
+        msg.id = 0xB8;
+        msg.len = 8;
+        memcpy(&(msg.buf[0]), &(GPS.altitude), sizeof(float));
+        memcpy(&(msg.buf[4]), &(GPS.speed), sizeof(float));
+
+        timestampWrite();
+        logger.print(msg.id, HEX);
+        logger.print(",");
+        for (int i=0; i<msg.len; i++) {
+          if (msg.buf[i]<16) {
+            logger.print("0");
+          }
+          logger.print(msg.buf[i], HEX);
+          logger.print(" ");
+        }
+        logger.println();
+        logger.flush();    
+        interrupts();
+    }
 }
 
 void parse_can_message() {                                              // ISR
@@ -137,8 +196,11 @@ void parse_can_message() {                                              // ISR
     Serial.println("Received!!");
     timestampWrite();
     logger.print(msg.id, HEX);
-    logger.print(", ");
+    logger.print(",");
     for (int i=0; i<msg.len; i++) {
+      if (msg.buf[i]<16) {
+        logger.print("0");
+      }
       logger.print(msg.buf[i], HEX);
       logger.print(" ");
     }
@@ -217,7 +279,7 @@ void timestampWrite() {
   logger.print(month());
   logger.print(" ");
   logger.print(year()); 
-  logger.print("   ");
+  logger.print(",");
 }
 
 /*

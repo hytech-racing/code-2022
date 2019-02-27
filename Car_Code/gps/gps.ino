@@ -10,7 +10,7 @@ void setup() {
   Serial.begin(115200);
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);     // specify data to be received (minimum + fix)
   GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);        // set update rate (1Hz)
-  GPS.sendCommand(PGCMD_ANTENNA);                 // report data about antenna
+  GPS.sendCommand(PGCMD_ANTENNA);                   // report data about antenna
 }
 
 void loop() {
@@ -21,6 +21,7 @@ void loop() {
   
   if (GPS.newNMEAreceived()) {
     GPS.parse(GPS.lastNMEA());
+    /*
     Serial.print("\nTime: ");
     Serial.print(GPS.hour, DEC); Serial.print(':');
     Serial.print(GPS.minute, DEC); Serial.print(':');
@@ -47,6 +48,6 @@ void loop() {
       Serial.print("Altitude: "); Serial.println(GPS.altitude);
       Serial.print("Satellites: "); Serial.println((int)GPS.satellites);
    }
+   */
   }
-  
 }
