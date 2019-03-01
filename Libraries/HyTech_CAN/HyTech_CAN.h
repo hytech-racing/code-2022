@@ -7,6 +7,12 @@
 /*
  * ECU state definitions // TODO make these enums?
  */
+#define MCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE 1
+#define MCU_STATE_TRACTIVE_SYSTEM_ACTIVE 2
+#define MCU_STATE_ENABLING_INVERTER 3
+#define MCU_STATE_WAITING_READY_TO_DRIVE_SOUND 4
+#define MCU_STATE_READY_TO_DRIVE 5
+
 #define FCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE 1
 #define FCU_STATE_TRACTIVE_SYSTEM_ACTIVE 2
 #define FCU_STATE_ENABLING_INVERTER 3
@@ -27,6 +33,8 @@
 /*
  * CAN ID definitions
  */
+#define ID_MCU_STATUS 0xC3
+#define ID_MCU_PEDAL_READINGS 0xC4
 #define ID_RCU_STATUS 0xD0
 #define ID_FCU_STATUS 0xD2
 #define ID_FCU_READINGS 0xD3
@@ -84,6 +92,22 @@
  * CAN message structs and classes
  */
 #pragma pack(push,1)
+
+typedef struct CAN_message_mcu_status_t {
+    uint8_t state;
+    uint8_t flags;
+    int16_t temperature;
+    uint16_t glv_battery_voltage;
+} CAN_msg_mcu_status;
+
+typedef struct CAN_message_mcu_pedal_readings_t {
+    uint16_t accelerator_pedal_raw_1;
+    uint16_t accelerator_pedal_raw_2;
+    uint16_t brake_pedal_raw;
+    uint8_t pedal_flags;
+    uint8_t torque_map_mode;
+} CAN_msg_mcu_pedal_readings;
+
 typedef struct CAN_message_rcu_status_t {
     uint8_t state;
     uint8_t flags;
@@ -326,6 +350,68 @@ typedef struct Telem_message {
 #pragma pack(pop)
 
 #ifdef __cplusplus
+
+class MCU_status {
+    public:
+        MCU_status();
+        MCU_status(uint8_t buf[8]);
+        MCU_status(uint8_t state, uint8_t flags, int16_t temperature, uint16_t glv_battery_voltage);
+        void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
+        uint8_t get_state();
+        uint8_t get_flags();
+        bool get_bms_ok_high();
+        bool get_imd_okhs_high();
+        bool get_inverter_powered();
+        bool get_shutdown_b_above_threshold();
+        bool get_shutdown_c_above_threshold();
+        bool get_shutdown_d_above_threshold();
+        bool get_shutdown_e_above_threshold();
+        bool get_shutdown_f_above_threshold();
+        int16_t get_temperature();
+        uint16_t get_glv_battery_voltage();
+        void set_state(uint8_t state);
+        void set_flags(uint8_t flags);
+        void set_bms_ok_high(bool bms_ok_high);
+        void set_imd_okhs_high(bool imd_okhs_high);
+        void set_inverter_powered(bool inverter_powered);
+        void set_shutdown_b_above_threshold(bool shutdown_b_above_threshold);
+        void set_shutdown_c_above_threshold(bool shutdown_c_above_threshold);
+        void set_shutdown_d_above_threshold(bool shutdown_d_above_threshold);
+        void set_shutdown_e_above_threshold(bool shutdown_e_above_threshold);
+        void set_shutdown_f_above_threshold(bool shutdown_f_above_threshold);
+        void set_temperature(int16_t temperature);
+        void set_glv_battery_voltage(uint16_t glv_battery_voltage);
+    private:
+        CAN_message_mcu_status_t message;
+};
+
+class MCU_pedal_readings {
+    public:
+        MCU_pedal_readings();
+        MCU_pedal_readings(uint8_t buf[8]);
+        MCU_pedal_readings(uint16_t accelerator_pedal_raw_1, uint16_t accelerator_pedal_raw_2, uint16_t brake_pedal_raw, uint8_t pedal_flags, uint8_t torque_map_mode);
+        void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
+        uint16_t get_accelerator_pedal_raw_1();
+        uint16_t get_accelerator_pedal_raw_2();
+        uint16_t get_brake_pedal_raw();
+        uint8_t get_pedal_flags();
+        bool get_accelerator_implausibility();
+        bool get_brake_implausibility();
+        bool get_brake_pedal_active();
+        uint8_t get_torque_map_mode();
+        void set_accelerator_pedal_raw_1(uint16_t accelerator_pedal_raw_1);
+        void set_accelerator_pedal_raw_2(uint16_t accelerator_pedal_raw_2);
+        void set_brake_pedal_raw(uint16_t brake_pedal_raw);
+        void set_pedal_flags(uint8_t pedal_flags);
+        void set_accelerator_implausibility(bool accelerator_implausibility);
+        void set_brake_implausibility(bool brake_implausibility);
+        void set_brake_pedal_active(bool brake_pedal_active);
+        void set_torque_map_mode(uint8_t torque_map_mode);
+    private:
+        CAN_message_mcu_pedal_readings_t message;
+};
 
 class RCU_status {
     public:
