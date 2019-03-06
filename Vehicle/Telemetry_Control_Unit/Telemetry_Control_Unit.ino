@@ -147,7 +147,7 @@ void loop() {
       if (GPS.newNMEAreceived()) {
         GPS.parse(GPS.lastNMEA());
         noInterrupts();
-        msg.id = 0xB7;
+        msg.id = ID_ECU_GPS_READINGS_ALPHA;
         msg.len = 8;
         memcpy(&(msg.buf[0]), &(GPS.latitude), sizeof(float));
         memcpy(&(msg.buf[4]), &(GPS.longitude), sizeof(float));
@@ -170,7 +170,7 @@ void loop() {
 
     if (gpsTimer_beta.check()) {
         noInterrupts();
-        msg.id = 0xB8;
+        msg.id = ID_ECU_GPS_READINGS_BETA;
         msg.len = 8;
         memcpy(&(msg.buf[0]), &(GPS.altitude), sizeof(float));
         memcpy(&(msg.buf[4]), &(GPS.speed), sizeof(float));
