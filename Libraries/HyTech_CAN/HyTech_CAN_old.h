@@ -143,15 +143,15 @@ class FCU_status {
 };
 
 typedef struct CAN_current_sensor_readings_t{
-	short ecu_current_value;
-	short cooling_current_value;
+	uint8_t ecu_current_value;
+	uint8_t cooling_current_value;
 } CAN_current_readings;
 
 class Current_readings {
 	public:
 		Current_readings();
 		Current_readings(uint8_t buf[8]);
-		Current_readings(short ecu_current_value, short cooling_current_value);
+		Current_readings(uint8_t ecu_current_value, uint8_t cooling_current_value);
 		void load(uint8_t buf[8]);
 		void write(uint8_t buf[8]);
 		short get_ecu_current_value();

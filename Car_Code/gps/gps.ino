@@ -21,7 +21,7 @@ void loop() {
   
   if (GPS.newNMEAreceived()) {
     GPS.parse(GPS.lastNMEA());
-    /*
+   
     Serial.print("\nTime: ");
     Serial.print(GPS.hour, DEC); Serial.print(':');
     Serial.print(GPS.minute, DEC); Serial.print(':');
@@ -48,6 +48,6 @@ void loop() {
       Serial.print("Altitude: "); Serial.println(GPS.altitude);
       Serial.print("Satellites: "); Serial.println((int)GPS.satellites);
    }
-   */
+   
   }
 }

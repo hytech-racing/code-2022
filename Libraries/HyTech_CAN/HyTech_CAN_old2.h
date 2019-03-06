@@ -61,7 +61,6 @@
 #define ID_MC_COMMAND_MESSAGE 0xC0
 #define ID_MC_READ_WRITE_PARAMETER_COMMAND 0xC1
 #define ID_MC_READ_WRITE_PARAMETER_RESPONSE 0xC2
-#define ID_ECU_CURRENT_SENSOR_READINGS 0xCC
 
 /*
 
@@ -140,26 +139,6 @@ class FCU_status {
         void set_start_button_press_id(uint8_t start_button_press_id);
     private:
         CAN_message_fcu_status_t message;
-};
-
-typedef struct CAN_current_sensor_readings_t{
-	short ecu_current_value;
-	short cooling_current_value;
-} CAN_current_readings;
-
-class Current_readings {
-	public:
-		Current_readings();
-		Current_readings(uint8_t buf[8]);
-		Current_readings(short ecu_current_value, short cooling_current_value);
-		void load(uint8_t buf[8]);
-		void write(uint8_t buf[8]);
-		short get_ecu_current_value();
-		short get_cooling_current_value();
-		void set_ecu_current_value(short ecu_current_value);
-		void set_cooling_current_value(short cooling_current_value);
-	private:
-		CAN_current_sensor_readings_t message;
 };
 
 typedef struct CAN_message_fcu_readings_t {

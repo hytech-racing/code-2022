@@ -17,9 +17,11 @@ void setup() {
     Serial.println("CAN transceiver initialized");
     Serial.println("CAN TEST SENDER/RECEIVER");
     pinMode(13, OUTPUT);
+    CAN0_MCR &= 0xFFFDFFFF;
 }
 
 void loop() {
+  
     if (timer_can.check()) { // Send a message on CAN
         uint32_t t = millis();
         msg.id = 0x1;
@@ -35,6 +37,7 @@ void loop() {
         }
         Serial.println();
     }
+    
     while (CAN.read(msg)) { // Receive a message on CAN
         Serial.print("Received 0x");
         Serial.print(msg.id, HEX);

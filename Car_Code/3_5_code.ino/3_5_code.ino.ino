@@ -110,7 +110,8 @@ void loop() {
     send_xbee();
 
     if (timer_debug_RTC.check()) {
-      digitalClockDisplay();
+      //digitalClockDisplay();
+      
     }
     
     if (timer_accelerometer.check()) {
@@ -120,8 +121,8 @@ void loop() {
       //self derived
       double current_ecu = ((double)(analogRead(A13)-96))*0.029412;
       double current_cooling = ((double)(analogRead(A12)-96))*0.029412;
-      Serial.println(current_cooling);
-      Serial.println(current_ecu);
+      //Serial.println(current_cooling);
+      //Serial.println(current_ecu);
       
       CAN_current_sensor_readings.set_ecu_current_value((short)((int)(current_ecu*100)));
       CAN_current_sensor_readings.set_cooling_current_value((short)((int)(current_cooling*100)));
@@ -140,9 +141,9 @@ void loop() {
       interrupts();
      
     }
-
+    
+    GPS.read();
     if (gpsTimer_alpha.check()) {
-      GPS.read();
       if (GPS.newNMEAreceived()) {
         GPS.parse(GPS.lastNMEA());
         noInterrupts();
@@ -188,6 +189,7 @@ void loop() {
         logger.flush();    
         interrupts();
     }
+    
 }
 
 void parse_can_message() {                                              // ISR
