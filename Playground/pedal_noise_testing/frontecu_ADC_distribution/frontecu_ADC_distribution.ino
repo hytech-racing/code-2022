@@ -14,14 +14,18 @@ void setup() {
 }
 
 void loop() {
+    // USE FOLLOWING CODE FOR AVERAGING
     int val = 0;
     for (int i = 0; i < 10; i++) {
       val += adc.read_adc(1);
     }
     val /= 10;
-    //int val = adc.read_adc(1);
     Serial.println(val);
+
+    // USE FOLLOWING CODE FOR SINGLE READ
 //    Serial.println(adc.read_adc(0));
+
+    // USE FOLLOWING CODE FOR MEDIAN
     /*for (int i = 0; i < 15; i++) {
       readings[i] = adc.read_adc(1);
     }
