@@ -1,3 +1,11 @@
+/*
+    Program to check voltage information of the battery pack.
+    Upload this code to a Teensy 3.2 connected to the same CAN bus
+    with the BMS, and it will print voltage information to Serial.
+
+    Created March 2019
+*/
+
 #include <HyTech_FlexCAN.h>
 #include <HyTech_CAN.h>
 #include <kinetis_flexcan.h>
