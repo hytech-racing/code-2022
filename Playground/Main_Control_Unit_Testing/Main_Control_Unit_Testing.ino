@@ -216,7 +216,7 @@ void setup() {
     FLEXCAN0_IMASK1 = FLEXCAN_IMASK1_BUF5M;
     /* Configure CAN rx interrupt */
 
-    delay(100);
+    delay(500);
 
     Serial.println("CAN system and serial communication initialized");
 
@@ -235,24 +235,16 @@ void setup() {
 
 void loop() {
 
-    //Serial.println(micros());
-
     read_pedal_values();
-    //read_status_values();
-    //if (timer_dashboard.check()) {
+    read_status_values();
     read_dashboard_buttons();
-        //set_dashboard_leds();
-    //}
+    set_dashboard_leds();
 
     /*
      * Send state over CAN
      */
     if (timer_can_update.check()) {
 
-        // Serial.println(num_pedal_readings);
-        // num_pedal_readings = 0;
-
-        read_pedal_values();
         mcu_pedal_readings.set_accelerator_pedal_raw_1(rolling_accel1_reading);
         mcu_pedal_readings.set_accelerator_pedal_raw_2(rolling_accel2_reading);
         mcu_pedal_readings.set_brake_pedal_raw(rolling_brake_reading);
@@ -282,9 +274,6 @@ void loop() {
         digitalWrite(SSR_INVERTER, HIGH);
         mcu_status.set_inverter_powered(true);
     }
-    // if (btn_restart_inverter_pressed && !inverter_restart) {
-    //     reset_inverter();
-    // }
 
     /*
      * Send a message to the Motor Controller over CAN when vehicle is not ready to drive
@@ -303,8 +292,10 @@ void loop() {
     //Serial.println(timer_motor_controller_send.check());
     if (timer_motor_controller_send.check()) {
         read_pedal_values();
-        Serial.println(num_pedal_readings);
+        //mcu_pedal_readings.set_accelerator_implausibility(false);
+        Serial.println(calculate_torque());
         num_pedal_readings = 0;
+
     }
 
 
@@ -714,10 +705,12 @@ void set_state(uint8_t new_state) {
 int calculate_torque() {
     int calculated_torque = 0;
 
-    if (!mcu_pedal_readings.get_accelerator_implausibility()) {
-        int torque1 = map(mcu_pedal_readings.get_accelerator_pedal_raw_1(), START_ACCELERATOR_PEDAL_1, END_ACCELERATOR_PEDAL_1, 0, MAX_TORQUE);
-        int torque2 = map(mcu_pedal_readings.get_accelerator_pedal_raw_2(), START_ACCELERATOR_PEDAL_2, END_ACCELERATOR_PEDAL_2, 0, MAX_TORQUE);
+    //if (!mcu_pedal_readings.get_accelerator_implausibility()) {
+        int torque1 = map(round(rolling_accel1_reading), START_ACCELERATOR_PEDAL_1, END_ACCELERATOR_PEDAL_1, 0, MAX_TORQUE);
+        int torque2 = map(round(rolling_accel2_reading), START_ACCELERATOR_PEDAL_2, END_ACCELERATOR_PEDAL_2, 0, MAX_TORQUE);
 
+        //Serial.print("Torque 1: "); Serial.println(torque1);
+        //Serial.print("Torque 2: "); Serial.println(torque2);
         // torque values are greater than the max possible value, set them to max
         if (torque1 > MAX_TORQUE) {
             torque1 = MAX_TORQUE;
@@ -728,9 +721,9 @@ int calculate_torque() {
         // compare torques to check for accelerator implausibility
         if (abs(torque1 - torque2) * 100 / MAX_TORQUE > 10) {
             mcu_pedal_readings.set_accelerator_implausibility(true);
-            Serial.print("ACCEL IMPLAUSIBILITY: COMPARISON FAILED");
+            Serial.println("ACCEL IMPLAUSIBILITY: COMPARISON FAILED");
         } else {
-            calculated_torque = min(torque1, torque2); // add ramp?
+            calculated_torque = min(torque1, torque2);
 
             if (debug && timer_debug_raw_torque.check()) {
                 Serial.print("TORQUE REQUEST DELTA PERCENT: "); // Print the % difference between the 2 accelerator sensor requests
@@ -750,7 +743,7 @@ int calculate_torque() {
                 calculated_torque = MAX_REGEN_TORQUE;
             }
         }
-    }
+    //}
 
     return calculated_torque;
 }
