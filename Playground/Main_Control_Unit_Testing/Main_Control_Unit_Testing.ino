@@ -251,6 +251,7 @@ void loop() {
 
         //read_status_values();
         mcu_status.set_glv_battery_voltage(rolling_glv_reading);
+        rolling_glv_reading = 0;
         num_glv_readings = 0;
 
         // Send Main Control Unit status message
@@ -323,7 +324,6 @@ void loop() {
         }
 
         //Serial.println(calculated_torque);
-        num_pedal_readings = 0;
 
         mc_command_message.set_torque_command(0);
 
@@ -331,6 +331,10 @@ void loop() {
         tx_msg.id = ID_MC_COMMAND_MESSAGE;
         tx_msg.len = 8;
         CAN.write(tx_msg);
+
+        rolling_accel1_reading = 0;
+        rolling_accel2_reading = 0;
+        rolling_brake_reading = 0;
         num_pedal_readings = 0;
     }
 
@@ -422,6 +426,9 @@ void loop() {
             tx_msg.id = ID_MC_COMMAND_MESSAGE;
             tx_msg.len = 8;
             CAN.write(tx_msg);
+            rolling_accel1_reading = 0;
+            rolling_accel2_reading = 0;
+            rolling_brake_reading = 0;
             num_pedal_readings = 0;
         }
         break;
@@ -540,7 +547,7 @@ void parse_can_message() {
         if (rx_msg.id == ID_MC_VOLTAGE_INFORMATION) {
             MC_voltage_information mc_voltage_information = MC_voltage_information(rx_msg.buf);
             if (mc_voltage_information.get_dc_bus_voltage() >= MIN_HV_VOLTAGE && mcu_status.get_state() == MCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
-                set_state(MCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
+                //set_state(MCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
             }
             if (mc_voltage_information.get_dc_bus_voltage() < MIN_HV_VOLTAGE && mcu_status.get_state() > MCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
                 set_state(MCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
