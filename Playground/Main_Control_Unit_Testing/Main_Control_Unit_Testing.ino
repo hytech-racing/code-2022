@@ -275,14 +275,63 @@ void loop() {
         mcu_status.set_inverter_powered(true);
     }
 
-
-    //Serial.println(timer_motor_controller_send.check());
     if (timer_motor_controller_send.check()) {
+
+        MC_command_message mc_command_message = MC_command_message(0, 0, 0, 1, 0, 0);
         read_pedal_values();
-        //mcu_pedal_readings.set_accelerator_implausibility(false);
-        Serial.println(calculate_torque());
+
+        //Check for accelerator implausibility FSAE EV2.3.10
+        mcu_pedal_readings.set_accelerator_implausibility(false);
+        if (mcu_pedal_readings.get_accelerator_pedal_raw_1() < MIN_ACCELERATOR_PEDAL_1 || mcu_pedal_readings.get_accelerator_pedal_raw_1() > MAX_ACCELERATOR_PEDAL_1) {
+            mcu_pedal_readings.set_accelerator_implausibility(true);
+        }
+        if (mcu_pedal_readings.get_accelerator_pedal_raw_2() > MIN_ACCELERATOR_PEDAL_2 || mcu_pedal_readings.get_accelerator_pedal_raw_2() < MAX_ACCELERATOR_PEDAL_2) {
+            mcu_pedal_readings.set_accelerator_implausibility(true);
+        }
+
+        int calculated_torque = calculate_torque();
+
+        // FSAE EV2.5 APPS / Brake Pedal Plausibility Check
+        if (mcu_pedal_readings.get_brake_implausibility() && calculated_torque < (MAX_TORQUE / 20)) {
+            mcu_pedal_readings.set_brake_implausibility(false); // Clear implausibility
+        }
+        if (mcu_pedal_readings.get_brake_pedal_active() && calculated_torque > (MAX_TORQUE / 4)) {
+            mcu_pedal_readings.set_brake_implausibility(true);
+        }
+
+        if (mcu_pedal_readings.get_brake_implausibility() || mcu_pedal_readings.get_accelerator_implausibility()) {
+            // Implausibility exists, command 0 torque
+            calculated_torque = 0;
+        }
+
+        // FSAE FMEA specifications // if BMS or IMD are faulting, set torque to 0
+        if (!mcu_status.get_bms_ok_high()) {
+            calculated_torque = 0;
+        }
+
+        if (!mcu_status.get_imd_okhs_high()) {
+            calculated_torque = 0;
+        }
+
+        if (debug && timer_debug_torque.check()) {
+            Serial.print("MCU REQUESTED TORQUE: ");
+            Serial.println(calculated_torque);
+            Serial.print("MCU IMPLAUS ACCEL: ");
+            Serial.println(mcu_pedal_readings.get_accelerator_implausibility());
+            Serial.print("MCU IMPLAUS BRAKE: ");
+            Serial.println(mcu_pedal_readings.get_brake_implausibility());
+        }
+
+        //Serial.println(calculated_torque);
         num_pedal_readings = 0;
 
+        mc_command_message.set_torque_command(0);
+
+        mc_command_message.write(tx_msg.buf);
+        tx_msg.id = ID_MC_COMMAND_MESSAGE;
+        tx_msg.len = 8;
+        CAN.write(tx_msg);
+        num_pedal_readings = 0;
     }
 
 
@@ -320,60 +369,60 @@ void loop() {
 
         case MCU_STATE_READY_TO_DRIVE:
         if (timer_motor_controller_send.check()) {
-            //MC_command_message mc_command_message = MC_command_message(0, 0, 0, 1, 0, 0);
+            MC_command_message mc_command_message = MC_command_message(0, 0, 0, 1, 0, 0);
             read_pedal_values();
 
             // Check for accelerator implausibility FSAE EV2.3.10
-            mcu_pedal_readings.set_accelerator_implausibility(false);
-            if (mcu_pedal_readings.get_accelerator_pedal_raw_1() < MIN_ACCELERATOR_PEDAL_1 || mcu_pedal_readings.get_accelerator_pedal_raw_1() > MAX_ACCELERATOR_PEDAL_1) {
-                mcu_pedal_readings.set_accelerator_implausibility(true);
-            }
-            if (mcu_pedal_readings.get_accelerator_pedal_raw_2() > MIN_ACCELERATOR_PEDAL_2 || mcu_pedal_readings.get_accelerator_pedal_raw_2() < MAX_ACCELERATOR_PEDAL_2) {
-                mcu_pedal_readings.set_accelerator_implausibility(true);
-            }
+            // mcu_pedal_readings.set_accelerator_implausibility(false);
+            // if (mcu_pedal_readings.get_accelerator_pedal_raw_1() < MIN_ACCELERATOR_PEDAL_1 || mcu_pedal_readings.get_accelerator_pedal_raw_1() > MAX_ACCELERATOR_PEDAL_1) {
+            //     mcu_pedal_readings.set_accelerator_implausibility(true);
+            // }
+            // if (mcu_pedal_readings.get_accelerator_pedal_raw_2() > MIN_ACCELERATOR_PEDAL_2 || mcu_pedal_readings.get_accelerator_pedal_raw_2() < MAX_ACCELERATOR_PEDAL_2) {
+            //     mcu_pedal_readings.set_accelerator_implausibility(true);
+            // }
 
             int calculated_torque = calculate_torque();
 
-            // FSAE EV2.5 APPS / Brake Pedal Plausibility Check
-            if (mcu_pedal_readings.get_brake_implausibility() && calculated_torque < (MAX_TORQUE / 20)) {
-                mcu_pedal_readings.set_brake_implausibility(false); // Clear implausibility
-            }
-            if (mcu_pedal_readings.get_brake_pedal_active() && calculated_torque > (MAX_TORQUE / 4)) {
-                mcu_pedal_readings.set_brake_implausibility(true);
-            }
+            // // FSAE EV2.5 APPS / Brake Pedal Plausibility Check
+            // if (mcu_pedal_readings.get_brake_implausibility() && calculated_torque < (MAX_TORQUE / 20)) {
+            //     mcu_pedal_readings.set_brake_implausibility(false); // Clear implausibility
+            // }
+            // if (mcu_pedal_readings.get_brake_pedal_active() && calculated_torque > (MAX_TORQUE / 4)) {
+            //     mcu_pedal_readings.set_brake_implausibility(true);
+            // }
 
-            if (mcu_pedal_readings.get_brake_implausibility() || mcu_pedal_readings.get_accelerator_implausibility()) {
-                // Implausibility exists, command 0 torque
-                calculated_torque = 0;
-            }
+            // if (mcu_pedal_readings.get_brake_implausibility() || mcu_pedal_readings.get_accelerator_implausibility()) {
+            //     // Implausibility exists, command 0 torque
+            //     calculated_torque = 0;
+            // }
 
-            // FSAE FMEA specifications // if BMS or IMD are faulting, set torque to 0
-            if (!mcu_status.get_bms_ok_high()) {
-                calculated_torque = 0;
-            }
+            // // FSAE FMEA specifications // if BMS or IMD are faulting, set torque to 0
+            // if (!mcu_status.get_bms_ok_high()) {
+            //     calculated_torque = 0;
+            // }
 
-            if (!mcu_status.get_imd_okhs_high()) {
-                calculated_torque = 0;
-            }
+            // if (!mcu_status.get_imd_okhs_high()) {
+            //     calculated_torque = 0;
+            // }
 
-            if (debug && timer_debug_torque.check()) {
-                Serial.print("MCU REQUESTED TORQUE: ");
-                Serial.println(calculated_torque);
-                Serial.print("MCU IMPLAUS ACCEL: ");
-                Serial.println(mcu_pedal_readings.get_accelerator_implausibility());
-                Serial.print("MCU IMPLAUS BRAKE: ");
-                Serial.println(mcu_pedal_readings.get_brake_implausibility());
-            }
+            // if (debug && timer_debug_torque.check()) {
+            //     Serial.print("MCU REQUESTED TORQUE: ");
+            //     Serial.println(calculated_torque);
+            //     Serial.print("MCU IMPLAUS ACCEL: ");
+            //     Serial.println(mcu_pedal_readings.get_accelerator_implausibility());
+            //     Serial.print("MCU IMPLAUS BRAKE: ");
+            //     Serial.println(mcu_pedal_readings.get_brake_implausibility());
+            // }
 
             Serial.println(calculated_torque);
 
-            //mc_command_message.set_torque_command(calculated_torque);
+            mc_command_message.set_torque_command(0);
 
-            // mc_command_message.write(tx_msg.buf);
-            // tx_msg.id = ID_MC_COMMAND_MESSAGE;
-            // tx_msg.len = 8;
-            // CAN.write(tx_msg);
-
+            mc_command_message.write(tx_msg.buf);
+            tx_msg.id = ID_MC_COMMAND_MESSAGE;
+            tx_msg.len = 8;
+            CAN.write(tx_msg);
+            num_pedal_readings = 0;
         }
         break;
 
@@ -761,8 +810,8 @@ int calculate_torque() {
         int torque1 = map(round(rolling_accel1_reading), START_ACCELERATOR_PEDAL_1, END_ACCELERATOR_PEDAL_1, 0, MAX_TORQUE);
         int torque2 = map(round(rolling_accel2_reading), START_ACCELERATOR_PEDAL_2, END_ACCELERATOR_PEDAL_2, 0, MAX_TORQUE);
 
-        //Serial.print("Torque 1: "); Serial.println(torque1);
-        //Serial.print("Torque 2: "); Serial.println(torque2);
+        Serial.print("Torque 1: "); Serial.println(torque1);
+        Serial.print("Torque 2: "); Serial.println(torque2);
         // torque values are greater than the max possible value, set them to max
         if (torque1 > MAX_TORQUE) {
             torque1 = MAX_TORQUE;
