@@ -89,9 +89,9 @@ BMS_temperatures bms_temperatures;
  */
 Metro timer_accelerometer = Metro(100);
 Metro timer_bms_imd_print_fault = Metro(500);
-Metro timer_btn_restart_inverter = Metro(10);
-Metro timer_btn_mode = Metro(50);
-Metro timer_btn_start = Metro(50);
+Metro timer_btn_restart_inverter = Metro(100);
+Metro timer_btn_mode = Metro(100);
+Metro timer_btn_start = Metro(100);
 Metro timer_debug = Metro(200);
 Metro timer_debug_raw_torque = Metro(200);
 Metro timer_debug_torque = Metro(200);
@@ -104,6 +104,7 @@ Metro timer_led_start_blink_slow = Metro(400);
 Metro timer_motor_controller_send = Metro(50);
 Metro timer_ready_sound = Metro(2000); // Time to play RTD sound
 Metro timer_can_update = Metro(100);
+Metro timer_dashboard = Metro(25);
 
 /*
  * Timers    // old rcu timers
@@ -141,8 +142,10 @@ bool btn_restart_inverter_reading = true;
 float rolling_accel1_reading = 0;
 float rolling_accel2_reading = 0;
 float rolling_brake_reading = 0;
+float rolling_glv_reading = 0;
 
 int num_pedal_readings = 0;
+int num_glv_readings = 0;
 
 bool bms_imd_latched = false; // instead of the old rcu_status.set_bms_imd_latched(bool);
 bool bms_faulting = false;
@@ -232,18 +235,31 @@ void setup() {
 
 void loop() {
 
-    //Serial.println(millis());
+    //Serial.println(micros());
 
     read_pedal_values();
-    read_status_values();
-
+    //read_status_values();
+    //if (timer_dashboard.check()) {
     read_dashboard_buttons();
-    set_dashboard_leds();
+        //set_dashboard_leds();
+    //}
 
     /*
      * Send state over CAN
      */
     if (timer_can_update.check()) {
+
+        // Serial.println(num_pedal_readings);
+        // num_pedal_readings = 0;
+
+        read_pedal_values();
+        mcu_pedal_readings.set_accelerator_pedal_raw_1(rolling_accel1_reading);
+        mcu_pedal_readings.set_accelerator_pedal_raw_2(rolling_accel2_reading);
+        mcu_pedal_readings.set_brake_pedal_raw(rolling_brake_reading);
+
+        //read_status_values();
+        mcu_status.set_glv_battery_voltage(rolling_glv_reading);
+        num_glv_readings = 0;
 
         // Send Main Control Unit status message
         mcu_status.write(tx_msg.buf);
@@ -266,26 +282,29 @@ void loop() {
         digitalWrite(SSR_INVERTER, HIGH);
         mcu_status.set_inverter_powered(true);
     }
-    if (btn_restart_inverter_pressed && !inverter_restart) {
-        reset_inverter();
-    }
+    // if (btn_restart_inverter_pressed && !inverter_restart) {
+    //     reset_inverter();
+    // }
 
     /*
      * Send a message to the Motor Controller over CAN when vehicle is not ready to drive
      */
-    if (mcu_status.get_state() < MCU_STATE_READY_TO_DRIVE && timer_motor_controller_send.check()) {
-        MC_command_message mc_command_message = MC_command_message(0, 0, 0, 0, 0, 0);
-        if (mcu_status.get_state() >= MCU_STATE_ENABLING_INVERTER) {
-             mc_command_message.set_inverter_enable(true);
-        }
-        mc_command_message.write(tx_msg.buf);
-        tx_msg.id = ID_MC_COMMAND_MESSAGE;
-        tx_msg.len = 8;//
-        CAN.write(tx_msg);
-    }
+    // if (mcu_status.get_state() < MCU_STATE_READY_TO_DRIVE && timer_motor_controller_send.check()) {
+    //     MC_command_message mc_command_message = MC_command_message(0, 0, 0, 0, 0, 0);
+    //     if (mcu_status.get_state() >= MCU_STATE_ENABLING_INVERTER) {
+    //          mc_command_message.set_inverter_enable(true);
+    //     }
+    //     mc_command_message.write(tx_msg.buf);
+    //     tx_msg.id = ID_MC_COMMAND_MESSAGE;
+    //     tx_msg.len = 8;//
+    //     CAN.write(tx_msg);
+    // }
 
+    //Serial.println(timer_motor_controller_send.check());
     if (timer_motor_controller_send.check()) {
-
+        read_pedal_values();
+        Serial.println(num_pedal_readings);
+        num_pedal_readings = 0;
     }
 
 
@@ -323,10 +342,10 @@ void loop() {
 
         case MCU_STATE_READY_TO_DRIVE:
 
-        if (timer_motor_controller_send.check()) {
+        // if (timer_motor_controller_send.check()) {
 
 
-        }
+        // }
 
         break;
 
@@ -467,7 +486,7 @@ void reset_inverter() {
  */
 void read_pedal_values() {
 
-    int num_readings = 7;
+    int num_readings = 5;
     int accel1_readings[num_readings];
     int accel2_readings[num_readings];
     int brake_readings[num_readings];
@@ -478,7 +497,6 @@ void read_pedal_values() {
     /*
      * Read pedal channels on the ADC multiple times and record the median for those readings
      */
-    noInterrupts();
     for (int i = 0; i < num_readings; i++) {
         accel1_readings[i] = ADC.read_adc(ADC_ACCEL_1_CHANNEL);
         accel2_readings[i] = ADC.read_adc(ADC_ACCEL_2_CHANNEL);
@@ -492,10 +510,9 @@ void read_pedal_values() {
     median_accel2 = accel2_readings[num_readings / 2 + 1];
     median_brake  = brake_readings[num_readings / 2 + 1];
 
-    mcu_pedal_readings.set_accelerator_pedal_raw_1(median_accel1);
-    mcu_pedal_readings.set_accelerator_pedal_raw_2(median_accel2);
-    mcu_pedal_readings.set_brake_pedal_raw(median_brake);
-    interrupts();
+    // mcu_pedal_readings.set_accelerator_pedal_raw_1(median_accel1);
+    // mcu_pedal_readings.set_accelerator_pedal_raw_2(median_accel2);
+    // mcu_pedal_readings.set_brake_pedal_raw(median_brake);
 
     /*
      * Calculate rolling average of readings
@@ -525,20 +542,26 @@ void read_pedal_values() {
 
 void read_status_values() {
 
-    int num_readings = 15;
+    int num_readings = 5;
     int glv_readings[num_readings];
+    int median_glv;
 
     /*
      * Read the GLV voltage multiple times and record the median value
      */
-    noInterrupts();
     for (int i = 0; i < num_readings; i++) {
         glv_readings[i] = ADC.read_adc(ADC_12V_SUPPLY_CHANNEL);
     }
 
     sort_ints(glv_readings, num_readings);
-    mcu_status.set_glv_battery_voltage(glv_readings[num_readings / 2 + 1] * GLV_VOLTAGE_MULTIPLIER);
-    interrupts();
+    median_glv = glv_readings[num_readings / 2 + 1];
+    mcu_status.set_glv_battery_voltage(median_glv * GLV_VOLTAGE_MULTIPLIER);
+
+    /*
+     * Calculate rolling average of readings
+     */
+    num_glv_readings++;
+    rolling_glv_reading += (median_glv - rolling_glv_reading) / num_glv_readings;;
 
     /*
      * Check for BMS fault
@@ -548,7 +571,7 @@ void read_status_values() {
     } else {
         mcu_status.set_bms_ok_high(false);
         if (timer_bms_print_fault.check()) {
-            Serial.println("BMS fault detected");
+            //Serial.println("BMS fault detected");
         }
     }
 
@@ -560,7 +583,7 @@ void read_status_values() {
     } else {
         mcu_status.set_imd_okhs_high(false);
         if (timer_imd_print_fault.check()) {
-            Serial.println("IMD fault detected");
+            //Serial.println("IMD fault detected");
         }
     }
 
@@ -785,6 +808,9 @@ void read_dashboard_buttons() {
     }
     if (btn_restart_inverter_debouncing && timer_btn_restart_inverter.check()) {
         btn_restart_inverter_pressed = !btn_restart_inverter_pressed;
+        if (btn_restart_inverter_pressed) {
+            reset_inverter();
+        }
     }
 }
 
@@ -810,7 +836,7 @@ void set_dashboard_leds() {
         EXPANDER.digitalWrite(EXPANDER_LED_START, led_start_active);
     }
 
-    EXPANDER.digitalWrite(EXPANDER_LED_BMS, HIGH);//!mcu_status.get_bms_ok_high());
+    EXPANDER.digitalWrite(EXPANDER_LED_BMS, !mcu_status.get_bms_ok_high());
     EXPANDER.digitalWrite(EXPANDER_LED_IMD, !mcu_status.get_imd_okhs_high());
 }
 
