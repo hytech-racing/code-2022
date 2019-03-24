@@ -911,12 +911,20 @@ void read_dashboard_buttons() {
             torque_mode = (torque_mode + 1) % 4;
             if (torque_mode == 0) {
                 set_mode_led(0);
+                MAX_ACCEL_REGEN = 0;
+                MAX_BRAKE_REGEN = 0;
             } else if (torque_mode == 1) {
                 set_mode_led(1);
+                MAX_ACCEL_REGEN = 0;
+                MAX_BRAKE_REGEN = -400;
             } else if (torque_mode == 2) {
                 set_mode_led(2);
+                MAX_ACCEL_REGEN = -100;
+                MAX_BRAKE_REGEN = -400;
             } else if (torque_mode == 3) {
                 set_mode_led(3);
+                MAX_ACCEL_REGEN = -400;
+                MAX_BRAKE_REGEN = 0;
             }
         }
     }
