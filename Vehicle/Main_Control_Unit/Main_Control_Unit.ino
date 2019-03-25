@@ -101,7 +101,6 @@ Metro timer_btn_start = Metro(100);
 Metro timer_debug = Metro(200);
 Metro timer_debug_raw_torque = Metro(200);
 Metro timer_debug_torque = Metro(200);
-Metro timer_ramp_torque = Metro(100);
 Metro timer_inverter_enable = Metro(2000); // Timeout failed inverter enable
 Metro timer_led_mode_blink_fast = Metro(150, 1);
 Metro timer_led_mode_blink_slow = Metro(400, 1);
@@ -110,73 +109,34 @@ Metro timer_led_start_blink_slow = Metro(400);
 Metro timer_motor_controller_send = Metro(50);
 Metro timer_ready_sound = Metro(2000); // Time to play RTD sound
 Metro timer_can_update = Metro(100);
-Metro timer_dashboard = Metro(25);
-
-/*
- * Timers    // old rcu timers
- */ // TODO: figure out which ones we need/adjust the values
 Metro timer_bms_print_fault = Metro(500);
-Metro timer_debug_bms_status = Metro(1000);
-Metro timer_debug_bms_temperatures = Metro(3000);
-Metro timer_debug_bms_detailed_temperatures = Metro(3000);
-Metro timer_debug_bms_voltages = Metro(1000);
-Metro timer_debug_bms_detailed_voltages = Metro(3000);
-Metro timer_debug_rms_command_message = Metro(200);
-Metro timer_debug_rms_current_information = Metro(100);
-Metro timer_debug_rms_fault_codes = Metro(2000);
-Metro timer_debug_rms_internal_states = Metro(2000);
-Metro timer_debug_rms_motor_position_information = Metro(100);
-Metro timer_debug_rms_temperatures_1 = Metro(3000);
-Metro timer_debug_rms_temperatures_3 = Metro(3000);
-Metro timer_debug_rms_torque_timer_information = Metro(200);
-Metro timer_debug_rms_voltage_information = Metro(100);
-Metro timer_debug_fcu_status = Metro(2000);
-Metro timer_debug_fcu_readings = Metro(200);
-Metro timer_detailed_voltages = Metro(1000);
 Metro timer_imd_print_fault = Metro(500);
 Metro timer_restart_inverter = Metro(500, 1); // Allow the FCU to restart the inverter
 Metro timer_status_send = Metro(100);
-
-Metro timer_start_btn_read = Metro(50);
-
-Metro timer_motor_controller_off = Metro(10000, 1);
-
-bool btn_start_reading = true;
-bool btn_mode_reading = true;
-bool btn_restart_inverter_reading = true;
 
 float rolling_accel1_reading = 0;
 float rolling_accel2_reading = 0;
 float rolling_brake_reading = 0;
 float rolling_glv_reading = 0;
 
-int num_pedal_readings = 0;
-int num_glv_readings = 0;
-
-bool bms_imd_latched = false; // instead of the old rcu_status.set_bms_imd_latched(bool);
-bool bms_faulting = false;
+bool btn_start_reading = true;
+bool btn_mode_reading = true;
+bool btn_restart_inverter_reading = true;
 bool imd_faulting = false;
 bool inverter_restart = false; // True when restarting the inverter
-
 bool btn_start_debounced = false;
-bool btn_start_current_state = false;
-
 bool btn_start_debouncing = false;
-uint8_t btn_start_new = 0;
 bool btn_start_pressed = false;
 bool btn_mode_debouncing = false;
-uint8_t btn_mode_new = 0;
 bool btn_mode_pressed = true;
 bool btn_restart_inverter_debouncing = false;
 bool btn_restart_inverter_pressed = false;
 bool debug = false;
 bool led_mode_active = false;
 bool led_start_active = false;
-bool regen_active = false;
 uint8_t torque_mode = 0;
 uint8_t led_mode_type = 0;
 uint8_t led_start_type = 0; // 0 for off, 1 for steady, 2 for fast blink, 3 for slow blink
-float rampRatio = 1;
 
 uint16_t MAX_TORQUE = 1600; // Torque in Nm * 10
 int16_t MAX_REGEN_TORQUE = 0;
@@ -455,6 +415,10 @@ void read_pedal_values() {
     // set the brake pedal active flag if the median reading is above the threshold
     mcu_pedal_readings.set_brake_pedal_active(rolling_brake_reading >= BRAKE_ACTIVE);
 
+    if (mcu_pedal_readings.get_brake_pedal_active()) {
+        digitalWrite(SSR_BRAKE_LIGHT, HIGH);
+    }
+
     if (debug && timer_debug.check()) {
         Serial.print("MCU PEDAL ACCEL 1: ");
         Serial.println(mcu_pedal_readings.get_accelerator_pedal_raw_1());
@@ -509,6 +473,11 @@ void read_status_values() {
      mcu_status.set_shutdown_d_above_threshold(ADC.read_adc(ADC_SHUTDOWN_D_READ_CHANNEL) > SHUTDOWN_D_HIGH);
      mcu_status.set_shutdown_e_above_threshold(analogRead(SENSE_SHUTDOWN_E) > SHUTDOWN_E_HIGH);
      mcu_status.set_shutdown_f_above_threshold(analogRead(SENSE_SHUTDOWN_F) > SHUTDOWN_F_HIGH);
+
+     /*
+      * Measure the temperature from on-board thermistors
+      */
+     mcu_status.set_temperature(ADC.read_adc(ADC_TEMPSENSE_CHANNEL));
 }
 
 /*
