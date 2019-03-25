@@ -8,31 +8,17 @@
 #include <kinetis_flexcan.h>
 #include <Metro.h>
 #include <XBTools.h>
+#include <TimeLib.h>
 
 /*
  * Pin definitions
  */
-#define COOL_RELAY_1 A9
-#define COOL_RELAY_2 2
-#define COOL_RELAY_3 A8
-#define GPIO1 A4
-#define GPIO2 5
-#define SENSE_12VSUPPLY A3
-#define SENSE_BMS A1
-#define SENSE_IMD A0
-#define SENSE_SHUTDOWN_OUT A2
-#define SSR_BRAKE_LIGHT 12
-#define SSR_INVERTER 6
-#define THERMISTOR A5 // TODO add temperature monitoring
 
 #define XB Serial2
 
 /*
  * Constant definitions
  */
-#define BMS_HIGH 134 // ~3V on BMS_OK line
-#define IMD_HIGH 134 // ~3V on OKHS line
-#define SHUTDOWN_OUT_HIGH 350 // ~5V on SHUTDOWN_C line
 #define XBEE_PKT_LEN 15
 
 /*
@@ -55,9 +41,10 @@ Metro timer_debug_rms_torque_timer_information = Metro(200);
 Metro timer_debug_rms_voltage_information = Metro(100);
 Metro timer_debug_fcu_status = Metro(2000);
 Metro timer_debug_fcu_readings = Metro(200);
+Metro timer_debug_mcu_status = Metro(2000);
+Metro timer_debug_mcu_pedal_readings = Metro(200);
 Metro timer_detailed_voltages = Metro(1000);
 Metro timer_imd_print_fault = Metro(500);
-Metro timer_restart_inverter = Metro(500); // Allow the FCU to restart the inverter
 Metro timer_status_send = Metro(100);
 Metro timer_status_send_xbee = Metro(2000);
 
@@ -81,11 +68,8 @@ BMS_detailed_temperatures bms_detailed_temperatures[8];
 BMS_status bms_status;
 FCU_status fcu_status;
 FCU_readings fcu_readings;
-
-boolean bms_faulting = false;
-boolean imd_faulting = false;
-
-boolean inverter_restart = false; // True when restarting the inverter
+MCU_status mcu_status;
+MCU_pedal_readings mcu_pedal_readings;
 
 FlexCAN CAN(500000);
 static CAN_message_t rx_msg;
@@ -93,11 +77,8 @@ static CAN_message_t tx_msg;
 static CAN_message_t xb_msg;
 
 void setup() {
-    pinMode(COOL_RELAY_1, OUTPUT);
-    pinMode(COOL_RELAY_2, OUTPUT);
-    pinMode(COOL_RELAY_3, OUTPUT);
-    pinMode(SSR_BRAKE_LIGHT, OUTPUT);
-    pinMode(SSR_INVERTER, OUTPUT);
+
+    setSyncProvider(getTeensy3Time); // Registers Teensy RTC as system time
 
     Serial.begin(115200); // Init serial for PC communication
     XB.begin(115200); // Init serial for XBee communication
@@ -112,6 +93,8 @@ void setup() {
 
     delay(100);
     Serial.println("CAN system, serial communication, and XBee initialized");
+    Serial.print("Current RTC time: ");
+    digitalClockDisplay();
 
 }
 
@@ -193,6 +176,12 @@ void parse_can_message() {
         if (rx_msg.id == ID_BMS_DETAILED_VOLTAGES) {
             BMS_detailed_voltages temp = BMS_detailed_voltages(rx_msg.buf);
             bms_detailed_voltages[temp.get_ic_id()][temp.get_group_id()].load(rx_msg.buf);
+        }
+        if (rx_msg.id == ID_MCU_STATUS) {
+            mcu_status.load(rx_msg.buf);
+        }
+        if (rx_msg.id == ID_MCU_PEDAL_READINGS) {
+            mcu_pedal_readings.load(rx_msg.buf);
         }
     }
 }
@@ -366,4 +355,44 @@ void send_xbee() {
         xb_msg.id = ID_MC_COMMAND_MESSAGE;
         write_xbee_data();
     }
+
+    if (timer_debug_mcu_status.check()) {
+        mcu_status.write(xb_msg.buf);
+        xb_msg.len = sizeof(CAN_message_mcu_status_t);
+        xb_msg.id = ID_MCU_STATUS;
+        write_xbee_data();
+    }
+
+    if (timer_debug_mcu_pedal_readings.check()) {
+        mcu_pedal_readings.write(xb_msg.buf);
+        xb_msg.len = sizeof(CAN_message_mcu_pedal_readings_t);
+        xb_msg.id = ID_MCU_PEDAL_READINGS;
+        write_xbee_data();
+    }
+}
+
+time_t getTeensy3Time() {
+    return Teensy3Clock.get();
+}
+
+void digitalClockDisplay() {
+    // digital clock display of the time
+    Serial.print(hour());
+    printDigits(minute());
+    printDigits(second());
+    Serial.print(" ");
+    Serial.print(day());
+    Serial.print(" ");
+    Serial.print(month());
+    Serial.print(" ");
+    Serial.print(year()); 
+    Serial.println(); 
+}
+
+void printDigits(int digits){
+    // utility function for digital clock display: prints preceding colon and leading 0
+    Serial.print(":");
+    if(digits < 10)
+        Serial.print('0');
+    Serial.print(digits);
 }
