@@ -193,8 +193,8 @@ void setup() {
     digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH);
     digitalWrite(SSR_INVERTER, HIGH);
     digitalWrite(PUMP_CTRL, HIGH);
-    analogWrite(FAN_1, FAN_1_DUTY_CYCLE);
-    //analogWrite(FAN_2, FAN_2_DUTY_CYCLE);
+    //analogWrite(FAN_1, FAN_1_DUTY_CYCLE);
+    analogWrite(FAN_2, FAN_2_DUTY_CYCLE);
     mcu_status.set_bms_ok_high(true);
     mcu_status.set_imd_okhs_high(true);
     mcu_status.set_inverter_powered(true);
@@ -416,9 +416,7 @@ void read_pedal_values() {
     // set the brake pedal active flag if the median reading is above the threshold
     mcu_pedal_readings.set_brake_pedal_active(rolling_brake_reading >= BRAKE_ACTIVE);
 
-    if (mcu_pedal_readings.get_brake_pedal_active()) {
-        digitalWrite(SSR_BRAKE_LIGHT, HIGH);
-    }
+    digitalWrite(SSR_BRAKE_LIGHT, mcu_pedal_readings.get_brake_pedal_active());
 
     if (debug && timer_debug.check()) {
         Serial.print("MCU PEDAL ACCEL 1: ");
