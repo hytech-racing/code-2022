@@ -70,7 +70,7 @@
 #define CH_CUR_SENSE_2 2
 #define CH_TEMP_SENSE_1 1
 #define CH_TEMP_SENSE_2 3
-#define CH_SHUTDOWN 5
+#define CH_SHUTDOWN 5 // TODO add other shutdown circuit channels
 #define CH_5V 4
 
 /*
@@ -157,7 +157,8 @@ BMS_onboard_detailed_temperatures bms_onboard_detailed_temperatures[TOTAL_IC];
 BMS_voltages bms_voltages;
 bool fh_watchdog_test = false;
 bool watchdog_high = true;
-bool balance_cycle = true;
+uint8_t balance_offcycle = 0; // Track which loops balancing will be disabled on
+uint8_t balance_limit_factor = 3; // Limit balancing to once every balance_limit_factor loops
 bool charge_mode_entered = false;
 
 int minVoltageICIndex;
@@ -314,6 +315,8 @@ void loop() {
             bms_detailed_temperatures[i].write(tx_msg.buf);
             CAN.write(tx_msg);
         }
+        
+        // TODO send balancing status CAN messages
 
         tx_msg.timeout = 0;
 
@@ -420,10 +423,10 @@ void stop_discharge_all() {
 void balance_cells() {
     int shutdown_circuit_voltage = ADC.read_adc(CH_SHUTDOWN);
     spi_enable(SPI_CLOCK_DIV16); // Reconfigure 1MHz SPI clock speed after ADC reading so LTC communication is successful
-    balance_cycle = !balance_cycle; // Only allow balancing on odd cycles
-    bool cells_balancing = false;
+    balance_offcycle = (balance_offcycle + 1) % balance_limit_factor; // Only allow balancing on 1/balance_limit_factor cycles
+    bool cells_balancing = false; // This gets set to true later if it turns out we are balancing any cells this loop
     if (bms_voltages.get_low() > voltage_cutoff_low
-        && balance_cycle
+        && !balance_offcycle
         && !bms_status.get_error_flags()
         && bms_status.get_state() >= BMS_STATE_CHARGING
         && bms_status.get_state() <= BMS_STATE_BALANCING
