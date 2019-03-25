@@ -327,7 +327,7 @@ void run_command(uint16_t cmd)
         }
         Serial.println();
         Serial.println();
-        SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0)); // Set SPI back to 1MHz for next isoSPI call; It might be best practice to put this right before each isoSPI call
+        spi_enable(SPI_CLOCK_DIV16); // Set SPI back to 1MHz for next isoSPI call; It might be best practice to put this right before each isoSPI call
         delay(500);
       }
       print_menu();
