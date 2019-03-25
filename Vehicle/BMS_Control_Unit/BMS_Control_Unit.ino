@@ -136,6 +136,7 @@ uint8_t tx_cfg[TOTAL_IC][6]; // data defining how data will be written to daisy 
  * CAN Variables
  */
 FlexCAN CAN(500000);
+const CAN_filter_t can_filter_ccu_status = {0, 0, ID_CCU_STATUS}; // Note: If you want to allow other specific messages in, you must instead use setFilter(), making sure to fill all slots 0-7 with duplicate filters as necessary
 static CAN_message_t rx_msg;
 static CAN_message_t tx_msg;
 
@@ -175,7 +176,7 @@ void setup() {
     pinMode(WATCHDOG, OUTPUT);
 
     Serial.begin(115200); // Init serial for PC communication
-    CAN.begin(); // Init CAN for vehicle communication
+    CAN.begin(can_filter_ccu_status); // Init CAN for vehicle communication
 
     /* Configure CAN rx interrupt */
     /*interrupts();
@@ -236,14 +237,14 @@ void loop() {
     }
 
     if (timer_process_cells_fast.check()) {
-        process_current(); // store data in bms_status object.
+        process_current(); // Store data in bms_status object.
     }
 
     if (timer_process_cells_slow.check()) {
-        process_voltages(); // poll controller and store data in bms_voltages object.
-        process_cell_temps(); // poll controller and store data in bms_temperatures and bms_detailed_temperatures
-        process_onboard_temps(); // poll controller and store data in bms_onboard_temperatures and bms_onboard_detailed_temperatures
-        //balance_cells(); // TODO fix SPI issue with ADC when this function is called
+        process_voltages(); // Poll controller and store data in bms_voltages object.
+        process_cell_temps(); // Poll controller and store data in bms_temperatures and bms_detailed_temperatures
+        process_onboard_temps(); // Poll controller and store data in bms_onboard_temperatures and bms_onboard_detailed_temperatures
+        balance_cells(); // Check local cell voltage data and balance individual cells if it is safe to do so
         print_cells(); // Print the cell voltages and balancing status to serial
         print_uptime();
 
@@ -418,7 +419,7 @@ void stop_discharge_all() {
 
 void balance_cells() {
     int shutdown_circuit_voltage = ADC.read_adc(CH_SHUTDOWN);
-    initialize(); // Reconfigure SPI pins after reading ADC so LTC communication is successful
+    spi_enable(SPI_CLOCK_DIV16); // Reconfigure 1MHz SPI clock speed after ADC reading so LTC communication is successful
     balance_cycle = !balance_cycle; // Only allow balancing on odd cycles
     bool cells_balancing = false;
     if (bms_voltages.get_low() > voltage_cutoff_low
@@ -433,10 +434,10 @@ void balance_cells() {
                     uint16_t cell_voltage = cell_voltages[ic][cell]; // current cell voltage in mV
                     if (cell_discharging[ic][cell]) {
                         if (cell_voltage < bms_voltages.get_low() + voltage_difference_threshold - 6) {
-                            modify_discharge_config(ic, cell, false);
+                            modify_discharge_config(ic, cell, false); // Modify our local version of the discharge configuration
                         }
                     } else if (cell_voltage > bms_voltages.get_low() + voltage_difference_threshold) {
-                            modify_discharge_config(ic, cell, true);
+                            modify_discharge_config(ic, cell, true); // Modify our local version of the discharge configuration
                             cells_balancing = true;
                     }
                 }
@@ -779,7 +780,7 @@ void process_current() {
      * current = (voltage - 2.5) * 300 / 2
      */
     double voltage = ADC.read_adc(CH_CUR_SENSE_2) / (double) 819;
-    initialize(); // Reconfigure SPI pins after reading ADC so LTC communication is successful
+    spi_enable(SPI_CLOCK_DIV16); // Reconfigure 1MHz SPI clock speed after ADC reading so LTC communication is successful
     double current = (voltage - 2.5) * (double) 150;
     Serial.print("\nCurrent Sensor: ");
     Serial.print(current, 2);
