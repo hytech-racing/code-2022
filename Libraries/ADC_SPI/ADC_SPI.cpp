@@ -11,7 +11,7 @@
  * Initialize ADC SPI using default CS pin
  */
 ADC_SPI::ADC_SPI() {
-	init(DEFAULT_SPI_CS);
+	init(DEFAULT_SPI_CS, DEFAULT_SPI_SPEED);
 }
 
 /*
@@ -19,14 +19,19 @@ ADC_SPI::ADC_SPI() {
  * param CS Pin to use for Chip Select
  */
 ADC_SPI::ADC_SPI(int CS) {
-	init(CS);
+	init(CS, DEFAULT_SPI_SPEED);
+}
+
+ADC_SPI::ADC_SPI(int CS, unsigned int SPIspeed) {
+	init(CS, SPIspeed);
 }
 
 /*
  * Initialization helper
  */
-void ADC_SPI::init(int CS) {
+void ADC_SPI::init(int CS, unsigned int SPIspeed) {
 	ADC_SPI_CS = CS;
+	SPI_SPEED  = SPIspeed;
 
 	pinMode(ADC_SPI_CS, OUTPUT);
 	pinMode(ADC_SPI_CS, HIGH);
@@ -43,7 +48,7 @@ void ADC_SPI::init(int CS) {
 uint16_t ADC_SPI::read_adc(int channel) {
 	// Gain control of the SPI port
 	// and configure settings
-	SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
+	SPI.beginTransaction(SPISettings(SPI_SPEED, MSBFIRST, SPI_MODE0));
 
 	// Take the SS pin low to select the chip:
 	digitalWrite(ADC_SPI_CS, LOW);

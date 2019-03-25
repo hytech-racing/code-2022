@@ -79,7 +79,7 @@ MCP23S17::MCP23S17(uint8_t address, uint8_t cs, unsigned int SPIspeed) {
     _outputCache = 0x0000;              // Default pull-up state is all off, 0x0000
     _invertCache = 0x0000;              // Default input inversion state is not inverted, 0x0000
 
-}
+};
 
 // Start the SPI Bus, write default values to all registers, and enable the hardware address pins (IOCON.HAEN = 1)
 
