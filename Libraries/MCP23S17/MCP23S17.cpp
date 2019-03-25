@@ -93,8 +93,8 @@ void MCP23S17::begin() {
     byteWrite(IODIRB, 0xFF);              // Write the default value (0xFF) in IODIRB register
 
     for (int i = 2; i < 22; i++) {        // This loop writes default values (0x00) to the rest of the registers
-    byteWrite(i, 0x00);
-    ::delay(10);
+        byteWrite(i, 0x00);
+        ::delay(10);
     }
 
     byteWrite(IOCON, 0b00001000);         // Enable the hardware address pins
@@ -128,9 +128,9 @@ void MCP23S17::pinMode(uint8_t pin, uint8_t mode) {
     if (pin < 0 || pin > 15) return;  // Check if the pin value is between 0 and 15; the function does nothing if the pin value is outside the range
 
     if (mode == OUTPUT)               // Determine the mode
-    _modeCache &= ~(1 << pin);    // If mode is OUTPUT, write 0 in the appropriate place of the mode cache
+        _modeCache &= ~(1 << pin);    // If mode is OUTPUT, write 0 in the appropriate place of the mode cache
     else
-    _modeCache |= (1 << pin);     // If mode value is anything other than 0, write 1 in the appropriate place of the mode cache
+        _modeCache |= (1 << pin);     // If mode value is anything other than 0, write 1 in the appropriate place of the mode cache
 
     byteWrite(IODIRA, (uint8_t) _modeCache);         // Write the LSB of the mode cache to IODIRA
     byteWrite(IODIRB, (uint8_t) (_modeCache >> 8));  // Write the MSB of the mode cache to IODIRB
@@ -152,9 +152,9 @@ void MCP23S17::pullupMode(uint8_t pin, uint8_t mode) {
     if (pin < 0 || pin > 15) return;
 
     if (mode == OFF)
-    _pullupCache &= ~(1 << pin);
+        _pullupCache &= ~(1 << pin);
     else
-    _pullupCache |= (1 << pin);
+        _pullupCache |= (1 << pin);
 
     byteWrite(GPPUA, (uint8_t) _pullupCache);
     byteWrite(GPPUB, (uint8_t) (_pullupCache >> 8));
@@ -176,9 +176,9 @@ void MCP23S17::inputInvert(uint8_t pin, uint8_t mode) {
     if (pin < 0 || pin > 15) return;
 
     if (mode == OFF)
-    _invertCache &= ~(1 << pin);
+        _invertCache &= ~(1 << pin);
     else
-    _invertCache |= (1 << pin);
+        _invertCache |= (1 << pin);
 
     byteWrite(IPOLA, (uint8_t) _invertCache);
     byteWrite(IPOLB, (uint8_t) (_invertCache >> 8));
@@ -200,9 +200,9 @@ void MCP23S17::digitalWrite(uint8_t pin, uint8_t value) {
     if (pin < 0 || pin > 15) return;
 
     if (value == LOW)
-    _outputCache &= ~(1 << pin);
+        _outputCache &= ~(1 << pin);
     else
-    _outputCache |= (1 << pin);
+        _outputCache |= (1 << pin);
 
     byteWrite(OLATA, (uint8_t) _outputCache);
     byteWrite(OLATB, (uint8_t) (_outputCache >> 8));

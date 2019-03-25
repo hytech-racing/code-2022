@@ -702,29 +702,77 @@ void read_dashboard_buttons() {
 }
 
 void set_dashboard_leds() {
+
+    int dash_values = 0;
+
+    /*
+     * Set torque mode led
+     */
     if ((led_mode_type == 2 && timer_led_mode_blink_fast.check()) || (led_mode_type == 3 && timer_led_mode_blink_slow.check())) {
-        EXPANDER.digitalWrite(EXPANDER_LED_MODE, led_mode_active);
+        //EXPANDER.digitalWrite(EXPANDER_LED_MODE, led_mode_active);
+        if (led_mode_active) {
+            dash_values |= (1 << EXPANDER_LED_MODE);
+        }
+        else {
+            dash_values &= ~(1 << EXPANDER_LED_MODE);
+        }
+
         led_mode_active = !led_mode_active;
     }
     if (led_mode_type < 2) {
         led_mode_active = led_mode_type;
-        EXPANDER.digitalWrite(EXPANDER_LED_MODE, led_mode_active);
+        //EXPANDER.digitalWrite(EXPANDER_LED_MODE, led_mode_active);
+        if (led_mode_active) {
+            dash_values |= (1 << EXPANDER_LED_MODE);
+        }
+        else {
+            dash_values &= ~(1 << EXPANDER_LED_MODE);
+        }
     }
 
     /*
-     * Blink start led
+     * Set start led
      */
     if ((led_start_type == 2 && timer_led_start_blink_fast.check()) || (led_start_type == 3 && timer_led_start_blink_slow.check())) {
-        EXPANDER.digitalWrite(EXPANDER_LED_START, led_start_active);
+        //EXPANDER.digitalWrite(EXPANDER_LED_START, led_start_active);
+        if (led_start_active) {
+            dash_values |= (1 << EXPANDER_LED_START);
+        }
+        else {
+            dash_values &= ~(1 << EXPANDER_LED_START);
+        }
         led_start_active = !led_start_active;
     }
     if (led_start_type < 2) {
         led_start_active = led_start_type;
-        EXPANDER.digitalWrite(EXPANDER_LED_START, led_start_active);
+        //EXPANDER.digitalWrite(EXPANDER_LED_START, led_start_active);
+        if (led_start_active) {
+            dash_values |= (1 << EXPANDER_LED_START);
+        }
+        else {
+            dash_values &= ~(1 << EXPANDER_LED_START);
+        }
+    }
+    // EXPANDER.digitalWrite(EXPANDER_LED_BMS, !mcu_status.get_bms_ok_high());
+    // EXPANDER.digitalWrite(EXPANDER_LED_IMD, !mcu_status.get_imd_okhs_high());
+
+    /*
+     * Set BMS and IMD leds
+     */
+    if (!mcu_status.get_bms_ok_high()) {
+        dash_values |= (1 << EXPANDER_LED_BMS);
+    }
+    else {
+        dash_values &= (1 << EXPANDER_LED_BMS);
+    }
+    if (!mcu_status.get_imd_okhs_high()) {
+        dash_values |= (1 << EXPANDER_LED_IMD);
+    }
+    else {
+        dash_values &= (1 << EXPANDER_LED_IMD);
     }
 
-    EXPANDER.digitalWrite(EXPANDER_LED_BMS, !mcu_status.get_bms_ok_high());
-    EXPANDER.digitalWrite(EXPANDER_LED_IMD, !mcu_status.get_imd_okhs_high());
+    EXPANDER.digitalWrite(dash_values);
 }
 
 // NOT TESTED YET
@@ -764,7 +812,7 @@ int calculate_torque_with_regen() {
         mcu_pedal_readings.set_accelerator_implausibility(true);
         Serial.println("ACCEL IMPLAUSIBILITY: COMPARISON FAILED");
     } else {
-        calculated_torque = min(torque1, torque2) + torque3;
+        calculated_torque = (torque1 + torque2) / 2 + torque3;
 
         if (debug && timer_debug_raw_torque.check()) {
             Serial.print("TORQUE REQUEST DELTA PERCENT: "); // Print the % difference between the 2 accelerator sensor requests
