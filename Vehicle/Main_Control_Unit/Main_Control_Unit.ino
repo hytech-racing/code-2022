@@ -320,9 +320,10 @@ void loop() {
                 Serial.println(mcu_pedal_readings.get_brake_implausibility());
             }
 
-            Serial.println(calculated_torque);
+            //Serial.println(calculated_torque);
 
             mc_command_message.set_torque_command(calculated_torque);
+            //Serial.print("RPM: "); Serial.println(mc_motor_position_information.get_motor_speed());
 
             mc_command_message.write(tx_msg.buf);
             tx_msg.id = ID_MC_COMMAND_MESSAGE;
@@ -591,7 +592,6 @@ void set_state(uint8_t new_state) {
         EXPANDER.digitalWrite(EXPANDER_READY_SOUND, LOW);
         Serial.println("RTDS deactivated");
         Serial.println("Ready to drive");
-        timer_motor_controller_off.reset();
     }
 }
 
