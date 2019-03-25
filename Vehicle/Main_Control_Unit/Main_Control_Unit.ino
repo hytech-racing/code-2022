@@ -408,6 +408,9 @@ void parse_can_message() {
             if (mc_internal_states.get_inverter_enable_state() && mcu_status.get_state() == MCU_STATE_ENABLING_INVERTER) {
                 set_state(MCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
             }
+            if (!mc_internal_states.get_inverter_enable_state()) {
+                set_state(MCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
+            }
         }
 
         if (rx_msg.id == ID_MC_MOTOR_POSITION_INFORMATION) {
