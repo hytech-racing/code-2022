@@ -44,7 +44,7 @@
 #define CURRENT_SENSE A3
 #define LED_STATUS 7
 #define LTC6820_CS 10
-#define TEMP_SENSE_1 A9
+#define TEMP_SENSE_1 A9 // TODO update these for 2019 ECU
 #define TEMP_SENSE_2 A2
 #define WATCHDOG A0
 
@@ -61,6 +61,8 @@
 #define IGNORE_FAULT_THRESHOLD 10       // Number of fault-worthy values to read in succession before faulting
 #define CURRENT_FAULT_THRESHOLD 5       // Number of fault-worthy electrical current values to read in succession before faulting
 #define SHUTDOWN_HIGH_THRESHOLD 1500    // Value returned by ADC above which the shutdown circuit is considered powered (balancing not allowed when AIRs open)
+#define BALANCE_LIMIT_FACTOR 3          // Reciprocal of the cell balancing duty cycle (3 means balancing can happen during 1 out of every 3 loops, etc)
+#define CHARGE_MODE_OVERRIDE false      // Set to true to place BMS in charge mode, set to false and BMS will require a Charger ECU CAN message to enter charge mode
 
 /*
  * Current Sensor ADC Channel definitions
@@ -106,7 +108,6 @@ uint8_t consecutive_faults_undervoltage = 0;
 uint8_t consecutive_faults_total_voltage_high = 0;
 uint8_t consecutive_faults_thermistor = 0;
 uint8_t consecutive_faults_current = 0;
-bool default_charge_mode = false; // enter charge mode by default
 
 uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages. Numbers are stored in 0.1 mV units.
 uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
@@ -156,17 +157,14 @@ BMS_onboard_temperatures bms_onboard_temperatures;
 BMS_onboard_detailed_temperatures bms_onboard_detailed_temperatures[TOTAL_IC];
 BMS_voltages bms_voltages;
 BMS_balancing_status bms_balancing_status[(TOTAL_IC + 3) / 4]; // Round up TOTAL_IC / 4 since data from 4 ICs can fit in a single message
-bool fh_watchdog_test = false;
-bool watchdog_high = true;
-uint8_t balance_offcycle = 0; // Track which loops balancing will be disabled on
-uint8_t balance_limit_factor = 3; // Limit balancing to once every balance_limit_factor loops
+bool fh_watchdog_test = false; // Initialize test mode to false - if set to true the BMS stops sending the watchdog signal
+bool watchdog_high = true; // Initialize watchdog signal - this alternates every loop
+uint8_t balance_offcycle = 0; // Tracks which loops balancing will be disabled on
 bool charge_mode_entered = false;
 
 int minVoltageICIndex;
 int minVoltageCellIndex;
 int voltage_difference;
-
-bool cell_discharging[TOTAL_IC][12];
 
 void setup() {
     pinMode(BMS_OK, OUTPUT);
@@ -197,7 +195,7 @@ void setup() {
     init_cfg(); // Initialize and write configuration registers to LTC6804 chips
     poll_cell_voltage();
     memcpy(cell_delta_voltage, cell_voltages, 2 * TOTAL_IC * CELLS_PER_IC);
-    if (default_charge_mode) {
+    if (CHARGE_MODE_OVERRIDE) {
         charge_mode_entered = true;
         bms_status.set_state(BMS_STATE_CHARGING);
     } else {
@@ -233,7 +231,7 @@ void setup() {
 void loop() {
     parse_can_message();
 
-    if (timer_charge_timeout.check() && bms_status.get_state() > BMS_STATE_DISCHARGING && !default_charge_mode) { // 1 second timeout - if timeout is reached, disable charging
+    if (timer_charge_timeout.check() && bms_status.get_state() > BMS_STATE_DISCHARGING && !CHARGE_MODE_OVERRIDE) { // 1 second timeout - if timeout is reached, disable charging
         Serial.println("Disabling charge mode - CCU timeout");
         bms_status.set_state(BMS_STATE_DISCHARGING);
     }
@@ -364,7 +362,7 @@ void init_cfg() {
 }
 
 void modify_discharge_config(int ic, int cell, bool setDischarge) {
-    cell_discharging[ic][cell] = setDischarge;
+    bms_balancing_status[ic / 4].set_cell_balancing(ic % 4, cell, setDischarge);
     if (ic < TOTAL_IC && cell < CELLS_PER_IC) {
         if (cell > 4) {
             cell++; // Increment cell, skipping the disconnected C5. This abstracts the missing cell from the rest of the program.
@@ -399,7 +397,7 @@ void discharge_cell(int ic, int cell, bool setDischarge) {
 void discharge_all() {
     for (int i = 0; i < TOTAL_IC; i++) {
         for (int j = 0; j < CELLS_PER_IC; j++) {
-            cell_discharging[i][j] = true;
+            bms_balancing_status[i / 4].set_cell_balancing(i % 4, j, true);
         }
         tx_cfg[i][4] = 0b11111111;
         tx_cfg[i][5] = tx_cfg[i][5] | 0b00001111;
@@ -416,7 +414,7 @@ void stop_discharge_cell(int ic, int cell) {
 void stop_discharge_all() {
     for (int i = 0; i < TOTAL_IC; i++) {
         for (int j = 0; j < CELLS_PER_IC; j++) {
-            cell_discharging[i][j] = false;
+            bms_balancing_status[i / 4].set_cell_balancing(i % 4, j, false);
         }
         tx_cfg[i][4] = 0b0;
         tx_cfg[i][5] = 0b0;
@@ -429,7 +427,7 @@ void stop_discharge_all() {
 void balance_cells() {
     int shutdown_circuit_voltage = ADC.read_adc(CH_SHUTDOWN);
     spi_enable(SPI_CLOCK_DIV16); // Reconfigure 1MHz SPI clock speed after ADC reading so LTC communication is successful
-    balance_offcycle = (balance_offcycle + 1) % balance_limit_factor; // Only allow balancing on 1/balance_limit_factor cycles
+    balance_offcycle = (balance_offcycle + 1) % BALANCE_LIMIT_FACTOR; // Only allow balancing on 1/BALANCE_LIMIT_FACTOR cycles
     bool cells_balancing = false; // This gets set to true later if it turns out we are balancing any cells this loop
     if (bms_voltages.get_low() > voltage_cutoff_low
         && !balance_offcycle
@@ -441,7 +439,7 @@ void balance_cells() {
             for (int cell = 0; cell < CELLS_PER_IC; cell++) { // Loop through cells
                 if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
                     uint16_t cell_voltage = cell_voltages[ic][cell]; // current cell voltage in mV
-                    if (cell_discharging[ic][cell]) {
+                    if (bms_balancing_status[ic / 4].get_cell_balancing(ic % 4, cell)) {
                         if (cell_voltage < bms_voltages.get_low() + voltage_difference_threshold - 6) {
                             modify_discharge_config(ic, cell, false); // Modify our local version of the discharge configuration
                         }
@@ -865,7 +863,7 @@ void print_cells() {
             double voltage = cell_voltages[current_ic][i] * 0.0001;
             Serial.print(voltage, 4);
             Serial.print(" Discharging: ");
-            Serial.print(cell_discharging[current_ic][i]);
+            Serial.print(bms_balancing_status[current_ic / 4].get_cell_balancing(current_ic % 4, i));
             Serial.print(" Voltage difference: ");
             Serial.print(cell_voltages[current_ic][i]-bms_voltages.get_low());
             Serial.print(" Delta To Threshold: ");

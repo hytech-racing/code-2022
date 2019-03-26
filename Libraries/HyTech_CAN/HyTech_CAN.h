@@ -666,14 +666,14 @@ class BMS_balancing_status {
         void load(uint8_t buf[]);
         void write(uint8_t buf[]);
         uint8_t get_group_id();
-        uint64_t get_balancing_status();
-        uint32_t get_segment_balancing_status(uint8_t segment_id);
-        bool get_cell_balancing_status(uint8_t segment_id, uint16_t cell_id);
+        uint64_t get_balancing();
+        uint16_t get_ic_balancing(uint8_t ic_id);
+        bool get_cell_balancing(uint8_t ic_id, uint16_t cell_id);
 
         void set_group_id(uint8_t group_id);
-        void set_balancing_status(uint64_t balancing_status);
-        void set_segment_balancing_status(uint8_t segment_id, uint32_t balancing_status);
-        void set_cell_balancing_status(uint8_t segment_id, uint8_t cell_id, bool balancing_status);
+        void set_balancing(uint64_t balancing_status);
+        void set_ic_balancing(uint8_t ic_id, uint32_t balancing_status);
+        void set_cell_balancing(uint8_t ic_id, uint8_t cell_id, bool balancing_status);
     private:
         uint64_t message; // Using a 64-bit datatype here instead of CAN_message_bms_balancing_status_t because it is much easier than dealing with an array
 };
