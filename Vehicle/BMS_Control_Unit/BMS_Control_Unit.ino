@@ -100,10 +100,10 @@ uint16_t onboard_temp_balance_disable = 6000;  // 60.00C
 uint16_t onboard_temp_balance_reenable = 5000; // 50.00C
 uint16_t onboard_temp_critical_high = 7000; // 70.00C
 uint16_t temp_critical_low = 0; // 0C
-uint16_t voltage_difference_threshold = 150; // 0.0500V
+uint16_t voltage_difference_threshold = 150; // 0.1500V
 
-uint8_t error_flags_history = 0; // will not be reset with BMS_OK if a fault has occured
-uint8_t consecutive_faults_overvoltage = 0;// keep track of how many consecutive faults occured
+uint8_t error_flags_history = 0; // Persistently stores fault flags until ECU restart
+uint8_t consecutive_faults_overvoltage = 0; // Keeps track of how many consecutive faults occured
 uint8_t consecutive_faults_undervoltage = 0;
 uint8_t consecutive_faults_total_voltage_high = 0;
 uint8_t consecutive_faults_thermistor = 0;
@@ -117,7 +117,7 @@ uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
       * Thermistor 3
       */
 int16_t cell_delta_voltage[TOTAL_IC][CELLS_PER_IC]; // keep track of which cells are being discharged
-int8_t ignore_cell[TOTAL_IC][CELLS_PER_IC]; //cells to be ignored for Balance testing
+int8_t ignore_cell[TOTAL_IC][CELLS_PER_IC]; // Cells to be ignored for under/overvoltage and balancing
 int8_t ignore_pcb_therm[TOTAL_IC][PCB_THERM_PER_IC]; // PCB thermistors to be ignored
 int8_t ignore_cell_therm[TOTAL_IC][THERMISTORS_PER_IC]; // Cell thermistors to be ignored
 
@@ -157,7 +157,7 @@ BMS_onboard_temperatures bms_onboard_temperatures;
 BMS_onboard_detailed_temperatures bms_onboard_detailed_temperatures[TOTAL_IC];
 BMS_voltages bms_voltages;
 BMS_balancing_status bms_balancing_status[(TOTAL_IC + 3) / 4]; // Round up TOTAL_IC / 4 since data from 4 ICs can fit in a single message
-bool fh_watchdog_test = false; // Initialize test mode to false - if set to true the BMS stops sending the watchdog signal
+bool fh_watchdog_test = false; // Initialize test mode to false - if set to true the BMS stops sending pulse to the watchdog timer in order to test its functionality
 bool watchdog_high = true; // Initialize watchdog signal - this alternates every loop
 uint8_t balance_offcycle = 0; // Tracks which loops balancing will be disabled on
 bool charge_mode_entered = false;
@@ -361,7 +361,7 @@ void init_cfg() {
     LTC6804_wrcfg(TOTAL_IC, tx_cfg); // Write configuration to ICs
 }
 
-void modify_discharge_config(int ic, int cell, bool setDischarge) {
+void modify_discharge_config(int ic, int cell, bool setDischarge) { // TODO unify language about "balancing" vs "discharging"
     bms_balancing_status[ic / 4].set_cell_balancing(ic % 4, cell, setDischarge);
     if (ic < TOTAL_IC && cell < CELLS_PER_IC) {
         if (cell > 4) {
@@ -396,9 +396,7 @@ void discharge_cell(int ic, int cell, bool setDischarge) {
 
 void discharge_all() {
     for (int i = 0; i < TOTAL_IC; i++) {
-        for (int j = 0; j < CELLS_PER_IC; j++) {
-            bms_balancing_status[i / 4].set_cell_balancing(i % 4, j, true);
-        }
+        bms_balancing_status[i / 4].set_ic_balancing(i % 4, ~0x0);
         tx_cfg[i][4] = 0b11111111;
         tx_cfg[i][5] = tx_cfg[i][5] | 0b00001111;
     }
@@ -413,9 +411,7 @@ void stop_discharge_cell(int ic, int cell) {
 
 void stop_discharge_all() {
     for (int i = 0; i < TOTAL_IC; i++) {
-        for (int j = 0; j < CELLS_PER_IC; j++) {
-            bms_balancing_status[i / 4].set_cell_balancing(i % 4, j, false);
-        }
+        bms_balancing_status[i / 4].set_ic_balancing(i % 4, 0x0);
         tx_cfg[i][4] = 0b0;
         tx_cfg[i][5] = 0b0;
     }
@@ -439,13 +435,11 @@ void balance_cells() {
             for (int cell = 0; cell < CELLS_PER_IC; cell++) { // Loop through cells
                 if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
                     uint16_t cell_voltage = cell_voltages[ic][cell]; // current cell voltage in mV
-                    if (bms_balancing_status[ic / 4].get_cell_balancing(ic % 4, cell)) {
-                        if (cell_voltage < bms_voltages.get_low() + voltage_difference_threshold - 6) {
-                            modify_discharge_config(ic, cell, false); // Modify our local version of the discharge configuration
-                        }
+                    if (cell_voltage < bms_voltages.get_low() + voltage_difference_threshold) {
+                        modify_discharge_config(ic, cell, false); // Modify our local version of the discharge configuration
                     } else if (cell_voltage > bms_voltages.get_low() + voltage_difference_threshold) {
-                            modify_discharge_config(ic, cell, true); // Modify our local version of the discharge configuration
-                            cells_balancing = true;
+                        modify_discharge_config(ic, cell, true); // Modify our local version of the discharge configuration
+                        cells_balancing = true;
                     }
                 }
             }
@@ -459,8 +453,7 @@ void balance_cells() {
         }
         wakeup_idle();
         LTC6804_wrcfg(TOTAL_IC, tx_cfg); // Write the new discharge configuration to the LTC6804s
-    }
-    else {
+    } else {
         stop_discharge_all(); // Make sure none of the cells are discharging
     }
 }
@@ -498,7 +491,7 @@ void process_voltages() {
             bms_detailed_voltages[ic][cell / 3].set_voltage(cell % 3, cell_voltages[ic][cell]); // Populate CAN message struct
             if (!ignore_cell[ic][cell]) {
                 uint16_t currentCell = cell_voltages[ic][cell];
-                cell_delta_voltage[ic][cell] = currentCell - cell_delta_voltage[ic][cell];
+                cell_delta_voltage[ic][cell] = currentCell - cell_delta_voltage[ic][cell]; // TODO rethink whether this is working the way we want it to
                 if (currentCell > maxVolt) {
                     maxVolt = currentCell;
                     maxIC = ic;
@@ -519,8 +512,6 @@ void process_voltages() {
     bms_voltages.set_low(minVolt);
     bms_voltages.set_high(maxVolt);
     bms_voltages.set_total(totalVolts);
-
-    // TODO: Low and High voltage error checking.
 
     bms_status.set_overvoltage(false); // RESET these values, then check below if they should be set again
     bms_status.set_undervoltage(false);
@@ -585,7 +576,7 @@ void poll_aux_voltage() {
     delay(200);
 }
 
-void process_cell_temps() { // TODO make work with signed int8_t CAN message (yes temperatures can be negative)
+void process_cell_temps() {
     double avgTemp, lowTemp, highTemp, totalTemp, thermTemp;
     poll_aux_voltage();
     totalTemp = 0;
@@ -594,7 +585,7 @@ void process_cell_temps() { // TODO make work with signed int8_t CAN message (ye
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         for (int j = 0; j < THERMISTORS_PER_IC; j++) {
             if (!ignore_cell_therm[ic][j]) {
-                thermTemp = calculate_cell_temp(aux_voltages[ic][j], aux_voltages[ic][5]); // TODO: replace 3 with aux_voltages[ic][5]?
+                thermTemp = calculate_cell_temp(aux_voltages[ic][j], aux_voltages[ic][5]); // aux_voltages[ic][5] stores the reference voltage
 
                 if (thermTemp < lowTemp) {
                     lowTemp = thermTemp;
@@ -657,30 +648,24 @@ void process_cell_temps() { // TODO make work with signed int8_t CAN message (ye
 }
 
 double calculate_cell_temp(double aux_voltage, double v_ref) {
-   /* aux_voltage = (R/(10k+R))*v_ref
-    * R = 10k * aux_voltage / (v_ref - aux_voltage)
-    */
+    /* aux_voltage = (R/(10k+R))*v_ref
+     * R = 10k * aux_voltage / (v_ref - aux_voltage)
+     */
     aux_voltage /= 10000;
-    //Serial.print("voltage: ");
-    //Serial.println(aux_voltage);
     v_ref /= 10000;
-    //Serial.print("v ref: ");
-    //Serial.println(v_ref);
     double thermistor_resistance = 1e4 * aux_voltage / (v_ref - aux_voltage);
-    //Serial.print("thermistor resistance: ");
-    //Serial.println(thermistor_resistance);
-   /*
+
+    /*
      * Temperature equation (in Kelvin) based on resistance is the following:
      * 1/T = 1/T0 + (1/B) * ln(R/R0)      (R = thermistor resistance)
      * T = 1/(1/T0 + (1/B) * ln(R/R0))
      */
-     double T0 = 298.15; // 25C in Kelvin
-     double b = 3984;    // B constant of the thermistor
-     double R0 = 10000;  // Resistance of thermistor at 25C
-     double temperature = 1 / ((1 / T0) + (1 / b) * log(thermistor_resistance / R0)) - (double) 273.15;
-     //Serial.print("temperature: ");
-     //Serial.println(temperature);
-     return (int16_t)(temperature * 100);
+    double T0 = 298.15; // 25C in Kelvin
+    double b = 3984;    // B constant of the thermistor
+    double R0 = 10000;  // Resistance of thermistor at 25C
+    double temperature = 1 / ((1 / T0) + (1 / b) * log(thermistor_resistance / R0)) - (double) 273.15;
+
+    return (int16_t)(temperature * 100);
 }
 
 void process_onboard_temps() {
@@ -752,28 +737,24 @@ void process_onboard_temps() {
 }
 
 double calculate_onboard_temp(double aux_voltage, double v_ref) {
-   /* aux_voltage = (R/(10k+R))*v_ref
-    * R = 10k * aux_voltage / (v_ref - aux_voltage)
-    */
+    /* aux_voltage = (R/(10k+R))*v_ref
+     * R = 10k * aux_voltage / (v_ref - aux_voltage)
+     */
     aux_voltage /= 10000;
-    //Serial.print("onboard voltage: ");
-    //Serial.println(aux_voltage);
     v_ref /= 10000;
-    //Serial.print("v ref: ");
-    //Serial.println(v_ref);
     double thermistor_resistance = 1e4 * aux_voltage / (v_ref - aux_voltage);
-    /*Serial.print("thermistor resistance: ");
-    Serial.println(thermistor_resistance); */
-   /*
+
+    /*
      * Temperature equation (in Kelvin) based on resistance is the following:
      * 1/T = 1/T0 + (1/B) * ln(R/R0)      (R = thermistor resistance)
      * T = 1/(1/T0 + (1/B) * ln(R/R0))
      */
-     double T0 = 298.15; // 25C in Kelvin
-     double b = 3380;    // B constant of the thermistor
-     double R0 = 10000;  // Resistance of thermistor at 25C
-     double temperature = 1 / ((1 / T0) + (1 / b) * log(thermistor_resistance / R0)) - (double) 273.15;
-     return (int16_t)(temperature * 100);
+    double T0 = 298.15; // 25C in Kelvin
+    double b = 3380;    // B constant of the thermistor
+    double R0 = 10000;  // Resistance of thermistor at 25C
+    double temperature = 1 / ((1 / T0) + (1 / b) * log(thermistor_resistance / R0)) - (double) 273.15;
+    
+    return (int16_t)(temperature * 100);
 }
 
 void process_current() {
@@ -961,7 +942,7 @@ void parse_can_message() {
             timer_charge_timeout.reset();
         }
 
-        if (rx_msg.id == ID_FH_WATCHDOG_TEST) { // stop sending pulse to watchdog timer
+        if (rx_msg.id == ID_FH_WATCHDOG_TEST) { // Stop sending pulse to watchdog timer in order to test its functionality
             fh_watchdog_test = true;
         }
     }

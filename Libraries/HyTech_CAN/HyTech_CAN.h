@@ -47,7 +47,11 @@
 #define ID_BMS_TEMPERATURES 0xD9
 #define ID_BMS_DETAILED_TEMPERATURES 0xDA
 #define ID_BMS_STATUS 0xDB
-#define ID_BMS_BALANCING_STATUS 0xDE
+#define ID_BMS_BALANCING_STATUS 0xDE // TODO rename to bms_balancing_cells when we're not in the middle of a development cycle
+#define ID_BMS_UPDATE_CONSTRAINTS 0xDF // TODO define this message
+#define ID_BMS_IGNORED_CELLS 0xE0 // TODO define this message
+#define ID_BMS_IGNORED_PCB_THERMISTORS 0xE1 // TODO define this message
+#define ID_BMS_IGNORED_CELL_THERMISTORS 0xE2 // TODO define this message
 #define ID_FH_WATCHDOG_TEST 0xDC
 #define ID_CCU_STATUS 0xDD
 #define ID_MC_TEMPERATURES_1 0xA0
