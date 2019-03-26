@@ -662,6 +662,7 @@ class BMS_balancing_status {
     public:
         BMS_balancing_status();
         BMS_balancing_status(uint8_t buf[]);
+        BMS_balancing_status(uint8_t group_id, int64_t balancing_status);
         void load(uint8_t buf[]);
         void write(uint8_t buf[]);
         uint8_t get_group_id();
@@ -674,7 +675,7 @@ class BMS_balancing_status {
         void set_segment_balancing_status(uint8_t segment_id, uint32_t balancing_status);
         void set_cell_balancing_status(uint8_t segment_id, uint8_t cell_id, bool balancing_status);
     private:
-        CAN_message_bms_balancing_status_t message;
+        uint64_t message; // Using a 64-bit datatype here instead of CAN_message_bms_balancing_status_t because it is much easier than dealing with an array
 };
 
 class CCU_status {

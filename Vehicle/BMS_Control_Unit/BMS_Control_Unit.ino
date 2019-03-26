@@ -155,6 +155,7 @@ BMS_detailed_temperatures bms_detailed_temperatures[TOTAL_IC];
 BMS_onboard_temperatures bms_onboard_temperatures;
 BMS_onboard_detailed_temperatures bms_onboard_detailed_temperatures[TOTAL_IC];
 BMS_voltages bms_voltages;
+BMS_balancing_status bms_balancing_status[(TOTAL_IC + 3) / 4]; // Round up TOTAL_IC / 4 since data from 4 ICs can fit in a single message
 bool fh_watchdog_test = false;
 bool watchdog_high = true;
 uint8_t balance_offcycle = 0; // Track which loops balancing will be disabled on
@@ -316,7 +317,12 @@ void loop() {
             CAN.write(tx_msg);
         }
         
-        // TODO send balancing status CAN messages
+        tx_msg.id = ID_BMS_BALANCING_STATUS;
+        tx_msg.len = sizeof(CAN_message_bms_balancing_status_t);
+        for (int i = 0; i < (TOTAL_IC + 3) / 4; i++) {
+            bms_balancing_status[i].write(tx_msg.buf);
+            CAN.write(tx_msg);
+        }
 
         tx_msg.timeout = 0;
 
