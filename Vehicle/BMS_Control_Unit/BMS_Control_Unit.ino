@@ -126,7 +126,6 @@ uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
       * Thermistor 2
       * Thermistor 3
       */
-int16_t cell_delta_voltage[TOTAL_IC][CELLS_PER_IC]; // keep track of which cells are being discharged
 int8_t ignore_cell[TOTAL_IC][CELLS_PER_IC]; // Cells to be ignored for under/overvoltage and balancing
 int8_t ignore_pcb_therm[TOTAL_IC][PCB_THERM_PER_IC]; // PCB thermistors to be ignored
 int8_t ignore_cell_therm[TOTAL_IC][THERMISTORS_PER_IC]; // Cell thermistors to be ignored
@@ -201,10 +200,6 @@ void setup() {
     digitalWrite(BMS_OK, HIGH);
     digitalWrite(WATCHDOG, watchdog_high);
 
-    initialize(); // Call our modified initialize function instead of the default Linear function
-    init_cfg(); // Initialize and write configuration registers to LTC6804 chips
-    poll_cell_voltage();
-    memcpy(cell_delta_voltage, cell_voltages, 2 * TOTAL_IC * CELLS_PER_IC);
     if (CHARGE_MODE_OVERRIDE) {
         charge_mode_entered = true;
         bms_status.set_state(BMS_STATE_CHARGING);
@@ -217,8 +212,6 @@ void setup() {
     total_charge = 0;
     total_discharge = 0;
     current_timer.begin(add_current, 10000);
-
-    Serial.println("Setup Complete!");
 
     // Initialize the ic/group IDs for detailed voltage and temperature CAN messages
     for (int i = 0; i < TOTAL_IC; i++) {
@@ -238,6 +231,12 @@ void setup() {
     // DEBUG insert PCB thermistors to ignore here
     ignore_cell_therm[6][2] = true; // Ignore IC 6 cell thermistor 2
     // DEBUG insert cell thermistors to ignore here
+
+    // Set up isoSPI
+    initialize(); // Call our modified initialize function instead of the default Linear function
+    init_cfg(); // Initialize and write configuration registers to LTC6804 chips
+    
+    Serial.println("Setup Complete!");
 }
 
 // TODO Implement Coulomb counting to track state of charge of battery.
@@ -517,7 +516,6 @@ void process_voltages() {
             bms_detailed_voltages[ic][cell / 3].set_voltage(cell % 3, cell_voltages[ic][cell]); // Populate CAN message struct
             if (!ignore_cell[ic][cell]) {
                 uint16_t currentCell = cell_voltages[ic][cell];
-                cell_delta_voltage[ic][cell] = currentCell - cell_delta_voltage[ic][cell]; // TODO rethink whether this is working the way we want it to
                 if (currentCell > maxVolt) {
                     maxVolt = currentCell;
                     maxIC = ic;
@@ -783,7 +781,7 @@ double calculate_onboard_temp(double aux_voltage, double v_ref) {
     return (int16_t)(temperature * 100);
 }
 
-void process_current() {
+void process_current() { // TODO fix this to work efficiently with get_current
     /*
      * Current sensor: ISB-300-A-604
      * Maximum positive current (300A) corresponds to 4.5V signal
