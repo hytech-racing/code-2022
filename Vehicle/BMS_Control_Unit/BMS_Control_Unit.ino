@@ -30,6 +30,7 @@
 
 #include <ADC_SPI.h>
 #include <Arduino.h>
+// #include <EEPROM.h> TODO add EEPROM functionality so we can configure parameters over CAN
 #include <HyTech_FlexCAN.h>
 #include <HyTech_CAN.h>
 #include <kinetis_flexcan.h>
@@ -98,7 +99,7 @@ uint16_t voltage_cutoff_low = 29800; // 2.9800V
 uint16_t voltage_cutoff_high = 42000; // 4.2000V
 uint16_t total_voltage_cutoff = 30000; // 300.00V
 uint16_t discharge_current_constant_high = 22000; // 220.00A
-int16_t charge_current_constant_high = -10000; // 100.00A // TODO take into account max charge allowed for regen, 100A is NOT NOMINALLY ALLOWED!
+int16_t charge_current_constant_high = -11000; // 110.00A
 uint16_t charge_temp_cell_critical_high = 4400; // 44.00C
 uint16_t discharge_temp_cell_critical_high = 6000; // 60.00C
 uint16_t onboard_temp_balance_disable = 6000;  // 60.00C
@@ -114,18 +115,14 @@ uint8_t consecutive_faults_total_voltage_high = 0;
 uint8_t consecutive_faults_thermistor = 0;
 uint8_t consecutive_faults_current = 0;
 
-volatile uint32_t total_charge; // Total incoming coloumbs since ECU powered
-volatile uint32_t total_discharge; // Total outgoing coloumbs since ECU powered
+volatile uint32_t total_charge = 0; // Total incoming coulombs since ECU powered // TODO make these better names
+volatile uint32_t total_discharge = 0; // Total outgoing coulombs since ECU powered
 uint32_t total_charge_copy;
 uint32_t total_discharge_copy;
 
 uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages. Numbers are stored in 0.1 mV units.
-uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
-     /* Data contained in this array is in this format:
-      * Thermistor 1
-      * Thermistor 2
-      * Thermistor 3
-      */
+uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages for each IC in this order: [Cell Term 1] [Cell Therm 2] [Cell Therm 3] [Onboard Therm 1] [Onboard Therm 2] [Voltage reference]
+
 int8_t ignore_cell[TOTAL_IC][CELLS_PER_IC]; // Cells to be ignored for under/overvoltage and balancing
 int8_t ignore_pcb_therm[TOTAL_IC][PCB_THERM_PER_IC]; // PCB thermistors to be ignored
 int8_t ignore_cell_therm[TOTAL_IC][THERMISTORS_PER_IC]; // Cell thermistors to be ignored
@@ -183,6 +180,8 @@ void setup() {
     pinMode(TEMP_SENSE_1,INPUT);
     pinMode(TEMP_SENSE_2,INPUT);
     pinMode(WATCHDOG, OUTPUT);
+    digitalWrite(BMS_OK, HIGH);
+    digitalWrite(WATCHDOG, watchdog_high);
 
     Serial.begin(115200); // Init serial for PC communication
     CAN.begin(can_filter_ccu_status); // Init CAN for vehicle communication
@@ -197,9 +196,7 @@ void setup() {
     delay(100);
     Serial.println("CAN system and serial communication initialized");
 
-    digitalWrite(BMS_OK, HIGH);
-    digitalWrite(WATCHDOG, watchdog_high);
-
+    // Configure charge mode if override is enabled
     if (CHARGE_MODE_OVERRIDE) {
         charge_mode_entered = true;
         bms_status.set_state(BMS_STATE_CHARGING);
