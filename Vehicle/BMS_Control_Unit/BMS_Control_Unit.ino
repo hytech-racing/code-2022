@@ -87,6 +87,11 @@ Metro timer_charge_enable_limit = Metro(60000); // Don't allow charger to re-ena
 Metro timer_charge_timeout = Metro(10000);
 
 /*
+ * Interrupt timers
+ */
+IntervalTimer current_timer;
+
+/*
  * Global variables
  */
 uint16_t voltage_cutoff_low = 29800; // 2.9800V
@@ -108,6 +113,11 @@ uint8_t consecutive_faults_undervoltage = 0;
 uint8_t consecutive_faults_total_voltage_high = 0;
 uint8_t consecutive_faults_thermistor = 0;
 uint8_t consecutive_faults_current = 0;
+
+volatile uint32_t total_charge; // Total incoming coloumbs since ECU powered
+volatile uint32_t total_discharge; // Total outgoing coloumbs since ECU powered
+uint32_t total_charge_copy;
+uint32_t total_discharge_copy;
 
 uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages. Numbers are stored in 0.1 mV units.
 uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages.
@@ -201,6 +211,13 @@ void setup() {
     } else {
         bms_status.set_state(BMS_STATE_DISCHARGING);
     }
+
+    // Set up current-measuring timer
+    current_timer.priority(255); // Priority range 0-255, 128 as default
+    total_charge = 0;
+    total_discharge = 0;
+    current_timer.begin(add_current, 10000);
+
     Serial.println("Setup Complete!");
 
     // Initialize the ic/group IDs for detailed voltage and temperature CAN messages
@@ -270,6 +287,15 @@ void loop() {
                 Serial.println(error_flags_history, HEX);
             }
         }
+
+        noInterrupts(); // Disable interrupts to ensure the values we are reading do not change while copying
+        total_charge_copy = total_charge;
+        total_discharge_copy = total_discharge;
+        interrupts();
+
+        Serial.println(total_charge_copy);
+        Serial.println(total_discharge_copy);
+
     }
 
     if (timer_can_update_fast.check()) {
@@ -945,5 +971,20 @@ void parse_can_message() {
         if (rx_msg.id == ID_FH_WATCHDOG_TEST) { // Stop sending pulse to watchdog timer in order to test its functionality
             fh_watchdog_test = true;
         }
+    }
+}
+
+double get_current() {
+    double voltage = ADC.read_adc(CH_CUR_SENSE_2) / (double) 819;
+    double current = (voltage - 2.5) * (double) 150;
+    return current;
+}
+
+void add_current() {
+    double delta = get_current() * 10;
+    if (delta > 0) {
+        total_discharge = total_discharge + delta;
+    } else {
+        total_charge = total_charge - delta; // Units will be 0.1C
     }
 }
