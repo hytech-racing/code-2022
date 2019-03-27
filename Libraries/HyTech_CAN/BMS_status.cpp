@@ -69,6 +69,14 @@ bool BMS_status::get_onboard_overtemp() {
     return (message.error_flags & 0x100) >> 8;
 }
 
+bool BMS_status::get_shutdown_g_above_threshold() {
+    return (message.error_flags & 0x200) >> 9;
+}
+
+bool BMS_status::get_shutdown_h_above_threshold() {
+    return (message.error_flags & 0x400) >> 10;
+}
+
 int16_t BMS_status::get_current() {
     return message.current;
 }
@@ -115,6 +123,14 @@ void BMS_status::set_undertemp(bool undertemp) {
 
 void BMS_status::set_onboard_overtemp(bool onboard_overtemp) {
     message.error_flags = (message.error_flags & 0xFEFF) | ((onboard_overtemp & 0x1) << 8);
+}
+
+void BMS_status::set_shutdown_g_above_threshold(bool shutdown_g_above_threshold) {
+    message.error_flags = (message.error_flags & 0xFDFF) | ((shutdown_g_above_threshold & 0x1) << 9);
+}
+
+void BMS_status::set_shutdown_h_above_threshold(bool shutdown_h_above_threshold) {
+    message.error_flags = (message.error_flags & 0xFBFF) | ((shutdown_h_above_threshold & 0x1) << 10);
 }
 
 void BMS_status::set_current(int16_t current) {
