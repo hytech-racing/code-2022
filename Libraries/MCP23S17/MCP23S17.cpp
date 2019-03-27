@@ -66,10 +66,14 @@
 // Constructor to instantiate an instance of MCP23S17 to a specific chip (address)
 
 MCP23S17::MCP23S17(uint8_t address, uint8_t cs) {
-    MCP23S17(address, cs, SPI_CLOCK_DIV8);
+    init(address, cs, SPI_CLOCK_DIV8);
 };
 
 MCP23S17::MCP23S17(uint8_t address, uint8_t cs, unsigned int SPIspeed) {
+    init(address, cs, SPIspeed);
+};
+
+void MCP23S17::init(uint8_t address, uint8_t cs, unsigned int SPIspeed) {
     _address     = address;
     _cs          = cs;
     _SPIspeed    = SPIspeed;
@@ -79,7 +83,7 @@ MCP23S17::MCP23S17(uint8_t address, uint8_t cs, unsigned int SPIspeed) {
     _outputCache = 0x0000;              // Default pull-up state is all off, 0x0000
     _invertCache = 0x0000;              // Default input inversion state is not inverted, 0x0000
 
-};
+}
 
 // Start the SPI Bus, write default values to all registers, and enable the hardware address pins (IOCON.HAEN = 1)
 

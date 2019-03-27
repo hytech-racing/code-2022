@@ -89,6 +89,8 @@ MC_motor_position_information mc_motor_position_information;
 #define START_BRAKE_PEDAL_WITH_REGEN 450   // TODO: calibrate this constant
 #define END_BRAKE_PEDAL_WITH_REGEN 1000    // TODO: calibrate this constant
 #define ALPHA 0.999
+#define EXPANDER_SPI_SPEED 9000000 // max SPI clock frequency for MCP23S17 is 10MHz in ideal conditions
+#define ADC_SPI_SPEED 1800000 // max SPI clokc frequency for MCP3208 is 2MHz in ideal conditions
 
 
 /*
@@ -142,11 +144,12 @@ uint16_t MAX_TORQUE = 1600; // Torque in Nm * 10
 int16_t MAX_REGEN_TORQUE = 0;
 int16_t MAX_ACCEL_REGEN = 0;
 int16_t MAX_BRAKE_REGEN = 0;
+uint16_t dash_values = 0;
 
 static CAN_message_t rx_msg;
 static CAN_message_t tx_msg;
-ADC_SPI ADC(ADC_CS);
-MCP23S17 EXPANDER(0, EXPANDER_CS);
+ADC_SPI ADC(ADC_CS, ADC_SPI_SPEED);
+MCP23S17 EXPANDER(0, EXPANDER_CS, EXPANDER_SPI_SPEED);
 FlexCAN CAN(500000);
 
 void setup() {
@@ -188,7 +191,6 @@ void setup() {
 
     Serial.println("CAN system and serial communication initialized");
 
-    //reset_inverter(); // what to do with this?? do we need to restart the inverter???
     set_state(MCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
     digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH);
     digitalWrite(SSR_INVERTER, HIGH);
@@ -198,7 +200,6 @@ void setup() {
     mcu_status.set_bms_ok_high(true);
     mcu_status.set_imd_okhs_high(true);
     mcu_status.set_inverter_powered(true);
-    digitalWrite(SSR_BRAKE_LIGHT, LOW);
 }
 
 void loop() {
@@ -703,13 +704,10 @@ void read_dashboard_buttons() {
 
 void set_dashboard_leds() {
 
-    int dash_values = 0;
-
     /*
      * Set torque mode led
      */
     if ((led_mode_type == 2 && timer_led_mode_blink_fast.check()) || (led_mode_type == 3 && timer_led_mode_blink_slow.check())) {
-        //EXPANDER.digitalWrite(EXPANDER_LED_MODE, led_mode_active);
         if (led_mode_active) {
             dash_values |= (1 << EXPANDER_LED_MODE);
         }
@@ -721,7 +719,6 @@ void set_dashboard_leds() {
     }
     if (led_mode_type < 2) {
         led_mode_active = led_mode_type;
-        //EXPANDER.digitalWrite(EXPANDER_LED_MODE, led_mode_active);
         if (led_mode_active) {
             dash_values |= (1 << EXPANDER_LED_MODE);
         }
@@ -753,8 +750,6 @@ void set_dashboard_leds() {
             dash_values &= ~(1 << EXPANDER_LED_START);
         }
     }
-    // EXPANDER.digitalWrite(EXPANDER_LED_BMS, !mcu_status.get_bms_ok_high());
-    // EXPANDER.digitalWrite(EXPANDER_LED_IMD, !mcu_status.get_imd_okhs_high());
 
     /*
      * Set BMS and IMD leds
@@ -763,13 +758,13 @@ void set_dashboard_leds() {
         dash_values |= (1 << EXPANDER_LED_BMS);
     }
     else {
-        dash_values &= (1 << EXPANDER_LED_BMS);
+        dash_values &= ~(1 << EXPANDER_LED_BMS);
     }
     if (!mcu_status.get_imd_okhs_high()) {
         dash_values |= (1 << EXPANDER_LED_IMD);
     }
     else {
-        dash_values &= (1 << EXPANDER_LED_IMD);
+        dash_values &= ~(1 << EXPANDER_LED_IMD);
     }
 
     EXPANDER.digitalWrite(dash_values);

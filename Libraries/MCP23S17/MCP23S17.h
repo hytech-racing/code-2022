@@ -99,6 +99,7 @@ class MCP23S17 {
     uint8_t byteRead(uint8_t);               // Reads an individual register and returns the byte. Argument is the register address
     unsigned int digitalRead(void);          // Reads all input  pins at once. Be sure it ignore the value of pins configured as output!
   private:
+    void init(uint8_t, uint8_t, unsigned int);
     uint8_t _address;                        // Address of the MCP23S17 in use
 	uint8_t _cs;                             // chip select pin
     unsigned int _modeCache;                 // Caches the mode (input/output) configuration of I/O pins
