@@ -182,16 +182,17 @@ typedef struct CAN_message_bms_status_t {
 	uint8_t state;
     uint16_t error_flags;
     int16_t current;
+    uint8_t flags;
 } CAN_message_bms_status_t;
 
 typedef struct CAN_message_bms_balancing_status_t {
 	uint8_t balancing_status[5];
 } CAN_message_bms_balancing_status_t;
 
-typedef CAN_message_bms_coulomb_counts_t {
+typedef struct CAN_message_bms_coulomb_counts_t {
     uint32_t total_charge;
     uint32_t total_discharge;
-} CAN_message_bms_coulomb_counts
+} CAN_message_bms_coulomb_counts_t;
 
 typedef struct CAN_message_ccu_status_t {
     bool charger_enabled;
@@ -649,9 +650,10 @@ class BMS_status {
         bool get_charge_overtemp();
         bool get_undertemp();
         bool get_onboard_overtemp();
+        int16_t get_current();
+        uint8_t get_flags();
         bool get_shutdown_g_above_threshold();
         bool get_shutdown_h_above_threshold();
-        int16_t get_current();
 
         void set_state(uint8_t state);
         void set_error_flags(uint16_t error_flags);
@@ -664,9 +666,10 @@ class BMS_status {
         void set_charge_overtemp(bool charge_overtemp);
         void set_undertemp(bool undertemp);
         void set_onboard_overtemp(bool onboard_overtemp);
+        void set_current(int16_t current);
+        void set_flags(uint8_t flags);
         void set_shutdown_g_above_threshold(bool shutdown_g_above_threshold);
         void set_shutdown_h_above_threshold(bool shutdown_h_above_threshold);
-        void set_current(int16_t current);
     private:
         CAN_message_bms_status_t message;
 };
@@ -704,7 +707,7 @@ class BMS_coulomb_counts {
         void set_total_discharge(uint32_t total_discharge);
     private:
         CAN_message_bms_coulomb_counts_t message;
-}
+};
 
 class CCU_status {
     public:

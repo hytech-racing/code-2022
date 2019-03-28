@@ -971,7 +971,7 @@ double get_current() {
      * voltage = read_adc() * 5 / 4095
      * current = (voltage - 2.5) * 300 / 2
      */
-    double voltage = read_adc(CH_CUR_SENSE_2) / (double) 819;
+    double voltage = read_adc(CH_CUR_SENSE) / (double) 819;
     double current = (voltage - 2.5) * (double) 150;
     return (int16_t) (current * 100);
 }
