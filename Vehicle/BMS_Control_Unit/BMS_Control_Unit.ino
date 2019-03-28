@@ -432,7 +432,7 @@ void balance_cells() {
         && !bms_status.get_error_flags()
         && bms_status.get_state() >= BMS_STATE_CHARGING
         && bms_status.get_state() <= BMS_STATE_BALANCING
-        && bms_status.get_shutdown_h_above_threshold()) {
+        && bms_status.get_shutdown_h_above_threshold()) { // Note: You may need to comment this conditional out if you are bench testing
         for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
             for (int cell = 0; cell < CELLS_PER_IC; cell++) { // Loop through cells
                 if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
