@@ -65,6 +65,7 @@
 #define SHUTDOWN_HIGH_THRESHOLD 1500    // Value returned by ADC above which the shutdown circuit is considered powered (balancing not allowed when AIRs open)
 #define BALANCE_LIMIT_FACTOR 3          // Reciprocal of the cell balancing duty cycle (3 means balancing can happen during 1 out of every 3 loops, etc)
 #define CHARGE_MODE_OVERRIDE false      // Set to true to place BMS in charge mode, set to false and BMS will require a Charger ECU CAN message to enter charge mode
+#define COULOUMB_COUNT_INTERVAL 10000   // Microseconds between current readings
 
 /*
  * Current Sensor ADC Channel definitions
@@ -162,6 +163,7 @@ BMS_onboard_temperatures bms_onboard_temperatures;
 BMS_onboard_detailed_temperatures bms_onboard_detailed_temperatures[TOTAL_IC];
 BMS_voltages bms_voltages;
 BMS_balancing_status bms_balancing_status[(TOTAL_IC + 3) / 4]; // Round up TOTAL_IC / 4 since data from 4 ICs can fit in a single message
+BMS_coulomb_counts bms_coulomb_counts;
 bool fh_watchdog_test = false; // Initialize test mode to false - if set to true the BMS stops sending pulse to the watchdog timer in order to test its functionality
 bool watchdog_high = true; // Initialize watchdog signal - this alternates every loop
 uint8_t balance_offcycle = 0; // Tracks which loops balancing will be disabled on
@@ -203,11 +205,11 @@ void setup() {
         bms_status.set_state(BMS_STATE_DISCHARGING);
     }
 
-    // Set up current-measuring timer
+    /*// Set up current-measuring timer
     current_timer.priority(255); // Priority range 0-255, 128 as default
     total_charge = 0;
     total_discharge = 0;
-    current_timer.begin(integrate_current, 10000);
+    current_timer.begin(integrate_current, COULOUMB_COUNT_INTERVAL);*/
 
     // Initialize the ic/group IDs for detailed voltage and temperature CAN messages
     for (int i = 0; i < TOTAL_IC; i++) {
@@ -256,6 +258,7 @@ void loop() {
         process_temps(); // Poll controllers, process values, populate populate bms_temperatures, bms_detailed_temperatures, bms_onboard_temperatures, and bms_onboard_detailed_temperatures
         process_adc(); // Poll ADC, process values, populate bms_status
         print_cells(); // Print the cell voltages and balancing status to serial
+        //process_coulombs(); // Process new coulomb counts, sending over CAN and printing to Serial
         print_uptime(); // Print the BMS uptime to serial
 
         Serial.print("State: ");
@@ -279,15 +282,6 @@ void loop() {
                 Serial.println(error_flags_history, HEX);
             }
         }
-
-        noInterrupts(); // Disable interrupts to ensure the values we are reading do not change while copying
-        total_charge_copy = total_charge;
-        total_discharge_copy = total_discharge;
-        interrupts();
-
-        Serial.println(total_charge_copy);
-        Serial.println(total_discharge_copy);
-
     }
 
     if (timer_can_update_fast.check()) {
@@ -973,16 +967,31 @@ double get_current() {
      */
     double voltage = read_adc(CH_CUR_SENSE) / (double) 819;
     double current = (voltage - 2.5) * (double) 150;
-    return (int16_t) (current * 100);
+    return (int16_t) (current * 100); // Current in Amps x 100
 }
 
 void integrate_current() {
-    int delta = get_current() / 10;
+    int delta = get_current();
     if (delta > 0) {
         total_discharge = total_discharge + delta;
     } else {
-        total_charge = total_charge - delta; // Units will be 0.1C
+        total_charge = total_charge - delta; // Units will be 0.01A / (1 / (COULOUMB_COUNT_INTERVAL x 10^-6) s)
     }
+}
+
+void process_coulombs() {
+    noInterrupts(); // Disable interrupts to ensure the values we are reading do not change while copying
+    total_charge_copy = total_charge;
+    total_discharge_copy = total_discharge;
+    interrupts();
+
+    Serial.print("\nCoulombs charged: ");
+    Serial.println(total_charge_copy / 10000);
+    Serial.print("Coulombs discharged: ");
+    Serial.println(total_discharge_copy / 10000);
+
+    bms_coulomb_counts.set_total_charge(total_charge_copy);
+    bms_coulomb_counts.set_total_discharge(total_discharge_copy);
 }
 
 /*
