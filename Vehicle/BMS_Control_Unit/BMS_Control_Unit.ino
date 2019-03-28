@@ -42,18 +42,15 @@
  * Pin definitions
  */
 #define ADC_CS 9
-#define BMS_OK A8
-#define CURRENT_SENSE A3
+#define BMS_OK A1
 #define LED_STATUS 7
 #define LTC6820_CS 10
-#define TEMP_SENSE_1 A9 // TODO update these for 2019 ECU
-#define TEMP_SENSE_2 A2
 #define WATCHDOG A0
 
 /*
  * Constant definitions
  */
-#define TOTAL_IC 8                      // Number of ICs in the system
+#define TOTAL_IC 4                      // Number of ICs in the system
 #define CELLS_PER_IC 9                  // Number of cells per IC
 #define THERMISTORS_PER_IC 3            // Number of cell thermistors per IC
 #define PCB_THERM_PER_IC 2              // Number of PCB thermistors per IC
@@ -84,8 +81,8 @@ Metro timer_can_update_slow = Metro(1000);
 Metro timer_process_cells_fast = Metro(100);
 Metro timer_process_cells_slow = Metro(1000);
 Metro timer_watchdog_timer = Metro(250);
-Metro timer_charge_enable_limit = Metro(60000); // Don't allow charger to re-enable more than once a minute
-Metro timer_charge_timeout = Metro(10000);
+Metro timer_charge_enable_limit = Metro(30000, 1); // Don't allow charger to re-enable more than once every 30 seconds
+Metro timer_charge_timeout = Metro(1000);
 
 /*
  * Interrupt timers
@@ -143,7 +140,7 @@ uint8_t tx_cfg[TOTAL_IC][6]; // data defining how data will be written to daisy 
  * CAN Variables
  */
 FlexCAN CAN(500000);
-const CAN_filter_t can_filter_ccu_status = {0, 0, ID_CCU_STATUS}; // Note: If you want to allow other specific messages in, you must instead use setFilter(), making sure to fill all slots 0-7 with duplicate filters as necessary
+const CAN_filter_t can_filter_ccu_status = {0, 0, ID_CCU_STATUS}; // Note: If this is passed into CAN.begin() it will be treated as a mask. Instead, pass it into CAN.setFilter(), making sure to fill all slots 0-7 with duplicate filters as necessary
 static CAN_message_t rx_msg;
 static CAN_message_t tx_msg;
 
@@ -167,25 +164,21 @@ BMS_coulomb_counts bms_coulomb_counts;
 bool fh_watchdog_test = false; // Initialize test mode to false - if set to true the BMS stops sending pulse to the watchdog timer in order to test its functionality
 bool watchdog_high = true; // Initialize watchdog signal - this alternates every loop
 uint8_t balance_offcycle = 0; // Tracks which loops balancing will be disabled on
-bool charge_mode_entered = false;
-
-int minVoltageICIndex;
-int minVoltageCellIndex;
-int voltage_difference;
+bool charge_mode_entered = false; // Used to enter charge mode immediately at startup instead of waiting for timer
 
 void setup() {
     pinMode(BMS_OK, OUTPUT);
-    pinMode(CURRENT_SENSE, INPUT);
     pinMode(LED_STATUS, OUTPUT);
     pinMode(LTC6820_CS,OUTPUT);
-    pinMode(TEMP_SENSE_1,INPUT);
-    pinMode(TEMP_SENSE_2,INPUT);
     pinMode(WATCHDOG, OUTPUT);
     digitalWrite(BMS_OK, HIGH);
     digitalWrite(WATCHDOG, watchdog_high);
 
     Serial.begin(115200); // Init serial for PC communication
-    CAN.begin(can_filter_ccu_status); // Init CAN for vehicle communication
+    CAN.begin(); // Init CAN for vehicle communication
+    for (int i = 0; i < 8; i++) { // Fill all filter slots with Charger Control Unit message filter (CAN controller requires filling all slots)
+        CAN.setFilter(can_filter_ccu_status, i);
+    }
 
     /* Configure CAN rx interrupt */
     /*interrupts();
@@ -197,12 +190,10 @@ void setup() {
     delay(100);
     Serial.println("CAN system and serial communication initialized");
 
-    // Configure charge mode if override is enabled
-    if (CHARGE_MODE_OVERRIDE) {
-        charge_mode_entered = true;
+    bms_status.set_state(BMS_STATE_DISCHARGING);
+    if (CHARGE_MODE_OVERRIDE) { // Configure charge mode if override is enabled
         bms_status.set_state(BMS_STATE_CHARGING);
-    } else {
-        bms_status.set_state(BMS_STATE_DISCHARGING);
+        digitalWrite(LED_STATUS, HIGH);
     }
 
     /*// Set up current-measuring timer
@@ -227,7 +218,7 @@ void setup() {
     //     }
     // }
     // DEBUG insert PCB thermistors to ignore here
-    ignore_cell_therm[6][2] = true; // Ignore IC 6 cell thermistor 2
+    //ignore_cell_therm[6][2] = true; // Ignore IC 6 cell thermistor 2
     // DEBUG insert cell thermistors to ignore here
 
     // Set up isoSPI
@@ -248,6 +239,7 @@ void loop() {
     if (timer_charge_timeout.check() && bms_status.get_state() > BMS_STATE_DISCHARGING && !CHARGE_MODE_OVERRIDE) { // 1 second timeout - if timeout is reached, disable charging
         Serial.println("Disabling charge mode - CCU timeout");
         bms_status.set_state(BMS_STATE_DISCHARGING);
+        digitalWrite(LED_STATUS, LOW);
     }
 
     if (timer_process_cells_fast.check()) {}
@@ -939,14 +931,13 @@ void cfg_set_undervoltage_comparison_voltage(uint16_t voltage) {
 
 void parse_can_message() {
     while (CAN.read(rx_msg)) {
-        if (rx_msg.id == ID_CCU_STATUS) { // Leave discharging mode if CCU status message is received
-            if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
-                if (timer_charge_enable_limit.check() || !charge_mode_entered) {
-                    charge_mode_entered = true;
-                    bms_status.set_state(BMS_STATE_CHARGING);
-                }
-            }
+        if (rx_msg.id == ID_CCU_STATUS) { // Enter charging mode if CCU status message is received
             timer_charge_timeout.reset();
+            if (bms_status.get_state() == BMS_STATE_DISCHARGING && (timer_charge_enable_limit.check() || !charge_mode_entered)) {
+                bms_status.set_state(BMS_STATE_CHARGING);
+                digitalWrite(LED_STATUS, HIGH);
+                charge_mode_entered = true;
+            }
         }
 
         if (rx_msg.id == ID_FH_WATCHDOG_TEST) { // Stop sending pulse to watchdog timer in order to test its functionality
