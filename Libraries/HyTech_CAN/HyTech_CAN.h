@@ -47,7 +47,9 @@
 #define ID_BMS_TEMPERATURES 0xD9
 #define ID_BMS_DETAILED_TEMPERATURES 0xDA
 #define ID_BMS_STATUS 0xDB
-#define ID_BMS_BALANCING_STATUS 0xDE
+#define ID_BMS_BALANCING_STATUS 0xDE // TODO rename to bms_balancing_cells when we're not in the middle of a development cycle
+#define ID_BMS_READ_WRITE_PARAMETER_COMMAND 0xE0 // TODO define this message
+#define ID_BMS_PARAMETER_RESPONSE 0xE1 // TODO define this message
 #define ID_BMS_COULOMB_COUNTS 0xE2
 #define ID_FH_WATCHDOG_TEST 0xDC
 #define ID_CCU_STATUS 0xDD
@@ -180,16 +182,17 @@ typedef struct CAN_message_bms_status_t {
 	uint8_t state;
     uint16_t error_flags;
     int16_t current;
+    uint8_t flags;
 } CAN_message_bms_status_t;
 
 typedef struct CAN_message_bms_balancing_status_t {
 	uint8_t balancing_status[5];
 } CAN_message_bms_balancing_status_t;
 
-typedef CAN_message_bms_coulomb_counts_t {
+typedef struct CAN_message_bms_coulomb_counts_t {
     uint32_t total_charge;
     uint32_t total_discharge;
-} CAN_message_bms_coulomb_counts
+} CAN_message_bms_coulomb_counts_t;
 
 typedef struct CAN_message_ccu_status_t {
     bool charger_enabled;
@@ -647,9 +650,10 @@ class BMS_status {
         bool get_charge_overtemp();
         bool get_undertemp();
         bool get_onboard_overtemp();
+        int16_t get_current();
+        uint8_t get_flags();
         bool get_shutdown_g_above_threshold();
         bool get_shutdown_h_above_threshold();
-        int16_t get_current();
 
         void set_state(uint8_t state);
         void set_error_flags(uint16_t error_flags);
@@ -662,9 +666,10 @@ class BMS_status {
         void set_charge_overtemp(bool charge_overtemp);
         void set_undertemp(bool undertemp);
         void set_onboard_overtemp(bool onboard_overtemp);
+        void set_current(int16_t current);
+        void set_flags(uint8_t flags);
         void set_shutdown_g_above_threshold(bool shutdown_g_above_threshold);
         void set_shutdown_h_above_threshold(bool shutdown_h_above_threshold);
-        void set_current(int16_t current);
     private:
         CAN_message_bms_status_t message;
 };
@@ -673,19 +678,20 @@ class BMS_balancing_status {
     public:
         BMS_balancing_status();
         BMS_balancing_status(uint8_t buf[]);
+        BMS_balancing_status(uint8_t group_id, int64_t balancing_status);
         void load(uint8_t buf[]);
         void write(uint8_t buf[]);
         uint8_t get_group_id();
-        uint64_t get_balancing_status();
-        uint32_t get_segment_balancing_status(uint8_t segment_id);
-        bool get_cell_balancing_status(uint8_t segment_id, uint16_t cell_id);
+        uint64_t get_balancing();
+        uint16_t get_ic_balancing(uint8_t ic_id);
+        bool get_cell_balancing(uint8_t ic_id, uint16_t cell_id);
 
         void set_group_id(uint8_t group_id);
-        void set_balancing_status(uint64_t balancing_status);
-        void set_segment_balancing_status(uint8_t segment_id, uint32_t balancing_status);
-        void set_cell_balancing_status(uint8_t segment_id, uint8_t cell_id, bool balancing_status);
+        void set_balancing(uint64_t balancing_status);
+        void set_ic_balancing(uint8_t ic_id, uint32_t balancing_status);
+        void set_cell_balancing(uint8_t ic_id, uint8_t cell_id, bool balancing_status);
     private:
-        CAN_message_bms_balancing_status_t message;
+        uint64_t message; // Using a 64-bit datatype here instead of CAN_message_bms_balancing_status_t because it is much easier than dealing with an array
 };
 
 class BMS_coulomb_counts {
@@ -701,7 +707,7 @@ class BMS_coulomb_counts {
         void set_total_discharge(uint32_t total_discharge);
     private:
         CAN_message_bms_coulomb_counts_t message;
-}
+};
 
 class CCU_status {
     public:

@@ -17,12 +17,14 @@ void BMS_status::load(uint8_t buf[]) {
     memcpy(&(message.state), &buf[0], sizeof(uint8_t));
     memcpy(&(message.error_flags), &buf[1], sizeof(uint16_t));
     memcpy(&(message.current), &buf[3], sizeof(int16_t));
+    memcpy(&(message.flags), &buf[5], sizeof(uint8_t));
 }
 
 void BMS_status::write(uint8_t buf[]) {
     memcpy(&buf[0], &(message.state), sizeof(uint8_t));
     memcpy(&buf[1], &(message.error_flags), sizeof(uint16_t));
     memcpy(&buf[3], &(message.current), sizeof(int16_t));
+    memcpy(&buf[5], &(message.flags), sizeof(uint8_t));
 }
 
 uint8_t BMS_status::get_state() {
@@ -69,16 +71,20 @@ bool BMS_status::get_onboard_overtemp() {
     return (message.error_flags & 0x100) >> 8;
 }
 
+int16_t BMS_status::get_current() {
+    return message.current;
+}
+
+uint8_t BMS_status::get_flags() {
+    return message.flags;
+}
+
 bool BMS_status::get_shutdown_g_above_threshold() {
-    return (message.error_flags & 0x200) >> 9;
+    return message.flags & 0x1;
 }
 
 bool BMS_status::get_shutdown_h_above_threshold() {
-    return (message.error_flags & 0x400) >> 10;
-}
-
-int16_t BMS_status::get_current() {
-    return message.current;
+    return (message.flags & 0x02) >> 1;
 }
 
 void BMS_status::set_state(uint8_t state) {
@@ -125,14 +131,18 @@ void BMS_status::set_onboard_overtemp(bool onboard_overtemp) {
     message.error_flags = (message.error_flags & 0xFEFF) | ((onboard_overtemp & 0x1) << 8);
 }
 
+void BMS_status::set_current(int16_t current) {
+    message.current = current;
+}
+
+void BMS_status::set_flags(uint8_t flags) {
+    message.flags = flags;
+}
+
 void BMS_status::set_shutdown_g_above_threshold(bool shutdown_g_above_threshold) {
-    message.error_flags = (message.error_flags & 0xFDFF) | ((shutdown_g_above_threshold & 0x1) << 9);
+    message.flags = (message.flags & 0xFFFE) | (shutdown_g_above_threshold & 0x1);
 }
 
 void BMS_status::set_shutdown_h_above_threshold(bool shutdown_h_above_threshold) {
-    message.error_flags = (message.error_flags & 0xFBFF) | ((shutdown_h_above_threshold & 0x1) << 10);
-}
-
-void BMS_status::set_current(int16_t current) {
-    message.current = current;
+    message.flags = (message.flags & 0xFFFD) | ((shutdown_h_above_threshold & 0x1) << 1);
 }
