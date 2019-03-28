@@ -41,6 +41,7 @@
 /*
  * Pin definitions
  */
+#define ADC_CS 9
 #define BMS_OK A8
 #define CURRENT_SENSE A3
 #define LED_STATUS 7
@@ -68,13 +69,11 @@
 /*
  * Current Sensor ADC Channel definitions
  */
-#define ADC_CS 9
-#define CH_CUR_SENSE_1 0
-#define CH_CUR_SENSE_2 2
-#define CH_TEMP_SENSE_1 1
-#define CH_TEMP_SENSE_2 3
-#define CH_SHUTDOWN 5 // TODO add other shutdown circuit channels
-#define CH_5V 4
+#define CH_CUR_SENSE  0
+#define CH_TEMP_SENSE 1
+#define CH_SHUTDOWN_G 3
+#define CH_5V         4
+#define CH_SHUTDOWN_H 5
 
 /*
  * Timers
@@ -208,7 +207,7 @@ void setup() {
     current_timer.priority(255); // Priority range 0-255, 128 as default
     total_charge = 0;
     total_discharge = 0;
-    current_timer.begin(add_current, 10000);
+    current_timer.begin(integrate_current, 10000);
 
     // Initialize the ic/group IDs for detailed voltage and temperature CAN messages
     for (int i = 0; i < TOTAL_IC; i++) {
@@ -249,17 +248,15 @@ void loop() {
         bms_status.set_state(BMS_STATE_DISCHARGING);
     }
 
-    if (timer_process_cells_fast.check()) {
-        process_current(); // Store data in bms_status object.
-    }
+    if (timer_process_cells_fast.check()) {}
 
     if (timer_process_cells_slow.check()) {
-        process_voltages(); // Poll controller and store data in bms_voltages object.
-        process_cell_temps(); // Poll controller and store data in bms_temperatures and bms_detailed_temperatures
-        process_onboard_temps(); // Poll controller and store data in bms_onboard_temperatures and bms_onboard_detailed_temperatures
-        balance_cells(); // Check local cell voltage data and balance individual cells if it is safe to do so
+        process_voltages(); // Poll controllers, process values, populate bms_voltages
+        balance_cells(); // Check local cell voltage data and balance individual cells as necessary
+        process_temps(); // Poll controllers, process values, populate populate bms_temperatures, bms_detailed_temperatures, bms_onboard_temperatures, and bms_onboard_detailed_temperatures
+        process_adc(); // Poll ADC, process values, populate bms_status
         print_cells(); // Print the cell voltages and balancing status to serial
-        print_uptime();
+        print_uptime(); // Print the BMS uptime to serial
 
         Serial.print("State: ");
         if (bms_status.get_state() == BMS_STATE_DISCHARGING) {Serial.println("DISCHARGING");}
@@ -268,12 +265,11 @@ void loop() {
         if (bms_status.get_state() == BMS_STATE_BALANCING_OVERHEATED) {Serial.println("BALANCING_OVERHEATED");}
 
         if (bms_status.get_error_flags()) { // BMS error - drive BMS_OK signal low
+            error_flags_history |= bms_status.get_error_flags();
+            digitalWrite(BMS_OK, LOW);
             Serial.print("---------- STATUS NOT GOOD * Error Code 0x");
             Serial.print(bms_status.get_error_flags(), HEX);
             Serial.println(" ----------");
-            error_flags_history |= bms_status.get_error_flags();
-
-            digitalWrite(BMS_OK, LOW);
         } else {
             digitalWrite(BMS_OK, HIGH);
             Serial.println("---------- STATUS GOOD ----------");
@@ -443,8 +439,6 @@ void stop_discharge_all() {
 }
 
 void balance_cells() {
-    int shutdown_circuit_voltage = ADC.read_adc(CH_SHUTDOWN);
-    spi_enable(SPI_CLOCK_DIV16); // Reconfigure 1MHz SPI clock speed after ADC reading so LTC communication is successful
     balance_offcycle = (balance_offcycle + 1) % BALANCE_LIMIT_FACTOR; // Only allow balancing on 1/BALANCE_LIMIT_FACTOR cycles
     bool cells_balancing = false; // This gets set to true later if it turns out we are balancing any cells this loop
     if (bms_voltages.get_low() > voltage_cutoff_low
@@ -452,7 +446,7 @@ void balance_cells() {
         && !bms_status.get_error_flags()
         && bms_status.get_state() >= BMS_STATE_CHARGING
         && bms_status.get_state() <= BMS_STATE_BALANCING
-        && shutdown_circuit_voltage > SHUTDOWN_HIGH_THRESHOLD) {
+        && bms_status.get_shutdown_h_above_threshold()) {
         for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
             for (int cell = 0; cell < CELLS_PER_IC; cell++) { // Loop through cells
                 if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
@@ -480,7 +474,7 @@ void balance_cells() {
     }
 }
 
-void poll_cell_voltage() {
+void poll_cell_voltages() {
     wakeup_sleep(); // Wake up LTC6804 ADC core
     LTC6804_adcv(); // Start cell ADC conversion
     delay(202); // Need to wait at least 201.317ms for conversion to finish, due to filtered sampling mode (26Hz) - See LTC6804 Datasheet Table 5
@@ -499,7 +493,7 @@ void poll_cell_voltage() {
 }
 
 void process_voltages() {
-    poll_cell_voltage(); // cell_voltages[] array populated with cell voltages after this
+    poll_cell_voltages(); // Poll controller and store data in cell_voltages[] array
     uint32_t totalVolts = 0; // stored in 10 mV units
     uint16_t maxVolt = 0; // stored in 0.1 mV units
     uint16_t minVolt = 65535; // stored in 0.1 mV units
@@ -582,7 +576,7 @@ void process_voltages() {
     Serial.println();
 }
 
-void poll_aux_voltage() {
+void poll_aux_voltages() {
     wakeup_sleep();
     //delayMicroseconds(200) // TODO try this if we are still having intermittent 6.5535 issues, maybe the last ADC isn't being given enough time to wake up
     LTC6804_adax(); // Start GPIO ADC conversion
@@ -597,9 +591,14 @@ void poll_aux_voltage() {
     delay(200);
 }
 
-void process_cell_temps() {
+void process_temps() {
+    poll_aux_voltages(); // Poll controllers and store data in aux_voltages[] array
+    process_cell_temps(); // Process values, populate populate bms_temperatures and bms_detailed_temperatures
+    process_onboard_temps(); // Process values, populate bms_onboard_temperatures and bms_onboard_detailed_temperatures
+}
+
+void process_cell_temps() { // Note: For up-to-date information you must poll the LTC6820s with poll_aux_voltages() before calling this function
     double avgTemp, lowTemp, highTemp, totalTemp, thermTemp;
-    poll_aux_voltage();
     totalTemp = 0;
     lowTemp = calculate_cell_temp(aux_voltages[0][0], aux_voltages[0][5]);
     highTemp = lowTemp;
@@ -689,9 +688,8 @@ double calculate_cell_temp(double aux_voltage, double v_ref) {
     return (int16_t)(temperature * 100);
 }
 
-void process_onboard_temps() {
+void process_onboard_temps() { // Note: For up-to-date information you must poll the LTC6820s with poll_aux_voltages() before calling this function
     double avgTemp, lowTemp, highTemp, totalTemp, thermTemp;
-    poll_aux_voltage();
     totalTemp = 0;
     lowTemp = calculate_onboard_temp(aux_voltages[0][3], aux_voltages[0][5]);
     highTemp = lowTemp;
@@ -775,26 +773,20 @@ double calculate_onboard_temp(double aux_voltage, double v_ref) {
     double R0 = 10000;  // Resistance of thermistor at 25C
     double temperature = 1 / ((1 / T0) + (1 / b) * log(thermistor_resistance / R0)) - (double) 273.15;
     
-    return (int16_t)(temperature * 100);
+    return (int16_t) (temperature * 100);
 }
 
-void process_current() { // TODO fix this to work efficiently with get_current
-    /*
-     * Current sensor: ISB-300-A-604
-     * Maximum positive current (300A) corresponds to 4.5V signal
-     * Maximum negative current (-300A) corresponds to 0.5V signal
-     * 0A current corresponds to 2.5V signal
-     *
-     * voltage = read_adc() * 5 / 4095
-     * current = (voltage - 2.5) * 300 / 2
-     */
-    double voltage = ADC.read_adc(CH_CUR_SENSE_2) / (double) 819;
-    spi_enable(SPI_CLOCK_DIV16); // Reconfigure 1MHz SPI clock speed after ADC reading so LTC communication is successful
-    double current = (voltage - 2.5) * (double) 150;
+void process_adc() {
+    //Process shutdown circuit measurements
+    bms_status.set_shutdown_g_above_threshold(read_adc(CH_SHUTDOWN_G) > SHUTDOWN_HIGH_THRESHOLD);
+    bms_status.set_shutdown_h_above_threshold(read_adc(CH_SHUTDOWN_H) > SHUTDOWN_HIGH_THRESHOLD);
+
+    // Process current measurement
+    int current = get_current();
     Serial.print("\nCurrent Sensor: ");
-    Serial.print(current, 2);
+    Serial.print(current / (double) 100, 2);
     Serial.println("A\n");
-    bms_status.set_current((int16_t) (current * 100));
+    bms_status.set_current(current);
     bms_status.set_charge_overcurrent(false); // RESET these values, then check below if they should be set again
     bms_status.set_discharge_overcurrent(false);
     if (bms_status.get_current() < charge_current_constant_high) {
@@ -819,7 +811,7 @@ void process_current() { // TODO fix this to work efficiently with get_current
 /*
  * Update maximum and minimum allowed voltage, current, temperature, etc.
  */
-int update_constraints(uint8_t address, uint16_t value) {
+int update_constraints(uint8_t address, uint16_t value) { // TODO EEPROM + CAN programming feature
     switch(address) {
         case 0:
             voltage_cutoff_low = value;
@@ -970,16 +962,36 @@ void parse_can_message() {
 }
 
 double get_current() {
-    double voltage = ADC.read_adc(CH_CUR_SENSE_2) / (double) 819;
+    /*
+     * Current sensor: ISB-300-A-604
+     * Maximum positive current (300A) corresponds to 4.5V signal
+     * Maximum negative current (-300A) corresponds to 0.5V signal
+     * 0A current corresponds to 2.5V signal
+     *
+     * voltage = read_adc() * 5 / 4095
+     * current = (voltage - 2.5) * 300 / 2
+     */
+    double voltage = read_adc(CH_CUR_SENSE_2) / (double) 819;
     double current = (voltage - 2.5) * (double) 150;
-    return current;
+    return (int16_t) (current * 100);
 }
 
-void add_current() {
-    double delta = get_current() * 10;
+void integrate_current() {
+    int delta = get_current() / 10;
     if (delta > 0) {
         total_discharge = total_discharge + delta;
     } else {
         total_charge = total_charge - delta; // Units will be 0.1C
     }
+}
+
+/*
+ * Helper function reads from ADC then sets SPI settings such that isoSPI will continue to work
+ */
+int read_adc(int channel) {
+    noInterrupts(); // Since timer interrupt triggers SPI communication, we don't want it to interrupt other SPI communication
+    int retval = ADC.read_adc(channel);
+    interrupts();
+    spi_enable(SPI_CLOCK_DIV16); // Reconfigure 1MHz SPI clock speed after ADC reading so LTC communication is successful
+    return retval;
 }
