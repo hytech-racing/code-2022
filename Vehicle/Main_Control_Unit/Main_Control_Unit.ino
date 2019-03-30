@@ -591,7 +591,6 @@ void set_state(uint8_t new_state) {
         EXPANDER.digitalWrite(EXPANDER_READY_SOUND, LOW);
         Serial.println("RTDS deactivated");
         Serial.println("Ready to drive");
-        timer_motor_controller_off.reset();
     }
 }
 
