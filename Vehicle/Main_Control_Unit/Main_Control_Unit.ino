@@ -376,10 +376,10 @@ void loop() {
                 Serial.println(mcu_pedal_readings.get_brake_implausibility());
             }
 
-            Serial.print("RPM: ");
-            Serial.println(mc_motor_position_information.get_motor_speed());
+            // Serial.print("RPM: ");
+            // Serial.println(mc_motor_position_information.get_motor_speed());
 
-            mc_command_message.set_torque_command(calculated_torque);
+            mc_command_message.set_torque_command(0);
 
             mc_command_message.write(tx_msg.buf);
             tx_msg.id = ID_MC_COMMAND_MESSAGE;
