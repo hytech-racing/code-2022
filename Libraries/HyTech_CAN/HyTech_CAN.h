@@ -104,7 +104,7 @@ typedef struct CAN_message_mcu_status_t {
     uint8_t flags;
     int16_t temperature;
     uint16_t glv_battery_voltage;
-} CAN_msg_mcu_status;
+} CAN_message_mcu_status_t;
 
 typedef struct CAN_message_mcu_pedal_readings_t {
     uint16_t accelerator_pedal_raw_1;
@@ -112,12 +112,12 @@ typedef struct CAN_message_mcu_pedal_readings_t {
     uint16_t brake_pedal_raw;
     uint8_t pedal_flags;
     uint8_t torque_map_mode;
-} CAN_msg_mcu_pedal_readings;
+} CAN_message_mcu_pedal_readings_t;
 
-typedef struct CAN_current_sensor_readings_t{
-	short ecu_current_value;
-	short cooling_current_value;
-} CAN_current_readings;
+typedef struct CAN_message_glv_current_readings_t {
+	uint16_t ecu_current_value;
+	uint16_t cooling_current_value;
+} CAN_message_glv_current_readings_t;
 
 typedef struct CAN_message_rcu_status_t {
     uint8_t state;
@@ -328,6 +328,9 @@ typedef struct Telem_message {
     uint32_t msg_id;
     uint8_t length;
     union {
+        CAN_message_mcu_status_t                mcu_status;
+        CAN_message_mcu_pedal_readings_t        mcu_pedal_readings;
+        CAN_message_glv_current_readings_t      glv_current_readings;
         CAN_msg_rcu_status                      rcu_status;
         CAN_msg_fcu_status                      fcu_status;
         CAN_msg_fcu_readings                    fcu_readings;
@@ -483,19 +486,19 @@ class FCU_status {
         CAN_message_fcu_status_t message;
 };
 
-class Current_readings {
+class GLV_current_readings {
 	public:
-		Current_readings();
-		Current_readings(uint8_t buf[8]);
-		Current_readings(short ecu_current_value, short cooling_current_value);
+		GLV_current_readings();
+		GLV_current_readings(uint8_t buf[8]);
+		GLV_current_readings(uint16_t ecu_current_value, uint16_t cooling_current_value);
 		void load(uint8_t buf[8]);
 		void write(uint8_t buf[8]);
-		short get_ecu_current_value();
-		short get_cooling_current_value();
-		void set_ecu_current_value(short ecu_current_value);
-		void set_cooling_current_value(short cooling_current_value);
+		uint16_t get_ecu_current_value();
+		uint16_t get_cooling_current_value();
+		void set_ecu_current_value(uint16_t ecu_current_value);
+		void set_cooling_current_value(uint16_t cooling_current_value);
 	private:
-		CAN_current_sensor_readings_t message;
+		CAN_message_glv_current_readings_t message;
 };
 
 class FCU_readings {
