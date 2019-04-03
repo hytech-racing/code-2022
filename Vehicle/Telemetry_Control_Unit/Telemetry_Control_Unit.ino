@@ -76,6 +76,7 @@ Metro timer_debug_RTC = Metro(1000);
 
 void setup() {
   // put your setup code here, to run once:
+    noInterrupts();
     NVIC_ENABLE_IRQ(IRQ_CAN0_MESSAGE);                                   // Enables interrupts on the teensy for CAN messages
     attachInterruptVector(IRQ_CAN0_MESSAGE, parse_can_message);          // Attaches parse_can_message() as ISR
     FLEXCAN0_IMASK1 = FLEXCAN_IMASK1_BUF5M;                             // Allows "CAN message arrived" bit in flag register to throw interrupt
@@ -89,8 +90,9 @@ void setup() {
     logger.println("time (uS), msg.id, data");                          // Print heading to the file.
     logger.flush();
 
-    //Teensy3Clock.set(1536653782);                                       // set time (epoch) at powerup  (COMMENT OUT THIS LINE AND PUSH ONCE RTC HAS BEEN SET!!!!)
+    //Teensy3Clock.set(9999999999);                                       // set time (epoch) at powerup  (COMMENT OUT THIS LINE AND PUSH ONCE RTC HAS BEEN SET!!!!)
     setSyncProvider(getTeensy3Time);                                    // registers Teensy RTC as system time
+    
 
     setupAccelerometer();
 
@@ -104,6 +106,11 @@ void setup() {
     GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);     // specify data to be received (minimum + fix)
     GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);        // set update rate (1Hz)
     GPS.sendCommand(PGCMD_ANTENNA);                   // report data about antenna
+
+    // Interrupt Handler debug 
+    pinMode(24, OUTPUT);
+    digitalWrite(24, HIGH);
+    interrupts();
 }
 
 void loop() {
@@ -111,13 +118,14 @@ void loop() {
 
     if (timer_debug_RTC.check()) {
       //digitalClockDisplay();
-      
+      Serial.println(Teensy3Clock.get());
     }
     
     if (timer_accelerometer.check()) {
         processAccelerometer(); 
     }
     if (timer_current.check()) {
+      noInterrupts();
       //self derived
       double current_ecu = ((double)(analogRead(A13)-96))*0.029412;
       double current_cooling = ((double)(analogRead(A12)-96))*0.029412;
@@ -128,7 +136,6 @@ void loop() {
       CAN_current_sensor_readings.set_cooling_current_value((short)((int)(current_cooling*100)));
 
       // order of bytes of each value is in reverse: buf[1],buf[0] is x value, buf[3],buf[2] is y value, and etc.
-      noInterrupts();
       CAN_current_sensor_readings.write(msg.buf);
       msg.id = ID_ECU_CURRENT_SENSOR_READINGS;
       msg.len = sizeof(CAN_current_sensor_readings_t);
@@ -144,28 +151,16 @@ void loop() {
     
     GPS.read();
     if (gpsTimer_alpha.check()) {
+      noInterrupts();
       if (GPS.newNMEAreceived()) {
         GPS.parse(GPS.lastNMEA());
-        noInterrupts();
         msg.id = ID_ECU_GPS_READINGS_ALPHA;
         msg.len = 8;
         memcpy(&(msg.buf[0]), &(GPS.latitude), sizeof(float));
         memcpy(&(msg.buf[4]), &(GPS.longitude), sizeof(float));
-
-        timestampWrite();
-        logger.print(msg.id, HEX);
-        logger.print(",");
-        for (int i=0; i<msg.len; i++) {
-          if (msg.buf[i]<16) {
-            logger.print("0");
-          }
-          logger.print(msg.buf[i], HEX);
-          logger.print(" ");
-        }
-        logger.println();
-        logger.flush();    
-        interrupts();
+        CAN.write(msg);  
       }
+      interrupts();
     }
 
     if (gpsTimer_beta.check()) {
@@ -174,29 +169,21 @@ void loop() {
         msg.len = 8;
         memcpy(&(msg.buf[0]), &(GPS.altitude), sizeof(float));
         memcpy(&(msg.buf[4]), &(GPS.speed), sizeof(float));
-
-        timestampWrite();
-        logger.print(msg.id, HEX);
-        logger.print(",");
-        for (int i=0; i<msg.len; i++) {
-          if (msg.buf[i]<16) {
-            logger.print("0");
-          }
-          logger.print(msg.buf[i], HEX);
-          logger.print(" ");
-        }
-        logger.println();
-        logger.flush();    
+        CAN.write(msg);    
         interrupts();
     }
     
 }
 
 void parse_can_message() {                                              // ISR
-   while (CAN.read(msg)) {
+  
+    CAN.read(msg);
+    digitalWrite(24, LOW);
+    //Serial.println("Received!!");
+    //timestampWrite();
     
-    Serial.println("Received!!");
-    timestampWrite();
+    logger.print(Teensy3Clock.get());
+    logger.print(",");
     logger.print(msg.id, HEX);
     logger.print(",");
     for (int i=0; i<msg.len; i++) {
@@ -208,7 +195,6 @@ void parse_can_message() {                                              // ISR
     }
     logger.println();
     logger.flush();                                                       // Ensure log is saved
-    
         
         if (msg.id == ID_MC_COMMAND_MESSAGE) {
             mc_command_message.load(msg.buf);
@@ -254,7 +240,8 @@ void parse_can_message() {                                              // ISR
             BMS_detailed_voltages temp = BMS_detailed_voltages(msg.buf);
             bms_detailed_voltages[temp.get_ic_id()][temp.get_group_id()].load(msg.buf);
         }
-    }
+        digitalWrite(24, HIGH);
+    
 }
 
 void digitalClockDisplay() {
@@ -322,6 +309,7 @@ void setupAccelerometer() {
 }
 
 void processAccelerometer() {
+  noInterrupts();
   /* Get a new sensor event */ 
   sensors_event_t event; 
   accel.getEvent(&event);
@@ -330,7 +318,6 @@ void processAccelerometer() {
   fcu_accelerometer_values.set_values((short)((int)(event.acceleration.x*100)), (short)((int)(event.acceleration.y*100)), (short)((int)(event.acceleration.z*100)));
   
   /* Send msg over CAN */
-  noInterrupts();
   fcu_accelerometer_values.write(xb_msg.buf);
   xb_msg.id = ID_FCU_ACCELEROMETER;
   xb_msg.len = sizeof(CAN_message_fcu_accelerometer_values_t);
@@ -401,6 +388,7 @@ int write_xbee_data() {
 }
 
 void send_xbee() {
+    noInterrupts();
     if (timer_debug_rms_temperatures_1.check()) {
         mc_temperatures_1.write(xb_msg.buf);
         xb_msg.len = sizeof(CAN_message_mc_temperatures_1_t);
@@ -606,4 +594,5 @@ void send_xbee() {
         XB.print("CMD_MSG COMMANDED TORQUE LIMIT: ");
         XB.println(mc_command_message.get_commanded_torque_limit() / (double) 10, 1);*/
     }
+    interrupts();
 }
