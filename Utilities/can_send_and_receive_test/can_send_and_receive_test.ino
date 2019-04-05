@@ -17,7 +17,7 @@ void setup() {
     Serial.println("CAN transceiver initialized");
     Serial.println("CAN TEST SENDER/RECEIVER");
     pinMode(13, OUTPUT);
-    // CAN0_MCR &= 0xFFFDFFFF; // Enable self-reception
+     CAN0_MCR &= 0xFFFDFFFF; // Enable self-reception
 }
 
 void loop() {

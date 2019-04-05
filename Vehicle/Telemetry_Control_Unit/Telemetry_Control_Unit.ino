@@ -6,7 +6,6 @@
 #include <HyTech_CAN.h>
 #include <kinetis_flexcan.h>
 #include <Wire.h>
-#include <SD.h>
 #include <TimeLib.h>
 #include <Metro.h>
 #include <XBTools.h>
@@ -20,9 +19,11 @@
 #define XBEE_PKT_LEN 15
 
 FlexCAN CAN(500000);
-static CAN_message_t msg;
+static CAN_message_t msg_tx;
+static CAN_message_t msg_rx;
 static CAN_message_t xb_msg;
 File logger;
+
 FCU_accelerometer_values fcu_accelerometer_values;
 ADC_SPI ADC(10);
 Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
@@ -76,14 +77,14 @@ Metro timer_debug_RTC = Metro(1000);
 
 void setup() {
   // put your setup code here, to run once:
-    noInterrupts();
+    CAN.begin();  
+    
     NVIC_ENABLE_IRQ(IRQ_CAN0_MESSAGE);                                   // Enables interrupts on the teensy for CAN messages
     attachInterruptVector(IRQ_CAN0_MESSAGE, parse_can_message);          // Attaches parse_can_message() as ISR
     FLEXCAN0_IMASK1 = FLEXCAN_IMASK1_BUF5M;                             // Allows "CAN message arrived" bit in flag register to throw interrupt
     CAN0_MCR &= 0xFFFDFFFF;                                             // Enables CAN message self-reception
-
-    Serial.begin(115200);
-    CAN.begin();                                                        // Begin CAN
+    
+    Serial.begin(115200);                                                      // Begin CAN
     SD.begin(BUILTIN_SDCARD);                                           // Begin Arduino SD API
     pinMode(10, OUTPUT);                                                // Initialize pin 10 as output; this is necessary for the SD Library
     logger = SD.open("sample.txt", FILE_WRITE);                         // Open file for writing.  Code revision necessary to record distinct sessions
@@ -93,29 +94,29 @@ void setup() {
     //Teensy3Clock.set(9999999999);                                       // set time (epoch) at powerup  (COMMENT OUT THIS LINE AND PUSH ONCE RTC HAS BEEN SET!!!!)
     setSyncProvider(getTeensy3Time);                                    // registers Teensy RTC as system time
     
-
+    
     setupAccelerometer();
 
     pinMode(A12, INPUT);
     pinMode(A13, INPUT);
 
     XB.begin(115200);
-
+    
     GPS.begin(9600);    // this baud rate is necessary!!!
 
     GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);     // specify data to be received (minimum + fix)
     GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);        // set update rate (1Hz)
     GPS.sendCommand(PGCMD_ANTENNA);                   // report data about antenna
-
+    
     // Interrupt Handler debug 
     pinMode(24, OUTPUT);
     digitalWrite(24, HIGH);
-    interrupts();
+    
 }
 
 void loop() {
     send_xbee();
-
+    
     if (timer_debug_RTC.check()) {
       //digitalClockDisplay();
       Serial.println(Teensy3Clock.get());
@@ -125,7 +126,7 @@ void loop() {
         processAccelerometer(); 
     }
     if (timer_current.check()) {
-      noInterrupts();
+      
       //self derived
       double current_ecu = ((double)(analogRead(A13)-96))*0.029412;
       double current_cooling = ((double)(analogRead(A12)-96))*0.029412;
@@ -136,112 +137,106 @@ void loop() {
       CAN_current_sensor_readings.set_cooling_current_value((short)((int)(current_cooling*100)));
 
       // order of bytes of each value is in reverse: buf[1],buf[0] is x value, buf[3],buf[2] is y value, and etc.
-      CAN_current_sensor_readings.write(msg.buf);
-      msg.id = ID_ECU_CURRENT_SENSOR_READINGS;
-      msg.len = sizeof(CAN_current_sensor_readings_t);
-      CAN.write(msg);
+      CAN_current_sensor_readings.write(msg_tx.buf);
+      msg_tx.id = ID_ECU_CURRENT_SENSOR_READINGS;
+      msg_tx.len = sizeof(CAN_current_sensor_readings_t);
+      CAN.write(msg_tx);
 
       CAN_current_sensor_readings.write(xb_msg.buf);
       xb_msg.id = ID_ECU_CURRENT_SENSOR_READINGS;
       xb_msg.len = sizeof(CAN_current_sensor_readings_t);
-      write_xbee_data();
-      interrupts();
-     
+      write_xbee_data();     
     }
     
     GPS.read();
     if (gpsTimer_alpha.check()) {
-      noInterrupts();
       if (GPS.newNMEAreceived()) {
         GPS.parse(GPS.lastNMEA());
-        msg.id = ID_ECU_GPS_READINGS_ALPHA;
-        msg.len = 8;
-        memcpy(&(msg.buf[0]), &(GPS.latitude), sizeof(float));
-        memcpy(&(msg.buf[4]), &(GPS.longitude), sizeof(float));
-        CAN.write(msg);  
+        msg_tx.id = ID_ECU_GPS_READINGS_ALPHA;
+        msg_tx.len = 8;
+        memcpy(&(msg_tx.buf[0]), &(GPS.latitude), sizeof(float));
+        memcpy(&(msg_tx.buf[4]), &(GPS.longitude), sizeof(float));
+        CAN.write(msg_tx);  
       }
-      interrupts();
     }
 
     if (gpsTimer_beta.check()) {
-        noInterrupts();
-        msg.id = ID_ECU_GPS_READINGS_BETA;
-        msg.len = 8;
-        memcpy(&(msg.buf[0]), &(GPS.altitude), sizeof(float));
-        memcpy(&(msg.buf[4]), &(GPS.speed), sizeof(float));
-        CAN.write(msg);    
-        interrupts();
+        msg_tx.id = ID_ECU_GPS_READINGS_BETA;
+        msg_tx.len = 8;
+        memcpy(&(msg_tx.buf[0]), &(GPS.altitude), sizeof(float));
+        memcpy(&(msg_tx.buf[4]), &(GPS.speed), sizeof(float));
+        CAN.write(msg_tx);    
     }
     
 }
 
 void parse_can_message() {                                              // ISR
   
-    CAN.read(msg);
+  while (CAN.read(msg_rx)) {
     digitalWrite(24, LOW);
     //Serial.println("Received!!");
     //timestampWrite();
     
     logger.print(Teensy3Clock.get());
     logger.print(",");
-    logger.print(msg.id, HEX);
+    logger.print(msg_rx.id, HEX);
     logger.print(",");
-    for (int i=0; i<msg.len; i++) {
-      if (msg.buf[i]<16) {
+    for (int i=0; i<msg_rx.len; i++) {
+      if (msg_rx.buf[i]<16) {
         logger.print("0");
       }
-      logger.print(msg.buf[i], HEX);
+      logger.print(msg_rx.buf[i], HEX);
       logger.print(" ");
     }
     logger.println();
     logger.flush();                                                       // Ensure log is saved
         
-        if (msg.id == ID_MC_COMMAND_MESSAGE) {
-            mc_command_message.load(msg.buf);
+        if (msg_rx.id == ID_MC_COMMAND_MESSAGE) {
+            mc_command_message.load(msg_rx.buf);
         }
-        if (msg.id == ID_MC_TEMPERATURES_1) {
-            mc_temperatures_1.load(msg.buf);
+        if (msg_rx.id == ID_MC_TEMPERATURES_1) {
+            mc_temperatures_1.load(msg_rx.buf);
         }
-        if (msg.id == ID_MC_TEMPERATURES_3) {
-            mc_temperatures_3.load(msg.buf);
+        if (msg_rx.id == ID_MC_TEMPERATURES_3) {
+            mc_temperatures_3.load(msg_rx.buf);
         }
-        if (msg.id == ID_MC_MOTOR_POSITION_INFORMATION) {
-            mc_motor_position_information.load(msg.buf);
+        if (msg_rx.id == ID_MC_MOTOR_POSITION_INFORMATION) {
+            mc_motor_position_information.load(msg_rx.buf);
         }
-        if (msg.id == ID_MC_CURRENT_INFORMATION) {
-            mc_current_information.load(msg.buf);
+        if (msg_rx.id == ID_MC_CURRENT_INFORMATION) {
+            mc_current_information.load(msg_rx.buf);
         }
-        if (msg.id == ID_MC_VOLTAGE_INFORMATION) {
-            mc_voltage_information.load(msg.buf);
+        if (msg_rx.id == ID_MC_VOLTAGE_INFORMATION) {
+            mc_voltage_information.load(msg_rx.buf);
         }
-        if (msg.id == ID_MC_INTERNAL_STATES) {
-            mc_internal_states.load(msg.buf);
+        if (msg_rx.id == ID_MC_INTERNAL_STATES) {
+            mc_internal_states.load(msg_rx.buf);
         }
-        if (msg.id == ID_MC_FAULT_CODES) {
-            mc_fault_codes.load(msg.buf);
+        if (msg_rx.id == ID_MC_FAULT_CODES) {
+            mc_fault_codes.load(msg_rx.buf);
         }
-        if (msg.id == ID_MC_TORQUE_TIMER_INFORMATION) {
-            mc_torque_timer_information.load(msg.buf);
+        if (msg_rx.id == ID_MC_TORQUE_TIMER_INFORMATION) {
+            mc_torque_timer_information.load(msg_rx.buf);
         }
-        if (msg.id == ID_BMS_VOLTAGES) {
-            bms_voltages.load(msg.buf);
+        if (msg_rx.id == ID_BMS_VOLTAGES) {
+            bms_voltages.load(msg_rx.buf);
         }
-        if (msg.id == ID_BMS_TEMPERATURES) {
-            bms_temperatures.load(msg.buf);
+        if (msg_rx.id == ID_BMS_TEMPERATURES) {
+            bms_temperatures.load(msg_rx.buf);
         }
-        if (msg.id == ID_BMS_DETAILED_TEMPERATURES) {
-            BMS_detailed_temperatures temp = BMS_detailed_temperatures(msg.buf);
-            bms_detailed_temperatures[temp.get_ic_id()].load(msg.buf);
+        if (msg_rx.id == ID_BMS_DETAILED_TEMPERATURES) {
+            BMS_detailed_temperatures temp = BMS_detailed_temperatures(msg_rx.buf);
+            bms_detailed_temperatures[temp.get_ic_id()].load(msg_rx.buf);
         }
-        if (msg.id == ID_BMS_STATUS) {
-            bms_status.load(msg.buf);
+        if (msg_rx.id == ID_BMS_STATUS) {
+            bms_status.load(msg_rx.buf);
         }
-        if (msg.id == ID_BMS_DETAILED_VOLTAGES) {
-            BMS_detailed_voltages temp = BMS_detailed_voltages(msg.buf);
-            bms_detailed_voltages[temp.get_ic_id()][temp.get_group_id()].load(msg.buf);
+        if (msg_rx.id == ID_BMS_DETAILED_VOLTAGES) {
+            BMS_detailed_voltages temp = BMS_detailed_voltages(msg_rx.buf);
+            bms_detailed_voltages[temp.get_ic_id()][temp.get_group_id()].load(msg_rx.buf);
         }
         digitalWrite(24, HIGH);
-    
+  }
 }
 
 void digitalClockDisplay() {
@@ -297,10 +292,10 @@ void writeDigits(int digits){
 
 void setupAccelerometer() {
       
-  /* Initialise the sensor */
+  // Initialise the sensor
   if(!accel.begin())
   {
-    /* There was a problem detecting the ADXL345 ... check your connections */
+    // There was a problem detecting the ADXL345 ... check your connections
     Serial.println("Sensor not detected!!!!!");
   }
   else {
@@ -309,24 +304,24 @@ void setupAccelerometer() {
 }
 
 void processAccelerometer() {
-  noInterrupts();
-  /* Get a new sensor event */ 
+  // Get a new sensor event
   sensors_event_t event; 
   accel.getEvent(&event);
   
-  /* Read accelerometer values into accelerometer struct */
+  // Read accelerometer values into accelerometer struct
   fcu_accelerometer_values.set_values((short)((int)(event.acceleration.x*100)), (short)((int)(event.acceleration.y*100)), (short)((int)(event.acceleration.z*100)));
   
-  /* Send msg over CAN */
+  // Send msg over CAN
   fcu_accelerometer_values.write(xb_msg.buf);
   xb_msg.id = ID_FCU_ACCELEROMETER;
   xb_msg.len = sizeof(CAN_message_fcu_accelerometer_values_t);
   write_xbee_data();
-  fcu_accelerometer_values.write(msg.buf);
-  msg.id = ID_FCU_ACCELEROMETER;
-  msg.len = sizeof(CAN_message_fcu_accelerometer_values_t);
-  CAN.write(msg);
-  interrupts();
+  
+  fcu_accelerometer_values.write(msg_tx.buf);
+  msg_tx.id = ID_FCU_ACCELEROMETER;
+  msg_tx.len = sizeof(CAN_message_fcu_accelerometer_values_t);
+  CAN.write(msg_tx);
+  
 
   /*
   // order of bytes of each value is in reverse: buf[1],buf[0] is x value, buf[3],buf[2] is y value, and etc.
@@ -388,7 +383,6 @@ int write_xbee_data() {
 }
 
 void send_xbee() {
-    noInterrupts();
     if (timer_debug_rms_temperatures_1.check()) {
         mc_temperatures_1.write(xb_msg.buf);
         xb_msg.len = sizeof(CAN_message_mc_temperatures_1_t);
@@ -594,5 +588,4 @@ void send_xbee() {
         XB.print("CMD_MSG COMMANDED TORQUE LIMIT: ");
         XB.println(mc_command_message.get_commanded_torque_limit() / (double) 10, 1);*/
     }
-    interrupts();
 }
