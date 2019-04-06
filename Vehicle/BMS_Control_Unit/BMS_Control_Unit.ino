@@ -1,7 +1,7 @@
 /*
  * HyTech 2019 BMS Control Unit
  * Init 2017-04-11
- * Configured for HV Board Rev 4
+ * Configured for HV Board Rev 11
  * Monitors cell voltages and temperatures, sends BMS_OK signal to close Shutdown Circuit
  */
 
@@ -38,30 +38,74 @@
 #include <LTC68042.h>
 #include <Metro.h>
 
+/*************************************
+ * Begin general configuration
+ *************************************/
+
+/*
+ * Set Board Version
+ * Uncomment whichever board this code is being uploaded to
+ * Used to set pins correctly and only enable features compatible with board
+ */
+//#define BOARD_VERSION_HYTECH_2018_HV_REV_4
+#define BOARD_VERSION_HYTECH_2019_HV_REV_11
+
+/*
+ * Set Accumulator Version
+ * If installing in an Accumulator, set the version here for BMS to ignore problematic sensor readings unique to each accumulator
+ */
+//#define ACCUMULATOR_VERSION_HYTECH_2018_ACCUMULATOR
+#define ACCUMULATOR_VERSION_HYTECH_2019_ACCUMULATOR
+
+/*
+ * Set Bench Test Mode
+ * Set to true to place BMS in Bench Test Mode
+ * When in Bench Test Mode, the BMS will automatically ignore ICs that did not respond at startup
+ */
+#define MODE_BENCH_TEST false
+
+/*
+ * Set Charge Override Mode
+ * Set to true to place BMS in charge override mode, set to false to disable
+ * When the BMS is in Charge Override Mode, it will balance without checking for the presence of the Charger ECU on CAN bus or a high signal on the Shutdown Circuit
+ * This mode is useful when bench testing
+ */
+#define MODE_CHARGE_OVERRIDE false
+
+/*************************************
+ * End general configuration
+ *************************************/
+
 /*
  * Pin definitions
  */
+#ifdef BOARD_VERSION_HYTECH_2018_HV_REV_4 // 2018 HV Board rev4
+#define ADC_CS 9
+#define BMS_OK A8
+#define LED_STATUS 7
+#define LTC6820_CS 10
+#define WATCHDOG A0
+#endif
+
+#ifdef BOARD_VERSION_HYTECH_2019_HV_REV_11 // 2019 HV Board rev11
 #define ADC_CS 9
 #define BMS_OK A1
 #define LED_STATUS 7
 #define LTC6820_CS 10
 #define WATCHDOG A0
+#endif
 
 /*
  * Constant definitions
  */
-#define TOTAL_IC 4                      // Number of ICs in the system
+#define TOTAL_IC 8                      // Number of ICs in the system
 #define CELLS_PER_IC 9                  // Number of cells per IC
 #define THERMISTORS_PER_IC 3            // Number of cell thermistors per IC
 #define PCB_THERM_PER_IC 2              // Number of PCB thermistors per IC
-#define TOTAL_CELLS 72                  // Number of non-ignored cells (used for calculating averages)
-#define TOTAL_PCB_THERMISTORS 16        // Number of non-ignored PCB thermistors (used for calculating averages)
-#define TOTAL_CELL_THERMISTORS 23       // Number of non-ignored cell thermistors (used for calculating averages)
 #define IGNORE_FAULT_THRESHOLD 10       // Number of fault-worthy values to read in succession before faulting
 #define CURRENT_FAULT_THRESHOLD 5       // Number of fault-worthy electrical current values to read in succession before faulting
 #define SHUTDOWN_HIGH_THRESHOLD 1500    // Value returned by ADC above which the shutdown circuit is considered powered (balancing not allowed when AIRs open)
 #define BALANCE_LIMIT_FACTOR 3          // Reciprocal of the cell balancing duty cycle (3 means balancing can happen during 1 out of every 3 loops, etc)
-#define CHARGE_MODE_OVERRIDE false      // Set to true to place BMS in charge mode, set to false and BMS will require a Charger ECU CAN message to enter charge mode
 #define COULOUMB_COUNT_INTERVAL 10000   // Microseconds between current readings
 
 /*
@@ -105,6 +149,10 @@ uint16_t onboard_temp_critical_high = 7000; // 70.00C
 uint16_t temp_critical_low = 0; // 0C
 uint16_t voltage_difference_threshold = 150; // 0.1500V
 
+uint8_t total_count_cells = CELLS_PER_IC * TOTAL_IC; // Number of non-ignored cells (used for calculating averages)
+uint8_t total_count_cell_thermistors = THERMISTORS_PER_IC * TOTAL_IC; // Number of non-ignored cell thermistors (used for calculating averages)
+uint8_t total_count_pcb_thermistors = PCB_THERM_PER_IC * TOTAL_IC; // Number of non-ignored PCB thermistors (used for calculating averages)
+
 uint8_t error_flags_history = 0; // Persistently stores fault flags until ECU restart
 uint8_t consecutive_faults_overvoltage = 0; // Keeps track of how many consecutive faults occured
 uint8_t consecutive_faults_undervoltage = 0;
@@ -135,6 +183,16 @@ int8_t ignore_cell_therm[TOTAL_IC][THERMISTORS_PER_IC]; // Cell thermistors to b
 
 */
 uint8_t tx_cfg[TOTAL_IC][6]; // data defining how data will be written to daisy chain ICs.
+
+/*!<
+  the rx_cfg[][8] array stores the data that is read back from a LTC6804
+  The configuration data for each IC is stored in blocks of 8 bytes. Below is an table illustrating the array organization:
+
+|rx_config[0][0]|rx_config[0][1]|rx_config[0][2]|rx_config[0][3]|rx_config[0][4]|rx_config[0][5]|rx_config[0][6]  |rx_config[0][7] |rx_config[1][0]|rx_config[1][1]|  .....    |
+|---------------|---------------|---------------|---------------|---------------|---------------|-----------------|----------------|---------------|---------------|-----------|
+|IC1 CFGR0      |IC1 CFGR1      |IC1 CFGR2      |IC1 CFGR3      |IC1 CFGR4      |IC1 CFGR5      |IC1 PEC High     |IC1 PEC Low     |IC2 CFGR0      |IC2 CFGR1      |  .....    |
+*/
+uint8_t rx_cfg[TOTAL_IC][8];
 
 /**
  * CAN Variables
@@ -191,7 +249,7 @@ void setup() {
     Serial.println("CAN system and serial communication initialized");
 
     bms_status.set_state(BMS_STATE_DISCHARGING);
-    if (CHARGE_MODE_OVERRIDE) { // Configure charge mode if override is enabled
+    if (MODE_CHARGE_OVERRIDE) { // Configure charge mode if override is enabled
         bms_status.set_state(BMS_STATE_CHARGING);
         digitalWrite(LED_STATUS, HIGH);
     }
@@ -202,7 +260,7 @@ void setup() {
     total_discharge = 0;
     current_timer.begin(integrate_current, COULOUMB_COUNT_INTERVAL);*/
 
-    // Initialize the ic/group IDs for detailed voltage and temperature CAN messages
+    /* Initialize the ic/group IDs for detailed voltage and temperature CAN messages */
     for (int i = 0; i < TOTAL_IC; i++) {
         for (int j = 0; j < 3; j++) {
             bms_detailed_voltages[i][j].set_ic_id(i);
@@ -211,19 +269,61 @@ void setup() {
         bms_detailed_temperatures[i].set_ic_id(i);
     }
 
-    // DEBUG Code for testing cell packs
+    /* Ignore cells or thermistors for bench testing */
+    // DEBUG Code for testing cell packs | Example:
     // for (int i=0; i<4; i++) {
     //     for (int j=0; j<9; j++) {
     //         ignore_cell[i][j] = true; // Ignore ICs 0-3
+    //         total_count_cells--; // Decrement cell count (used for calculating averages)
     //     }
     // }
-    // DEBUG insert PCB thermistors to ignore here
-    //ignore_cell_therm[6][2] = true; // Ignore IC 6 cell thermistor 2
-    // DEBUG insert cell thermistors to ignore here
+    // DEBUG insert cell thermistors to ignore here | Example:
+    // ignore_cell_therm[5][1] = true; // Ignore IC 5 cell thermistor 1
+    // total_count_cell_thermistors--; // Decrement cell thermistor count (used for calculating averages)
+    // DEBUG insert PCB thermistors to ignore here | Example:
+    // ignore_pcb_therm[2][0] = true; // Ignore IC 2 pcb thermistor 0
+    // total_count_pcb_thermistors--; // Decrement pcb thermistor count (used for calculating averages)
 
-    // Set up isoSPI
+    /* Ignore cells or thermistors in 2018 accumulator */
+    #ifdef ACCUMULATOR_VERSION_HYTECH_2018_ACCUMULATOR
+    ignore_cell_therm[6][2] = true; // Ignore IC 6 cell thermistor 2 due to faulty connector
+    total_count_cell_thermistors -= 1;
+    #endif
+
+    /* Ignore cells or thermistors in 2019 accumulator */
+    #ifdef ACCUMULATOR_VERSION_HYTECH_2019_ACCUMULATOR
+    #endif
+
+    /* Set up isoSPI */
     initialize(); // Call our modified initialize function instead of the default Linear function
     init_cfg(); // Initialize and write configuration registers to LTC6804 chips
+
+    /* Bench test mode: check which ICs are online at startup and ignore cells from disconnected ICs */
+    if (MODE_BENCH_TEST) {
+        Serial.println("Bench Test Mode: Ignoring all ICs which do not respond at startup");
+        LTC6804_rdcfg(TOTAL_IC,rx_cfg); // Read back configuration registers right after we initialized them
+        for (int i=0; i < TOTAL_IC; i++) { // Check whether checksum is valid
+            int calculated_pec = pec15_calc(6, &rx_cfg[i][0]);
+            int received_pec = (rx_cfg[i][6] << 8) | rx_cfg[i][7];
+            if (calculated_pec != received_pec) { // IC did not respond properly - ignore cells and thermistors
+                Serial.print("Ignoring IC ");
+                Serial.println(i);
+                for (int j=0; j<CELLS_PER_IC; j++) {
+                    ignore_cell[i][j] = true;
+                }
+                total_count_cells -= CELLS_PER_IC; // Adjust cell count (used for calculating averages)
+                for (int j=0; j<THERMISTORS_PER_IC; j++) {
+                    ignore_cell_therm[i][j] = true;
+                }
+                total_count_cell_thermistors -= THERMISTORS_PER_IC; // Adjust cell thermistor count (used for calculating averages)
+                for (int j=0; j<PCB_THERM_PER_IC; j++) {
+                    ignore_pcb_therm[i][j] = true;
+                }
+                total_count_pcb_thermistors -= PCB_THERM_PER_IC; // Adjust cell pcb thermistor count (used for calculating averages)
+            }
+        }
+        Serial.println();
+    }
     
     Serial.println("Setup Complete!");
 }
@@ -236,7 +336,7 @@ void setup() {
 void loop() {
     parse_can_message();
 
-    if (timer_charge_timeout.check() && bms_status.get_state() > BMS_STATE_DISCHARGING && !CHARGE_MODE_OVERRIDE) { // 1 second timeout - if timeout is reached, disable charging
+    if (timer_charge_timeout.check() && bms_status.get_state() > BMS_STATE_DISCHARGING && !MODE_CHARGE_OVERRIDE) { // 1 second timeout - if timeout is reached, disable charging
         Serial.println("Disabling charge mode - CCU timeout");
         bms_status.set_state(BMS_STATE_DISCHARGING);
         digitalWrite(LED_STATUS, LOW);
@@ -246,7 +346,9 @@ void loop() {
 
     if (timer_process_cells_slow.check()) {
         process_voltages(); // Poll controllers, process values, populate bms_voltages
+        #ifndef BOARD_VERSION_HYTECH_2018_HV_REV_4 // Don't try to balance cells on 2018 HV board
         balance_cells(); // Check local cell voltage data and balance individual cells as necessary
+        #endif
         process_temps(); // Poll controllers, process values, populate populate bms_temperatures, bms_detailed_temperatures, bms_onboard_temperatures, and bms_onboard_detailed_temperatures
         process_adc(); // Poll ADC, process values, populate bms_status
         print_cells(); // Print the cell voltages and balancing status to serial
@@ -361,7 +463,7 @@ void init_cfg() {
     cfg_set_overvoltage_comparison_voltage(voltage_cutoff_high * 10); // Calculate overvoltage comparison register values
     cfg_set_undervoltage_comparison_voltage(voltage_cutoff_low * 10); // Calculate undervoltage comparison register values
     wakeup_idle(); // Wake up isoSPI
-    delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54
+    delayMicroseconds(1200); // Wait 4*t_wake for wakeup command to propogate and all 4 chips to wake up - See LTC6804 Datasheet page 54 // TODO is this needed?
     LTC6804_wrcfg(TOTAL_IC, tx_cfg); // Write configuration to ICs
 }
 
@@ -432,7 +534,7 @@ void balance_cells() {
         && !bms_status.get_error_flags()
         && bms_status.get_state() >= BMS_STATE_CHARGING
         && bms_status.get_state() <= BMS_STATE_BALANCING
-        && bms_status.get_shutdown_h_above_threshold()) { // Note: You may need to comment this conditional out if you are bench testing
+        && (bms_status.get_shutdown_h_above_threshold() || MODE_CHARGE_OVERRIDE)) { // Don't check shutdown circuit if in charge mode override
         for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
             for (int cell = 0; cell < CELLS_PER_IC; cell++) { // Loop through cells
                 if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
@@ -507,7 +609,7 @@ void process_voltages() {
             }
         }
     }
-    avgVolt = totalVolts / TOTAL_CELLS; // stored in 0.1 mV units
+    avgVolt = totalVolts / total_count_cells; // stored in 0.1 mV units
     totalVolts /= 100; // convert 0.1mV units down to 10mV units
     bms_voltages.set_average(avgVolt);
     bms_voltages.set_low(minVolt);
@@ -620,7 +722,7 @@ void process_cell_temps() { // Note: For up-to-date information you must poll th
             }
         }
     }
-    avgTemp = (int16_t) (totalTemp / TOTAL_CELL_THERMISTORS);
+    avgTemp = (int16_t) (totalTemp / total_count_cell_thermistors);
     bms_temperatures.set_low_temperature((int16_t) lowTemp);
     bms_temperatures.set_high_temperature((int16_t) highTemp);
     bms_temperatures.set_average_temperature((int16_t) avgTemp);
