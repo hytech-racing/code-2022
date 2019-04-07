@@ -302,22 +302,22 @@ void setup() {
     /* Bench test mode: check which ICs are online at startup and ignore cells from disconnected ICs */
     if (MODE_BENCH_TEST) {
         Serial.println("\nBench Test Mode: Ignoring all ICs which do not respond at startup");
-        LTC6804_rdcfg(TOTAL_IC,rx_cfg); // Read back configuration registers that we just initialized
+        LTC6804_rdcfg(TOTAL_IC, rx_cfg); // Read back configuration registers that we just initialized
         for (int i=0; i < TOTAL_IC; i++) { // Check whether checksum is valid
             int calculated_pec = pec15_calc(6, &rx_cfg[i][0]);
             int received_pec = (rx_cfg[i][6] << 8) | rx_cfg[i][7];
             if (calculated_pec != received_pec) { // IC did not respond properly - ignore cells and thermistors
                 Serial.print("Ignoring IC ");
                 Serial.println(i);
-                for (int j=0; j<CELLS_PER_IC; j++) {
+                for (int j = 0; j < CELLS_PER_IC; j++) {
                     ignore_cell[i][j] = true;
                 }
                 total_count_cells -= CELLS_PER_IC; // Adjust cell count (used for calculating averages)
-                for (int j=0; j<THERMISTORS_PER_IC; j++) {
+                for (int j = 0; j < THERMISTORS_PER_IC; j++) {
                     ignore_cell_therm[i][j] = true;
                 }
                 total_count_cell_thermistors -= THERMISTORS_PER_IC; // Adjust cell thermistor count (used for calculating averages)
-                for (int j=0; j<PCB_THERM_PER_IC; j++) {
+                for (int j = 0; j < PCB_THERM_PER_IC; j++) {
                     ignore_pcb_therm[i][j] = true;
                 }
                 total_count_pcb_thermistors -= PCB_THERM_PER_IC; // Adjust cell pcb thermistor count (used for calculating averages)
@@ -684,7 +684,7 @@ void process_temps() {
 void process_cell_temps() { // Note: For up-to-date information you must poll the LTC6820s with poll_aux_voltages() before calling this function
     double avgTemp, lowTemp, highTemp, totalTemp, thermTemp;
     totalTemp = 0;
-    lowTemp = 9999;
+    lowTemp = 9999; // Alternatively use first value from array, but that could be an ignored thermistor
     highTemp = -9999;
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         for (int j = 0; j < THERMISTORS_PER_IC; j++) {
@@ -759,7 +759,7 @@ double calculate_cell_temp(double aux_voltage, double v_ref) {
 void process_onboard_temps() { // Note: For up-to-date information you must poll the LTC6820s with poll_aux_voltages() before calling this function
     double avgTemp, lowTemp, highTemp, totalTemp, thermTemp;
     totalTemp = 0;
-    lowTemp = 9999;
+    lowTemp = 9999; // Alternatively use first value from array, but that could be an ignored thermistor
     highTemp = -9999;
 
     for (int ic = 0; ic < TOTAL_IC; ic++) {
