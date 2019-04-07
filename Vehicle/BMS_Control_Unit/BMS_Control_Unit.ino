@@ -228,7 +228,7 @@ void setup() {
     ADC.read_adc(0); // TODO isoSPI doesn't work until some other SPI gets called. This is a placeholder until we fix the problem
     pinMode(BMS_OK, OUTPUT);
     pinMode(LED_STATUS, OUTPUT);
-    pinMode(LTC6820_CS,OUTPUT);
+    pinMode(LTC6820_CS, OUTPUT);
     pinMode(WATCHDOG, OUTPUT);
     digitalWrite(BMS_OK, HIGH);
     digitalWrite(WATCHDOG, watchdog_high);
@@ -324,7 +324,6 @@ void setup() {
             }
         }
         Serial.println();
-        Serial.print("Cell therm: "); Serial.println(total_count_cell_thermistors);
     }
     
     Serial.println("Setup Complete!");
