@@ -131,7 +131,7 @@ Metro timer_charge_timeout = Metro(1000);
 /*
  * Interrupt timers
  */
-IntervalTimer current_timer;
+//IntervalTimer current_timer;
 
 /*
  * Global variables
