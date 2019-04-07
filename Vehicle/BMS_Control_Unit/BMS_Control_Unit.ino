@@ -59,14 +59,14 @@
 
 /*
  * Set Bench Test Mode
- * Set to true to place BMS in Bench Test Mode
+ * Set to true to place BMS in Bench Test Mode, set to false to disable
  * When in Bench Test Mode, the BMS will automatically ignore ICs that did not respond at startup
  */
 #define MODE_BENCH_TEST false
 
 /*
  * Set Charge Override Mode
- * Set to true to place BMS in charge override mode, set to false to disable
+ * Set to true to place BMS in Charge Override Mode, set to false to disable
  * When the BMS is in Charge Override Mode, it will balance without checking for the presence of the Charger ECU on CAN bus or a high signal on the Shutdown Circuit
  * This mode is useful when bench testing
  */
@@ -225,6 +225,7 @@ uint8_t balance_offcycle = 0; // Tracks which loops balancing will be disabled o
 bool charge_mode_entered = false; // Used to enter charge mode immediately at startup instead of waiting for timer
 
 void setup() {
+    ADC.read_adc(0); // TODO isoSPI doesn't work until some other SPI gets called. This is a placeholder until we fix the problem
     pinMode(BMS_OK, OUTPUT);
     pinMode(LED_STATUS, OUTPUT);
     pinMode(LTC6820_CS,OUTPUT);
@@ -249,7 +250,7 @@ void setup() {
     Serial.println("CAN system and serial communication initialized");
 
     bms_status.set_state(BMS_STATE_DISCHARGING);
-    if (MODE_CHARGE_OVERRIDE) { // Configure charge mode if override is enabled
+    if (MODE_CHARGE_OVERRIDE) { // Configure Charge Override Mode if enabled
         bms_status.set_state(BMS_STATE_CHARGING);
         digitalWrite(LED_STATUS, HIGH);
     }
@@ -300,8 +301,8 @@ void setup() {
 
     /* Bench test mode: check which ICs are online at startup and ignore cells from disconnected ICs */
     if (MODE_BENCH_TEST) {
-        Serial.println("Bench Test Mode: Ignoring all ICs which do not respond at startup");
-        LTC6804_rdcfg(TOTAL_IC,rx_cfg); // Read back configuration registers right after we initialized them
+        Serial.println("\nBench Test Mode: Ignoring all ICs which do not respond at startup");
+        LTC6804_rdcfg(TOTAL_IC,rx_cfg); // Read back configuration registers that we just initialized
         for (int i=0; i < TOTAL_IC; i++) { // Check whether checksum is valid
             int calculated_pec = pec15_calc(6, &rx_cfg[i][0]);
             int received_pec = (rx_cfg[i][6] << 8) | rx_cfg[i][7];
@@ -323,6 +324,7 @@ void setup() {
             }
         }
         Serial.println();
+        Serial.print("Cell therm: "); Serial.println(total_count_cell_thermistors);
     }
     
     Serial.println("Setup Complete!");
@@ -346,11 +348,12 @@ void loop() {
 
     if (timer_process_cells_slow.check()) {
         process_voltages(); // Poll controllers, process values, populate bms_voltages
-        #ifndef BOARD_VERSION_HYTECH_2018_HV_REV_4 // Don't try to balance cells on 2018 HV board
+        #ifndef BOARD_VERSION_HYTECH_2018_HV_REV_4 // Don't try to balance cells or use onboard ADC values on 2018 HV board
         balance_cells(); // Check local cell voltage data and balance individual cells as necessary
+        process_adc(); // Poll ADC, process values, populate bms_status
         #endif
         process_temps(); // Poll controllers, process values, populate populate bms_temperatures, bms_detailed_temperatures, bms_onboard_temperatures, and bms_onboard_detailed_temperatures
-        process_adc(); // Poll ADC, process values, populate bms_status
+        print_temps(); // Print cell and pcb temperatures to serial
         print_cells(); // Print the cell voltages and balancing status to serial
         //process_coulombs(); // Process new coulomb counts, sending over CAN and printing to Serial
         print_uptime(); // Print the BMS uptime to serial
@@ -534,7 +537,7 @@ void balance_cells() {
         && !bms_status.get_error_flags()
         && bms_status.get_state() >= BMS_STATE_CHARGING
         && bms_status.get_state() <= BMS_STATE_BALANCING
-        && (bms_status.get_shutdown_h_above_threshold() || MODE_CHARGE_OVERRIDE)) { // Don't check shutdown circuit if in charge mode override
+        && (bms_status.get_shutdown_h_above_threshold() || MODE_CHARGE_OVERRIDE)) { // Don't check shutdown circuit if in Charge Override Mode
         for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
             for (int cell = 0; cell < CELLS_PER_IC; cell++) { // Loop through cells
                 if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
@@ -656,12 +659,6 @@ void process_voltages() {
     }else {
         consecutive_faults_total_voltage_high = 0;
     }
-
-    Serial.print("Average cell voltage: "); Serial.println(avgVolt / (double) 1e4, 4);
-    Serial.print("Total pack voltage:   "); Serial.println(totalVolts / (double) 1e2, 4);
-    Serial.print("Min cell voltage:     "); Serial.println(minVolt / (double) 1e4, 4);
-    Serial.print("Max cell voltage:     "); Serial.println(maxVolt / (double) 1e4, 4);
-    Serial.println();
 }
 
 void poll_aux_voltages() {
@@ -688,8 +685,8 @@ void process_temps() {
 void process_cell_temps() { // Note: For up-to-date information you must poll the LTC6820s with poll_aux_voltages() before calling this function
     double avgTemp, lowTemp, highTemp, totalTemp, thermTemp;
     totalTemp = 0;
-    lowTemp = calculate_cell_temp(aux_voltages[0][0], aux_voltages[0][5]);
-    highTemp = lowTemp;
+    lowTemp = 9999;
+    highTemp = -9999;
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         for (int j = 0; j < THERMISTORS_PER_IC; j++) {
             if (!ignore_cell_therm[ic][j]) {
@@ -705,20 +702,6 @@ void process_cell_temps() { // Note: For up-to-date information you must poll th
 
                 bms_detailed_temperatures[ic].set_temperature(j, thermTemp); // Populate CAN message struct
                 totalTemp += thermTemp;
-
-                Serial.print("IC ");
-                Serial.print(ic);
-                Serial.print(" CELL Thermistor ");
-                Serial.print(j);
-                Serial.print(": ");
-                Serial.print(thermTemp / 100, 2);
-                Serial.println(" C");
-            } else {
-                Serial.print("IC ");
-                Serial.print(ic);
-                Serial.print(" CELL Thermistor ");
-                Serial.print(j);
-                Serial.println(": IGNORED");
             }
         }
     }
@@ -726,8 +709,6 @@ void process_cell_temps() { // Note: For up-to-date information you must poll th
     bms_temperatures.set_low_temperature((int16_t) lowTemp);
     bms_temperatures.set_high_temperature((int16_t) highTemp);
     bms_temperatures.set_average_temperature((int16_t) avgTemp);
-
-    print_cell_temperatures();
 
     bms_status.set_discharge_overtemp(false); // RESET these values, then check below if they should be set again
     bms_status.set_charge_overtemp(false);
@@ -779,8 +760,8 @@ double calculate_cell_temp(double aux_voltage, double v_ref) {
 void process_onboard_temps() { // Note: For up-to-date information you must poll the LTC6820s with poll_aux_voltages() before calling this function
     double avgTemp, lowTemp, highTemp, totalTemp, thermTemp;
     totalTemp = 0;
-    lowTemp = calculate_onboard_temp(aux_voltages[0][3], aux_voltages[0][5]);
-    highTemp = lowTemp;
+    lowTemp = 9999;
+    highTemp = -9999;
 
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         for (int j = 0; j < PCB_THERM_PER_IC; j++) {
@@ -794,28 +775,15 @@ void process_onboard_temps() { // Note: For up-to-date information you must poll
                     highTemp = thermTemp;
                 }
 
-                bms_onboard_detailed_temperatures[ic].set_temperature(j, thermTemp * 10000); // Populate CAN message struct
+                bms_onboard_detailed_temperatures[ic].set_temperature(j, thermTemp); // Populate CAN message struct
                 totalTemp += thermTemp;
-
-                Serial.print("IC ");
-                Serial.print(ic);
-                Serial.print(" PCB Thermistor ");
-                Serial.print(j);
-                Serial.print(": ");
-                Serial.print(thermTemp / 100, 2);
-                Serial.println(" C");
-            } else {
-                Serial.print("Ignored PCB thermistor ");
-                Serial.println(j);
             }
         }
     }
-    avgTemp = (int16_t) (totalTemp / ((TOTAL_IC) * PCB_THERM_PER_IC));
+    avgTemp = (int16_t) (totalTemp / total_count_pcb_thermistors);
     bms_onboard_temperatures.set_low_temperature((int16_t) lowTemp);
     bms_onboard_temperatures.set_high_temperature((int16_t) highTemp);
     bms_onboard_temperatures.set_average_temperature((int16_t) avgTemp);
-
-    print_onboard_temperatures();
 
     bms_status.set_onboard_overtemp(false); // RESET this value, then check below if they should be set
 
@@ -931,27 +899,98 @@ int update_constraints(uint8_t address, uint16_t value) { // TODO EEPROM + CAN p
     return 0;
 }
 
-void print_cells() {
-    for (int current_ic = 0; current_ic < TOTAL_IC; current_ic++) {
-        Serial.println();
-        Serial.print("IC: ");
-        Serial.println(current_ic);
-        for (int i = 0; i < CELLS_PER_IC; i++) {
-            Serial.print("C"); Serial.print(i);
-            if (ignore_cell[current_ic][i]) {
-                Serial.print(" IGNORED CELL");
+void print_temps() {
+    Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
+    Serial.println("\t\tCell Temperatures\t\t\t\t\t\t\t\t\t   PCB Temperatures");
+    Serial.println("\tTHERM 0\t\tTHERM 1\t\tTHERM 2\t\t\t\t\t\t\t\tTHERM 0\t\tTHERM 1");
+    for (int ic = 0; ic < TOTAL_IC; ic++) {
+        Serial.print("IC"); Serial.print(ic); Serial.print("\t");
+        for (int therm = 0; therm < THERMISTORS_PER_IC; therm++) {
+            if (!ignore_cell_therm[ic][therm]) {
+                double temp = ((double) bms_detailed_temperatures[ic].get_temperature(therm)) / 100;
+                Serial.print(temp, 2);
+                Serial.print(" ºC");
+            } else {
+                Serial.print("IGN\t");
             }
-            Serial.print(": ");
-            double voltage = cell_voltages[current_ic][i] * 0.0001;
-            Serial.print(voltage, 4);
-            Serial.print(" Discharging: ");
-            Serial.print(bms_balancing_status[current_ic / 4].get_cell_balancing(current_ic % 4, i));
-            Serial.print(" Voltage difference: ");
-            Serial.print(cell_voltages[current_ic][i]-bms_voltages.get_low());
-            Serial.print(" Delta To Threshold: ");
-            Serial.println((cell_voltages[current_ic][i]-bms_voltages.get_low())-voltage_difference_threshold);
+            Serial.print("\t");
         }
+        Serial.print("\t\t\t\t\t\t");
+        for (int therm = 0; therm < PCB_THERM_PER_IC; therm++) {
+            if (!ignore_pcb_therm[ic][therm]) {
+                double temp = ((double) bms_onboard_detailed_temperatures[ic].get_temperature(therm)) / 100;
+                Serial.print(temp, 2);
+                Serial.print(" ºC");
+            } else {
+                Serial.print("IGN\t");
+            }
+            Serial.print("\t");
+        }
+        Serial.println();
     }
+    Serial.print("\nCell temperature statistics\t\t Average: ");
+    Serial.print(bms_temperatures.get_average_temperature() / (double) 100, 2);
+    Serial.print(" ºC\t\t");
+    Serial.print("Min: ");
+    Serial.print(bms_temperatures.get_low_temperature() / (double) 100, 2);
+    Serial.print(" ºC\t\t");
+    Serial.print("Max: ");
+    Serial.print(bms_temperatures.get_high_temperature() / (double) 100, 2);
+    Serial.println(" ºC\n");
+    Serial.print("PCB temperature statistics\t\t Average: ");
+    Serial.print(bms_onboard_temperatures.get_average_temperature() / (double) 100, 2);
+    Serial.print(" ºC\t\t");
+    Serial.print("Min: ");
+    Serial.print(bms_onboard_temperatures.get_low_temperature() / (double) 100, 2);
+    Serial.print(" ºC\t\t");
+    Serial.print("Max: ");
+    Serial.print(bms_onboard_temperatures.get_high_temperature() / (double) 100, 2);
+    Serial.println(" ºC\n");
+}
+
+void print_cells() {
+    Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
+    Serial.println("\t\t\t\tRaw Cell Voltages\t\t\t\t\t\t\tCell Status (Ignoring or Balancing)");
+    Serial.println("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\t\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8");
+    for (int ic = 0; ic < TOTAL_IC; ic++) {
+        Serial.print("IC"); Serial.print(ic); Serial.print("\t");
+        for (int cell = 0; cell < CELLS_PER_IC; cell++) {
+            double voltage = cell_voltages[ic][cell] * 0.0001;
+            Serial.print(voltage, 4); Serial.print("V\t");
+        }
+        Serial.print("\t");
+        for (int cell = 0; cell < CELLS_PER_IC; cell++) {
+            int balancing = bms_balancing_status[ic / 4].get_cell_balancing(ic % 4, cell);
+            int ignored = ignore_cell[ic][cell];
+            if (balancing) {
+                Serial.print("BAL");
+            } else if (ignored) {
+                Serial.print("IGN");
+            }
+            Serial.print("\t");
+        }
+        Serial.println();
+    }
+    Serial.println();
+    Serial.println("\t\t\t\tDelta from Min Cell");
+    Serial.println("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8");
+    for (int ic = 0; ic < TOTAL_IC; ic++) {
+        Serial.print("IC"); Serial.print(ic); Serial.print("\t");
+        for (int cell = 0; cell < CELLS_PER_IC; cell++) {
+            if (!ignore_cell[ic][cell]) {
+                double voltage = (cell_voltages[ic][cell]-bms_voltages.get_low()) * 0.0001;
+                Serial.print(voltage, 4);
+                Serial.print("V");
+            }
+            Serial.print("\t");
+        }
+        Serial.println();
+    }
+    Serial.println();
+    Serial.print("Cell voltage statistics\t\tTotal: "); Serial.print(bms_voltages.get_total() / (double) 1e2, 4); Serial.print("V\t\t");
+    Serial.print("Average: "); Serial.print(bms_voltages.get_average() / (double) 1e4, 4); Serial.print("V\t\t");
+    Serial.print("Min: "); Serial.print(bms_voltages.get_low() / (double) 1e4, 4); Serial.print("V\t\t");
+    Serial.print("Max: "); Serial.print(bms_voltages.get_high() / (double) 1e4, 4); Serial.println("V");
 }
 
 void print_aux() {
