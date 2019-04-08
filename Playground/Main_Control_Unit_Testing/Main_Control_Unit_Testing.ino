@@ -88,7 +88,7 @@ MC_motor_position_information mc_motor_position_information;
 #define START_ACCEL2_PEDAL_WITH_REGEN 3890 // TODO: calibrate this constant
 #define START_BRAKE_PEDAL_WITH_REGEN 450   // TODO: calibrate this constant
 #define END_BRAKE_PEDAL_WITH_REGEN 1000    // TODO: calibrate this constant
-#define ALPHA 0.999
+#define ALPHA 0.9772
 #define EXPANDER_SPI_SPEED 9000000 // max SPI clock frequency for MCP23S17 is 10MHz in ideal conditions
 #define ADC_SPI_SPEED 1800000 // max SPI clokc frequency for MCP3208 is 2MHz in ideal conditions
 
@@ -464,12 +464,18 @@ void reset_inverter() {
  */
 void read_pedal_values() {
 
-    // print values in a table format
-    for (int i = 0; i < 3; i++) {
-        Serial.print(ADC.read_adc(i));
-        Serial.print("\t");
-    }
+    int accel1_raw_reading = ADC.read_adc(ADC_ACCEL_1_CHANNEL);
+    int accel2_raw_reading = ADC.read_adc(ADC_ACCEL_2_CHANNEL);
+
+    rolling_accel1_reading = ALPHA * rolling_accel1_reading + (1 - ALPHA) * accel1_raw_reading;
+    rolling_accel2_reading = ALPHA * rolling_accel2_reading + (1 - ALPHA) * accel2_raw_reading;
+
+    Serial.print(accel1_raw_reading); Serial.print("\t");
+    Serial.print(rolling_accel1_reading); Serial.print("\t");
+    Serial.print(accel2_raw_reading); Serial.print("\t");
+    Serial.print(rolling_accel2_reading); Serial.print("\t");
     Serial.println(micros());
+
 
     mcu_pedal_readings.set_brake_pedal_active(ADC.read_adc(ADC_BRAKE_CHANNEL) >= BRAKE_ACTIVE);
 
@@ -519,7 +525,7 @@ void read_status_values() {
     } else {
         mcu_status.set_bms_ok_high(false);
         if (timer_bms_print_fault.check()) {
-            Serial.println("BMS fault detected");
+            //Serial.println("BMS fault detected");
         }
     }
 
