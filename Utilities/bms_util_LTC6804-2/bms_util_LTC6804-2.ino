@@ -38,7 +38,7 @@ NOTES
     Reads the LTC6804 axiliary registers and prints the GPIO voltages to the serial port.
 
  Menu Entry 7: Start cell voltage measurement loop
-    The command will continuously measure the LTC6804 cell voltages and print the results to the serial port.
+    The command will continuously measure the LTC6804 cell voltages and MCP3208 ADC readings and print the results to the serial port.
     The loop can be exited by sending the MCU a 'm' character over the serial link.
 
  Menu Entry 8: Start aux voltage measurement loop
@@ -316,6 +316,7 @@ void run_command(uint16_t cmd)
           Serial.println("A PEC error was detected in the received data");
         }
         print_cells();
+        Serial.print("[MCP3208 ADC] ");
         for (int i = 0; i < 8; i++) {
           int val = adc.read_adc(i);
           Serial.print("C");
@@ -324,9 +325,9 @@ void run_command(uint16_t cmd)
           Serial.print(val);
           Serial.print('\t');
         }
-        pinMode(10, OUTPUT);
-        digitalWrite(10, HIGH);
         Serial.println();
+        Serial.println();
+        spi_enable(SPI_CLOCK_DIV16); // Set SPI back to 1MHz for next isoSPI call; It might be best practice to put this right before each isoSPI call
         delay(500);
       }
       print_menu();
