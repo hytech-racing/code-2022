@@ -56,6 +56,7 @@ BMS_status bms_status;
 BMS_temperatures bms_temperatures;
 BMS_voltages bms_voltages;
 MC_motor_position_information mc_motor_position_information;
+MC_current_information mc_current_informtarion;
 
 /*
  * Constant definitions
@@ -148,6 +149,9 @@ int16_t MAX_REGEN_TORQUE = 0;
 int16_t MAX_ACCEL_REGEN = 0;
 int16_t MAX_BRAKE_REGEN = 0;
 uint16_t dash_values = 0;
+
+int old_current = 0;
+int old_time = 0;
 
 static CAN_message_t rx_msg;
 static CAN_message_t tx_msg;
@@ -363,6 +367,10 @@ void parse_can_message() {
             MC_voltage_information mc_voltage_information = MC_voltage_information(rx_msg.buf);
             if (mc_voltage_information.get_dc_bus_voltage() >= MIN_HV_VOLTAGE && mcu_status.get_state() == MCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
                 set_state(MCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
+
+                // set variables used in couloumb counting
+                old_time = 0;
+                old_current = 0;
             }
             if (mc_voltage_information.get_dc_bus_voltage() < MIN_HV_VOLTAGE && mcu_status.get_state() > MCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE) {
                 set_state(MCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
@@ -393,6 +401,11 @@ void parse_can_message() {
 
         if (rx_msg.id == ID_BMS_VOLTAGES) {
             bms_volages.load(rx_msg.buf);
+        }
+
+        if (rx_msg.id == ID_MC_CURRENT_INFORMATION) {
+            mc_current_informtarion.load(rx_msg.buf);
+
         }
     }
 
@@ -837,3 +850,16 @@ int calculate_torque_with_regen() {
     return calculated_torque;
 }
 
+void update_couloumb_count() {
+    int new_current = mc_current_informtarion.get_dc_bus_current() / 10; // get current in Amps
+    double new_time = micros() / 1000000;
+
+    if (new_current > 0) {
+        discharge_amount = -(new_current + old_current) * (new_time - old_time) / 2;
+    } else {
+        charge_amount = (new_current + old_current) * (new_time - old_time) / 2;
+    }
+
+    old_time = new_time;
+    old_current = new_current;
+}
