@@ -53,7 +53,7 @@ def mqtt_message(client, userdata, msg):
 def main():
     if len(sys.argv) != 2:
         print('Usage:')
-        print('telemetry_lte_xbee.py [fcu|mcu\n')
+        print('telemetry_lte_xbee.py [fcu|mcu]\n')
         quit()
 
     if sys.argv[1] == 'fcu':
@@ -111,47 +111,50 @@ def main():
     screen.addstr(11,55,'BMS VOLTAGE LOW: ')
     screen.addstr(12,55,'BMS VOLTAGE HIGH: ')
     screen.addstr(13,55,'BMS VOLTAGE TOTAL: ')
+    screen.addstr(14,55,'BMS TOTAL CHARGE: ')
+    screen.addstr(15,55,'BMS TOTAL DISCHARGE: ')
 
     if ecu_version == 0:
-        screen.addstr(15,55,'FRONT CONTROL UNIT')
-        screen.addstr(16,55,'FCU UPTIME: ')
-        screen.addstr(17,55,'FCU STATE: ')
-        screen.addstr(18,55,'START BUTTON ID: ')
-        screen.addstr(19,55,'FCU RAW TORQUE: ')
-        screen.addstr(20,55,'FCU REQUESTED TORQUE: ')
+        screen.addstr(17,55,'FRONT CONTROL UNIT')
+        screen.addstr(18,55,'FCU UPTIME: ')
+        screen.addstr(19,55,'FCU STATE: ')
+        screen.addstr(20,55,'START BUTTON ID: ')
+        screen.addstr(21,55,'FCU RAW TORQUE: ')
+        screen.addstr(22,55,'REQUESTED TORQUE: ')
 
-        screen.addstr(21,55,'FCU PEDAL ACCEL 1: ')
-        screen.addstr(22,55,'FCU PEDAL ACCEL 2: ')
-        screen.addstr(23,55,'FCU PEDAL BRAKE: ')
-        screen.addstr(24,55,'FCU BRAKE ACT: ')
-        screen.addstr(25,55,'FCU IMPLAUS ACCEL: ')
-        screen.addstr(26,55,'FCU IMPLAUS BRAKE: ')
+        screen.addstr(23,55,'FCU PEDAL ACCEL 1: ')
+        screen.addstr(24,55,'FCU PEDAL ACCEL 2: ')
+        screen.addstr(25,55,'FCU PEDAL BRAKE: ')
+        screen.addstr(26,55,'FCU BRAKE ACT: ')
+        screen.addstr(27,55,'FCU IMPLAUS ACCEL: ')
+        screen.addstr(28,55,'FCU IMPLAUS BRAKE: ')
 
         # RCU messages are only needed if FCU is used
-        screen.addstr(28,55,'REAR CONTROL UNIT')
-        screen.addstr(29,55,'RCU UPTIME: ')
-        screen.addstr(30,55,'RCU STATE: ')
-        screen.addstr(31,55,'RCU FLAGS: ')
-        screen.addstr(32,55,'GLV BATT VOLTAGE: ')
-        screen.addstr(33,55,'RCU BMS FAULT: ')
-        screen.addstr(34,55,'RCU IMD FAULT: ')
+        screen.addstr(30,55,'REAR CONTROL UNIT')
+        screen.addstr(31,55,'RCU UPTIME: ')
+        screen.addstr(32,55,'RCU STATE: ')
+        screen.addstr(33,55,'RCU FLAGS: ')
+        screen.addstr(34,55,'GLV BATT VOLTAGE: ')
+        screen.addstr(35,55,'RCU BMS FAULT: ')
+        screen.addstr(36,55,'RCU IMD FAULT: ')
     else:
-        screen.addstr(15,55,'MAIN CONTROL UNIT')
-        screen.addstr(16,55,'MCU STATE: ')
-        screen.addstr(17,55,'MCU BMS FAULT: ')
-        screen.addstr(18,55,'MCU IMD FAULT: ')
-        screen.addstr(19,55,'MCU INVERTER POWER: ')
-        screen.addstr(20,55,'MCU SHUTDOWN ABOVE THRESH: ')
-        screen.addstr(21,55,'MCU TEMPERATURE: ')
-        screen.addstr(22,55,'MCU GLV VOLTAGE: ')
+        screen.addstr(17,55,'MAIN CONTROL UNIT')
+        screen.addstr(18,55,'MCU STATE: ')
+        screen.addstr(19,55,'MCU BMS FAULT: ')
+        screen.addstr(20,55,'MCU IMD FAULT: ')
+        screen.addstr(21,55,'MCU INVERTER POWER: ')
+        screen.addstr(22,55,'MCU SHUTDOWN ABOVE THRESH: ')
+        screen.addstr(23,55,'MCU TEMPERATURE: ')
+        screen.addstr(24,55,'MCU GLV VOLTAGE: ')
 
-        screen.addstr(23,55,'MCU PEDAL ACCEL 1: ')
-        screen.addstr(24,55,'MCU PEDAL ACCEL 2: ')
-        screen.addstr(25,55,'MCU PEDAL BRAKE: ')
-        screen.addstr(26,55,'MCU BRAKE ACT: ')
-        screen.addstr(27,55,'MCU IMPLAUS ACCEL: ')
-        screen.addstr(28,55,'MCU IMPLAUS BRAKE: ')
-        screen.addstr(29,55,'MCU TORQUE MAP MODE: ')
+        screen.addstr(25,55,'MCU PEDAL ACCEL 1: ')
+        screen.addstr(26,55,'MCU PEDAL ACCEL 2: ')
+        screen.addstr(27,55,'MCU PEDAL BRAKE: ')
+        screen.addstr(28,55,'MCU BRAKE ACT: ')
+        screen.addstr(29,55,'MCU IMPLAUS ACCEL: ')
+        screen.addstr(30,55,'MCU IMPLAUS BRAKE: ')
+        screen.addstr(31,55,'MCU TORQUE MAP MODE: ')
+        screen.addstr(32,55,'REQUESTED TORQUE: ')
 
     screen.addstr(3,105,'BATTERY MANAGEMENT SYSTEM DETAILED VOLTAGES')
     screen.addstr(4,105,'IC 0 CELL 0: ')
@@ -433,60 +436,76 @@ def updateScreen(incomingLine):
     if ('BMS VOLTAGE TOTAL' in incomingLine):
         clearLine(13,55)
         screen.addstr(13,55,incomingLine)
-    if ('FCU UPTIME' in incomingLine):
-        clearLine(16,55)
-        screen.addstr(16,55,incomingLine)
-    if ('FCU STATE' in incomingLine):
-        clearLine(17,55)
-        screen.addstr(17,55,incomingLine)
-    if ('FCU START BUTTON ID' in incomingLine):
+    if ('BMS TOTAL CHARGE' in incomingLine):
+        clearLine(14,55)
+        screen.addstr(14,55,incomingLine)
+    if ('BMS TOTAL DISCHARGE' in incomingLine):
+        clearLine(15,55)
+        screen.addstr(15,55,incomingLine)
+    if ('FCU UPTIME' in incomingLine or 'MCU STATE' in incomingLine):
         clearLine(18,55)
         screen.addstr(18,55,incomingLine)
-    if ('FCU RAW TORQUE' in incomingLine):
+    if ('FCU STATE' in incomingLine or 'MCU BMS FAULT' in incomingLine):
         clearLine(19,55)
         screen.addstr(19,55,incomingLine)
-    if ('FCU REQUESTED TORQUE' in incomingLine):
+    if ('FCU START BUTTON ID' in incomingLine or 'MCU IMD FAULT' in incomingLine):
         clearLine(20,55)
         screen.addstr(20,55,incomingLine)
-    if ('FCU PEDAL ACCEL 1' in incomingLine or 'MCU PEDAL ACCEL 1' in incomingLine):
+    if ('FCU RAW TORQUE' in incomingLine or 'MCU INVERTER POWER' in incomingLine):
         clearLine(21,55)
         screen.addstr(21,55,incomingLine)
-    if ('FCU PEDAL ACCEL 2' in incomingLine or 'MCU PEDAL ACCEL 2' in incomingLine):
+    if ('REQUESTED TORQUE' in incomingLine):
+        if ecu_version == 0:
+            clearLine(22,55)
+            screen.addstr(22,55,incomingLine)
+        else:
+            clearLine(32,55)
+            screen.addstr(32,55,incomingLine)
+    if ('MCU SHUTDOWN ABOVE THRESH' in incomingLine):
         clearLine(22,55)
         screen.addstr(22,55,incomingLine)
-    if ('FCU PEDAL BRAKE' in incomingLine or 'MCU PEDAL BRAKE' in incomingLine):
+    if ('FCU PEDAL ACCEL 1' in incomingLine or 'MCU TEMPERATURE' in incomingLine):
         clearLine(23,55)
         screen.addstr(23,55,incomingLine)
-    if ('FCU BRAKE ACT' in incomingLine or 'MCU BRAKE ACT' in incomingLine):
+    if ('FCU PEDAL ACCEL 2' in incomingLine or 'MCU GLV VOLTAGE' in incomingLine):
         clearLine(24,55)
         screen.addstr(24,55,incomingLine)
-    if ('FCU IMPLAUS ACCEL' in incomingLine or 'MCU IMPLAUS ACCEL' in incomingLine):
+    if ('FCU PEDAL BRAKE' in incomingLine or 'MCU PEDAL ACCEL 1' in incomingLine):
         clearLine(25,55)
         screen.addstr(25,55,incomingLine)
-    if ('FCU IMPLAUS BRAKE' in incomingLine or 'MCU IMPLAUS BRAKE' in incomingLine):
+    if ('FCU BRAKE ACT' in incomingLine or 'MCU PEDAL ACCEL 2' in incomingLine):
         clearLine(26,55)
         screen.addstr(26,55,incomingLine)
-    if ('MCU TORQUE MAP MODE' in incomingLine):
-        clearLine(27, 55)
-        screen.addstr(27, 55, incomingLine)
-    if ('RCU UPTIME' in incomingLine):
-        clearLine(29,55)
-        screen.addstr(29,55,incomingLine)
-    if ('RCU STATE' in incomingLine):
-        clearLine(30,55)
-        screen.addstr(30,55,incomingLine)
-    if ('RCU FLAGS' in incomingLine):
+    if ('FCU IMPLAUS ACCEL' in incomingLine or 'MCU PEDAL BRAKE' in incomingLine):
+        clearLine(27,55)
+        screen.addstr(27,55,incomingLine)
+    if ('FCU IMPLAUS BRAKE' in incomingLine or 'MCU BRAKE ACT' in incomingLine):
+        clearLine(28,55)
+        screen.addstr(28,55,incomingLine)
+    if ('MCU IMPLAUS ACCEL' in incomingLine):
+        clearLine(29, 55)
+        screen.addstr(29, 55, incomingLine)
+    if ('MCU IMPLAUS BRAKE' in incomingLine):
+        clearLine(30, 55)
+        screen.addstr(30, 55, incomingLine)
+    if ('RCU UPTIME' in incomingLine or 'MCU TORQUE MAP MODE' in incomingLine):
         clearLine(31,55)
         screen.addstr(31,55,incomingLine)
-    if ('GLV BATT VOLTAGE' in incomingLine):
+    if ('RCU STATE' in incomingLine):
         clearLine(32,55)
         screen.addstr(32,55,incomingLine)
-    if ('RCU BMS FAULT' in incomingLine):
+    if ('RCU FLAGS' in incomingLine):
         clearLine(33,55)
         screen.addstr(33,55,incomingLine)
-    if ('RCU IMD FAULT' in incomingLine):
+    if ('GLV BATT VOLTAGE' in incomingLine):
         clearLine(34,55)
         screen.addstr(34,55,incomingLine)
+    if ('RCU BMS FAULT' in incomingLine):
+        clearLine(35,55)
+        screen.addstr(35,55,incomingLine)
+    if ('RCU IMD FAULT' in incomingLine):
+        clearLine(36,55)
+        screen.addstr(36,55,incomingLine)
     if ('IC 0 C' in incomingLine):
         row = 4 + int(incomingLine[10])
         clearLineShort(row,105)
@@ -644,7 +663,7 @@ def decode(msg):
         ret.append("TORQUE FEEDBACK: " + str(b2i16(msg[7:9]) / 10.) + " Nm")
         ret.append("RMS UPTIME: " + str(int(b2ui32(msg[9:13]) * .003)) + " s")
     if (id == 0xC0):
-        ret.append("FCU REQUESTED TORQUE: " + str(b2i16(msg[5:7]) / 10.) + " N")
+        ret.append("REQUESTED TORQUE: " + str(b2i16(msg[5:7]) / 10.) + " Nm")
         #ret.append("FCU REQUESTED INVERTER ENABLE: " + str(ord(msg[10]) & 0x1))
     if (id == 0xC3):
         ret.append("MCU STATE: " + str(ord(msg[5])))
@@ -703,6 +722,9 @@ def decode(msg):
         ret.append("BMS STATE: " + str(ord(msg[5])))
         ret.append("BMS ERROR FLAGS: 0x" + binascii.hexlify(msg[7]).upper() + binascii.hexlify(msg[6]).upper())
         ret.append("BMS CURRENT: " + str(b2i16(msg[8:10]) / 100.) + " A")
+    if (id == 0xE2):
+        ret.append("BMS TOTAL CHARGE: " + str(b2ui32(msg[5:9]) / 10000. + " C"))
+        ret.append("BMS TOTAL DISCHARGE: " + str(b2ui32(msg[9:13]) / 10000. + " C"))
     return ret
 
 def b2i8(data):
