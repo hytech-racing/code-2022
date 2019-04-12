@@ -100,6 +100,10 @@ def main():
     screen.addstr(37,5,'TORQUE FEEDBACK: ')
     screen.addstr(38,5,'RMS UPTIME: ')
 
+    screen.addstr(40,5,'GLV CURRENT READINGS')
+    screen.addstr(41,5,'ECU CURRENT: ')
+    screen.addstr(42,5,'COOLING CURRENT: ')
+
     screen.addstr(3,55,'BATTERY MANAGEMENT SYSTEM')
     screen.addstr(4,55,'BMS AVERAGE TEMPERATURE: ')
     screen.addstr(5,55,'BMS LOW TEMPERATURE: ')
@@ -406,6 +410,12 @@ def updateScreen(incomingLine):
     if ('RMS UPTIME' in incomingLine):
         clearLine(38,5)
         screen.addstr(38,5,incomingLine)
+    if ('ECU CURRENT' in incomingLine):
+        clearLine(41,5)
+        screen.addstr(41,5,incomingLine)
+    if ('COOLING CURRENT' in incomingLine):
+        clearLine(42,5)
+        screen.addstr(42,5,incomingLine)
     if ('BMS AVERAGE TEMPERATURE' in incomingLine):
         clearLine(4,55)
         screen.addstr(4,55,incomingLine)
@@ -681,6 +691,9 @@ def decode(msg):
         ret.append("MCU IMPLAUS ACCEL: " + str(ord(msg[12]) & 0x1))
         ret.append("MCU IMPLAUS BRAKE: " + str((ord(msg[12]) & 0x2) >> 1))
         ret.append("MCU TORQUE MAP MODE: " + str(ord(msg[13])))
+    if (id == 0xCC):
+        ret.append("ECU CURRENT: " + str(b2ui16(msg[5:7]) / 100.) + " A")
+        ret.append("COOLING CURRENT: " + str(b2ui16(msg[7:9]) / 100.) + " A")
     if (id == 0xD0):
         ret.append("RCU STATE: " + str(ord(msg[5])))
         ret.append("RCU FLAGS: 0x" + binascii.hexlify(msg[6]).upper())
