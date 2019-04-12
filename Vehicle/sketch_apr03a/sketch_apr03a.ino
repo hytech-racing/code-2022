@@ -197,8 +197,10 @@ void loop() {
       GPS.parse(GPS.lastNMEA());
       msg_tx.id = ID_ECU_GPS_READINGS_ALPHA;
       msg_tx.len = 8;
-      memcpy(&(msg_tx.buf[0]), &(GPS.latitude), sizeof(float));
-      memcpy(&(msg_tx.buf[4]), &(GPS.longitude), sizeof(float));
+      int latitudex10000 = (int)(GPS.latitude*10000);
+      int longitudex10000 = (int)(GPS.longitude*10000);
+      memcpy(&(msg_tx.buf[0]), &latitudex10000, sizeof(int));
+      memcpy(&(msg_tx.buf[4]), &longitudex10000, sizeof(int));
       CAN.write(msg_tx);  
     }
   }
@@ -206,8 +208,10 @@ void loop() {
   if (gpsTimer_beta.check()) {
       msg_tx.id = ID_ECU_GPS_READINGS_BETA;
       msg_tx.len = 8;
-      memcpy(&(msg_tx.buf[0]), &(GPS.altitude), sizeof(float));
-      memcpy(&(msg_tx.buf[4]), &(GPS.speed), sizeof(float));
+      int altitudex10000 = (int)(GPS.altitude*10000);
+      int speedx10000 = (int)(GPS.speed*10000);
+      memcpy(&(msg_tx.buf[0]), &altitudex10000, sizeof(int));
+      memcpy(&(msg_tx.buf[4]), &speedx10000, sizeof(int));
       CAN.write(msg_tx);    
   }
 }
