@@ -20,7 +20,7 @@ BMS_detailed_temperatures bms_detailed_temperatures;
 BMS_onboard_temperatures bms_onboard_temperatures;
 BMS_onboard_detailed_temperatures bms_onboard_detailed_temperatures;
 BMS_status bms_status;
-//BMS_balancing_status bms_balancing_status;                                                // class not yet implemented
+BMS_balancing_status bms_balancing_status;                                                
 CCU_status ccu_status;
 MC_temperatures_1 mc_temperatures_1;
 MC_temperatures_2 mc_temperatures_2;
@@ -51,7 +51,7 @@ static int flag_bms_detailed_temperatures;
 static int flag_bms_onboard_temperatures;
 static int flag_bms_onboard_detailed_temperatures;
 static int flag_bms_status;
-//static int flag_bms_balancing_status;                                                // class not yet implemented
+static int flag_bms_balancing_status;                                                // class not yet implemented
 static int flag_ccu_status;
 static int flag_mc_temperatures_1;
 static int flag_mc_temperatures_2;
@@ -158,13 +158,13 @@ void loop() {
     msg_log.id = ID_BMS_STATUS;
     write_to_SD(flag_bms_status);
   }
-  /*
+  
   if (flag_bms_balancing_status) {
     bms_balancing_status.write(msg_log.buf);
     msg_log.id = ID_BMS_BALANCING_STATUS;
     write_to_SD(flag_bms_balancing_status);
   }
-  */
+  
   if (flag_ccu_status) {
     ccu_status.write(msg_log.buf);
     msg_log.id = ID_CCU_STATUS;
@@ -319,12 +319,12 @@ void parse_can_message() {
       bms_status.load(msg_rx.buf);
       flag_bms_status = time_now;
     }
-    /*
+    
     if (msg_rx.id == ID_BMS_BALANCING_STATUS) {
       bms_balancing_status.load(msg_rx.buf);
       flag_bms_balancing_status = time_now;
     }
-    */
+    
     if (msg_rx.id == ID_CCU_STATUS) {
       ccu_status.load(msg_rx.buf);
       flag_ccu_status = time_now;
