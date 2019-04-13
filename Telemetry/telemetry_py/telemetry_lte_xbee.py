@@ -274,6 +274,25 @@ def main():
     screen.addstr(17,180,'IC 7 THERM 1: ')
     screen.addstr(18,180,'IC 7 THERM 2: ')
 
+    screen.addstr(20,155,'BATTERY MANAGEMENT SYSTEM BALANCING STATUS')
+    screen.addstr(21,160,'C0')
+    screen.addstr(21,165,'C1')
+    screen.addstr(21,170,'C2')
+    screen.addstr(21,175,'C3')
+    screen.addstr(21,180,'C4')
+    screen.addstr(21,185,'C5')
+    screen.addstr(21,190,'C6')
+    screen.addstr(21,195,'C7')
+    screen.addstr(21,200,'C8')
+    screen.addstr(22,155,'IC0')
+    screen.addstr(23,155,'IC1')
+    screen.addstr(24,155,'IC2')
+    screen.addstr(25,155,'IC3')
+    screen.addstr(26,155,'IC4')
+    screen.addstr(27,155,'IC5')
+    screen.addstr(28,155,'IC6')
+    screen.addstr(29,155,'IC7')
+
     curses.wrapper(live)
     curses.endwin()
 
@@ -580,6 +599,12 @@ def updateScreen(incomingLine):
         row = 16 + int(incomingLine[11])
         clearLineShort(row,180)
         screen.addstr(row,180,incomingLine)
+    if ('BAL' in incomingLine): # format: BAL IC# CELL# [ON|OFF]
+        row = 22 + int(incomingLine[incomingLine.index('IC') + 2])
+        col = 160 + (int(incomingLine[incomingLine.index('CELL') + 4]) * 5)
+        clearLineBal(row, col)
+        if 'ON' in incomingLine:
+            screen.addstr(row, col, 'BAL')
     screen.refresh()
 
 def clearLine(y, x):
@@ -588,6 +613,10 @@ def clearLine(y, x):
 
 def clearLineShort(y, x):
     blanks = '                      '
+    screen.addstr(y,x,blanks)
+
+def clearLineBal(y, x):
+    blanks = '   '
     screen.addstr(y,x,blanks)
 
 def unpack(frame):
@@ -735,6 +764,19 @@ def decode(msg):
         ret.append("BMS STATE: " + str(ord(msg[5])))
         ret.append("BMS ERROR FLAGS: 0x" + binascii.hexlify(msg[7]).upper() + binascii.hexlify(msg[6]).upper())
         ret.append("BMS CURRENT: " + str(b2i16(msg[8:10]) / 100.) + " A")
+    if (id == 0xDE):
+        bal = "BAL "
+        data = b2ui64(msg[5:13])
+        group = data & 0x1
+        for ic in range(8):
+            for cell in range(9):
+                bal += "IC" + (ic + 4 if group == 1 else ic) + " "
+                bal += "CELL" + cell + " "
+                if (((data >> (0x4 + 0x9 * ic)) & 0x1FF) >> cell) & 0x1 == 1:
+                    bal += "ON"
+                else:
+                    bal += "OFF"
+        ret.append(bal)
     if (id == 0xE2):
         ret.append("BMS TOTAL CHARGE: " + str(b2ui32(msg[5:9]) / 10000. + " C"))
         ret.append("BMS TOTAL DISCHARGE: " + str(b2ui32(msg[9:13]) / 10000. + " C"))
@@ -751,6 +793,10 @@ def b2ui16(data):
 
 def b2ui32(data):
     return struct.unpack("<1I", chr(ord(data[0])) + chr(ord(data[1])) + chr(ord(data[2])) + chr(ord(data[3])))[0]
+
+def b2ui64(data):
+    return struct.unpack("<1Q", chr(ord(data[0])) + chr(ord(data[1])) + chr(ord(data[2])) + chr(ord(data[3])) \
+        + chr(ord(data[4])) + chr(ord(data[5])) + chr(ord(data[6])) + chr(ord(data[7])))[0]
 
 def shutdown_from_flags(flags):
     shutdown = ''
