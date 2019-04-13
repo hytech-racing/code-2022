@@ -708,7 +708,7 @@ def decode(msg):
         ret.append("MCU STATE: " + str(ord(msg[5])))
         ret.append("MCU BMS FAULT: " + str(not ord(msg[6]) & 0x1))
         ret.append("MCU IMD FAULT: " + str(not (ord(msg[6]) & 0x2) >> 1))
-        ret.append("MCU INVERTER POWER: " + str((ord(msg[6]) & 0x4) >> 2))
+        ret.append("MCU INVERTER POWER: " + ("ON" if ((ord(msg[6]) & 0x4) >> 2) == 1 else "OFF"))
         ret.append("MCU SHUTDOWN ABOVE THRESH: " + shutdown_from_flags(ord(msg[6])))
         ret.append("MCU TEMPERATURE: " + str(b2i16(msg[7:9])))
         ret.append("MCU GLV VOLTAGE: " + str(b2ui16(msg[9:11]) / 100.) + " V")
