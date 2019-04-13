@@ -770,8 +770,8 @@ def decode(msg):
         group = data & 0x1
         for ic in range(8):
             for cell in range(9):
-                bal += "IC" + (ic + 4 if group == 1 else ic) + " "
-                bal += "CELL" + cell + " "
+                bal += "IC" + str(ic + 4 if group == 1 else ic) + " "
+                bal += "CELL" + str(cell) + " "
                 if (((data >> (0x4 + 0x9 * ic)) & 0x1FF) >> cell) & 0x1 == 1:
                     bal += "ON"
                 else:
