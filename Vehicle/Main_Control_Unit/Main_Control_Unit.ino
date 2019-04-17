@@ -91,15 +91,15 @@ BMS_coulomb_counts bms_coulomb_counts;
 #define START_ACCEL2_PEDAL_WITH_REGEN 3890 // TODO: calibrate this constant
 #define START_BRAKE_PEDAL_WITH_REGEN 450   // TODO: calibrate this constant
 #define END_BRAKE_PEDAL_WITH_REGEN 1000    // TODO: calibrate this constant
-#define ALPHA 0.9772
+#define ALPHA 0.9772 // parameter for the sowftware filter used on ADC pedal channels
 #define EXPANDER_SPI_SPEED 9000000 // max SPI clock frequency for MCP23S17 is 10MHz in ideal conditions
 #define ADC_SPI_SPEED 1800000 // max SPI clokc frequency for MCP3208 is 2MHz in ideal conditions
-#define TORQUE_ADJUSTMENT_VOLTAGE 3.5242
-#define MAX_POSSIBLE_TORQUE 1600
+#define TORQUE_ADJUSTMENT_VOLTAGE 3.5242  //
+#define MAX_POSSIBLE_TORQUE 1600  //
 
 
 /*
- * Timers  // old fcu timers
+ * Timers
  */
 Metro timer_bms_imd_print_fault = Metro(500);
 Metro timer_btn_restart_inverter = Metro(100);
@@ -121,10 +121,13 @@ Metro timer_imd_print_fault = Metro(500);
 Metro timer_restart_inverter = Metro(500, 1); // Allow the FCU to restart the inverter
 Metro timer_status_send = Metro(100);
 
-float rolling_accel1_reading = 0;
-float rolling_accel2_reading = 0;
-float rolling_brake_reading = 0;
-float rolling_glv_reading = 0;
+/*
+ * Variables to store filtered values from ADC channels
+ */
+float filtered_accel1_reading = 0;
+float filtered_accel2_reading = 0;
+float filtered_brake_reading = 0;
+float riltered_glv_reading = 0;
 
 bool btn_start_reading = true;
 bool btn_mode_reading = true;
@@ -220,18 +223,19 @@ void loop() {
      */
     if (timer_can_update.check()) {
 
-        mcu_pedal_readings.set_accelerator_pedal_raw_1(rolling_accel1_reading);
-        mcu_pedal_readings.set_accelerator_pedal_raw_2(rolling_accel2_reading);
-        mcu_pedal_readings.set_brake_pedal_raw(rolling_brake_reading);
-
+        // Update the status values
         read_status_values();
-        mcu_status.set_glv_battery_voltage(rolling_glv_reading);
 
         // Send Main Control Unit status message
         mcu_status.write(tx_msg.buf);
         tx_msg.id = ID_MCU_STATUS;
         tx_msg.len = sizeof(CAN_message_mcu_status_t);
         CAN.write(tx_msg);
+
+        // Update the pedal readings to send over CAN
+        mcu_pedal_readings.set_accelerator_pedal_raw_1(filtered_accel1_reading);
+        mcu_pedal_readings.set_accelerator_pedal_raw_2(filtered_accel2_reading);
+        mcu_pedal_readings.set_brake_pedal_raw(filtered_brake_reading);
 
         // Send Main Control Unit pedal reading message
         mcu_pedal_readings.write(tx_msg.buf);
@@ -430,21 +434,22 @@ void reset_inverter() {
 void read_pedal_values() {
 
     /*
-     * Calculate rolling weighted average of  multiple pedal readings
+     * Filter ADC readings
      */
-
-    rolling_accel1_reading = ALPHA * rolling_accel1_reading + (1 - ALPHA) * ADC.read_adc(ADC_ACCEL_1_CHANNEL);
-    rolling_accel2_reading = ALPHA * rolling_accel2_reading + (1 - ALPHA) * ADC.read_adc(ADC_ACCEL_2_CHANNEL);
-    rolling_brake_reading  = ALPHA * rolling_brake_reading + (1 - ALPHA) * ADC.read_adc(ADC_BRAKE_CHANNEL);
+    filtered_accel1_reading = ALPHA * filtered_accel1_reading + (1 - ALPHA) * ADC.read_adc(ADC_ACCEL_1_CHANNEL);
+    filtered_accel2_reading = ALPHA * filtered_accel2_reading + (1 - ALPHA) * ADC.read_adc(ADC_ACCEL_2_CHANNEL);
+    filtered_brake_reading  = ALPHA * filtered_brake_reading + (1 - ALPHA) * ADC.read_adc(ADC_BRAKE_CHANNEL);
 
 
     //Serial.println(ADC.read_adc(ADC_ACCEL_1_CHANNEL));
 
     // set the brake pedal active flag if the median reading is above the threshold
-    mcu_pedal_readings.set_brake_pedal_active(rolling_brake_reading >= BRAKE_ACTIVE);
-
+    mcu_pedal_readings.set_brake_pedal_active(filtered_brake_reading >= BRAKE_ACTIVE);
     digitalWrite(SSR_BRAKE_LIGHT, mcu_pedal_readings.get_brake_pedal_active());
 
+    /*
+     * Print values for debugging
+     */
     if (debug && timer_debug.check()) {
         Serial.print("MCU PEDAL ACCEL 1: ");
         Serial.println(mcu_pedal_readings.get_accelerator_pedal_raw_1());
@@ -462,10 +467,12 @@ void read_pedal_values() {
 void read_status_values() {
 
     /*
-     * Calculate rolling weighted average of glv voltage readings
+     * Filter ADC readings of GLV voltage
      */
-    rolling_glv_reading += ALPHA * rolling_glv_reading + (1 - ALPHA) * ADC.read_adc(ADC_12V_SUPPLY_CHANNEL);
-    mcu_status.set_glv_battery_voltage(rolling_glv_reading * GLV_VOLTAGE_MULTIPLIER);
+    filtered_glv_reading += ALPHA * filtered_glv_reading + (1 - ALPHA) * ADC.read_adc(ADC_12V_SUPPLY_CHANNEL);
+
+    mcu_status.set_glv_battery_voltage(filtered_glv_reading * GLV_VOLTAGE_MULTIPLIER); // convert GLV voltage and to send it over CAN
+
 
     /*
      * Check for BMS fault
@@ -624,8 +631,8 @@ int calculate_torque() {
     int calculated_torque = 0;
 
     //if (!mcu_pedal_readings.get_accelerator_implausibility()) {
-        int torque1 = map(round(rolling_accel1_reading), START_ACCELERATOR_PEDAL_1, END_ACCELERATOR_PEDAL_1, 0, MAX_TORQUE);
-        int torque2 = map(round(rolling_accel2_reading), START_ACCELERATOR_PEDAL_2, END_ACCELERATOR_PEDAL_2, 0, MAX_TORQUE);
+        int torque1 = map(round(filtered_accel1_reading), START_ACCELERATOR_PEDAL_1, END_ACCELERATOR_PEDAL_1, 0, MAX_TORQUE);
+        int torque2 = map(round(filtered_accel2_reading), START_ACCELERATOR_PEDAL_2, END_ACCELERATOR_PEDAL_2, 0, MAX_TORQUE);
 
         // torque values are greater than the max possible value, set them to max
         if (torque1 > MAX_TORQUE) {
@@ -807,9 +814,9 @@ int calculate_torque_with_regen() {
         MAX_TORQUE = map(lowest_cell_voltage, 0, TORQUE_ADJUSTMENT_VOLTAGE, 0, MAX_POSSIBLE_TORQUE);
     }
 
-    int torque1 = map(round(rolling_accel1_reading), START_ACCEL1_PEDAL_WITH_REGEN, END_ACCELERATOR_PEDAL_1, MAX_ACCEL_REGEN, MAX_TORQUE);
-    int torque2 = map(round(rolling_accel2_reading), START_ACCEL2_PEDAL_WITH_REGEN, END_ACCELERATOR_PEDAL_2, MAX_ACCEL_REGEN, MAX_TORQUE);
-    int torque3 = map(round(rolling_brake_reading), START_BRAKE_PEDAL_WITH_REGEN, END_BRAKE_PEDAL_WITH_REGEN, 0, MAX_BRAKE_REGEN);
+    int torque1 = map(round(filtered_accel1_reading), START_ACCEL1_PEDAL_WITH_REGEN, END_ACCELERATOR_PEDAL_1, MAX_ACCEL_REGEN, MAX_TORQUE);
+    int torque2 = map(round(filtered_accel2_reading), START_ACCEL2_PEDAL_WITH_REGEN, END_ACCELERATOR_PEDAL_2, MAX_ACCEL_REGEN, MAX_TORQUE);
+    int torque3 = map(round(filtered_brake_reading), START_BRAKE_PEDAL_WITH_REGEN, END_BRAKE_PEDAL_WITH_REGEN, 0, MAX_BRAKE_REGEN);
 
     if (torque1 > MAX_TORQUE) {
         torque1 = MAX_TORQUE;
