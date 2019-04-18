@@ -82,6 +82,8 @@ MC_read_write_parameter_command mc_read_write_parameter_command;
 MC_read_write_parameter_response mc_read_write_parameter_response;
 FCU_accelerometer_values fcu_accelerometer_values;
 
+
+
 // flags double in function as timestamps
 static int flag_mcu_status;
 static int flag_mcu_pedal_readings;
@@ -117,24 +119,24 @@ static int flag_fcu_accelerometer_values;
 void setup() {
   
   
-  /*    // Teensy 3.5 code
+      // Teensy 3.5 code
   NVIC_ENABLE_IRQ(IRQ_CAN0_MESSAGE);                                   // Enables interrupts on the teensy for CAN messages
   attachInterruptVector(IRQ_CAN0_MESSAGE, parse_can_message);          // Attaches parse_can_message() as ISR
   CAN0_IMASK1 |= 0x00000020;                                           // Allows "CAN message arrived" bit in flag register to throw interrupt
   CAN0_MCR &= 0xFFFDFFFF;                                              // Enables CAN message self-reception
-  */
-        // Teensy 3.2 code
+  
+  /*      // Teensy 3.2 code
   NVIC_ENABLE_IRQ(IRQ_CAN_MESSAGE);                                   // Enables interrupts on the teensy for CAN messages
   attachInterruptVector(IRQ_CAN_MESSAGE, parse_can_message);          // Attaches parse_can_message() as ISR
   CAN0_IMASK1 |= 0x00000020;
   CAN0_MCR &= 0xFFFDFFFF;
-  
+  */
   // put your setup code here, to run once:
   pinMode(10, OUTPUT);                                                // Initialize pin 10 as output; this is necessary for the SD Library
   Serial.begin(115200);
   CAN.begin();    
-  SD.begin(10);                                                       // Begin Arduino SD API (3.2)
-  //SD.begin(BUILTIN_SDCARD);                                         // Begin Arduino SD API (3.5)
+  //SD.begin(10);                                                       // Begin Arduino SD API (3.2)
+  SD.begin(BUILTIN_SDCARD);                                         // Begin Arduino SD API (3.5)
   logger = SD.open("sample.txt", FILE_WRITE);                         // Open file for writing.  
   logger.println("time, msg.id, data");                               // Print heading to the file.
   logger.flush();
@@ -196,23 +198,43 @@ void loop() {
     if (GPS.newNMEAreceived()) {
       GPS.parse(GPS.lastNMEA());
       msg_tx.id = ID_ECU_GPS_READINGS_ALPHA;
+      msg_log.id = ID_ECU_GPS_READINGS_ALPHA;
       msg_tx.len = 8;
+      msg_log.len = 8;
       int latitudex10000 = (int)(GPS.latitude*10000);
       int longitudex10000 = (int)(GPS.longitude*10000);
+      Serial.print("Latitude (x10000): ");
+      Serial.println(latitudex10000);
+      Serial.print("Longitude (x10000): ");
+      Serial.println(longitudex10000);
       memcpy(&(msg_tx.buf[0]), &latitudex10000, sizeof(int));
       memcpy(&(msg_tx.buf[4]), &longitudex10000, sizeof(int));
-      CAN.write(msg_tx);  
+      memcpy(&(msg_log.buf[0]), &latitudex10000, sizeof(int));
+      memcpy(&(msg_log.buf[4]), &longitudex10000, sizeof(int));
+      CAN.write(msg_tx);
+      int time_now = Teensy3Clock.get();
+      write_to_SD(time_now);
     }
   }
 
   if (gpsTimer_beta.check()) {
       msg_tx.id = ID_ECU_GPS_READINGS_BETA;
+      msg_log.id = ID_ECU_GPS_READINGS_BETA;
       msg_tx.len = 8;
+      msg_log.len = 8;
       int altitudex10000 = (int)(GPS.altitude*10000);
+      Serial.print("Altitude (x10000): ");
+      Serial.println(altitudex10000);
       int speedx10000 = (int)(GPS.speed*10000);
+      Serial.print("Speed (x10000): ");
+      Serial.println(speedx10000);
       memcpy(&(msg_tx.buf[0]), &altitudex10000, sizeof(int));
       memcpy(&(msg_tx.buf[4]), &speedx10000, sizeof(int));
+      memcpy(&(msg_log.buf[0]), &altitudex10000, sizeof(int));
+      memcpy(&(msg_log.buf[4]), &speedx10000, sizeof(int));
       CAN.write(msg_tx);    
+      int time_now = Teensy3Clock.get();
+      write_to_SD(time_now);
   }
 }
 
@@ -420,6 +442,7 @@ void parse_can_message() {
 
   // identify received CAN messages and load contents into corresponding structs
   while (CAN.read(msg_rx)) {
+    //Serial.println("Received!");
     int time_now = Teensy3Clock.get();                                          // RTC!!
     if (msg_rx.id == ID_MCU_STATUS) {
       mcu_status.load(msg_rx.buf);
@@ -672,9 +695,9 @@ int write_xbee_data() {
     //Serial.println();
 
     int written = XB.write(cobs_buf, 2 + XBEE_PKT_LEN);
-    //Serial.print("Wrote ");
-    //Serial.print(written);
-    //Serial.println(" bytes");
+    Serial.print("Wrote ");
+    Serial.print(written);
+    Serial.println(" bytes");
 
     memset(xb_buf, 0, sizeof(CAN_message_t));
 

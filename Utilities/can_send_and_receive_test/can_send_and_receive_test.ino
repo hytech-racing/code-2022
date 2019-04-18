@@ -23,11 +23,11 @@ void setup() {
 void loop() {
   
     if (timer_can.check()) { // Send a message on CAN
-        uint32_t t = millis();
-        msg.id = 0x1;
+        uint32_t t = micros();
+        msg.id = 0xDD;
         msg.len = sizeof(uint32_t);
         memcpy(msg.buf, &t, sizeof(uint32_t));
-        CAN.write(msg);
+        CAN.write(msg);/*
         Serial.print("Sent 0x");
         Serial.print(msg.id, HEX);
         Serial.print(": ");
@@ -36,8 +36,9 @@ void loop() {
             Serial.print(" ");
         }
         Serial.println();
+        */
     }
-    
+    /*
     while (CAN.read(msg)) { // Receive a message on CAN
         Serial.print("Received 0x");
         Serial.print(msg.id, HEX);
@@ -53,4 +54,5 @@ void loop() {
     if (timer_light.check()) { // Turn off LED
         digitalWrite(13, LOW);
     }
+    */
 }
