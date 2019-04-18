@@ -510,7 +510,7 @@ void read_status_values() {
      /*
       * Measure the temperature from on-board thermistors
       */
-     mcu_status.set_temperature(ADC.read_adc(ADC_TEMPSENSE_CHANNEL));
+     mcu_status.set_temperature(ADC.read_adc(ADC_TEMPSENSE_CHANNEL) * 100); // send temperatures in 0.01 C
 }
 
 /*
