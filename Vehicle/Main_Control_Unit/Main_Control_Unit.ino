@@ -438,7 +438,7 @@ void read_pedal_values() {
      */
     filtered_accel1_reading = ALPHA * filtered_accel1_reading + (1 - ALPHA) * ADC.read_adc(ADC_ACCEL_1_CHANNEL);
     filtered_accel2_reading = ALPHA * filtered_accel2_reading + (1 - ALPHA) * ADC.read_adc(ADC_ACCEL_2_CHANNEL);
-    filtered_brake_reading  = ALPHA * filtered_brake_reading + (1 - ALPHA) * ADC.read_adc(ADC_BRAKE_CHANNEL);
+    filtered_brake_reading  = ALPHA * filtered_brake_reading  + (1 - ALPHA) * ADC.read_adc(ADC_BRAKE_CHANNEL);
 
 
     //Serial.println(ADC.read_adc(ADC_ACCEL_1_CHANNEL));
