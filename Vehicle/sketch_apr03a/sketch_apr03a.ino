@@ -47,8 +47,7 @@ Metro timer_debug_rms_voltage_information = Metro(100);
 Metro timer_detailed_voltages = Metro(1000);
 Metro timer_status_send = Metro(100);
 Metro timer_status_send_xbee = Metro(2000);
-Metro gpsTimer_alpha = Metro(500);
-Metro gpsTimer_beta = Metro(500);
+Metro gpsTimer = Metro(500);
 Metro timer_debug_RTC = Metro(1000);
 
 MCU_status mcu_status;
@@ -81,6 +80,12 @@ MC_command_message mc_command_message;
 MC_read_write_parameter_command mc_read_write_parameter_command;
 MC_read_write_parameter_response mc_read_write_parameter_response;
 FCU_accelerometer_values fcu_accelerometer_values;
+
+// data for gps
+static int latitudex10000;
+static int longitudex10000;
+static int altitudex10000;
+static int speedx10000;
 
 
 
@@ -115,6 +120,8 @@ static int flag_mc_command_message;
 static int flag_mc_read_write_parameter_command;
 static int flag_mc_read_write_parameter_response;
 static int flag_fcu_accelerometer_values;
+static int flag_gps_alpha;
+static int flag_gps_beta;
 
 void setup() {
   
@@ -194,47 +201,33 @@ void loop() {
   }
     
   GPS.read();
-  if (gpsTimer_alpha.check()) {
-    if (GPS.newNMEAreceived()) {
-      GPS.parse(GPS.lastNMEA());
-      msg_tx.id = ID_ECU_GPS_READINGS_ALPHA;
-      msg_log.id = ID_ECU_GPS_READINGS_ALPHA;
-      msg_tx.len = 8;
-      msg_log.len = 8;
-      int latitudex10000 = (int)(GPS.latitude*10000);
-      int longitudex10000 = (int)(GPS.longitude*10000);
-      Serial.print("Latitude (x10000): ");
-      Serial.println(latitudex10000);
-      Serial.print("Longitude (x10000): ");
-      Serial.println(longitudex10000);
-      memcpy(&(msg_tx.buf[0]), &latitudex10000, sizeof(int));
-      memcpy(&(msg_tx.buf[4]), &longitudex10000, sizeof(int));
-      memcpy(&(msg_log.buf[0]), &latitudex10000, sizeof(int));
-      memcpy(&(msg_log.buf[4]), &longitudex10000, sizeof(int));
-      CAN.write(msg_tx);
-      int time_now = Teensy3Clock.get();
-      write_to_SD(time_now);
-    }
+  if (GPS.newNMEAreceived()) {
+    GPS.parse(GPS.lastNMEA());
   }
+  if (gpsTimer.check()) {
+    msg_tx.id = ID_ECU_GPS_READINGS_ALPHA;
+    msg_tx.len = 8;
+    int latitudex10000_send = (int)(GPS.latitude*10000);
+    int longitudex10000_send = (int)(GPS.longitude*10000);
+    //Serial.print("Latitude (x10000): ");
+    //Serial.println(latitudex10000);
+    //Serial.print("Longitude (x10000): ");
+    //Serial.println(longitudex10000);
+    memcpy(&(msg_tx.buf[0]), &latitudex10000_send, sizeof(int));
+    memcpy(&(msg_tx.buf[4]), &longitudex10000_send, sizeof(int));
+    CAN.write(msg_tx);
 
-  if (gpsTimer_beta.check()) {
-      msg_tx.id = ID_ECU_GPS_READINGS_BETA;
-      msg_log.id = ID_ECU_GPS_READINGS_BETA;
-      msg_tx.len = 8;
-      msg_log.len = 8;
-      int altitudex10000 = (int)(GPS.altitude*10000);
-      Serial.print("Altitude (x10000): ");
-      Serial.println(altitudex10000);
-      int speedx10000 = (int)(GPS.speed*10000);
-      Serial.print("Speed (x10000): ");
-      Serial.println(speedx10000);
-      memcpy(&(msg_tx.buf[0]), &altitudex10000, sizeof(int));
-      memcpy(&(msg_tx.buf[4]), &speedx10000, sizeof(int));
-      memcpy(&(msg_log.buf[0]), &altitudex10000, sizeof(int));
-      memcpy(&(msg_log.buf[4]), &speedx10000, sizeof(int));
-      CAN.write(msg_tx);    
-      int time_now = Teensy3Clock.get();
-      write_to_SD(time_now);
+    msg_tx.id = ID_ECU_GPS_READINGS_BETA;
+    msg_tx.len = 8;
+    int altitudex10000_send = (int)(GPS.altitude*10000);
+    //Serial.print("Altitude (x10000): ");
+    //Serial.println(altitudex10000);
+    int speedx10000_send = (int)(GPS.speed*10000);
+    //Serial.print("Speed (x10000): ");
+    //Serial.println(speedx10000);
+    memcpy(&(msg_tx.buf[0]), &altitudex10000_send, sizeof(int));
+    memcpy(&(msg_tx.buf[4]), &speedx10000_send, sizeof(int));
+    CAN.write(msg_tx);    
   }
 }
 
@@ -436,6 +429,18 @@ void process_SD() {
     msg_log.id = ID_FCU_ACCELEROMETER;
     write_to_SD(flag_fcu_accelerometer_values);
   }
+  if (flag_gps_alpha) {
+    memcpy(&(msg_log.buf[0]), &latitudex10000, sizeof(int));
+    memcpy(&(msg_log.buf[4]), &longitudex10000, sizeof(int));
+    msg_log.id = ID_ECU_GPS_READINGS_ALPHA;
+    write_to_SD(flag_gps_alpha);
+  }
+  if (flag_gps_beta) {
+    memcpy(&(msg_log.buf[0]), &altitudex10000, sizeof(int));
+    memcpy(&(msg_log.buf[4]), &speedx10000, sizeof(int));
+    msg_log.id = ID_ECU_GPS_READINGS_BETA;
+    write_to_SD(flag_gps_beta);
+  }
 }
 
 void parse_can_message() {
@@ -585,6 +590,16 @@ void parse_can_message() {
       fcu_accelerometer_values.load(msg_rx.buf);
       flag_fcu_accelerometer_values = time_now;
     }
+    if (msg_rx.id == ID_ECU_GPS_READINGS_ALPHA) {
+      memcpy(&latitudex10000, &(msg_rx.buf[0]), sizeof(int));
+      memcpy(&longitudex10000, &(msg_rx.buf[4]), sizeof(int));
+      flag_gps_alpha = time_now;
+    }
+    if (msg_rx.id == ID_ECU_GPS_READINGS_BETA) {
+      memcpy(&altitudex10000, &(msg_rx.buf[0]), sizeof(int));
+      memcpy(&speedx10000, &(msg_rx.buf[4]), sizeof(int));
+      flag_gps_beta = time_now;
+    }
   }
 }
 
@@ -695,9 +710,9 @@ int write_xbee_data() {
     //Serial.println();
 
     int written = XB.write(cobs_buf, 2 + XBEE_PKT_LEN);
-    Serial.print("Wrote ");
-    Serial.print(written);
-    Serial.println(" bytes");
+    //Serial.print("Wrote ");
+    //Serial.print(written);
+    //Serial.println(" bytes");
 
     memset(xb_buf, 0, sizeof(CAN_message_t));
 
