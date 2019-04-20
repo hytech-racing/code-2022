@@ -72,6 +72,13 @@
  */
 #define MODE_CHARGE_OVERRIDE false
 
+/*
+ * Set ADC Ignore Mode
+ * Set to true to place BMS in ADC Ignore Mode, set to false to disable
+ * When the BMS is in ADC Ignore Mode, it will not use data received from the ADC for determining faults, or for restricting cell balancing
+ */
+#define MODE_ADC_IGNORE false
+
 /*************************************
  * End general configuration
  *************************************/
@@ -536,7 +543,7 @@ void balance_cells() {
         && !bms_status.get_error_flags()
         && bms_status.get_state() >= BMS_STATE_CHARGING
         && bms_status.get_state() <= BMS_STATE_BALANCING
-        && (bms_status.get_shutdown_h_above_threshold() || MODE_CHARGE_OVERRIDE)) { // Don't check shutdown circuit if in Charge Override Mode
+        && (bms_status.get_shutdown_h_above_threshold() || MODE_CHARGE_OVERRIDE || MODE_ADC_IGNORE)) { // Don't check shutdown circuit if in Charge Override Mode or ADC Ignore Mode
         for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
             for (int cell = 0; cell < CELLS_PER_IC; cell++) { // Loop through cells
                 if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
@@ -844,14 +851,14 @@ void process_adc() {
     bms_status.set_current(current);
     bms_status.set_charge_overcurrent(false); // RESET these values, then check below if they should be set again
     bms_status.set_discharge_overcurrent(false);
-    if (bms_status.get_current() < charge_current_constant_high) {
+    if (bms_status.get_current() < charge_current_constant_high && !MODE_ADC_IGNORE) {
         if (consecutive_faults_current >= CURRENT_FAULT_THRESHOLD) {
             bms_status.set_charge_overcurrent(true);
             Serial.println("CHARGE CURRENT HIGH FAULT!!!!!!!!!!!!!!!!!!!");
         } else {
             consecutive_faults_current++;
         }
-    } else if (bms_status.get_current() > discharge_current_constant_high) {
+    } else if (bms_status.get_current() > discharge_current_constant_high && !MODE_ADC_IGNORE) {
         if (consecutive_faults_current >= CURRENT_FAULT_THRESHOLD) {
             bms_status.set_discharge_overcurrent(true);
             Serial.println("DISCHARGE CURRENT HIGH FAULT!!!!!!!!!!!!!!!!!!!");
