@@ -73,8 +73,8 @@ CCU_status ccu_status;
 MC_temperatures_1 mc_temperatures_1;
 MC_temperatures_2 mc_temperatures_2;
 MC_temperatures_3 mc_temperatures_3;
-MC_analog_input_voltages mc_analog_input_voltages;
-MC_digital_input_status mc_digital_input_status;
+//MC_analog_input_voltages mc_analog_input_voltages;
+//MC_digital_input_status mc_digital_input_status;
 MC_motor_position_information mc_motor_position_information;
 MC_current_information mc_current_information;
 MC_voltage_information mc_voltage_information;
@@ -113,8 +113,8 @@ static int flag_ccu_status;
 static int flag_mc_temperatures_1;
 static int flag_mc_temperatures_2;
 static int flag_mc_temperatures_3;
-static int flag_mc_analog_input_voltages;
-static int flag_mc_digital_input_status;
+//static int flag_mc_analog_input_voltages;
+//static int flag_mc_digital_input_status;
 static int flag_mc_motor_position_information;
 static int flag_mc_current_information;
 static int flag_mc_voltage_information;
@@ -352,7 +352,7 @@ void process_SD() {
     msg_log.id = ID_MC_TEMPERATURES_3;
     write_to_SD(flag_mc_temperatures_3);
   }
-
+  /*
   if (flag_mc_analog_input_voltages) {
     mc_analog_input_voltages.write(msg_log.buf);
     msg_log.id = ID_MC_ANALOG_INPUTS_VOLTAGES;
@@ -364,7 +364,7 @@ void process_SD() {
     msg_log.id = ID_MC_DIGITAL_INPUT_STATUS;
     write_to_SD(flag_mc_digital_input_status);
   }
-
+  */
   if (flag_mc_motor_position_information) {
     mc_motor_position_information.write(msg_log.buf);
     msg_log.id = ID_MC_MOTOR_POSITION_INFORMATION;
@@ -541,6 +541,7 @@ void parse_can_message() {
       mc_temperatures_3.load(msg_rx.buf);
       flag_mc_temperatures_3 = time_now;
     }
+    /*
     if (msg_rx.id == ID_MC_ANALOG_INPUTS_VOLTAGES) {
       mc_analog_input_voltages.load(msg_rx.buf);
       flag_mc_analog_input_voltages = time_now;
@@ -549,6 +550,7 @@ void parse_can_message() {
       mc_digital_input_status.load(msg_rx.buf);
       flag_mc_digital_input_status = time_now;
     }
+    */
     if (msg_rx.id == ID_MC_MOTOR_POSITION_INFORMATION) {
       mc_motor_position_information.load(msg_rx.buf);
       flag_mc_motor_position_information = time_now;
