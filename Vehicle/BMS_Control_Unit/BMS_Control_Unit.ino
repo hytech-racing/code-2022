@@ -268,13 +268,16 @@ void setup() {
     total_discharge = 0;
     current_timer.begin(integrate_current, COULOUMB_COUNT_INTERVAL);*/
 
-    /* Initialize the ic/group IDs for detailed voltage and temperature CAN messages */
+    /* Initialize the ic/group IDs for detailed voltage, temperature, and balancing CAN messages */
     for (int i = 0; i < TOTAL_IC; i++) {
         for (int j = 0; j < 3; j++) {
             bms_detailed_voltages[i][j].set_ic_id(i);
             bms_detailed_voltages[i][j].set_group_id(j);
         }
         bms_detailed_temperatures[i].set_ic_id(i);
+    }
+    for (int i = 0; i < ((TOTAL_IC + 3) / 4); i++) {
+        bms_balancing_status[i].set_group_id(i);
     }
 
     /* Ignore cells or thermistors for bench testing */
@@ -478,8 +481,8 @@ void init_cfg() {
 }
 
 void modify_discharge_config(int ic, int cell, bool setDischarge) { // TODO unify language about "balancing" vs "discharging"
-    bms_balancing_status[ic / 4].set_cell_balancing(ic % 4, cell, setDischarge);
     if (ic < TOTAL_IC && cell < CELLS_PER_IC) {
+        bms_balancing_status[ic / 4].set_cell_balancing(ic % 4, cell, setDischarge);
         if (cell > 4) {
             cell++; // Increment cell, skipping the disconnected C5. This abstracts the missing cell from the rest of the program.
         }
