@@ -154,7 +154,7 @@ uint16_t onboard_temp_balance_disable = 6000;  // 60.00C
 uint16_t onboard_temp_balance_reenable = 5000; // 50.00C
 uint16_t onboard_temp_critical_high = 7000; // 70.00C
 uint16_t temp_critical_low = 0; // 0C
-uint16_t voltage_difference_threshold = 150; // 0.1500V
+uint16_t voltage_difference_threshold = 150; // 0.0150V
 
 uint8_t total_count_cells = CELLS_PER_IC * TOTAL_IC; // Number of non-ignored cells (used for calculating averages)
 uint8_t total_count_cell_thermistors = THERMISTORS_PER_IC * TOTAL_IC; // Number of non-ignored cell thermistors (used for calculating averages)
@@ -361,6 +361,7 @@ void loop() {
         process_temps(); // Poll controllers, process values, populate populate bms_temperatures, bms_detailed_temperatures, bms_onboard_temperatures, and bms_onboard_detailed_temperatures
         print_temps(); // Print cell and pcb temperatures to serial
         print_cells(); // Print the cell voltages and balancing status to serial
+        print_current(); // Print measured current sensor value
         //process_coulombs(); // Process new coulomb counts, sending over CAN and printing to Serial
         print_uptime(); // Print the BMS uptime to serial
 
@@ -845,9 +846,6 @@ void process_adc() {
 
     // Process current measurement
     int current = get_current();
-    Serial.print("\nCurrent Sensor: ");
-    Serial.print(current / (double) 100, 2);
-    Serial.println("A\n");
     bms_status.set_current(current);
     bms_status.set_charge_overcurrent(false); // RESET these values, then check below if they should be set again
     bms_status.set_discharge_overcurrent(false);
@@ -961,8 +959,13 @@ void print_cells() {
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         Serial.print("IC"); Serial.print(ic); Serial.print("\t");
         for (int cell = 0; cell < CELLS_PER_IC; cell++) {
-            double voltage = cell_voltages[ic][cell] * 0.0001;
-            Serial.print(voltage, 4); Serial.print("V\t");
+            int ignored = ignore_cell[ic][cell];
+            if (!MODE_BENCH_TEST || !ignored) { // Don't clutter test bench UI with ignored cells
+                double voltage = cell_voltages[ic][cell] * 0.0001;
+                Serial.print(voltage, 4); Serial.print("V\t");
+            } else {
+                Serial.print("\t");
+            }
         }
         Serial.print("\t");
         for (int cell = 0; cell < CELLS_PER_IC; cell++) {
@@ -997,6 +1000,12 @@ void print_cells() {
     Serial.print("Average: "); Serial.print(bms_voltages.get_average() / (double) 1e4, 4); Serial.print("V\t\t");
     Serial.print("Min: "); Serial.print(bms_voltages.get_low() / (double) 1e4, 4); Serial.print("V\t\t");
     Serial.print("Max: "); Serial.print(bms_voltages.get_high() / (double) 1e4, 4); Serial.println("V");
+}
+
+void print_current() {
+    Serial.print("\nCurrent Sensor: ");
+    Serial.print(bms_status.get_current() / (double) 100, 2);
+    Serial.println("A");
 }
 
 void print_aux() {
