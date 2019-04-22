@@ -528,9 +528,11 @@ void stop_discharge_cell(int ic, int cell) {
     discharge_cell(ic, cell, false);
 }
 
-void stop_discharge_all() {
+void stop_discharge_all(bool skip_clearing_status) {
     for (int i = 0; i < TOTAL_IC; i++) {
-        bms_balancing_status[i / 4].set_ic_balancing(i % 4, 0x0);
+        if (!skip_clearing_status) { // Optionally leave bms_balancing_status alone - useful if only temporarily disabling balancing
+            bms_balancing_status[i / 4].set_ic_balancing(i % 4, 0x0);
+        }
         tx_cfg[i][4] = 0b0;
         tx_cfg[i][5] = 0b0;
     }
@@ -539,37 +541,44 @@ void stop_discharge_all() {
     LTC6804_wrcfg(TOTAL_IC, tx_cfg);
 }
 
+void stop_discharge_all() {
+    stop_discharge_all(false);
+}
+
 void balance_cells() {
     balance_offcycle = (balance_offcycle + 1) % BALANCE_LIMIT_FACTOR; // Only allow balancing on 1/BALANCE_LIMIT_FACTOR cycles
     bool cells_balancing = false; // This gets set to true later if it turns out we are balancing any cells this loop
-    if (bms_voltages.get_low() > voltage_cutoff_low
-        && !balance_offcycle
+    if (bms_voltages.get_low() > voltage_cutoff_low // TODO technically this could keep a widely spread out pack from ever balancing
         && !bms_status.get_error_flags()
         && bms_status.get_state() >= BMS_STATE_CHARGING
         && bms_status.get_state() <= BMS_STATE_BALANCING
         && (bms_status.get_shutdown_h_above_threshold() || MODE_CHARGE_OVERRIDE || MODE_ADC_IGNORE)) { // Don't check shutdown circuit if in Charge Override Mode or ADC Ignore Mode
-        for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
-            for (int cell = 0; cell < CELLS_PER_IC; cell++) { // Loop through cells
-                if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
-                    uint16_t cell_voltage = cell_voltages[ic][cell]; // current cell voltage in mV
-                    if (cell_voltage < bms_voltages.get_low() + voltage_difference_threshold) {
-                        modify_discharge_config(ic, cell, false); // Modify our local version of the discharge configuration
-                    } else if (cell_voltage > bms_voltages.get_low() + voltage_difference_threshold) {
-                        modify_discharge_config(ic, cell, true); // Modify our local version of the discharge configuration
-                        cells_balancing = true;
+        if (balance_offcycle) { // One last check - are we in an off-cycle? If so, we want to disable balancing but preserve bmc_balancing_status
+            stop_discharge_all(true); // Stop all cells from discharging, but don't clear bms_balancing_status - this way we can view what will shortly be balancing again
+        } else { // Proceed with balancing
+            for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
+                for (int cell = 0; cell < CELLS_PER_IC; cell++) { // Loop through cells
+                    if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
+                        uint16_t cell_voltage = cell_voltages[ic][cell]; // current cell voltage in mV
+                        if (cell_voltage < bms_voltages.get_low() + voltage_difference_threshold) {
+                            modify_discharge_config(ic, cell, false); // Modify our local version of the discharge configuration
+                        } else if (cell_voltage > bms_voltages.get_low() + voltage_difference_threshold) {
+                            modify_discharge_config(ic, cell, true); // Modify our local version of the discharge configuration
+                            cells_balancing = true;
+                        }
                     }
                 }
             }
-        }
-        if (cells_balancing) { // Cells currently balancing
-            bms_status.set_state(BMS_STATE_BALANCING);
-        } else { // Balancing allowed, but no cells currently balancing
-            if (timer_charge_enable_limit.check()) {
-                bms_status.set_state(BMS_STATE_CHARGING);
+            if (cells_balancing) { // Cells currently balancing
+                bms_status.set_state(BMS_STATE_BALANCING);
+            } else { // Balancing allowed, but no cells currently balancing
+                if (timer_charge_enable_limit.check()) {
+                    bms_status.set_state(BMS_STATE_CHARGING);
+                }
             }
+            wakeup_idle();
+            LTC6804_wrcfg(TOTAL_IC, tx_cfg); // Write the new discharge configuration to the LTC6804s
         }
-        wakeup_idle();
-        LTC6804_wrcfg(TOTAL_IC, tx_cfg); // Write the new discharge configuration to the LTC6804s
     } else {
         stop_discharge_all(); // Make sure none of the cells are discharging
     }
