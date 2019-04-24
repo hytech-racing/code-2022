@@ -63,40 +63,37 @@ BMS_coulomb_counts bms_coulomb_counts;
  * Constant definitions
  */
  // TODO some of these values need to be calibrated once hardware is installed
-#define BRAKE_ACTIVE 600
-#define MIN_ACCELERATOR_PEDAL_1 100 // Low accelerator implausibility threshold
-#define START_ACCELERATOR_PEDAL_1 200 // Position to start acceleration
-#define END_ACCELERATOR_PEDAL_1 540 // Position to max out acceleration
-#define MAX_ACCELERATOR_PEDAL_1 700 // High accelerator implausibility threshold
-#define MIN_ACCELERATOR_PEDAL_2 3990 // Low accelerator implausibility threshold
-#define START_ACCELERATOR_PEDAL_2 3880 // Position to start acceleration
-#define END_ACCELERATOR_PEDAL_2 3550 // Position to max out acceleration
-#define MAX_ACCELERATOR_PEDAL_2 3400 // High accelerator implausibility threshold
-#define MIN_BRAKE_PEDAL 1510
-#define MAX_BRAKE_PEDAL 1684
-#define MIN_HV_VOLTAGE 500 // Volts in V * 0.1 - Used to check if Accumulator is energized
-#define BMS_HIGH 134 // ~3V on BMS_OK line
-#define IMD_HIGH 134 // ~3V on OKHS line
-#define SHUTDOWN_B_HIGH 350 // ~5V on SHUTDOWN_B line
-#define SHUTDOWN_C_HIGH 350 // ~5V on SHUTDOWN_C line
-#define SHUTDOWN_D_HIGH 350 // ~5V on SHUTDOWN_D line ??????
-#define SHUTDOWN_E_HIGH 350 // ~5V on SHUTDOWN_E line
-#define SHUTDOWN_F_HIGH 350 // ~5V on SHUTDOWN_F line
-#define FAN_1_DUTY_CYCLE 127 // TODO: figure out correct duty cycle (0 = 0%, 255 = 100%)
-#define FAN_2_DUTY_CYCLE 127 // TODO: figure out correct duty cycle (0 = 0%, 255 = 100%)
+#define BRAKE_ACTIVE 600                // Threshold for brake pedal active
+#define MIN_ACCELERATOR_PEDAL_1 100     // Low accelerator implausibility threshold
+#define START_ACCELERATOR_PEDAL_1 200   // Position to start acceleration
+#define END_ACCELERATOR_PEDAL_1 540     // Position to max out acceleration
+#define MAX_ACCELERATOR_PEDAL_1 700     // High accelerator implausibility threshold
+#define MIN_ACCELERATOR_PEDAL_2 3990    // Low accelerator implausibility threshold
+#define START_ACCELERATOR_PEDAL_2 3880  // Position to start acceleration
+#define END_ACCELERATOR_PEDAL_2 3550    // Position to max out acceleration
+#define MAX_ACCELERATOR_PEDAL_2 3400    // High accelerator implausibility threshold
+#define MIN_HV_VOLTAGE 500              // Volts in V * 0.1 - Used to check if Accumulator is energized
+#define BMS_HIGH 134                    // ~3V on BMS_OK line
+#define IMD_HIGH 134                    // ~3V on OKHS line
+#define SHUTDOWN_B_HIGH 530             // ~5V on SHUTDOWN_B line
+#define SHUTDOWN_C_HIGH 350             // ~5V on SHUTDOWN_C line
+#define SHUTDOWN_D_HIGH 350             // ~5V on SHUTDOWN_D line ??????
+#define SHUTDOWN_E_HIGH 350             // ~5V on SHUTDOWN_E line
+#define SHUTDOWN_F_HIGH 350             // ~5V on SHUTDOWN_F line
+#define FAN_1_DUTY_CYCLE 127            // TODO: figure out correct duty cycle (0 = 0%, 255 = 100%)
+#define FAN_2_DUTY_CYCLE 127            // TODO: figure out correct duty cycle (0 = 0%, 255 = 100%)
 #define BMS_HIGH_BATTERY_TEMPERATURE 50 // TODO: figure out correct value
-#define GLV_VOLTAGE_MULTIPLIER 5.5963 // TODO: calibrate this constant
-#define MIN_RPM_FOR_REGEN 100 // TODO: calibrate this constant
+#define GLV_VOLTAGE_MULTIPLIER 5.5963   // TODO: calibrate this constant
+#define MIN_RPM_FOR_REGEN 100           // TODO: calibrate this constant
 #define START_ACCEL1_PEDAL_WITH_REGEN 190  // TODO: calibrate this constant
 #define START_ACCEL2_PEDAL_WITH_REGEN 3890 // TODO: calibrate this constant
 #define START_BRAKE_PEDAL_WITH_REGEN 450   // TODO: calibrate this constant
 #define END_BRAKE_PEDAL_WITH_REGEN 1000    // TODO: calibrate this constant
-#define ALPHA 0.9772 // parameter for the sowftware filter used on ADC pedal channels
-#define EXPANDER_SPI_SPEED 9000000 // max SPI clock frequency for MCP23S17 is 10MHz in ideal conditions
-#define ADC_SPI_SPEED 1800000 // max SPI clokc frequency for MCP3208 is 2MHz in ideal conditions
-#define TORQUE_ADJUSTMENT_VOLTAGE 3.5242  //
-#define MAX_POSSIBLE_TORQUE 1600  //
-
+#define ALPHA 0.9772                    // parameter for the sowftware filter used on ADC pedal channels
+#define EXPANDER_SPI_SPEED 9000000      // max SPI clock frequency for MCP23S17 is 10MHz in ideal conditions
+#define ADC_SPI_SPEED 1800000           // max SPI clokc frequency for MCP3208 is 2MHz in ideal conditions
+#define TORQUE_ADJUSTMENT_VOLTAGE 3.5242   //
+#define MAX_POSSIBLE_TORQUE 1600        //
 
 /*
  * Timers
