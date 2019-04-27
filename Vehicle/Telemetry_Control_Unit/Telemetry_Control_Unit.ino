@@ -2,7 +2,7 @@
  * Teensy 3.5 Telemetry Control Unit code
  * Written by Soohyun Kim, with assistance by Ryan Gallaway and Nathan Cheek. 
  * 
- * Rev 1 - 4/18/2019
+ * Rev 2 - 4/23/2019
  */
 
 #include <SD.h>
@@ -35,6 +35,9 @@ ADC_SPI ADC(10);
 Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
 Adafruit_GPS GPS(&Serial1);
 
+Metro timer_debug_mcu_status = Metro(2000);
+Metro timer_debug_mcu_pedal_readings = Metro(200);
+Metro timer_debug_bms_balancing_status = Metro(3000);
 Metro timer_accelerometer = Metro(100);
 Metro timer_current = Metro(500);
 Metro timer_debug_bms_status = Metro(1000);
@@ -67,7 +70,7 @@ BMS_detailed_temperatures bms_detailed_temperatures[8];
 BMS_onboard_temperatures bms_onboard_temperatures;
 BMS_onboard_detailed_temperatures bms_onboard_detailed_temperatures[8];
 BMS_status bms_status;
-BMS_balancing_status bms_balancing_status;
+BMS_balancing_status bms_balancing_status[2];
 BMS_coulomb_counts bms_coulomb_counts;                                                
 CCU_status ccu_status;
 MC_temperatures_1 mc_temperatures_1;
@@ -149,8 +152,8 @@ void setup() {
   pinMode(10, OUTPUT);                                                // Initialize pin 10 as output; this is necessary for the SD Library
   Serial.begin(115200);
   CAN.begin();    
-  //SD.begin(10);                                                       // Begin Arduino SD API (3.2)
-  SD.begin(BUILTIN_SDCARD);                                         // Begin Arduino SD API (3.5)
+  //SD.begin(10);                                                     // Begin Arduino SD API (3.2)
+  SD.begin(BUILTIN_SDCARD);                                           // Begin Arduino SD API (3.5)
   logger = SD.open("sample.txt", FILE_WRITE);                         // Open file for writing.  
   logger.println("time, msg.id, data");                               // Print heading to the file.
   logger.flush();
@@ -177,7 +180,6 @@ void loop() {
   send_xbee();
     
   if (timer_debug_RTC.check()) {
-    //digitalClockDisplay();
     Serial.println(Teensy3Clock.get());
   }
     
@@ -195,7 +197,7 @@ void loop() {
     current_readings.set_ecu_current_value((short)((int)(current_ecu*100)));
     current_readings.set_cooling_current_value((short)((int)(current_cooling*100)));
 
-      // order of bytes of each value is in reverse: buf[1],buf[0] is x value, buf[3],buf[2] is y value, and etc.
+    // order of bytes of each value is in reverse: buf[1],buf[0] is x value, buf[3],buf[2] is y value, and etc.
     current_readings.write(msg_tx.buf);
     msg_tx.id = ID_GLV_CURRENT_READINGS;
     msg_tx.len = sizeof(CAN_message_glv_current_readings_t);
@@ -264,11 +266,6 @@ void process_SD() {
   }
 
   if (flag_bms_detailed_voltages) {
-    /*
-    bms_detailed_voltages.write(msg_log.buf);
-    msg_log.id = ID_BMS_DETAILED_VOLTAGES;
-    write_to_SD(flag_bms_detailed_voltages);
-    */
     for (int ic = 0; ic < 8; ic++) {
       for (int group = 0; group < 3; group++) {
         bms_detailed_voltages[ic][group].write(msg_log.buf);
@@ -285,11 +282,6 @@ void process_SD() {
   }
 
   if (flag_bms_detailed_temperatures) {
-    /*
-    bms_detailed_temperatures.write(msg_log.buf);
-    msg_log.id = ID_BMS_DETAILED_TEMPERATURES;
-    write_to_SD(flag_bms_detailed_temperatures);
-    */
     for (int ic = 0; ic < 8; ic++) {
       bms_detailed_temperatures[ic].write(msg_log.buf);
       msg_log.id = ID_BMS_DETAILED_TEMPERATURES;
@@ -318,9 +310,11 @@ void process_SD() {
   }
   
   if (flag_bms_balancing_status) {
-    bms_balancing_status.write(msg_log.buf);
-    msg_log.id = ID_BMS_BALANCING_STATUS;
-    write_to_SD(flag_bms_balancing_status);
+    for (int i=0; i<2; i++) {
+      bms_balancing_status[i].write(msg_log.buf);
+      msg_log.id = ID_BMS_BALANCING_STATUS;
+      write_to_SD(flag_bms_balancing_status);
+    }
   }
 
   if (flag_bms_coulomb_counts) {
@@ -472,59 +466,42 @@ void parse_can_message() {
       bms_voltages.load(msg_rx.buf);
       flag_bms_voltages = time_now;
     }
-    /*
-    if (msg_rx.id == ID_BMS_DETAILED_VOLTAGES) {
-      bms_detailed_voltages.load(msg_rx.buf);
-      flag_bms_detailed_voltages = time_now;
-    }
-    */
     if (msg_rx.id == ID_BMS_DETAILED_VOLTAGES) {
       BMS_detailed_voltages temp = BMS_detailed_voltages(msg_rx.buf);
       bms_detailed_voltages[temp.get_ic_id()][temp.get_group_id()].load(msg_rx.buf);
+      flag_bms_detailed_voltages = time_now;
     }
     if (msg_rx.id == ID_BMS_TEMPERATURES) {
       bms_temperatures.load(msg_rx.buf);
       flag_bms_temperatures = time_now;
     }
-    /*
-    if (msg_rx.id == ID_BMS_DETAILED_TEMPERATURES) {
-      bms_detailed_temperatures.load(msg_rx.buf);
-      flag_bms_detailed_temperatures = time_now;
-    }
-    */
     if (msg_rx.id == ID_BMS_DETAILED_TEMPERATURES) {
       BMS_detailed_temperatures temp = BMS_detailed_temperatures(msg_rx.buf);
       bms_detailed_temperatures[temp.get_ic_id()].load(msg_rx.buf);
+      flag_bms_detailed_temperatures = time_now;
     }
     if (msg_rx.id == ID_BMS_ONBOARD_TEMPERATURES) {
       bms_onboard_temperatures.load(msg_rx.buf);
       flag_bms_onboard_temperatures = time_now;
     }
-    /*
-    if (msg_rx.id == ID_BMS_ONBOARD_DETAILED_TEMPERATURES) {
-      bms_onboard_detailed_temperatures.load(msg_rx.buf);
-      flag_bms_onboard_detailed_temperatures = time_now;
-    }
-    */
     if (msg_rx.id == ID_BMS_ONBOARD_DETAILED_TEMPERATURES) {
       BMS_onboard_detailed_temperatures temp = BMS_onboard_detailed_temperatures(msg_rx.buf);
       bms_onboard_detailed_temperatures[temp.get_ic_id()].load(msg_rx.buf);
+      flag_bms_onboard_detailed_temperatures = time_now;
     }
     if (msg_rx.id == ID_BMS_STATUS) {
       bms_status.load(msg_rx.buf);
       flag_bms_status = time_now;
     }
-    
     if (msg_rx.id == ID_BMS_BALANCING_STATUS) {
-      bms_balancing_status.load(msg_rx.buf);
+      BMS_balancing_status temp = BMS_balancing_status(msg_rx.buf);
+      bms_balancing_status[temp.get_group_id()].load(msg_rx.buf);
       flag_bms_balancing_status = time_now;
     }
-
     if (msg_rx.id == ID_BMS_COULOMB_COUNTS) {
       bms_coulomb_counts.load(msg_rx.buf);
       flag_bms_coulomb_counts = time_now;
     }
-    
     if (msg_rx.id == ID_CCU_STATUS) {
       ccu_status.load(msg_rx.buf);
       flag_ccu_status = time_now;
@@ -933,5 +910,27 @@ void send_xbee() {
         XB.println(mc_command_message.get_discharge_enable());
         XB.print("CMD_MSG COMMANDED TORQUE LIMIT: ");
         XB.println(mc_command_message.get_commanded_torque_limit() / (double) 10, 1);*/
+    }
+    if (timer_debug_mcu_status.check()) {
+        mcu_status.write(xb_msg.buf);
+        xb_msg.len = sizeof(CAN_message_mcu_status_t);
+        xb_msg.id = ID_MCU_STATUS;
+        write_xbee_data();
+    }
+
+    if (timer_debug_mcu_pedal_readings.check()) {
+        mcu_pedal_readings.write(xb_msg.buf);
+        xb_msg.len = sizeof(CAN_message_mcu_pedal_readings_t);
+        xb_msg.id = ID_MCU_PEDAL_READINGS;
+        write_xbee_data();
+    }
+    
+    if (timer_debug_bms_balancing_status.check()) {
+        for (int i=0; i<2; i++) {
+            bms_balancing_status[i].write(xb_msg.buf);
+            xb_msg.len = sizeof(CAN_message_bms_detailed_temperatures_t);
+            xb_msg.id = ID_BMS_DETAILED_TEMPERATURES;
+            write_xbee_data();
+        }
     }
 }
