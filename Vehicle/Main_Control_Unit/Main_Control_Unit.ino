@@ -44,7 +44,7 @@
 #define EXPANDER_LED_START 9
 #define EXPANDER_LED_BMS 10
 #define EXPANDER_LED_IMD 11
-#define EXPANDER_LED_POWER 12
+#define EXPANDER_LED_MC_ERR 12
 #define EXPANDER_LED_MODE 13
 
 /*
@@ -64,14 +64,14 @@ BMS_coulomb_counts bms_coulomb_counts;
  */
  // TODO some of these values need to be calibrated once hardware is installed
 #define BRAKE_ACTIVE 600                // Threshold for brake pedal active
-#define MIN_ACCELERATOR_PEDAL_1 100     // Low accelerator implausibility threshold
-#define START_ACCELERATOR_PEDAL_1 200   // Position to start acceleration
-#define END_ACCELERATOR_PEDAL_1 540     // Position to max out acceleration
+#define MIN_ACCELERATOR_PEDAL_1 1850     // Low accelerator implausibility threshold
+#define START_ACCELERATOR_PEDAL_1 2050   // Position to start acceleration
+#define END_ACCELERATOR_PEDAL_1 2420     // Position to max out acceleration
 #define MAX_ACCELERATOR_PEDAL_1 700     // High accelerator implausibility threshold
-#define MIN_ACCELERATOR_PEDAL_2 3990    // Low accelerator implausibility threshold
-#define START_ACCELERATOR_PEDAL_2 3880  // Position to start acceleration
-#define END_ACCELERATOR_PEDAL_2 3550    // Position to max out acceleration
-#define MAX_ACCELERATOR_PEDAL_2 3400    // High accelerator implausibility threshold
+#define MIN_ACCELERATOR_PEDAL_2 2250    // Low accelerator implausibility threshold
+#define START_ACCELERATOR_PEDAL_2 2050  // Position to start acceleration
+#define END_ACCELERATOR_PEDAL_2 1680    // Position to max out acceleration
+#define MAX_ACCELERATOR_PEDAL_2 1590    // High accelerator implausibility threshold
 #define MIN_HV_VOLTAGE 500              // Volts in V * 0.1 - Used to check if Accumulator is energized
 #define BMS_HIGH 134                    // ~3V on BMS_OK line
 #define IMD_HIGH 134                    // ~3V on OKHS line
@@ -124,7 +124,7 @@ Metro timer_status_send = Metro(100);
 float filtered_accel1_reading = 0;
 float filtered_accel2_reading = 0;
 float filtered_brake_reading = 0;
-float riltered_glv_reading = 0;
+float filtered_glv_reading = 0;
 
 bool btn_start_reading = true;
 bool btn_mode_reading = true;
@@ -171,7 +171,7 @@ void setup() {
     EXPANDER.pinMode(EXPANDER_LED_BMS, OUTPUT);
     EXPANDER.pinMode(EXPANDER_LED_IMD, OUTPUT);
     EXPANDER.pinMode(EXPANDER_LED_MODE, OUTPUT);
-    EXPANDER.pinMode(EXPANDER_LED_POWER, OUTPUT);
+    EXPANDER.pinMode(EXPANDER_LED_MC_ERR, OUTPUT);
     EXPANDER.pinMode(EXPANDER_LED_START, OUTPUT);
     EXPANDER.pinMode(EXPANDER_READY_SOUND, OUTPUT);
     pinMode(SOFTWARE_SHUTDOWN_RELAY, OUTPUT);
@@ -302,7 +302,7 @@ void loop() {
                 mcu_pedal_readings.set_accelerator_implausibility(true);
             }
 
-            int calculated_torque = calculate_torque_with_regen();
+            int calculated_torque = calculate_torque();
 
             // FSAE EV2.5 APPS / Brake Pedal Plausibility Check
             if (mcu_pedal_readings.get_brake_implausibility() && calculated_torque < (MAX_TORQUE / 20)) {
@@ -337,6 +337,7 @@ void loop() {
 
             // Serial.print("RPM: ");
             // Serial.println(mc_motor_position_information.get_motor_speed());
+            Serial.println(calculated_torque);
 
             mc_command_message.set_torque_command(0);
 
@@ -436,6 +437,9 @@ void read_pedal_values() {
     filtered_accel1_reading = ALPHA * filtered_accel1_reading + (1 - ALPHA) * ADC.read_adc(ADC_ACCEL_1_CHANNEL);
     filtered_accel2_reading = ALPHA * filtered_accel2_reading + (1 - ALPHA) * ADC.read_adc(ADC_ACCEL_2_CHANNEL);
     filtered_brake_reading  = ALPHA * filtered_brake_reading  + (1 - ALPHA) * ADC.read_adc(ADC_BRAKE_CHANNEL);
+    // Serial.print("ACCEL 1: "); Serial.println(filtered_accel1_reading);
+    // Serial.print("ACCEL 2: "); Serial.println(filtered_accel2_reading);
+    // Serial.print("BRAKE: "); Serial.println(filtered_brake_reading);
 
 
     //Serial.println(ADC.read_adc(ADC_ACCEL_1_CHANNEL));
