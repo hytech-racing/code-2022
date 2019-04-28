@@ -67,7 +67,7 @@ BMS_coulomb_counts bms_coulomb_counts;
 #define MIN_ACCELERATOR_PEDAL_1 1850     // Low accelerator implausibility threshold
 #define START_ACCELERATOR_PEDAL_1 2050   // Position to start acceleration
 #define END_ACCELERATOR_PEDAL_1 2420     // Position to max out acceleration
-#define MAX_ACCELERATOR_PEDAL_1 700     // High accelerator implausibility threshold
+#define MAX_ACCELERATOR_PEDAL_1 2500    // High accelerator implausibility threshold
 #define MIN_ACCELERATOR_PEDAL_2 2250    // Low accelerator implausibility threshold
 #define START_ACCELERATOR_PEDAL_2 2050  // Position to start acceleration
 #define END_ACCELERATOR_PEDAL_2 1680    // Position to max out acceleration
