@@ -290,7 +290,7 @@ void loop() {
 
         case MCU_STATE_READY_TO_DRIVE:
         if (timer_motor_controller_send.check()) {
-            MC_command_message mc_command_message = MC_command_message(0, 0, 0, 1, 0, 0);
+            MC_command_message mc_command_message = MC_command_message(0, 0, 1, 1, 0, 0);
             //read_pedal_values();
 
             // Check for accelerator implausibility FSAE EV2.3.10
@@ -594,7 +594,7 @@ void set_state(uint8_t new_state) {
 
         set_start_led(1);
         Serial.println("MCU Enabling inverter");
-        MC_command_message mc_command_message = MC_command_message(0, 0, 0, 1, 0, 0);
+        MC_command_message mc_command_message = MC_command_message(0, 0, 1, 1, 0, 0);
         tx_msg.id = 0xC0;
         tx_msg.len = 8;
 
