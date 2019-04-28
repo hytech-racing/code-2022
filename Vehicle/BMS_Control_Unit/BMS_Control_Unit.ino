@@ -77,7 +77,7 @@
  * Set to true to place BMS in ADC Ignore Mode, set to false to disable
  * When the BMS is in ADC Ignore Mode, it will not use data received from the ADC for determining faults, or for restricting cell balancing
  */
-#define MODE_ADC_IGNORE false
+#define MODE_ADC_IGNORE true
 
 /*************************************
  * End general configuration
