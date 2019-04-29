@@ -691,7 +691,7 @@ class BMS_balancing_status {
 
         void set_group_id(uint8_t group_id);
         void set_balancing(uint64_t balancing_status);
-        void set_ic_balancing(uint8_t ic_id, uint32_t balancing_status);
+        void set_ic_balancing(uint8_t ic_id, uint16_t balancing_status);
         void set_cell_balancing(uint8_t ic_id, uint8_t cell_id, bool balancing_status);
     private:
         uint64_t message; // Using a 64-bit datatype here instead of CAN_message_bms_balancing_status_t because it is much easier than dealing with an array

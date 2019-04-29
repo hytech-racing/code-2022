@@ -77,7 +77,7 @@
  * Set to true to place BMS in ADC Ignore Mode, set to false to disable
  * When the BMS is in ADC Ignore Mode, it will not use data received from the ADC for determining faults, or for restricting cell balancing
  */
-#define MODE_ADC_IGNORE false
+#define MODE_ADC_IGNORE true
 
 /*************************************
  * End general configuration
@@ -154,7 +154,7 @@ uint16_t onboard_temp_balance_disable = 6000;  // 60.00C
 uint16_t onboard_temp_balance_reenable = 5000; // 50.00C
 uint16_t onboard_temp_critical_high = 7000; // 70.00C
 uint16_t temp_critical_low = 0; // 0C
-uint16_t voltage_difference_threshold = 150; // 0.1500V
+uint16_t voltage_difference_threshold = 150; // 0.0150V
 
 uint8_t total_count_cells = CELLS_PER_IC * TOTAL_IC; // Number of non-ignored cells (used for calculating averages)
 uint8_t total_count_cell_thermistors = THERMISTORS_PER_IC * TOTAL_IC; // Number of non-ignored cell thermistors (used for calculating averages)
@@ -268,13 +268,16 @@ void setup() {
     total_discharge = 0;
     current_timer.begin(integrate_current, COULOUMB_COUNT_INTERVAL);*/
 
-    /* Initialize the ic/group IDs for detailed voltage and temperature CAN messages */
+    /* Initialize the ic/group IDs for detailed voltage, temperature, and balancing CAN messages */
     for (int i = 0; i < TOTAL_IC; i++) {
         for (int j = 0; j < 3; j++) {
             bms_detailed_voltages[i][j].set_ic_id(i);
             bms_detailed_voltages[i][j].set_group_id(j);
         }
         bms_detailed_temperatures[i].set_ic_id(i);
+    }
+    for (int i = 0; i < ((TOTAL_IC + 3) / 4); i++) {
+        bms_balancing_status[i].set_group_id(i);
     }
 
     /* Ignore cells or thermistors for bench testing */
@@ -361,6 +364,7 @@ void loop() {
         process_temps(); // Poll controllers, process values, populate populate bms_temperatures, bms_detailed_temperatures, bms_onboard_temperatures, and bms_onboard_detailed_temperatures
         print_temps(); // Print cell and pcb temperatures to serial
         print_cells(); // Print the cell voltages and balancing status to serial
+        print_current(); // Print measured current sensor value
         //process_coulombs(); // Process new coulomb counts, sending over CAN and printing to Serial
         print_uptime(); // Print the BMS uptime to serial
 
@@ -477,8 +481,8 @@ void init_cfg() {
 }
 
 void modify_discharge_config(int ic, int cell, bool setDischarge) { // TODO unify language about "balancing" vs "discharging"
-    bms_balancing_status[ic / 4].set_cell_balancing(ic % 4, cell, setDischarge);
     if (ic < TOTAL_IC && cell < CELLS_PER_IC) {
+        bms_balancing_status[ic / 4].set_cell_balancing(ic % 4, cell, setDischarge);
         if (cell > 4) {
             cell++; // Increment cell, skipping the disconnected C5. This abstracts the missing cell from the rest of the program.
         }
@@ -524,9 +528,11 @@ void stop_discharge_cell(int ic, int cell) {
     discharge_cell(ic, cell, false);
 }
 
-void stop_discharge_all() {
+void stop_discharge_all(bool skip_clearing_status) {
     for (int i = 0; i < TOTAL_IC; i++) {
-        bms_balancing_status[i / 4].set_ic_balancing(i % 4, 0x0);
+        if (!skip_clearing_status) { // Optionally leave bms_balancing_status alone - useful if only temporarily disabling balancing
+            bms_balancing_status[i / 4].set_ic_balancing(i % 4, 0x0);
+        }
         tx_cfg[i][4] = 0b0;
         tx_cfg[i][5] = 0b0;
     }
@@ -535,37 +541,44 @@ void stop_discharge_all() {
     LTC6804_wrcfg(TOTAL_IC, tx_cfg);
 }
 
+void stop_discharge_all() {
+    stop_discharge_all(false);
+}
+
 void balance_cells() {
     balance_offcycle = (balance_offcycle + 1) % BALANCE_LIMIT_FACTOR; // Only allow balancing on 1/BALANCE_LIMIT_FACTOR cycles
     bool cells_balancing = false; // This gets set to true later if it turns out we are balancing any cells this loop
-    if (bms_voltages.get_low() > voltage_cutoff_low
-        && !balance_offcycle
+    if (bms_voltages.get_low() > voltage_cutoff_low // TODO technically this could keep a widely spread out pack from ever balancing
         && !bms_status.get_error_flags()
         && bms_status.get_state() >= BMS_STATE_CHARGING
         && bms_status.get_state() <= BMS_STATE_BALANCING
         && (bms_status.get_shutdown_h_above_threshold() || MODE_CHARGE_OVERRIDE || MODE_ADC_IGNORE)) { // Don't check shutdown circuit if in Charge Override Mode or ADC Ignore Mode
-        for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
-            for (int cell = 0; cell < CELLS_PER_IC; cell++) { // Loop through cells
-                if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
-                    uint16_t cell_voltage = cell_voltages[ic][cell]; // current cell voltage in mV
-                    if (cell_voltage < bms_voltages.get_low() + voltage_difference_threshold) {
-                        modify_discharge_config(ic, cell, false); // Modify our local version of the discharge configuration
-                    } else if (cell_voltage > bms_voltages.get_low() + voltage_difference_threshold) {
-                        modify_discharge_config(ic, cell, true); // Modify our local version of the discharge configuration
-                        cells_balancing = true;
+        if (balance_offcycle) { // One last check - are we in an off-cycle? If so, we want to disable balancing but preserve bmc_balancing_status
+            stop_discharge_all(true); // Stop all cells from discharging, but don't clear bms_balancing_status - this way we can view what will shortly be balancing again
+        } else { // Proceed with balancing
+            for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
+                for (int cell = 0; cell < CELLS_PER_IC; cell++) { // Loop through cells
+                    if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
+                        uint16_t cell_voltage = cell_voltages[ic][cell]; // current cell voltage in mV
+                        if (cell_voltage < bms_voltages.get_low() + voltage_difference_threshold) {
+                            modify_discharge_config(ic, cell, false); // Modify our local version of the discharge configuration
+                        } else if (cell_voltage > bms_voltages.get_low() + voltage_difference_threshold) {
+                            modify_discharge_config(ic, cell, true); // Modify our local version of the discharge configuration
+                            cells_balancing = true;
+                        }
                     }
                 }
             }
-        }
-        if (cells_balancing) { // Cells currently balancing
-            bms_status.set_state(BMS_STATE_BALANCING);
-        } else { // Balancing allowed, but no cells currently balancing
-            if (timer_charge_enable_limit.check()) {
-                bms_status.set_state(BMS_STATE_CHARGING);
+            if (cells_balancing) { // Cells currently balancing
+                bms_status.set_state(BMS_STATE_BALANCING);
+            } else { // Balancing allowed, but no cells currently balancing
+                if (timer_charge_enable_limit.check()) {
+                    bms_status.set_state(BMS_STATE_CHARGING);
+                }
             }
+            wakeup_idle();
+            LTC6804_wrcfg(TOTAL_IC, tx_cfg); // Write the new discharge configuration to the LTC6804s
         }
-        wakeup_idle();
-        LTC6804_wrcfg(TOTAL_IC, tx_cfg); // Write the new discharge configuration to the LTC6804s
     } else {
         stop_discharge_all(); // Make sure none of the cells are discharging
     }
@@ -845,9 +858,6 @@ void process_adc() {
 
     // Process current measurement
     int current = get_current();
-    Serial.print("\nCurrent Sensor: ");
-    Serial.print(current / (double) 100, 2);
-    Serial.println("A\n");
     bms_status.set_current(current);
     bms_status.set_charge_overcurrent(false); // RESET these values, then check below if they should be set again
     bms_status.set_discharge_overcurrent(false);
@@ -961,8 +971,13 @@ void print_cells() {
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         Serial.print("IC"); Serial.print(ic); Serial.print("\t");
         for (int cell = 0; cell < CELLS_PER_IC; cell++) {
-            double voltage = cell_voltages[ic][cell] * 0.0001;
-            Serial.print(voltage, 4); Serial.print("V\t");
+            int ignored = ignore_cell[ic][cell];
+            if (!MODE_BENCH_TEST || !ignored) { // Don't clutter test bench UI with ignored cells
+                double voltage = cell_voltages[ic][cell] * 0.0001;
+                Serial.print(voltage, 4); Serial.print("V\t");
+            } else {
+                Serial.print("\t");
+            }
         }
         Serial.print("\t");
         for (int cell = 0; cell < CELLS_PER_IC; cell++) {
@@ -997,6 +1012,12 @@ void print_cells() {
     Serial.print("Average: "); Serial.print(bms_voltages.get_average() / (double) 1e4, 4); Serial.print("V\t\t");
     Serial.print("Min: "); Serial.print(bms_voltages.get_low() / (double) 1e4, 4); Serial.print("V\t\t");
     Serial.print("Max: "); Serial.print(bms_voltages.get_high() / (double) 1e4, 4); Serial.println("V");
+}
+
+void print_current() {
+    Serial.print("\nCurrent Sensor: ");
+    Serial.print(bms_status.get_current() / (double) 100, 2);
+    Serial.println("A");
 }
 
 void print_aux() {
