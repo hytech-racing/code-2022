@@ -268,8 +268,19 @@ void loop() {
         // if start button has been pressed and brake pedal is held down, transition to the next state
         if (btn_start_pressed) {
             if (mcu_pedal_readings.get_brake_pedal_active()) {
-                set_state(MCU_STATE_ENABLING_INVERTER);
+                //set_state(MCU_STATE_ENABLING_INVERTER);
+                set_state(MCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
             }
+        }
+        break;
+
+        case MCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
+
+        EXPANDER.digitalWrite(EXPANDER_READY_SOUND, HIGH);
+
+        if (timer_ready_sound.check()) {
+            EXPANDER.digitalWrite(EXPANDER_READY_SOUND, LOW);
+            set_state(MCU_STATE_ENABLING_INVERTER);
         }
         break;
 
@@ -279,14 +290,14 @@ void loop() {
         }
         break;
 
-        case MCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
+        // case MCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
 
-        EXPANDER.digitalWrite(EXPANDER_READY_SOUND, HIGH);
+        // EXPANDER.digitalWrite(EXPANDER_READY_SOUND, HIGH);
 
-        if (timer_ready_sound.check()) {
-            set_state(MCU_STATE_READY_TO_DRIVE);
-        }
-        break;
+        // if (timer_ready_sound.check()) {
+        //     set_state(MCU_STATE_READY_TO_DRIVE);
+        // }
+        // break;
 
         case MCU_STATE_READY_TO_DRIVE:
         if (timer_motor_controller_send.check()) {
@@ -339,7 +350,7 @@ void loop() {
             // Serial.println(mc_motor_position_information.get_motor_speed());
             Serial.println(calculated_torque);
 
-            mc_command_message.set_torque_command(0);
+            mc_command_message.set_torque_command(calculated_torque);
 
             mc_command_message.write(tx_msg.buf);
             tx_msg.id = ID_MC_COMMAND_MESSAGE;
@@ -354,7 +365,7 @@ void loop() {
      * Send a message to the Motor Controller over CAN when vehicle is not ready to drive
      */
     if (mcu_status.get_state() < MCU_STATE_READY_TO_DRIVE && timer_motor_controller_send.check()) {
-        MC_command_message mc_command_message = MC_command_message(0, 0, 0, 0, 0, 0);
+        MC_command_message mc_command_message = MC_command_message(0, 0, 1, 0, 0, 0);
 
         if (mcu_status.get_state() >= MCU_STATE_ENABLING_INVERTER) {
              mc_command_message.set_inverter_enable(true);
@@ -362,7 +373,7 @@ void loop() {
 
         mc_command_message.write(tx_msg.buf);
         tx_msg.id = ID_MC_COMMAND_MESSAGE;
-        tx_msg.len = 8;//
+        tx_msg.len = 8;
         CAN.write(tx_msg);
     }
 }
@@ -385,7 +396,8 @@ void parse_can_message() {
         if (rx_msg.id == ID_MC_INTERNAL_STATES) {
             MC_internal_states mc_internal_states = MC_internal_states(rx_msg.buf);
             if (mc_internal_states.get_inverter_enable_state() && mcu_status.get_state() == MCU_STATE_ENABLING_INVERTER) {
-                set_state(MCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
+                //set_state(MCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
+                set_state(MCU_STATE_READY_TO_DRIVE);
             }
             if (!mc_internal_states.get_inverter_enable_state() && mcu_status.get_state() == MCU_STATE_READY_TO_DRIVE) {
                 set_state(MCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
@@ -470,9 +482,9 @@ void read_status_values() {
     /*
      * Filter ADC readings of GLV voltage
      */
-    filtered_glv_reading += ALPHA * filtered_glv_reading + (1 - ALPHA) * ADC.read_adc(ADC_12V_SUPPLY_CHANNEL);
+    //filtered_glv_reading += ALPHA * filtered_glv_reading + (1 - ALPHA) * ADC.read_adc(ADC_12V_SUPPLY_CHANNEL);
 
-    mcu_status.set_glv_battery_voltage(filtered_glv_reading * GLV_VOLTAGE_MULTIPLIER); // convert GLV voltage and to send it over CAN
+    mcu_status.set_glv_battery_voltage(ADC.read_adc(ADC_12V_SUPPLY_CHANNEL) * GLV_VOLTAGE_MULTIPLIER); // convert GLV voltage and to send it over CAN
 
 
     /*
@@ -592,6 +604,9 @@ void set_state(uint8_t new_state) {
     }
     if (new_state == MCU_STATE_ENABLING_INVERTER) {
 
+        // states are switched to fix the RTDS not being loud enough
+        Serial.println("RTDS deactivated");
+
         set_start_led(1);
         Serial.println("MCU Enabling inverter");
         MC_command_message mc_command_message = MC_command_message(0, 0, 1, 1, 0, 0);
@@ -618,12 +633,14 @@ void set_state(uint8_t new_state) {
     }
     if (new_state == MCU_STATE_WAITING_READY_TO_DRIVE_SOUND) {
         timer_ready_sound.reset();
-        Serial.println("Inverter enabled");
+        //Serial.println("Inverter enabled");
         Serial.println("RTDS enabled");
     }
     if (new_state == MCU_STATE_READY_TO_DRIVE) {
-        EXPANDER.digitalWrite(EXPANDER_READY_SOUND, LOW);
-        Serial.println("RTDS deactivated");
+        //EXPANDER.digitalWrite(EXPANDER_READY_SOUND, LOW);
+
+        Serial.println("Inverter enabled");
+        //Serial.println("RTDS deactivated");
         Serial.println("Ready to drive");
     }
 }
