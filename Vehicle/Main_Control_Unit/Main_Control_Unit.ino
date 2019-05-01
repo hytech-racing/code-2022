@@ -66,11 +66,11 @@ BMS_coulomb_counts bms_coulomb_counts;
 #define BRAKE_ACTIVE 600                // Threshold for brake pedal active
 #define MIN_ACCELERATOR_PEDAL_1 1850     // Low accelerator implausibility threshold
 #define START_ACCELERATOR_PEDAL_1 2050   // Position to start acceleration
-#define END_ACCELERATOR_PEDAL_1 2420     // Position to max out acceleration
+#define END_ACCELERATOR_PEDAL_1 2400     // Position to max out acceleration
 #define MAX_ACCELERATOR_PEDAL_1 2500    // High accelerator implausibility threshold
 #define MIN_ACCELERATOR_PEDAL_2 2250    // Low accelerator implausibility threshold
 #define START_ACCELERATOR_PEDAL_2 2050  // Position to start acceleration
-#define END_ACCELERATOR_PEDAL_2 1680    // Position to max out acceleration
+#define END_ACCELERATOR_PEDAL_2 1700    // Position to max out acceleration
 #define MAX_ACCELERATOR_PEDAL_2 1590    // High accelerator implausibility threshold
 #define MIN_HV_VOLTAGE 500              // Volts in V * 0.1 - Used to check if Accumulator is energized
 #define BMS_HIGH 134                    // ~3V on BMS_OK line
@@ -279,7 +279,7 @@ void loop() {
         EXPANDER.digitalWrite(EXPANDER_READY_SOUND, HIGH);
 
         if (timer_ready_sound.check()) {
-            EXPANDER.digitalWrite(EXPANDER_READY_SOUND, LOW);
+            //EXPANDER.digitalWrite(EXPANDER_READY_SOUND, LOW);
             set_state(MCU_STATE_ENABLING_INVERTER);
         }
         break;
@@ -367,9 +367,9 @@ void loop() {
     if (mcu_status.get_state() < MCU_STATE_READY_TO_DRIVE && timer_motor_controller_send.check()) {
         MC_command_message mc_command_message = MC_command_message(0, 0, 1, 0, 0, 0);
 
-        if (mcu_status.get_state() >= MCU_STATE_ENABLING_INVERTER) {
-             mc_command_message.set_inverter_enable(true);
-        }
+        // if (mcu_status.get_state() >= MCU_STATE_ENABLING_INVERTER) {
+        //      mc_command_message.set_inverter_enable(true);
+        // }
 
         mc_command_message.write(tx_msg.buf);
         tx_msg.id = ID_MC_COMMAND_MESSAGE;
@@ -540,11 +540,12 @@ void set_mode_led(uint8_t type) {
             return;
         }
         if (type == 1) {
+            timer_led_mode_blink_fast.reset();
             if (debug) {
                 Serial.println("MCU Setting Mode LED solid on");
             }
         } else if (type == 2) {
-            timer_led_mode_blink_fast.reset();
+            // timer_led_mode_blink_fast.reset();
             if (debug) {
                 Serial.println("MCU Setting Mode LED fast blink");
             }
@@ -603,7 +604,7 @@ void set_state(uint8_t new_state) {
         set_start_led(2);
     }
     if (new_state == MCU_STATE_ENABLING_INVERTER) {
-
+        EXPANDER.digitalWrite(EXPANDER_READY_SOUND, LOW);
         // states are switched to fix the RTDS not being loud enough
         Serial.println("RTDS deactivated");
 
@@ -715,24 +716,30 @@ void read_dashboard_buttons() {
     if (btn_mode_debouncing && timer_btn_mode.check()) {                        // debounce period finishes
         btn_mode_pressed = !btn_mode_pressed;
         if (btn_mode_pressed) {
-            torque_mode = (torque_mode + 1) % 4;
+            torque_mode = (torque_mode + 1) % 3;
             if (torque_mode == 0) {
                 set_mode_led(0);
+                // 40
+                MAX_TORQUE = 400;
                 MAX_ACCEL_REGEN = 0;
                 MAX_BRAKE_REGEN = 0;
             } else if (torque_mode == 1) {
+                // blink 80
+                MAX_TORQUE = 800;
                 set_mode_led(1);
                 MAX_ACCEL_REGEN = 0;
                 MAX_BRAKE_REGEN = -400;
             } else if (torque_mode == 2) {
+                // solid 160
+                MAX_TORQUE = 1600;
                 set_mode_led(2);
                 MAX_ACCEL_REGEN = -100;
                 MAX_BRAKE_REGEN = -400;
-            } else if (torque_mode == 3) {
-                set_mode_led(3);
-                MAX_ACCEL_REGEN = -400;
-                MAX_BRAKE_REGEN = 0;
-            }
+            } //else if (torque_mode == 3) {
+            //     set_mode_led(3);
+            //     MAX_ACCEL_REGEN = -400;
+            //     MAX_BRAKE_REGEN = 0;
+            // }
         }
     }
 
@@ -757,7 +764,7 @@ void set_dashboard_leds() {
     /*
      * Set torque mode led
      */
-    if ((led_mode_type == 2 && timer_led_mode_blink_fast.check()) || (led_mode_type == 3 && timer_led_mode_blink_slow.check())) {
+    if ((led_mode_type == 1 && timer_led_mode_blink_fast.check())) { //|| (led_mode_type == 3 && timer_led_mode_blink_slow.check())) {
         if (led_mode_active) {
             dash_values |= (1 << EXPANDER_LED_MODE);
         }
@@ -767,8 +774,20 @@ void set_dashboard_leds() {
 
         led_mode_active = !led_mode_active;
     }
-    if (led_mode_type < 2) {
+    if (led_mode_type == 0) {
         led_mode_active = led_mode_type;
+
+        if (led_mode_active) {
+            dash_values |= (1 << EXPANDER_LED_MODE);
+        }
+        else {
+            dash_values &= ~(1 << EXPANDER_LED_MODE);
+        }
+    }
+
+    if (led_mode_type == 2) {
+        led_mode_active = 1;
+
         if (led_mode_active) {
             dash_values |= (1 << EXPANDER_LED_MODE);
         }
