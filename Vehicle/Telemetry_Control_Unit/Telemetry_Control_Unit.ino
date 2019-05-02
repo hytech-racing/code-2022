@@ -962,10 +962,10 @@ void send_xbee() {
     }
     
     if (timer_debug_bms_balancing_status.check()) {
-        for (int i=0; i<2; i++) {
+        for (int i = 0; i < 2; i++) {
             bms_balancing_status[i].write(xb_msg.buf);
-            xb_msg.len = sizeof(CAN_message_bms_detailed_temperatures_t);
-            xb_msg.id = ID_BMS_DETAILED_TEMPERATURES;
+            xb_msg.len = sizeof(CAN_message_bms_balancing_status_t);
+            xb_msg.id = ID_BMS_BALANCING_STATUS;
             write_xbee_data();
         }
     }
