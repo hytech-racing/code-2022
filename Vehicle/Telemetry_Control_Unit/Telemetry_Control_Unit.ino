@@ -154,7 +154,7 @@ void setup() {
   CAN.begin();    
   //SD.begin(10);                                                     // Begin Arduino SD API (3.2)
   SD.begin(BUILTIN_SDCARD);                                           // Begin Arduino SD API (3.5)
-  logger = SD.open("fh-datalog.txt", FILE_WRITE);                     // Open file for writing.  
+  logger = SD.open("FHDatalog.txt", FILE_WRITE);                     // Open file for writing.  
   logger.println("time,msg.id,msg.len,data");                         // Print heading to the file.
   logger.flush();
 
