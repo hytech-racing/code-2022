@@ -418,6 +418,11 @@ void loop() {
         tx_msg.len = sizeof(CAN_message_bms_temperatures_t);
         CAN.write(tx_msg);
 
+        bms_onboard_temperatures.write(tx_msg.buf);
+        tx_msg.id = ID_BMS_ONBOARD_TEMPERATURES;
+        tx_msg.len = sizeof(CAN_message_bms_onboard_temperatures_t);
+        CAN.write(tx_msg);
+
         tx_msg.id = ID_BMS_DETAILED_VOLTAGES;
         tx_msg.len = sizeof(CAN_message_bms_detailed_voltages_t);
         for (int i = 0; i < TOTAL_IC; i++) {
@@ -431,6 +436,13 @@ void loop() {
         tx_msg.len = sizeof(CAN_message_bms_detailed_temperatures_t);
         for (int i = 0; i < TOTAL_IC; i++) {
             bms_detailed_temperatures[i].write(tx_msg.buf);
+            CAN.write(tx_msg);
+        }
+
+        tx_msg.id = ID_BMS_ONBOARD_DETAILED_TEMPERATURES;
+        tx_msg.len = sizeof(CAN_message_bms_onboard_detailed_temperatures_t);
+        for (int i = 0; i < TOTAL_IC; i++) {
+            bms_onboard_detailed_temperatures[i].write(tx_msg.buf);
             CAN.write(tx_msg);
         }
         
