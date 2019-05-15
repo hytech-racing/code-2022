@@ -1114,7 +1114,7 @@ void parse_can_message() {
     }
 }
 
-double get_current() {
+int16_t get_current() {
     /*
      * Current sensor: ISB-300-A-604
      * Maximum positive current (300A) corresponds to 4.5V signal
