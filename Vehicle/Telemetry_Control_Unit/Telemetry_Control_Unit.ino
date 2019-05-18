@@ -650,12 +650,11 @@ void write_to_SD(int& timestamp) { // Note: This function does not flush data to
   logger.print(",");
   logger.print(msg_log.len);
   logger.print(",");
-  for (int i=0; i<8; i++) {
-    if (msg_log.buf[i]<16) {
+  for (int i = 0; i < msg_log.len; i++) {
+    if (msg_log.buf[i] < 16) {
       logger.print("0");
     }
     logger.print(msg_log.buf[i], HEX);
-    logger.print("");
   }
   logger.println();
 
