@@ -27,7 +27,6 @@
 FlexCAN CAN(500000);
 static CAN_message_t msg_rx;
 static CAN_message_t msg_tx;
-static CAN_message_t msg_log;
 static CAN_message_t xb_msg;
 File logger;
 
@@ -202,9 +201,7 @@ void setup() {
   pinMode(A13, INPUT);                                                // Current sensor (non-cooling circuit)
 }
 
-void loop() {
-  process_SD();
-  
+void loop() {  
   if (timer_flush.check()) {
     logger.flush(); // Flush data to disk (data is also flushed whenever the 512 Byte buffer fills up, but this call ensures we don't lose more than a second of data when the car turns off)
   }
@@ -272,256 +269,10 @@ void loop() {
   }
 }
 
-void process_SD() {
-  // check flags and write to SD therefrom
-  if (flag_mcu_status) {
-    mcu_status.write(msg_log.buf);
-    msg_log.id = ID_MCU_STATUS;
-    msg_log.len = sizeof(CAN_message_mcu_status_t);
-    write_to_SD(flag_mcu_status);
-  }
-  if (flag_mcu_pedal_readings) {
-    mcu_pedal_readings.write(msg_log.buf);
-    msg_log.id = ID_MCU_PEDAL_READINGS;
-    msg_log.len = sizeof(CAN_message_mcu_pedal_readings_t);
-    write_to_SD(flag_mcu_pedal_readings);
-  }
-  
-  if (flag_current_readings) {
-    current_readings.write(msg_log.buf);
-    msg_log.id = ID_GLV_CURRENT_READINGS;
-    msg_log.len = sizeof(CAN_message_glv_current_readings_t);
-    write_to_SD(flag_current_readings);
-  }
-
-  if (flag_bms_voltages) {
-    bms_voltages.write(msg_log.buf);
-    msg_log.id = ID_BMS_VOLTAGES;
-    msg_log.len = sizeof(CAN_message_bms_voltages_t);
-    write_to_SD(flag_bms_voltages);
-  }
-
-  if (flag_bms_detailed_voltages) { // TODO fix so we only write the ones that came in
-    for (int ic = 0; ic < 8; ic++) {
-      for (int group = 0; group < 3; group++) {
-        bms_detailed_voltages[ic][group].write(msg_log.buf);
-        msg_log.id = ID_BMS_DETAILED_VOLTAGES;
-        msg_log.len = sizeof(CAN_message_bms_detailed_voltages_t);
-        int temp = flag_bms_detailed_voltages;
-        write_to_SD(temp);
-      }
-    }
-    flag_bms_detailed_voltages = 0;
-  }
-
-  if (flag_bms_temperatures) {
-    bms_temperatures.write(msg_log.buf);
-    msg_log.id = ID_BMS_TEMPERATURES;
-    msg_log.len = sizeof(CAN_message_bms_temperatures_t);
-    write_to_SD(flag_bms_temperatures);
-  }
-
-  if (flag_bms_detailed_temperatures) { // TODO fix so we only write the ones that came in
-    for (int ic = 0; ic < 8; ic++) {
-      bms_detailed_temperatures[ic].write(msg_log.buf);
-      msg_log.id = ID_BMS_DETAILED_TEMPERATURES;
-      msg_log.len = sizeof(CAN_message_bms_detailed_temperatures_t);
-      int temp = flag_bms_detailed_temperatures;
-      write_to_SD(temp);
-    }
-    flag_bms_detailed_temperatures = 0;
-  }
-
-  if (flag_bms_onboard_temperatures) {
-    bms_onboard_temperatures.write(msg_log.buf);
-    msg_log.id = ID_BMS_ONBOARD_TEMPERATURES;
-    msg_log.len = sizeof(CAN_message_bms_onboard_temperatures_t);
-    write_to_SD(flag_bms_onboard_temperatures);
-  }
-
-  if (flag_bms_onboard_detailed_temperatures) { // TODO fix so we only write the ones that came in
-    for (int i=0; i<8; i++) {
-      bms_onboard_detailed_temperatures[i].write(msg_log.buf);
-      msg_log.id = ID_BMS_ONBOARD_DETAILED_TEMPERATURES;
-      msg_log.len = sizeof(CAN_message_bms_onboard_detailed_temperatures_t);
-      int temp = flag_bms_onboard_detailed_temperatures;
-      write_to_SD(temp);
-    }
-    flag_bms_onboard_detailed_temperatures = 0;
-  }
-
-  if (flag_bms_status) {
-    bms_status.write(msg_log.buf);
-    msg_log.id = ID_BMS_STATUS;
-    msg_log.len = sizeof(CAN_message_bms_status_t);
-    write_to_SD(flag_bms_status);
-  }
-  
-  if (flag_bms_balancing_status) { // TODO fix so we only write the ones that came in
-    for (int i=0; i<2; i++) {
-      bms_balancing_status[i].write(msg_log.buf);
-      msg_log.id = ID_BMS_BALANCING_STATUS;
-      msg_log.len = sizeof(CAN_message_bms_balancing_status_t);
-      int temp = flag_bms_balancing_status;
-      write_to_SD(temp);
-    }
-    flag_bms_balancing_status = 0;
-  }
-
-  if (flag_bms_coulomb_counts) {
-    bms_coulomb_counts.write(msg_log.buf);
-    msg_log.id = ID_BMS_COULOMB_COUNTS;
-    msg_log.len = sizeof(CAN_message_bms_coulomb_counts_t);
-    write_to_SD(flag_bms_coulomb_counts);
-  }
-  
-  if (flag_ccu_status) {
-    ccu_status.write(msg_log.buf);
-    msg_log.id = ID_CCU_STATUS;
-    msg_log.len = sizeof(CAN_message_ccu_status_t);
-    write_to_SD(flag_ccu_status);
-  }
-
-  if (flag_mc_temperatures_1) {
-    mc_temperatures_1.write(msg_log.buf);
-    msg_log.id = ID_MC_TEMPERATURES_1;
-    msg_log.len = sizeof(CAN_message_mc_temperatures_1_t);
-    write_to_SD(flag_mc_temperatures_1);
-  }
-
-  if (flag_mc_temperatures_2) {
-    mc_temperatures_2.write(msg_log.buf);
-    msg_log.id = ID_MC_TEMPERATURES_2;
-    msg_log.len = sizeof(CAN_message_mc_temperatures_2_t);
-    write_to_SD(flag_mc_temperatures_2);
-  }
-
-  if (flag_mc_temperatures_3) {
-    mc_temperatures_3.write(msg_log.buf);
-    msg_log.id = ID_MC_TEMPERATURES_3;
-    msg_log.len = sizeof(CAN_message_mc_temperatures_3_t);
-    write_to_SD(flag_mc_temperatures_3);
-  }
-  /*
-  if (flag_mc_analog_input_voltages) {
-    mc_analog_input_voltages.write(msg_log.buf);
-    msg_log.id = ID_MC_ANALOG_INPUTS_VOLTAGES;
-    msg_log.len = sizeof(CAN_message_mc_analog_input_voltages_t);
-    write_to_SD(flag_mc_analog_input_voltages);
-  }
-
-  if (flag_mc_digital_input_status) {
-    mc_digital_input_status.write(msg_log.buf);
-    msg_log.id = ID_MC_DIGITAL_INPUT_STATUS;
-    msg_log.len = sizeof(CAN_message_mc_digital_input_status_t);
-    write_to_SD(flag_mc_digital_input_status);
-  }
-  */
-  if (flag_mc_motor_position_information) {
-    mc_motor_position_information.write(msg_log.buf);
-    msg_log.id = ID_MC_MOTOR_POSITION_INFORMATION;
-    msg_log.len = sizeof(CAN_message_mc_motor_position_information_t);
-    write_to_SD(flag_mc_motor_position_information);
-  }
-
-  if (flag_mc_current_information) {
-    mc_current_information.write(msg_log.buf);
-    msg_log.id = ID_MC_CURRENT_INFORMATION;
-    msg_log.len = sizeof(CAN_message_mc_current_information_t);
-    write_to_SD(flag_mc_current_information);
-  }
-
-  if (flag_mc_voltage_information) {
-    mc_voltage_information.write(msg_log.buf);
-    msg_log.id = ID_MC_VOLTAGE_INFORMATION;
-    msg_log.len = sizeof(CAN_message_mc_voltage_information_t);
-    write_to_SD(flag_mc_voltage_information);
-  }
-
-  if (flag_mc_internal_states) {
-    mc_internal_states.write(msg_log.buf);
-    msg_log.id = ID_MC_INTERNAL_STATES;
-    msg_log.len = sizeof(CAN_message_mc_internal_states_t);
-    write_to_SD(flag_mc_internal_states);
-  }
-
-  if (flag_mc_fault_codes) {
-    mc_fault_codes.write(msg_log.buf);
-    msg_log.id = ID_MC_FAULT_CODES;
-    msg_log.len = sizeof(CAN_message_mc_fault_codes_t);
-    write_to_SD(flag_mc_fault_codes);
-  }
-
-  if (flag_mc_torque_timer_information) {
-    mc_torque_timer_information.write(msg_log.buf);
-    msg_log.id = ID_MC_TORQUE_TIMER_INFORMATION;
-    msg_log.len = sizeof(CAN_message_mc_torque_timer_information_t);
-    write_to_SD(flag_mc_torque_timer_information);
-  }
-
-  if (flag_mc_modulation_index_flux_weakening_output_information) {
-    mc_modulation_index_flux_weakening_output_information.write(msg_log.buf);
-    msg_log.id = ID_MC_MODULATION_INDEX_FLUX_WEAKENING_OUTPUT_INFORMATION;
-    msg_log.len = sizeof(CAN_message_mc_modulation_index_flux_weakening_output_information_t);
-    write_to_SD(flag_mc_modulation_index_flux_weakening_output_information);
-  }
-
-  if (flag_mc_firmware_information) {
-    mc_firmware_information.write(msg_log.buf);
-    msg_log.id = ID_MC_FIRMWARE_INFORMATION;
-    msg_log.len = sizeof(CAN_message_mc_firmware_information_t);
-    write_to_SD(flag_mc_firmware_information);
-  }
-
-  if (flag_mc_command_message) {
-    mc_command_message.write(msg_log.buf);
-    msg_log.id = ID_MC_COMMAND_MESSAGE;
-    msg_log.len = sizeof(CAN_message_mc_command_message_t);
-    write_to_SD(flag_mc_command_message);
-  }
-
-  if (flag_mc_read_write_parameter_command) {
-    mc_read_write_parameter_command.write(msg_log.buf);
-    msg_log.id = ID_MC_READ_WRITE_PARAMETER_COMMAND;
-    msg_log.len = sizeof(CAN_message_mc_read_write_parameter_command_t);
-    write_to_SD(flag_mc_read_write_parameter_command);
-  }
-
-  if (flag_mc_read_write_parameter_response) {
-    mc_read_write_parameter_response.write(msg_log.buf);
-    msg_log.id = ID_MC_READ_WRITE_PARAMETER_RESPONSE;
-    msg_log.len = sizeof(CAN_message_mc_read_write_parameter_response_t);
-    write_to_SD(flag_mc_read_write_parameter_response);
-  }
-
-  if (flag_fcu_accelerometer_values) {
-    fcu_accelerometer_values.write(msg_log.buf);
-    msg_log.id = ID_FCU_ACCELEROMETER;
-    msg_log.len = sizeof(CAN_message_fcu_accelerometer_values_t);
-    write_to_SD(flag_fcu_accelerometer_values);
-  }
-  if (flag_gps_alpha) {
-    memcpy(&(msg_log.buf[0]), &latitudex10000, sizeof(int));
-    memcpy(&(msg_log.buf[4]), &longitudex10000, sizeof(int));
-    msg_log.id = ID_ECU_GPS_READINGS_ALPHA;
-    // TODO msg_log.len = sizeof(CAN_message_gps_alpha_t);
-    msg_log.len = 8;
-    write_to_SD(flag_gps_alpha);
-  }
-  if (flag_gps_beta) {
-    memcpy(&(msg_log.buf[0]), &altitudex10000, sizeof(int));
-    memcpy(&(msg_log.buf[4]), &speedx10000, sizeof(int));
-    msg_log.id = ID_ECU_GPS_READINGS_BETA;
-    // TODO msg_log.len = sizeof(CAN_message_gps_beta_t);
-    msg_log.len = 8;
-    write_to_SD(flag_gps_beta);
-  }
-}
-
 void parse_can_message() {
   // identify received CAN messages and load contents into corresponding structs
   while (CAN.read(msg_rx)) {
-    //Serial.println("Received!");
+    write_to_SD(&msg_rx); // Write to SD card buffer (will take 8ms if the buffer fills up, triggering a flush to disk)
     int time_now = Teensy3Clock.get(); // RTC
     if (msg_rx.id == ID_MCU_STATUS) {
       mcu_status.load(msg_rx.buf);
@@ -662,23 +413,20 @@ void parse_can_message() {
   }
 }
 
-void write_to_SD(int& timestamp) { // Note: This function does not flush data to disk! It will happen when the buffer fills or when the above flush timer fires
-  logger.print(timestamp);
+void write_to_SD(CAN_message_t *msg) { // Note: This function does not flush data to disk! It will happen when the buffer fills or when the above flush timer fires
+  logger.print(Teensy3Clock.get());
   logger.print(",");
-  logger.print(msg_log.id, HEX);
+  logger.print(msg->id, HEX);
   logger.print(",");
-  logger.print(msg_log.len);
+  logger.print(msg->len);
   logger.print(",");
-  for (int i = 0; i < msg_log.len; i++) {
-    if (msg_log.buf[i] < 16) {
+  for (int i = 0; i < msg->len; i++) {
+    if (msg->buf[i] < 16) {
       logger.print("0");
     }
-    logger.print(msg_log.buf[i], HEX);
+    logger.print(msg->buf[i], HEX);
   }
   logger.println();
-
-  // clear flag
-  timestamp = 0;
 }
 
 time_t getTeensy3Time()
