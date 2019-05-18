@@ -158,7 +158,20 @@ void setup() {
   if (!SD.begin(BUILTIN_SDCARD)) {                                    // Begin Arduino SD API (3.5)
     Serial.println("SD card failed, or not present");
   }
-  logger = SD.open("datalog.csv", O_WRITE | O_CREAT | O_APPEND);      // Open file for writing
+  char filename[] = "data0000.CSV";
+  for (uint8_t i = 0; i < 10000; i++) {
+    filename[4] = i / 1000     + '0';
+    filename[5] = i / 100 % 10 + '0';
+    filename[6] = i / 10  % 10 + '0';
+    filename[7] = i       % 10 + '0';
+    if (!SD.exists(filename)) {
+      logger = SD.open(filename, O_WRITE | O_CREAT);                  // Open file for writing
+      break;
+    }
+    if (i == 9999) {                                                  // If SD card reaches log filename limit, print error
+      Serial.println("SD card has too many log files");
+    }
+  }
   if (logger) {
     Serial.println("Successfully opened SD file");
   } else {
