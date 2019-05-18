@@ -151,10 +151,18 @@ void setup() {
   
   pinMode(10, OUTPUT);                                                // Initialize pin 10 as output; this is necessary for the SD Library
   Serial.begin(115200);
-  CAN.begin();    
+  CAN.begin();
+  Serial.println("Initializing SD card...");
   //SD.begin(10);                                                     // Begin Arduino SD API (3.2)
-  SD.begin(BUILTIN_SDCARD);                                           // Begin Arduino SD API (3.5)
-  logger = SD.open("FHDatalog.txt", FILE_WRITE);                     // Open file for writing.  
+  if (!SD.begin(BUILTIN_SDCARD)) {                                    // Begin Arduino SD API (3.5)
+    Serial.println("SD card failed, or not present");
+  }
+  logger = SD.open("datalog.csv", FILE_WRITE);                      // Open file for writing.
+  if (logger) {
+    Serial.println("Successfully opened SD file");
+  } else {
+    Serial.println("Failed to open SD file");
+  }
   logger.println("time,msg.id,msg.len,data");                         // Print heading to the file.
   logger.flush();
 
