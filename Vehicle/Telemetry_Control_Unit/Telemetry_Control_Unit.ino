@@ -288,9 +288,11 @@ void process_SD() {
         bms_detailed_voltages[ic][group].write(msg_log.buf);
         msg_log.id = ID_BMS_DETAILED_VOLTAGES;
         msg_log.len = sizeof(CAN_message_bms_detailed_voltages_t);
-        write_to_SD(flag_bms_detailed_voltages);
+        int temp = flag_bms_detailed_voltages;
+        write_to_SD(temp);
       }
-    } 
+    }
+    flag_bms_detailed_voltages = 0;
   }
 
   if (flag_bms_temperatures) {
@@ -305,8 +307,10 @@ void process_SD() {
       bms_detailed_temperatures[ic].write(msg_log.buf);
       msg_log.id = ID_BMS_DETAILED_TEMPERATURES;
       msg_log.len = sizeof(CAN_message_bms_detailed_temperatures_t);
-      write_to_SD(flag_bms_detailed_temperatures);
+      int temp = flag_bms_detailed_temperatures;
+      write_to_SD(temp);
     }
+    flag_bms_detailed_temperatures = 0;
   }
 
   if (flag_bms_onboard_temperatures) {
@@ -321,8 +325,10 @@ void process_SD() {
       bms_onboard_detailed_temperatures[i].write(msg_log.buf);
       msg_log.id = ID_BMS_ONBOARD_DETAILED_TEMPERATURES;
       msg_log.len = sizeof(CAN_message_bms_onboard_detailed_temperatures_t);
-      write_to_SD(flag_bms_onboard_detailed_temperatures);
+      int temp = flag_bms_onboard_detailed_temperatures;
+      write_to_SD(temp);
     }
+    flag_bms_onboard_detailed_temperatures = 0;
   }
 
   if (flag_bms_status) {
@@ -337,8 +343,10 @@ void process_SD() {
       bms_balancing_status[i].write(msg_log.buf);
       msg_log.id = ID_BMS_BALANCING_STATUS;
       msg_log.len = sizeof(CAN_message_bms_balancing_status_t);
-      write_to_SD(flag_bms_balancing_status);
+      int temp = flag_bms_balancing_status;
+      write_to_SD(temp);
     }
+    flag_bms_balancing_status = 0;
   }
 
   if (flag_bms_coulomb_counts) {
@@ -495,7 +503,7 @@ void parse_can_message() {
   // identify received CAN messages and load contents into corresponding structs
   while (CAN.read(msg_rx)) {
     //Serial.println("Received!");
-    int time_now = Teensy3Clock.get();                                          // RTC!!
+    int time_now = Teensy3Clock.get(); // RTC
     if (msg_rx.id == ID_MCU_STATUS) {
       mcu_status.load(msg_rx.buf);
       flag_mcu_status = time_now;
