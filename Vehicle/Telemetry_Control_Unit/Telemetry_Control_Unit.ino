@@ -149,11 +149,20 @@ void setup() {
   CAN0_IMASK1 |= 0x00000020;
   CAN0_MCR &= 0xFFFDFFFF;
   */
+
+  //Teensy3Clock.set(9999999999);                                     // set time (epoch) at powerup  (COMMENT OUT THIS LINE AND PUSH ONCE RTC HAS BEEN SET!!!!)
+  setSyncProvider(getTeensy3Time);                                    // registers Teensy RTC as system time
+  if (timeStatus() != timeSet) {
+    Serial.println("RTC not set up - uncomment the Teensy3Clock.set() function call to set the time");
+  } else {
+    Serial.println("System time set to RTC");
+  }
   
   pinMode(10, OUTPUT);                                                // Initialize pin 10 as output; this is necessary for the SD Library
   Serial.begin(115200);
   CAN.begin();
   Serial.println("Initializing SD card...");
+  SdFile::dateTimeCallback(sdDateTime);                               // Set date/time callback function
   //SD.begin(10);                                                     // Begin Arduino SD API (3.2)
   if (!SD.begin(BUILTIN_SDCARD)) {                                    // Begin Arduino SD API (3.5)
     Serial.println("SD card failed, or not present");
@@ -179,9 +188,6 @@ void setup() {
   }
   logger.println("time,msg.id,msg.len,data");                         // Print heading to the file.
   logger.flush();
-
-  //Teensy3Clock.set(9999999999);                                     // set time (epoch) at powerup  (COMMENT OUT THIS LINE AND PUSH ONCE RTC HAS BEEN SET!!!!)
-  setSyncProvider(getTeensy3Time);                                    // registers Teensy RTC as system time
 
   setupAccelerometer();
 
@@ -1000,4 +1006,12 @@ void send_xbee() {
             write_xbee_data();
         }
     }
+}
+
+void sdDateTime(uint16_t* date, uint16_t* time) {
+  // return date using FAT_DATE macro to format fields
+  *date = FAT_DATE(year(), month(), day());
+
+  // return time using FAT_TIME macro to format fields
+  *time = FAT_TIME(hour(), minute(), second());
 }
