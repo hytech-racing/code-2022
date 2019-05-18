@@ -59,6 +59,7 @@ Metro timer_status_send = Metro(100);
 Metro timer_status_send_xbee = Metro(2000);
 Metro gpsTimer = Metro(500);
 Metro timer_debug_RTC = Metro(1000);
+Metro timer_flush = Metro(1000);
 
 MCU_status mcu_status;
 MCU_pedal_readings mcu_pedal_readings;
@@ -157,7 +158,7 @@ void setup() {
   if (!SD.begin(BUILTIN_SDCARD)) {                                    // Begin Arduino SD API (3.5)
     Serial.println("SD card failed, or not present");
   }
-  logger = SD.open("datalog.csv", FILE_WRITE);                      // Open file for writing.
+  logger = SD.open("datalog.csv", O_WRITE | O_CREAT | O_APPEND);      // Open file for writing
   if (logger) {
     Serial.println("Successfully opened SD file");
   } else {
@@ -184,6 +185,10 @@ void setup() {
 
 void loop() {
   process_SD();
+  
+  if (timer_flush.check()) {
+    logger.flush(); // Flush data to disk (data is also flushed whenever the 512 Byte buffer fills up, but this call ensures we don't lose more than a second of data when the car turns off)
+  }
 
   send_xbee();
     
@@ -244,7 +249,7 @@ void loop() {
     //Serial.println(speedx10000);
     memcpy(&(msg_tx.buf[0]), &altitudex10000_send, sizeof(int));
     memcpy(&(msg_tx.buf[4]), &speedx10000_send, sizeof(int));
-    CAN.write(msg_tx);    
+    CAN.write(msg_tx);
   }
 }
 
@@ -277,7 +282,7 @@ void process_SD() {
     write_to_SD(flag_bms_voltages);
   }
 
-  if (flag_bms_detailed_voltages) {
+  if (flag_bms_detailed_voltages) { // TODO fix so we only write the ones that came in
     for (int ic = 0; ic < 8; ic++) {
       for (int group = 0; group < 3; group++) {
         bms_detailed_voltages[ic][group].write(msg_log.buf);
@@ -295,7 +300,7 @@ void process_SD() {
     write_to_SD(flag_bms_temperatures);
   }
 
-  if (flag_bms_detailed_temperatures) {
+  if (flag_bms_detailed_temperatures) { // TODO fix so we only write the ones that came in
     for (int ic = 0; ic < 8; ic++) {
       bms_detailed_temperatures[ic].write(msg_log.buf);
       msg_log.id = ID_BMS_DETAILED_TEMPERATURES;
@@ -311,7 +316,7 @@ void process_SD() {
     write_to_SD(flag_bms_onboard_temperatures);
   }
 
-  if (flag_bms_onboard_detailed_temperatures) {
+  if (flag_bms_onboard_detailed_temperatures) { // TODO fix so we only write the ones that came in
     for (int i=0; i<8; i++) {
       bms_onboard_detailed_temperatures[i].write(msg_log.buf);
       msg_log.id = ID_BMS_ONBOARD_DETAILED_TEMPERATURES;
@@ -327,7 +332,7 @@ void process_SD() {
     write_to_SD(flag_bms_status);
   }
   
-  if (flag_bms_balancing_status) {
+  if (flag_bms_balancing_status) { // TODO fix so we only write the ones that came in
     for (int i=0; i<2; i++) {
       bms_balancing_status[i].write(msg_log.buf);
       msg_log.id = ID_BMS_BALANCING_STATUS;
@@ -487,7 +492,6 @@ void process_SD() {
 }
 
 void parse_can_message() {
-
   // identify received CAN messages and load contents into corresponding structs
   while (CAN.read(msg_rx)) {
     //Serial.println("Received!");
@@ -631,7 +635,7 @@ void parse_can_message() {
   }
 }
 
-void write_to_SD(int& timestamp) {
+void write_to_SD(int& timestamp) { // Note: This function does not flush data to disk! It will happen when the buffer fills or when the above flush timer fires
   logger.print(timestamp);
   logger.print(",");
   logger.print(msg_log.id, HEX);
@@ -646,7 +650,6 @@ void write_to_SD(int& timestamp) {
     logger.print("");
   }
   logger.println();
-  logger.flush(); 
 
   // clear flag
   timestamp = 0;
