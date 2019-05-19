@@ -8,7 +8,6 @@
 #include <SD.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_ADXL345_U.h>
-#include <ADC_SPI.h>
 #include <HyTech_FlexCAN.h>
 #include <HyTech_CAN.h>
 #include <kinetis_flexcan.h>
@@ -30,7 +29,6 @@ static CAN_message_t msg_tx;
 static CAN_message_t xb_msg;
 File logger;
 
-ADC_SPI ADC(10);
 Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
 Adafruit_GPS GPS(&Serial1);
 
@@ -130,295 +128,295 @@ static int flag_gps;
 static bool pending_gps_data;
 
 void setup() {
-  /* Set up real-time clock */
-  //Teensy3Clock.set(9999999999); // set time (epoch) at powerup  (COMMENT OUT THIS LINE AND PUSH ONCE RTC HAS BEEN SET!!!!)
-  setSyncProvider(getTeensy3Time); // registers Teensy RTC as system time
-  if (timeStatus() != timeSet) {
-    Serial.println("RTC not set up - uncomment the Teensy3Clock.set() function call to set the time");
-  } else {
-    Serial.println("System time set to RTC");
-  }
-
-  /* Configure pins */
-  pinMode(A12, INPUT); // Current sensor (cooling circuit)
-  pinMode(A13, INPUT); // Current sensor (non-cooling circuit)
-  
-  /* Set up Serial, XBee and CAN */
-  Serial.begin(115200);
-  XB.begin(115200);
-  FLEXCAN0_MCR &= 0xFFFDFFFF; // Enables CAN message self-reception
-  CAN.begin();
-
-  /* Set up accelerometer */
-  setup_accelerometer();
-
-  /* Set up GPS */
-  GPS.begin(9600);
-  GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA); // specify data to be received (minimum + fix)
-  GPS.sendCommand(PMTK_SET_NMEA_UPDATE_10HZ); // set update rate (10Hz)
-  GPS.sendCommand(PGCMD_ANTENNA); // report data about antenna
-
-  /* Set up SD card */
-  Serial.println("Initializing SD card...");
-  SdFile::dateTimeCallback(sd_date_time); // Set date/time callback function
-  if (!SD.begin(BUILTIN_SDCARD)) { // Begin Arduino SD API (Teensy 3.5)
-    Serial.println("SD card failed or not present");
-  }
-  char filename[] = "data0000.CSV";
-  for (uint8_t i = 0; i < 10000; i++) {
-    filename[4] = i / 1000     + '0';
-    filename[5] = i / 100 % 10 + '0';
-    filename[6] = i / 10  % 10 + '0';
-    filename[7] = i       % 10 + '0';
-    if (!SD.exists(filename)) {
-      logger = SD.open(filename, O_WRITE | O_CREAT); // Open file for writing
-      break;
+    /* Set up real-time clock */
+    //Teensy3Clock.set(9999999999); // set time (epoch) at powerup  (COMMENT OUT THIS LINE AND PUSH ONCE RTC HAS BEEN SET!!!!)
+    setSyncProvider(getTeensy3Time); // registers Teensy RTC as system time
+    if (timeStatus() != timeSet) {
+        Serial.println("RTC not set up - uncomment the Teensy3Clock.set() function call to set the time");
+    } else {
+        Serial.println("System time set to RTC");
     }
-    if (i == 9999) { // If all possible filenames are in use, print error
-      Serial.println("All possible SD card log filenames are in use - please clean up the SD card");
+
+    /* Configure pins */
+    pinMode(A12, INPUT); // Current sensor (cooling circuit)
+    pinMode(A13, INPUT); // Current sensor (non-cooling circuit)
+
+    /* Set up Serial, XBee and CAN */
+    Serial.begin(115200);
+    XB.begin(115200);
+    FLEXCAN0_MCR &= 0xFFFDFFFF; // Enables CAN message self-reception
+    CAN.begin();
+
+    /* Set up accelerometer */
+    setup_accelerometer();
+
+    /* Set up GPS */
+    GPS.begin(9600);
+    GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA); // specify data to be received (minimum + fix)
+    GPS.sendCommand(PMTK_SET_NMEA_UPDATE_10HZ); // set update rate (10Hz)
+    GPS.sendCommand(PGCMD_ANTENNA); // report data about antenna
+
+    /* Set up SD card */
+    Serial.println("Initializing SD card...");
+    SdFile::dateTimeCallback(sd_date_time); // Set date/time callback function
+    if (!SD.begin(BUILTIN_SDCARD)) { // Begin Arduino SD API (Teensy 3.5)
+        Serial.println("SD card failed or not present");
     }
-  }
-  if (logger) {
-    Serial.println("Successfully opened SD file");
-  } else {
-    Serial.println("Failed to open SD file");
-  }
-  logger.println("time,msg.id,msg.len,data"); // Print CSV heading to the logfile
-  logger.flush();
+    char filename[] = "data0000.CSV";
+    for (uint8_t i = 0; i < 10000; i++) {
+        filename[4] = i / 1000     + '0';
+        filename[5] = i / 100 % 10 + '0';
+        filename[6] = i / 10  % 10 + '0';
+        filename[7] = i       % 10 + '0';
+        if (!SD.exists(filename)) {
+            logger = SD.open(filename, O_WRITE | O_CREAT); // Open file for writing
+            break;
+        }
+        if (i == 9999) { // If all possible filenames are in use, print error
+            Serial.println("All possible SD card log filenames are in use - please clean up the SD card");
+        }
+    }
+    if (logger) {
+        Serial.println("Successfully opened SD file");
+    } else {
+        Serial.println("Failed to open SD file");
+    }
+    logger.println("time,msg.id,msg.len,data"); // Print CSV heading to the logfile
+    logger.flush();
 }
 
 void loop() {
-  /* Process and log incoming CAN messages */
-  parse_can_message();
+    /* Process and log incoming CAN messages */
+    parse_can_message();
 
-  /* Send messages over XBee */
-  send_xbee();
+    /* Send messages over XBee */
+    send_xbee();
 
-  /* Flush data to SD card occasionally */
-  if (timer_flush.check()) {
-    logger.flush(); // Flush data to disk (data is also flushed whenever the 512 Byte buffer fills up, but this call ensures we don't lose more than a second of data when the car turns off)
-  }
+    /* Flush data to SD card occasionally */
+    if (timer_flush.check()) {
+        logger.flush(); // Flush data to disk (data is also flushed whenever the 512 Byte buffer fills up, but this call ensures we don't lose more than a second of data when the car turns off)
+    }
 
-  /* Print timestamp to serial occasionally */
-  if (timer_debug_RTC.check()) {
-    Serial.println(Teensy3Clock.get());
-  }
-  
-  /* Process accelerometer readings occasionally */
-  if (timer_accelerometer.check()) {
-      process_accelerometer(); 
-  }
+    /* Print timestamp to serial occasionally */
+    if (timer_debug_RTC.check()) {
+        Serial.println(Teensy3Clock.get());
+    }
 
-  /* Process current sensor readings occasionally */
-  if (timer_current.check()) {
-    process_current();  
-  }
-  
-  /* Process GPS readings */
-  GPS.read();
-  if (GPS.newNMEAreceived()) {
-    GPS.parse(GPS.lastNMEA());
-    flag_gps = Teensy3Clock.get();
-    pending_gps_data = true;
-  }
-  if (timer_gps.check() && pending_gps_data) {
-    process_gps();
-  }
+    /* Process accelerometer readings occasionally */
+    if (timer_accelerometer.check()) {
+        process_accelerometer(); 
+    }
+
+    /* Process current sensor readings occasionally */
+    if (timer_current.check()) {
+        process_current();  
+    }
+
+    /* Process GPS readings */
+    GPS.read();
+    if (GPS.newNMEAreceived()) {
+        GPS.parse(GPS.lastNMEA());
+        flag_gps = Teensy3Clock.get();
+        pending_gps_data = true;
+    }
+    if (timer_gps.check() && pending_gps_data) {
+        process_gps();
+    }
 }
 
 void parse_can_message() {
-  while (CAN.read(msg_rx)) {
-    write_to_SD(&msg_rx); // Write to SD card buffer (if the buffer fills up, triggering a flush to disk, this will take 8ms)
-    int time_now = Teensy3Clock.get(); // RTC
+    while (CAN.read(msg_rx)) {
+        write_to_SD(&msg_rx); // Write to SD card buffer (if the buffer fills up, triggering a flush to disk, this will take 8ms)
+        int time_now = Teensy3Clock.get(); // RTC
 
-    // Identify received CAN messages and load contents into corresponding structs
-    if (msg_rx.id == ID_MCU_STATUS) {
-      mcu_status.load(msg_rx.buf);
-      flag_mcu_status = time_now;
+        // Identify received CAN messages and load contents into corresponding structs
+        if (msg_rx.id == ID_MCU_STATUS) {
+            mcu_status.load(msg_rx.buf);
+            flag_mcu_status = time_now;
+        }
+        if (msg_rx.id == ID_MCU_PEDAL_READINGS) {
+            mcu_pedal_readings.load(msg_rx.buf);
+            flag_mcu_pedal_readings = time_now;
+        }
+        if (msg_rx.id == ID_GLV_CURRENT_READINGS) {
+            current_readings.load(msg_rx.buf);
+            flag_current_readings = time_now;
+        }
+        if (msg_rx.id == ID_BMS_VOLTAGES) {
+            bms_voltages.load(msg_rx.buf);
+            flag_bms_voltages = time_now;
+        }
+        if (msg_rx.id == ID_BMS_DETAILED_VOLTAGES) {
+            BMS_detailed_voltages temp = BMS_detailed_voltages(msg_rx.buf);
+            bms_detailed_voltages[temp.get_ic_id()][temp.get_group_id()].load(msg_rx.buf);
+            flag_bms_detailed_voltages = time_now;
+        }
+        if (msg_rx.id == ID_BMS_TEMPERATURES) {
+            bms_temperatures.load(msg_rx.buf);
+            flag_bms_temperatures = time_now;
+        }
+        if (msg_rx.id == ID_BMS_DETAILED_TEMPERATURES) {
+            BMS_detailed_temperatures temp = BMS_detailed_temperatures(msg_rx.buf);
+            bms_detailed_temperatures[temp.get_ic_id()].load(msg_rx.buf);
+            flag_bms_detailed_temperatures = time_now;
+        }
+        if (msg_rx.id == ID_BMS_ONBOARD_TEMPERATURES) {
+            bms_onboard_temperatures.load(msg_rx.buf);
+            flag_bms_onboard_temperatures = time_now;
+        }
+        if (msg_rx.id == ID_BMS_ONBOARD_DETAILED_TEMPERATURES) {
+            BMS_onboard_detailed_temperatures temp = BMS_onboard_detailed_temperatures(msg_rx.buf);
+            bms_onboard_detailed_temperatures[temp.get_ic_id()].load(msg_rx.buf);
+            flag_bms_onboard_detailed_temperatures = time_now;
+        }
+        if (msg_rx.id == ID_BMS_STATUS) {
+            bms_status.load(msg_rx.buf);
+            flag_bms_status = time_now;
+        }
+        if (msg_rx.id == ID_BMS_BALANCING_STATUS) {
+            BMS_balancing_status temp = BMS_balancing_status(msg_rx.buf);
+            bms_balancing_status[temp.get_group_id()].load(msg_rx.buf);
+            flag_bms_balancing_status = time_now;
+        }
+        if (msg_rx.id == ID_BMS_COULOMB_COUNTS) {
+            bms_coulomb_counts.load(msg_rx.buf);
+            flag_bms_coulomb_counts = time_now;
+        }
+        if (msg_rx.id == ID_CCU_STATUS) {
+            ccu_status.load(msg_rx.buf);
+            flag_ccu_status = time_now;
+        }
+        if (msg_rx.id == ID_MC_TEMPERATURES_1) {
+            mc_temperatures_1.load(msg_rx.buf);
+            flag_mc_temperatures_1 = time_now;
+        }
+        if (msg_rx.id == ID_MC_TEMPERATURES_2) {
+            mc_temperatures_2.load(msg_rx.buf);
+            flag_mc_temperatures_2 = time_now;
+        }
+        if (msg_rx.id == ID_MC_TEMPERATURES_3) {
+            mc_temperatures_3.load(msg_rx.buf);
+            flag_mc_temperatures_3 = time_now;
+        }
+        /*
+        if (msg_rx.id == ID_MC_ANALOG_INPUTS_VOLTAGES) {
+            mc_analog_input_voltages.load(msg_rx.buf);
+            flag_mc_analog_input_voltages = time_now;
+        }
+        if (msg_rx.id == ID_MC_DIGITAL_INPUT_STATUS) {
+            mc_digital_input_status.load(msg_rx.buf);
+            flag_mc_digital_input_status = time_now;
+        }
+        */
+        if (msg_rx.id == ID_MC_MOTOR_POSITION_INFORMATION) {
+            mc_motor_position_information.load(msg_rx.buf);
+            flag_mc_motor_position_information = time_now;
+        }
+        if (msg_rx.id == ID_MC_CURRENT_INFORMATION) {
+            mc_current_information.load(msg_rx.buf);
+            flag_mc_current_information = time_now;
+        }
+        if (msg_rx.id == ID_MC_VOLTAGE_INFORMATION) {
+            mc_voltage_information.load(msg_rx.buf);
+            flag_mc_voltage_information = time_now;
+        }
+        if (msg_rx.id == ID_MC_INTERNAL_STATES) {
+            mc_internal_states.load(msg_rx.buf);
+            flag_mc_internal_states = time_now;
+        }
+        if (msg_rx.id == ID_MC_FAULT_CODES) {
+            mc_fault_codes.load(msg_rx.buf);
+            flag_mc_fault_codes = time_now;
+        }
+        if (msg_rx.id == ID_MC_TORQUE_TIMER_INFORMATION) {
+            mc_torque_timer_information.load(msg_rx.buf);
+            flag_mc_torque_timer_information = time_now;
+        }
+        if (msg_rx.id == ID_MC_MODULATION_INDEX_FLUX_WEAKENING_OUTPUT_INFORMATION) {
+            mc_modulation_index_flux_weakening_output_information.load(msg_rx.buf);
+            flag_mc_modulation_index_flux_weakening_output_information = time_now;
+        }
+        if (msg_rx.id == ID_MC_FIRMWARE_INFORMATION) {
+            mc_firmware_information.load(msg_rx.buf);
+            flag_mc_firmware_information = time_now;
+        }
+        if (msg_rx.id == ID_MC_COMMAND_MESSAGE) {
+            mc_command_message.load(msg_rx.buf);
+            flag_mc_command_message = time_now;
+        }
+        if (msg_rx.id == ID_MC_READ_WRITE_PARAMETER_COMMAND) {
+            mc_read_write_parameter_command.load(msg_rx.buf);
+            flag_mc_read_write_parameter_command = time_now;
+        }
+        if (msg_rx.id == ID_MC_READ_WRITE_PARAMETER_RESPONSE) {
+            mc_read_write_parameter_response.load(msg_rx.buf);
+            flag_mc_read_write_parameter_response = time_now;
+        }
+        if (msg_rx.id == ID_FCU_ACCELEROMETER) {
+            fcu_accelerometer_values.load(msg_rx.buf);
+            flag_fcu_accelerometer_values = time_now;
+        }
     }
-    if (msg_rx.id == ID_MCU_PEDAL_READINGS) {
-      mcu_pedal_readings.load(msg_rx.buf);
-      flag_mcu_pedal_readings = time_now;
-    }
-    if (msg_rx.id == ID_GLV_CURRENT_READINGS) {
-      current_readings.load(msg_rx.buf);
-      flag_current_readings = time_now;
-    }
-    if (msg_rx.id == ID_BMS_VOLTAGES) {
-      bms_voltages.load(msg_rx.buf);
-      flag_bms_voltages = time_now;
-    }
-    if (msg_rx.id == ID_BMS_DETAILED_VOLTAGES) {
-      BMS_detailed_voltages temp = BMS_detailed_voltages(msg_rx.buf);
-      bms_detailed_voltages[temp.get_ic_id()][temp.get_group_id()].load(msg_rx.buf);
-      flag_bms_detailed_voltages = time_now;
-    }
-    if (msg_rx.id == ID_BMS_TEMPERATURES) {
-      bms_temperatures.load(msg_rx.buf);
-      flag_bms_temperatures = time_now;
-    }
-    if (msg_rx.id == ID_BMS_DETAILED_TEMPERATURES) {
-      BMS_detailed_temperatures temp = BMS_detailed_temperatures(msg_rx.buf);
-      bms_detailed_temperatures[temp.get_ic_id()].load(msg_rx.buf);
-      flag_bms_detailed_temperatures = time_now;
-    }
-    if (msg_rx.id == ID_BMS_ONBOARD_TEMPERATURES) {
-      bms_onboard_temperatures.load(msg_rx.buf);
-      flag_bms_onboard_temperatures = time_now;
-    }
-    if (msg_rx.id == ID_BMS_ONBOARD_DETAILED_TEMPERATURES) {
-      BMS_onboard_detailed_temperatures temp = BMS_onboard_detailed_temperatures(msg_rx.buf);
-      bms_onboard_detailed_temperatures[temp.get_ic_id()].load(msg_rx.buf);
-      flag_bms_onboard_detailed_temperatures = time_now;
-    }
-    if (msg_rx.id == ID_BMS_STATUS) {
-      bms_status.load(msg_rx.buf);
-      flag_bms_status = time_now;
-    }
-    if (msg_rx.id == ID_BMS_BALANCING_STATUS) {
-      BMS_balancing_status temp = BMS_balancing_status(msg_rx.buf);
-      bms_balancing_status[temp.get_group_id()].load(msg_rx.buf);
-      flag_bms_balancing_status = time_now;
-    }
-    if (msg_rx.id == ID_BMS_COULOMB_COUNTS) {
-      bms_coulomb_counts.load(msg_rx.buf);
-      flag_bms_coulomb_counts = time_now;
-    }
-    if (msg_rx.id == ID_CCU_STATUS) {
-      ccu_status.load(msg_rx.buf);
-      flag_ccu_status = time_now;
-    }
-    if (msg_rx.id == ID_MC_TEMPERATURES_1) {
-      mc_temperatures_1.load(msg_rx.buf);
-      flag_mc_temperatures_1 = time_now;
-    }
-    if (msg_rx.id == ID_MC_TEMPERATURES_2) {
-      mc_temperatures_2.load(msg_rx.buf);
-      flag_mc_temperatures_2 = time_now;
-    }
-    if (msg_rx.id == ID_MC_TEMPERATURES_3) {
-      mc_temperatures_3.load(msg_rx.buf);
-      flag_mc_temperatures_3 = time_now;
-    }
-    /*
-    if (msg_rx.id == ID_MC_ANALOG_INPUTS_VOLTAGES) {
-      mc_analog_input_voltages.load(msg_rx.buf);
-      flag_mc_analog_input_voltages = time_now;
-    }
-    if (msg_rx.id == ID_MC_DIGITAL_INPUT_STATUS) {
-      mc_digital_input_status.load(msg_rx.buf);
-      flag_mc_digital_input_status = time_now;
-    }
-    */
-    if (msg_rx.id == ID_MC_MOTOR_POSITION_INFORMATION) {
-      mc_motor_position_information.load(msg_rx.buf);
-      flag_mc_motor_position_information = time_now;
-    }
-    if (msg_rx.id == ID_MC_CURRENT_INFORMATION) {
-      mc_current_information.load(msg_rx.buf);
-      flag_mc_current_information = time_now;
-    }
-    if (msg_rx.id == ID_MC_VOLTAGE_INFORMATION) {
-      mc_voltage_information.load(msg_rx.buf);
-      flag_mc_voltage_information = time_now;
-    }
-    if (msg_rx.id == ID_MC_INTERNAL_STATES) {
-      mc_internal_states.load(msg_rx.buf);
-      flag_mc_internal_states = time_now;
-    }
-    if (msg_rx.id == ID_MC_FAULT_CODES) {
-      mc_fault_codes.load(msg_rx.buf);
-      flag_mc_fault_codes = time_now;
-    }
-    if (msg_rx.id == ID_MC_TORQUE_TIMER_INFORMATION) {
-      mc_torque_timer_information.load(msg_rx.buf);
-      flag_mc_torque_timer_information = time_now;
-    }
-    if (msg_rx.id == ID_MC_MODULATION_INDEX_FLUX_WEAKENING_OUTPUT_INFORMATION) {
-      mc_modulation_index_flux_weakening_output_information.load(msg_rx.buf);
-      flag_mc_modulation_index_flux_weakening_output_information = time_now;
-    }
-    if (msg_rx.id == ID_MC_FIRMWARE_INFORMATION) {
-      mc_firmware_information.load(msg_rx.buf);
-      flag_mc_firmware_information = time_now;
-    }
-    if (msg_rx.id == ID_MC_COMMAND_MESSAGE) {
-      mc_command_message.load(msg_rx.buf);
-      flag_mc_command_message = time_now;
-    }
-    if (msg_rx.id == ID_MC_READ_WRITE_PARAMETER_COMMAND) {
-      mc_read_write_parameter_command.load(msg_rx.buf);
-      flag_mc_read_write_parameter_command = time_now;
-    }
-    if (msg_rx.id == ID_MC_READ_WRITE_PARAMETER_RESPONSE) {
-      mc_read_write_parameter_response.load(msg_rx.buf);
-      flag_mc_read_write_parameter_response = time_now;
-    }
-    if (msg_rx.id == ID_FCU_ACCELEROMETER) {
-      fcu_accelerometer_values.load(msg_rx.buf);
-      flag_fcu_accelerometer_values = time_now;
-    }
-  }
 }
 
 void write_to_SD(CAN_message_t *msg) { // Note: This function does not flush data to disk! It will happen when the buffer fills or when the above flush timer fires
-  logger.print(Teensy3Clock.get());
-  logger.print(",");
-  logger.print(msg->id, HEX);
-  logger.print(",");
-  logger.print(msg->len);
-  logger.print(",");
-  for (int i = 0; i < msg->len; i++) {
-    if (msg->buf[i] < 16) {
-      logger.print("0");
+    logger.print(Teensy3Clock.get());
+    logger.print(",");
+    logger.print(msg->id, HEX);
+    logger.print(",");
+    logger.print(msg->len);
+    logger.print(",");
+    for (int i = 0; i < msg->len; i++) {
+        if (msg->buf[i] < 16) {
+            logger.print("0");
+        }
+        logger.print(msg->buf[i], HEX);
     }
-    logger.print(msg->buf[i], HEX);
-  }
-  logger.println();
+    logger.println();
 }
 
 time_t getTeensy3Time() {
-  return Teensy3Clock.get();
+    return Teensy3Clock.get();
 }
 
 void setup_accelerometer() {
-  // Initialise the sensor
-  if(!accel.begin())
-  {
-    // There was a problem detecting the ADXL345 ... check your connections
-    Serial.println("Sensor not detected!!!!!");
-  }
-  else {
-    accel.setRange(ADXL345_RANGE_4_G);
-  }
+    // Initialise the sensor
+    if(!accel.begin())
+    {
+        // There was a problem detecting the ADXL345 ... check your connections
+        Serial.println("Sensor not detected!!!!!");
+    }
+    else {
+        accel.setRange(ADXL345_RANGE_4_G);
+    }
 }
 
 void process_accelerometer() {
-  /* Get a new sensor event */
-  sensors_event_t event;
-  accel.getEvent(&event);
-  
-  /* Read accelerometer values into accelerometer class */
-  fcu_accelerometer_values.set_values((uint8_t) (event.acceleration.x*100), (uint8_t) (event.acceleration.y*100), (uint8_t) (event.acceleration.z*100));
-  
-  /* Send message over XBee */
-  fcu_accelerometer_values.write(xb_msg.buf);
-  xb_msg.id = ID_FCU_ACCELEROMETER;
-  xb_msg.len = sizeof(CAN_message_fcu_accelerometer_values_t);
-  write_xbee_data();
+    /* Get a new sensor event */
+    sensors_event_t event;
+    accel.getEvent(&event);
+    
+    /* Read accelerometer values into accelerometer class */
+    fcu_accelerometer_values.set_values((uint8_t) (event.acceleration.x*100), (uint8_t) (event.acceleration.y*100), (uint8_t) (event.acceleration.z*100));
+    
+    /* Send message over XBee */
+    fcu_accelerometer_values.write(xb_msg.buf);
+    xb_msg.id = ID_FCU_ACCELEROMETER;
+    xb_msg.len = sizeof(CAN_message_fcu_accelerometer_values_t);
+    write_xbee_data();
 
-  /* Send message over CAN */
-  fcu_accelerometer_values.write(msg_tx.buf);
-  msg_tx.id = ID_FCU_ACCELEROMETER;
-  msg_tx.len = sizeof(CAN_message_fcu_accelerometer_values_t);
-  CAN.write(msg_tx);
+    /* Send message over CAN */
+    fcu_accelerometer_values.write(msg_tx.buf);
+    msg_tx.id = ID_FCU_ACCELEROMETER;
+    msg_tx.len = sizeof(CAN_message_fcu_accelerometer_values_t);
+    CAN.write(msg_tx);
 
-  /*
-  Serial.print("\n\nACCELEROMETER DATA\n\n");
-  Serial.print(event.acceleration.x); Serial.print(", ");
-  Serial.print(event.acceleration.y); Serial.print(", ");
-  Serial.print(event.acceleration.z); Serial.println("\n\n");
-  */
+    /*
+    Serial.print("\n\nACCELEROMETER DATA\n\n");
+    Serial.print(event.acceleration.x); Serial.print(", ");
+    Serial.print(event.acceleration.y); Serial.print(", ");
+    Serial.print(event.acceleration.z); Serial.println("\n\n");
+    */
 }
 
 void process_current() {
@@ -495,8 +493,8 @@ int write_xbee_data() {
     memcpy(&xb_buf[XBEE_PKT_LEN - 2], &checksum, sizeof(uint16_t));
 
     for (int i = 0; i < XBEE_PKT_LEN; i++) {
-      //Serial.print(xb_buf[i], HEX);
-      //Serial.print(" ");
+        //Serial.print(xb_buf[i], HEX);
+        //Serial.print(" ");
     }
     //Serial.println();
 
@@ -505,8 +503,8 @@ int write_xbee_data() {
     cobs_buf[XBEE_PKT_LEN+1] = 0x0;
 
     for (int i = 0; i < XBEE_PKT_LEN+2; i++) {
-      //Serial.print(cobs_buf[i], HEX);
-      //Serial.print(" ");
+        //Serial.print(cobs_buf[i], HEX);
+        //Serial.print(" ");
     }
     //Serial.println();
 
@@ -751,9 +749,9 @@ void send_xbee() {
 }
 
 void sd_date_time(uint16_t* date, uint16_t* time) {
-  // return date using FAT_DATE macro to format fields
-  *date = FAT_DATE(year(), month(), day());
+    // return date using FAT_DATE macro to format fields
+    *date = FAT_DATE(year(), month(), day());
 
-  // return time using FAT_TIME macro to format fields
-  *time = FAT_TIME(hour(), minute(), second());
+    // return time using FAT_TIME macro to format fields
+    *time = FAT_TIME(hour(), minute(), second());
 }
