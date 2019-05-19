@@ -38,10 +38,10 @@
 #define ID_RCU_STATUS 0xD0
 #define ID_FCU_STATUS 0xD2
 #define ID_FCU_READINGS 0xD3
-#define ID_FCU_ACCELEROMETER 0xDF
+#define ID_FCU_ACCELEROMETER 0xDF // TODO rename to mcu_accelerometer_readings when we're not in the middle of a development cycle
 #define ID_RCU_RESTART_MC 0xD4
 #define ID_BMS_ONBOARD_TEMPERATURES 0xD5
-#define ID_BMS_ONBOARD_DETAILED_TEMPERATURES 0xD6
+#define ID_BMS_ONBOARD_DETAILED_TEMPERATURES 0xD6 // TODO rename to bms_detailed_onboard_temperatures when we're not in the middle of a development cycle
 #define ID_BMS_VOLTAGES 0xD7
 #define ID_BMS_DETAILED_VOLTAGES 0xD8
 #define ID_BMS_TEMPERATURES 0xD9
@@ -73,8 +73,9 @@
 #define ID_MC_READ_WRITE_PARAMETER_COMMAND 0xC1
 #define ID_MC_READ_WRITE_PARAMETER_RESPONSE 0xC2
 #define ID_GLV_CURRENT_READINGS 0xCC
-#define ID_ECU_GPS_READINGS_ALPHA 0xE7
-#define ID_ECU_GPS_READINGS_BETA 0xE8
+#define ID_MCU_GPS_READINGS_ALPHA 0xE7
+#define ID_MCU_GPS_READINGS_BETA 0xE8
+#define ID_MCU_GPS_READINGS_GAMMA 0xE9
 
 /*
 
@@ -323,6 +324,23 @@ typedef struct CAN_message_fcu_accelerometer_values_t {
    short ZValue_x100;
 } CAN_message_fcu_accelerometer_values_t;
 
+typedef struct CAN_message_gps_readings_alpha_t {
+    int32_t latitude;
+    int32_t longitude;
+} CAN_message_gps_readings_alpha_t;
+
+typedef struct CAN_message_gps_readings_beta_t {
+    int32_t altitude;
+    int32_t speed;
+} CAN_message_gps_readings_beta_t;
+
+typedef struct CAN_message_gps_readings_gamma_t {
+    uint8_t fix_quality;
+    uint8_t satellite_count;
+    uint32_t timestamp_seconds;
+    uint16_t timestamp_milliseconds;
+} CAN_message_gps_readings_gamma_t;
+
 typedef struct Telem_message {
     //bool cobs_flag;
     uint32_t msg_id;
@@ -364,6 +382,9 @@ typedef struct Telem_message {
         CAN_message_mc_read_write_parameter_response_t
                 mc_read_write_parameter_response;
         CAN_message_fcu_accelerometer_values_t  fcu_accelerometer_values;
+        CAN_message_gps_readings_alpha_t CAN_message_gps_readings_alpha;
+        CAN_message_gps_readings_beta_t CAN_message_gps_readings_beta;
+        CAN_message_gps_readings_gamma_t CAN_message_gps_readings_gamma;
     } contents;
     uint16_t checksum;
 } Telem_message_t;
@@ -1037,17 +1058,63 @@ class MC_read_write_parameter_response {
 };
 
 class FCU_accelerometer_values {
-   public:
-      FCU_accelerometer_values();
-      FCU_accelerometer_values(uint8_t buf[8]);
-      void load(uint8_t buf[8]);
-      void write(uint8_t buf[8]);
-      short get_x();
-      short get_y();
-      short get_z();
-      void set_values(short, short, short);
-   private:
-      CAN_message_fcu_accelerometer_values_t message;
+    public:
+        FCU_accelerometer_values();
+        FCU_accelerometer_values(uint8_t buf[8]);
+        void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
+        short get_x();
+        short get_y();
+        short get_z();
+        void set_values(short, short, short);
+    private:
+        CAN_message_fcu_accelerometer_values_t message;
+};
+
+class MCU_GPS_readings_alpha {
+    public:
+        MCU_GPS_readings_alpha();
+        MCU_GPS_readings_alpha(uint8_t buf[8]);
+        void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
+        int32_t get_latitude();
+        int32_t get_longitude();
+        void set_latitude(int32_t latitude);
+        void set_longitude(int32_t longitude);
+    private:
+        CAN_message_gps_readings_alpha_t message;
+};
+
+class MCU_GPS_readings_beta {
+    public:
+        MCU_GPS_readings_beta();
+        MCU_GPS_readings_beta(uint8_t buf[8]);
+        void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
+        int32_t get_altitude();
+        int32_t get_speed();
+        void set_altitude(int32_t altitude);
+        void set_speed(int32_t speed);
+    private:
+        CAN_message_gps_readings_beta_t message;
+};
+
+class MCU_GPS_readings_gamma {
+    public:
+        MCU_GPS_readings_gamma();
+        MCU_GPS_readings_gamma(uint8_t buf[8]);
+        void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
+        uint8_t get_fix_quality();
+        uint8_t get_satellite_count();
+        uint32_t get_timestamp_seconds();
+        uint16_t get_timestamp_milliseconds();
+        void set_fix_quality(uint8_t fix_quality);
+        void set_satellite_count(uint8_t satellite_count);
+        void set_timestamp_seconds(uint32_t timestamp_seconds);
+        void set_timestamp_milliseconds(uint16_t timestamp_milliseconds);
+    private:
+        CAN_message_gps_readings_gamma_t message;
 };
 
 #endif
