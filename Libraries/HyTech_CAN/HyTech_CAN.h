@@ -287,9 +287,9 @@ typedef struct CAN_message_mc_voltage_information_t {
 } CAN_message_mc_voltage_information_t;
 
 typedef struct CAN_message_fcu_accelerometer_values_t {
-   short XValue_x100;
-   short YValue_x100;
-   short ZValue_x100;
+   uint8_t XValue_x100;
+   uint8_t YValue_x100;
+   uint8_t ZValue_x100;
 } CAN_message_fcu_accelerometer_values_t;
 
 typedef struct CAN_message_mcu_gps_readings_alpha_t {
@@ -591,10 +591,10 @@ class FCU_accelerometer_values {
         FCU_accelerometer_values(uint8_t buf[8]);
         void load(uint8_t buf[8]);
         void write(uint8_t buf[8]);
-        short get_x();
-        short get_y();
-        short get_z();
-        void set_values(short, short, short);
+        uint8_t get_x();
+        uint8_t get_y();
+        uint8_t get_z();
+        void set_values(uint8_t x, uint8_t y, uint8_t z);
     private:
         CAN_message_fcu_accelerometer_values_t message;
 };
