@@ -94,9 +94,6 @@ MCU_GPS_readings_alpha mcu_gps_readings_alpha;
 MCU_GPS_readings_beta mcu_gps_readings_beta;
 MCU_GPS_readings_gamma mcu_gps_readings_gamma;
 
-
-
-
 // flags double in function as timestamps
 static int flag_mcu_status;
 static int flag_mcu_pedal_readings;
@@ -380,13 +377,11 @@ void write_to_SD(CAN_message_t *msg) { // Note: This function does not flush dat
   logger.println();
 }
 
-time_t getTeensy3Time()
-{
+time_t getTeensy3Time() {
   return Teensy3Clock.get();
 }
 
 void setup_accelerometer() {
-      
   // Initialise the sensor
   if(!accel.begin())
   {
@@ -399,31 +394,24 @@ void setup_accelerometer() {
 }
 
 void process_accelerometer() {
-  // Get a new sensor event
-  sensors_event_t event; 
+  /* Get a new sensor event */
+  sensors_event_t event;
   accel.getEvent(&event);
   
-  // Read accelerometer values into accelerometer class
-  fcu_accelerometer_values.set_values((short)((int)(event.acceleration.x*100)), (short)((int)(event.acceleration.y*100)), (short)((int)(event.acceleration.z*100)));
+  /* Read accelerometer values into accelerometer class */
+  fcu_accelerometer_values.set_values((uint8_t) (event.acceleration.x*100), (uint8_t) (event.acceleration.y*100), (uint8_t) (event.acceleration.z*100));
   
-  // Send msg over CAN
+  /* Send message over XBee */
   fcu_accelerometer_values.write(xb_msg.buf);
   xb_msg.id = ID_FCU_ACCELEROMETER;
   xb_msg.len = sizeof(CAN_message_fcu_accelerometer_values_t);
   write_xbee_data();
-  
+
+  /* Send message over CAN */
   fcu_accelerometer_values.write(msg_tx.buf);
   msg_tx.id = ID_FCU_ACCELEROMETER;
   msg_tx.len = sizeof(CAN_message_fcu_accelerometer_values_t);
   CAN.write(msg_tx);
-  
-
-  /*
-  // order of bytes of each value is in reverse: buf[1],buf[0] is x value, buf[3],buf[2] is y value, and etc.
-  Serial.println((short)((int)(event.acceleration.x*100)));
-  Serial.print(msg.buf[1], HEX);
-  Serial.println(msg.buf[0], HEX);
-  */
 
   /*
   Serial.print("\n\nACCELEROMETER DATA\n\n");
@@ -478,7 +466,8 @@ void process_gps() {
 
     mcu_gps_readings_gamma.set_fix_quality(GPS.fixquality);
     mcu_gps_readings_gamma.set_satellite_count(GPS.satellites);
-    mcu_gps_readings_gamma.set_timestamp_seconds(0);
+    TimeElements tm = {Second : GPS.seconds, Minute : GPS.minute, Hour : GPS.hour, Wday : 0, Day : GPS.day, Month : GPS.month, Year : GPS.year};
+    mcu_gps_readings_gamma.set_timestamp_seconds((uint32_t) makeTime(tm));
     mcu_gps_readings_gamma.set_timestamp_milliseconds(GPS.milliseconds);
     msg_tx.id = ID_MCU_GPS_READINGS_BETA;
     msg_tx.len = sizeof(CAN_message_mcu_gps_readings_gamma_t);
