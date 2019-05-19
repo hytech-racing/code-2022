@@ -324,22 +324,22 @@ typedef struct CAN_message_fcu_accelerometer_values_t {
    short ZValue_x100;
 } CAN_message_fcu_accelerometer_values_t;
 
-typedef struct CAN_message_gps_readings_alpha_t {
+typedef struct CAN_message_mcu_gps_readings_alpha_t {
     int32_t latitude;
     int32_t longitude;
-} CAN_message_gps_readings_alpha_t;
+} CAN_message_mcu_gps_readings_alpha_t;
 
-typedef struct CAN_message_gps_readings_beta_t {
+typedef struct CAN_message_mcu_gps_readings_beta_t {
     int32_t altitude;
     int32_t speed;
-} CAN_message_gps_readings_beta_t;
+} CAN_message_mcu_gps_readings_beta_t;
 
-typedef struct CAN_message_gps_readings_gamma_t {
+typedef struct CAN_message_mcu_gps_readings_gamma_t {
     uint8_t fix_quality;
     uint8_t satellite_count;
     uint32_t timestamp_seconds;
     uint16_t timestamp_milliseconds;
-} CAN_message_gps_readings_gamma_t;
+} CAN_message_mcu_gps_readings_gamma_t;
 
 typedef struct Telem_message {
     //bool cobs_flag;
@@ -382,9 +382,9 @@ typedef struct Telem_message {
         CAN_message_mc_read_write_parameter_response_t
                 mc_read_write_parameter_response;
         CAN_message_fcu_accelerometer_values_t  fcu_accelerometer_values;
-        CAN_message_gps_readings_alpha_t CAN_message_gps_readings_alpha;
-        CAN_message_gps_readings_beta_t CAN_message_gps_readings_beta;
-        CAN_message_gps_readings_gamma_t CAN_message_gps_readings_gamma;
+        CAN_message_mcu_gps_readings_alpha_t CAN_message_mcu_gps_readings_alpha;
+        CAN_message_mcu_gps_readings_beta_t CAN_message_mcu_gps_readings_beta;
+        CAN_message_mcu_gps_readings_gamma_t CAN_message_mcu_gps_readings_gamma;
     } contents;
     uint16_t checksum;
 } Telem_message_t;
@@ -1082,7 +1082,7 @@ class MCU_GPS_readings_alpha {
         void set_latitude(int32_t latitude);
         void set_longitude(int32_t longitude);
     private:
-        CAN_message_gps_readings_alpha_t message;
+        CAN_message_mcu_gps_readings_alpha_t message;
 };
 
 class MCU_GPS_readings_beta {
@@ -1096,7 +1096,7 @@ class MCU_GPS_readings_beta {
         void set_altitude(int32_t altitude);
         void set_speed(int32_t speed);
     private:
-        CAN_message_gps_readings_beta_t message;
+        CAN_message_mcu_gps_readings_beta_t message;
 };
 
 class MCU_GPS_readings_gamma {
@@ -1114,7 +1114,7 @@ class MCU_GPS_readings_gamma {
         void set_timestamp_seconds(uint32_t timestamp_seconds);
         void set_timestamp_milliseconds(uint16_t timestamp_milliseconds);
     private:
-        CAN_message_gps_readings_gamma_t message;
+        CAN_message_mcu_gps_readings_gamma_t message;
 };
 
 #endif

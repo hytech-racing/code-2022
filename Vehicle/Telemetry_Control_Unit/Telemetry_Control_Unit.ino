@@ -399,7 +399,7 @@ void process_accelerometer() {
   sensors_event_t event; 
   accel.getEvent(&event);
   
-  // Read accelerometer values into accelerometer struct
+  // Read accelerometer values into accelerometer class
   fcu_accelerometer_values.set_values((short)((int)(event.acceleration.x*100)), (short)((int)(event.acceleration.y*100)), (short)((int)(event.acceleration.z*100)));
   
   // Send msg over CAN
@@ -459,7 +459,7 @@ void process_gps() {
     //Serial.print("Longitude (x10000): ");
     //Serial.println(mcu_gps_readings_alpha.get_longitude());
     msg_tx.id = ID_MCU_GPS_READINGS_ALPHA;
-    msg_tx.len = sizeof(CAN_message_gps_readings_alpha_t);
+    msg_tx.len = sizeof(CAN_message_mcu_gps_readings_alpha_t);
     CAN.write(msg_tx);
 
     mcu_gps_readings_beta.set_altitude(GPS.altitude * 10000);
@@ -469,7 +469,7 @@ void process_gps() {
     //Serial.print("Speed (x10000): ");
     //Serial.println(mcu_gps_readings_beta.get_speed());
     msg_tx.id = ID_MCU_GPS_READINGS_BETA;
-    msg_tx.len = sizeof(CAN_message_gps_readings_beta_t);
+    msg_tx.len = sizeof(CAN_message_mcu_gps_readings_beta_t);
     CAN.write(msg_tx);
 
     mcu_gps_readings_gamma.set_fix_quality(GPS.fixquality);
@@ -477,7 +477,7 @@ void process_gps() {
     mcu_gps_readings_gamma.set_timestamp_seconds(0);
     mcu_gps_readings_gamma.set_timestamp_milliseconds(GPS.milliseconds);
     msg_tx.id = ID_MCU_GPS_READINGS_BETA;
-    msg_tx.len = sizeof(CAN_message_gps_readings_gamma_t);
+    msg_tx.len = sizeof(CAN_message_mcu_gps_readings_gamma_t);
     CAN.write(msg_tx);
 
     pending_gps_data = false;
