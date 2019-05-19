@@ -133,22 +133,38 @@ static int flag_gps;
 static bool pending_gps_data;
 
 void setup() {
-  //Teensy3Clock.set(9999999999);                                     // set time (epoch) at powerup  (COMMENT OUT THIS LINE AND PUSH ONCE RTC HAS BEEN SET!!!!)
-  setSyncProvider(getTeensy3Time);                                    // registers Teensy RTC as system time
+  /* Set up real-time clock */
+  //Teensy3Clock.set(9999999999); // set time (epoch) at powerup  (COMMENT OUT THIS LINE AND PUSH ONCE RTC HAS BEEN SET!!!!)
+  setSyncProvider(getTeensy3Time); // registers Teensy RTC as system time
   if (timeStatus() != timeSet) {
     Serial.println("RTC not set up - uncomment the Teensy3Clock.set() function call to set the time");
   } else {
     Serial.println("System time set to RTC");
   }
+
+  /* Configure pins */
+  pinMode(A12, INPUT); // Current sensor (cooling circuit)
+  pinMode(A13, INPUT); // Current sensor (non-cooling circuit)
   
-  pinMode(10, OUTPUT);                                                // Initialize pin 10 as output; this is necessary for the SD Library
+  /* Set up Serial, XBee and CAN */
   Serial.begin(115200);
-  FLEXCAN0_MCR &= 0xFFFDFFFF;                                          // Enables CAN message self-reception
+  XB.begin(115200);
+  FLEXCAN0_MCR &= 0xFFFDFFFF; // Enables CAN message self-reception
   CAN.begin();
+
+  /* Set up accelerometer */
+  setup_accelerometer();
+
+  /* Set up GPS */
+  GPS.begin(9600);
+  GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA); // specify data to be received (minimum + fix)
+  GPS.sendCommand(PMTK_SET_NMEA_UPDATE_10HZ); // set update rate (10Hz)
+  GPS.sendCommand(PGCMD_ANTENNA); // report data about antenna
+
+  /* Set up SD card */
   Serial.println("Initializing SD card...");
-  SdFile::dateTimeCallback(sd_date_time);                               // Set date/time callback function
-  //SD.begin(10);                                                     // Begin Arduino SD API (Teensy 3.2)
-  if (!SD.begin(BUILTIN_SDCARD)) {                                    // Begin Arduino SD API (Teensy 3.5)
+  SdFile::dateTimeCallback(sd_date_time); // Set date/time callback function
+  if (!SD.begin(BUILTIN_SDCARD)) { // Begin Arduino SD API (Teensy 3.5)
     Serial.println("SD card failed or not present");
   }
   char filename[] = "data0000.CSV";
@@ -158,11 +174,11 @@ void setup() {
     filename[6] = i / 10  % 10 + '0';
     filename[7] = i       % 10 + '0';
     if (!SD.exists(filename)) {
-      logger = SD.open(filename, O_WRITE | O_CREAT);                  // Open file for writing
+      logger = SD.open(filename, O_WRITE | O_CREAT); // Open file for writing
       break;
     }
-    if (i == 9999) {                                                  // If SD card reaches log filename limit, print error
-      Serial.println("SD card has too many log files");
+    if (i == 9999) { // If all possible filenames are in use, print error
+      Serial.println("All possible SD card log filenames are in use - please clean up the SD card");
     }
   }
   if (logger) {
@@ -170,20 +186,8 @@ void setup() {
   } else {
     Serial.println("Failed to open SD file");
   }
-  logger.println("time,msg.id,msg.len,data");                         // Print CSV heading to the logfile
+  logger.println("time,msg.id,msg.len,data"); // Print CSV heading to the logfile
   logger.flush();
-
-  setup_accelerometer();
-
-  XB.begin(115200);
-
-  GPS.begin(9600);
-  GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);                       // specify data to be received (minimum + fix)
-  GPS.sendCommand(PMTK_SET_NMEA_UPDATE_10HZ);                         // set update rate (10Hz)
-  GPS.sendCommand(PGCMD_ANTENNA);                                     // report data about antenna
-
-  pinMode(A12, INPUT);                                                // Current sensor (cooling circuit)
-  pinMode(A13, INPUT);                                                // Current sensor (non-cooling circuit)
 }
 
 void loop() {
