@@ -134,21 +134,6 @@ static int flag_gps_alpha;
 static int flag_gps_beta;
 
 void setup() {
-  
-  
-      // Teensy 3.5 code
-  NVIC_ENABLE_IRQ(IRQ_CAN0_MESSAGE);                                   // Enables interrupts on the teensy for CAN messages
-  attachInterruptVector(IRQ_CAN0_MESSAGE, parse_can_message);          // Attaches parse_can_message() as ISR
-  CAN0_IMASK1 |= 0x00000020;                                           // Allows "CAN message arrived" bit in flag register to throw interrupt
-  CAN0_MCR &= 0xFFFDFFFF;                                              // Enables CAN message self-reception
-  
-  /*      // Teensy 3.2 code
-  NVIC_ENABLE_IRQ(IRQ_CAN_MESSAGE);                                   // Enables interrupts on the teensy for CAN messages
-  attachInterruptVector(IRQ_CAN_MESSAGE, parse_can_message);          // Attaches parse_can_message() as ISR
-  CAN0_IMASK1 |= 0x00000020;
-  CAN0_MCR &= 0xFFFDFFFF;
-  */
-
   //Teensy3Clock.set(9999999999);                                     // set time (epoch) at powerup  (COMMENT OUT THIS LINE AND PUSH ONCE RTC HAS BEEN SET!!!!)
   setSyncProvider(getTeensy3Time);                                    // registers Teensy RTC as system time
   if (timeStatus() != timeSet) {
@@ -159,6 +144,7 @@ void setup() {
   
   pinMode(10, OUTPUT);                                                // Initialize pin 10 as output; this is necessary for the SD Library
   Serial.begin(115200);
+  FLEXCAN0_MCR &= 0xFFFDFFFF;                                          // Enables CAN message self-reception
   CAN.begin();
   Serial.println("Initializing SD card...");
   SdFile::dateTimeCallback(sdDateTime);                               // Set date/time callback function
@@ -201,7 +187,9 @@ void setup() {
   pinMode(A13, INPUT);                                                // Current sensor (non-cooling circuit)
 }
 
-void loop() {  
+void loop() {
+  parse_can_message();
+  
   if (timer_flush.check()) {
     logger.flush(); // Flush data to disk (data is also flushed whenever the 512 Byte buffer fills up, but this call ensures we don't lose more than a second of data when the car turns off)
   }
