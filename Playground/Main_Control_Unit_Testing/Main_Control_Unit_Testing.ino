@@ -44,7 +44,7 @@
 #define EXPANDER_LED_START 9
 #define EXPANDER_LED_BMS 10
 #define EXPANDER_LED_IMD 11
-#define EXPANDER_LED_POWER 12
+#define EXPANDER_LED_MC_ERR 12
 #define EXPANDER_LED_MODE 13
 
 /*
@@ -54,47 +54,49 @@ MCU_status mcu_status;
 MCU_pedal_readings mcu_pedal_readings;
 BMS_status bms_status;
 BMS_temperatures bms_temperatures;
+BMS_voltages bms_voltages;
 MC_motor_position_information mc_motor_position_information;
+MC_current_information mc_current_informtarion;
+BMS_coulomb_counts bms_coulomb_counts;
 
 /*
  * Constant definitions
  */
  // TODO some of these values need to be calibrated once hardware is installed
-#define BRAKE_ACTIVE 600
-#define MIN_ACCELERATOR_PEDAL_1 100 // Low accelerator implausibility threshold
-#define START_ACCELERATOR_PEDAL_1 200 // Position to start acceleration
-#define END_ACCELERATOR_PEDAL_1 540 // Position to max out acceleration
-#define MAX_ACCELERATOR_PEDAL_1 700 // High accelerator implausibility threshold
-#define MIN_ACCELERATOR_PEDAL_2 3990 // Low accelerator implausibility threshold
-#define START_ACCELERATOR_PEDAL_2 3880 // Position to start acceleration
-#define END_ACCELERATOR_PEDAL_2 3550 // Position to max out acceleration
-#define MAX_ACCELERATOR_PEDAL_2 3400 // High accelerator implausibility threshold
-#define MIN_BRAKE_PEDAL 1510
-#define MAX_BRAKE_PEDAL 1684
-#define MIN_HV_VOLTAGE 500 // Volts in V * 0.1 - Used to check if Accumulator is energized
-#define BMS_HIGH 134 // ~3V on BMS_OK line
-#define IMD_HIGH 134 // ~3V on OKHS line
-#define SHUTDOWN_B_HIGH 350 // ~5V on SHUTDOWN_B line
-#define SHUTDOWN_C_HIGH 350 // ~5V on SHUTDOWN_C line
-#define SHUTDOWN_D_HIGH 350 // ~5V on SHUTDOWN_D line ??????
-#define SHUTDOWN_E_HIGH 350 // ~5V on SHUTDOWN_E line
-#define SHUTDOWN_F_HIGH 350 // ~5V on SHUTDOWN_F line
-#define FAN_1_DUTY_CYCLE 127 // TODO: figure out correct duty cycle (0 = 0%, 255 = 100%)
-#define FAN_2_DUTY_CYCLE 127 // TODO: figure out correct duty cycle (0 = 0%, 255 = 100%)
+#define BRAKE_ACTIVE 600                // Threshold for brake pedal active
+#define MIN_ACCELERATOR_PEDAL_1 1850     // Low accelerator implausibility threshold
+#define START_ACCELERATOR_PEDAL_1 2050   // Position to start acceleration
+#define END_ACCELERATOR_PEDAL_1 2400     // Position to max out acceleration
+#define MAX_ACCELERATOR_PEDAL_1 2500    // High accelerator implausibility threshold
+#define MIN_ACCELERATOR_PEDAL_2 2250    // Low accelerator implausibility threshold
+#define START_ACCELERATOR_PEDAL_2 2050  // Position to start acceleration
+#define END_ACCELERATOR_PEDAL_2 1700    // Position to max out acceleration
+#define MAX_ACCELERATOR_PEDAL_2 1590    // High accelerator implausibility threshold
+#define MIN_HV_VOLTAGE 500              // Volts in V * 0.1 - Used to check if Accumulator is energized
+#define BMS_HIGH 134                    // ~3V on BMS_OK line
+#define IMD_HIGH 134                    // ~3V on OKHS line
+#define SHUTDOWN_B_HIGH 530             // ~5V on SHUTDOWN_B line
+#define SHUTDOWN_C_HIGH 350             // ~5V on SHUTDOWN_C line
+#define SHUTDOWN_D_HIGH 350             // ~5V on SHUTDOWN_D line ??????
+#define SHUTDOWN_E_HIGH 350             // ~5V on SHUTDOWN_E line
+#define SHUTDOWN_F_HIGH 350             // ~5V on SHUTDOWN_F line
+#define FAN_1_DUTY_CYCLE 127            // TODO: figure out correct duty cycle (0 = 0%, 255 = 100%)
+#define FAN_2_DUTY_CYCLE 127            // TODO: figure out correct duty cycle (0 = 0%, 255 = 100%)
 #define BMS_HIGH_BATTERY_TEMPERATURE 50 // TODO: figure out correct value
-#define GLV_VOLTAGE_MULTIPLIER 5.5963 // TODO: calibrate this constant
-#define MIN_RPM_FOR_REGEN 100 // TODO: calibrate this constant
+#define GLV_VOLTAGE_MULTIPLIER 5.5963   // TODO: calibrate this constant
+#define MIN_RPM_FOR_REGEN 100           // TODO: calibrate this constant
 #define START_ACCEL1_PEDAL_WITH_REGEN 190  // TODO: calibrate this constant
 #define START_ACCEL2_PEDAL_WITH_REGEN 3890 // TODO: calibrate this constant
 #define START_BRAKE_PEDAL_WITH_REGEN 450   // TODO: calibrate this constant
 #define END_BRAKE_PEDAL_WITH_REGEN 1000    // TODO: calibrate this constant
-#define ALPHA 0.9772
-#define EXPANDER_SPI_SPEED 9000000 // max SPI clock frequency for MCP23S17 is 10MHz in ideal conditions
-#define ADC_SPI_SPEED 1800000 // max SPI clokc frequency for MCP3208 is 2MHz in ideal conditions
-
+#define ALPHA 0.9772                    // parameter for the sowftware filter used on ADC pedal channels
+#define EXPANDER_SPI_SPEED 9000000      // max SPI clock frequency for MCP23S17 is 10MHz in ideal conditions
+#define ADC_SPI_SPEED 1800000           // max SPI clokc frequency for MCP3208 is 2MHz in ideal conditions
+#define TORQUE_ADJUSTMENT_VOLTAGE 3.5242   //
+#define MAX_POSSIBLE_TORQUE 1600        //
 
 /*
- * Timers  // old fcu timers
+ * Timers
  */
 Metro timer_bms_imd_print_fault = Metro(500);
 Metro timer_btn_restart_inverter = Metro(100);
@@ -116,10 +118,13 @@ Metro timer_imd_print_fault = Metro(500);
 Metro timer_restart_inverter = Metro(500, 1); // Allow the FCU to restart the inverter
 Metro timer_status_send = Metro(100);
 
-float rolling_accel1_reading = 0;
-float rolling_accel2_reading = 0;
-float rolling_brake_reading = 0;
-float rolling_glv_reading = 0;
+/*
+ * Variables to store filtered values from ADC channels
+ */
+float filtered_accel1_reading = 0;
+float filtered_accel2_reading = 0;
+float filtered_brake_reading = 0;
+float filtered_glv_reading = 0;
 
 bool btn_start_reading = true;
 bool btn_mode_reading = true;
@@ -140,11 +145,13 @@ uint8_t torque_mode = 0;
 uint8_t led_mode_type = 0;
 uint8_t led_start_type = 0; // 0 for off, 1 for steady, 2 for fast blink, 3 for slow blink
 
-uint16_t MAX_TORQUE = 1600; // Torque in Nm * 10
+uint16_t MAX_TORQUE = MAX_POSSIBLE_TORQUE; // Torque in Nm * 10
 int16_t MAX_REGEN_TORQUE = 0;
 int16_t MAX_ACCEL_REGEN = 0;
 int16_t MAX_BRAKE_REGEN = 0;
 uint16_t dash_values = 0;
+uint32_t total_charge_amount = 0;
+uint32_t total_discharge_amount = 0;
 
 static CAN_message_t rx_msg;
 static CAN_message_t tx_msg;
@@ -164,7 +171,7 @@ void setup() {
     EXPANDER.pinMode(EXPANDER_LED_BMS, OUTPUT);
     EXPANDER.pinMode(EXPANDER_LED_IMD, OUTPUT);
     EXPANDER.pinMode(EXPANDER_LED_MODE, OUTPUT);
-    EXPANDER.pinMode(EXPANDER_LED_POWER, OUTPUT);
+    EXPANDER.pinMode(EXPANDER_LED_MC_ERR, OUTPUT);
     EXPANDER.pinMode(EXPANDER_LED_START, OUTPUT);
     EXPANDER.pinMode(EXPANDER_READY_SOUND, OUTPUT);
     pinMode(SOFTWARE_SHUTDOWN_RELAY, OUTPUT);
@@ -189,11 +196,7 @@ void setup() {
 
     delay(500);
 
-    //Serial.println("CAN system and serial communication initialized");
-
-    Serial.print("BRAKE"); Serial.print("\t");
-    Serial.print("ACCEL1"); Serial.print("\t");
-    Serial.println("ACCEL2");
+    Serial.println("CAN system and serial communication initialized");
 
     set_state(MCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE);
     digitalWrite(SOFTWARE_SHUTDOWN_RELAY, HIGH);
@@ -217,12 +220,8 @@ void loop() {
      */
     if (timer_can_update.check()) {
 
-        mcu_pedal_readings.set_accelerator_pedal_raw_1(rolling_accel1_reading);
-        mcu_pedal_readings.set_accelerator_pedal_raw_2(rolling_accel2_reading);
-        mcu_pedal_readings.set_brake_pedal_raw(rolling_brake_reading);
-
+        // Update the status values
         read_status_values();
-        mcu_status.set_glv_battery_voltage(rolling_glv_reading);
 
         // Send Main Control Unit status message
         mcu_status.write(tx_msg.buf);
@@ -230,10 +229,22 @@ void loop() {
         tx_msg.len = sizeof(CAN_message_mcu_status_t);
         CAN.write(tx_msg);
 
-        // Send second Main Control Unit pedal reading message
+        // Update the pedal readings to send over CAN
+        mcu_pedal_readings.set_accelerator_pedal_raw_1(filtered_accel1_reading);
+        mcu_pedal_readings.set_accelerator_pedal_raw_2(filtered_accel2_reading);
+        mcu_pedal_readings.set_brake_pedal_raw(filtered_brake_reading);
+
+        // Send Main Control Unit pedal reading message
         mcu_pedal_readings.write(tx_msg.buf);
         tx_msg.id = ID_MCU_PEDAL_READINGS;
         tx_msg.len = sizeof(CAN_message_mcu_pedal_readings_t);
+        CAN.write(tx_msg);
+
+        // Send couloumb counting information
+        bms_coulomb_counts.set_total_charge(total_charge_amount);
+        bms_coulomb_counts.set_total_discharge(total_discharge_amount);
+        tx_msg.id = ID_BMS_COULOMB_COUNTS;
+        tx_msg.len = sizeof(CAN_message_bms_coulomb_counts_t);
         CAN.write(tx_msg);
     }
 
@@ -246,62 +257,6 @@ void loop() {
         mcu_status.set_inverter_powered(true);
     }
 
-    // if (timer_motor_controller_send.check()) {
-    //     MC_command_message mc_command_message = MC_command_message(0, 0, 0, 1, 0, 0);
-    //     //read_pedal_values();
-
-    //     // Check for accelerator implausibility FSAE EV2.3.10 and Formula Hybrid EV3.5.4
-    //     mcu_pedal_readings.set_accelerator_implausibility(false);
-    //     if (mcu_pedal_readings.get_accelerator_pedal_raw_1() < MIN_ACCELERATOR_PEDAL_1 || mcu_pedal_readings.get_accelerator_pedal_raw_1() > MAX_ACCELERATOR_PEDAL_1) {
-    //         mcu_pedal_readings.set_accelerator_implausibility(true);
-    //     }
-    //     if (mcu_pedal_readings.get_accelerator_pedal_raw_2() > MIN_ACCELERATOR_PEDAL_2 || mcu_pedal_readings.get_accelerator_pedal_raw_2() < MAX_ACCELERATOR_PEDAL_2) {
-    //         mcu_pedal_readings.set_accelerator_implausibility(true);
-    //     }
-
-    //     int calculated_torque = calculate_torque_with_regen();
-
-    //     // FSAE EV2.5 APPS / Brake Pedal Plausibility Check
-    //     if (mcu_pedal_readings.get_brake_implausibility() && calculated_torque < (MAX_TORQUE / 20)) {
-    //         mcu_pedal_readings.set_brake_implausibility(false); // Clear implausibility
-    //     }
-    //     // if (mcu_pedal_readings.get_brake_pedal_active() && calculated_torque > (MAX_TORQUE / 4)) {
-    //     //     mcu_pedal_readings.set_brake_implausibility(true);
-    //     // }
-
-    //     if (mcu_pedal_readings.get_brake_implausibility() || mcu_pedal_readings.get_accelerator_implausibility()) {
-    //         // Implausibility exists, command 0 torque
-    //         calculated_torque = 0;
-    //     }
-
-    //     // FSAE FMEA specifications // if BMS or IMD are faulting, set torque to 0
-    //     if (!mcu_status.get_bms_ok_high()) {
-    //         calculated_torque = 0;
-    //     }
-
-    //     if (!mcu_status.get_imd_okhs_high()) {
-    //         calculated_torque = 0;
-    //     }
-
-    //     if (debug && timer_debug_torque.check()) {
-    //         Serial.print("MCU REQUESTED TORQUE: ");
-    //         Serial.println(calculated_torque);
-    //         Serial.print("MCU IMPLAUS ACCEL: ");
-    //         Serial.println(mcu_pedal_readings.get_accelerator_implausibility());
-    //         Serial.print("MCU IMPLAUS BRAKE: ");
-    //         Serial.println(mcu_pedal_readings.get_brake_implausibility());
-    //     }
-
-    //     Serial.println(calculated_torque);
-
-    //     mc_command_message.set_torque_command(0);
-
-    //     mc_command_message.write(tx_msg.buf);
-    //     tx_msg.id = ID_MC_COMMAND_MESSAGE;
-    //     tx_msg.len = 8;
-    //     CAN.write(tx_msg);
-    // }
-
     /*
      * State machine
      */
@@ -313,8 +268,19 @@ void loop() {
         // if start button has been pressed and brake pedal is held down, transition to the next state
         if (btn_start_pressed) {
             if (mcu_pedal_readings.get_brake_pedal_active()) {
-                set_state(MCU_STATE_ENABLING_INVERTER);
+                //set_state(MCU_STATE_ENABLING_INVERTER);
+                set_state(MCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
             }
+        }
+        break;
+
+        case MCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
+
+        EXPANDER.digitalWrite(EXPANDER_READY_SOUND, HIGH);
+
+        if (timer_ready_sound.check()) {
+            //EXPANDER.digitalWrite(EXPANDER_READY_SOUND, LOW);
+            set_state(MCU_STATE_ENABLING_INVERTER);
         }
         break;
 
@@ -324,18 +290,18 @@ void loop() {
         }
         break;
 
-        case MCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
+        // case MCU_STATE_WAITING_READY_TO_DRIVE_SOUND:
 
-        EXPANDER.digitalWrite(EXPANDER_READY_SOUND, HIGH);
+        // EXPANDER.digitalWrite(EXPANDER_READY_SOUND, HIGH);
 
-        if (timer_ready_sound.check()) {
-            set_state(MCU_STATE_READY_TO_DRIVE);
-        }
-        break;
+        // if (timer_ready_sound.check()) {
+        //     set_state(MCU_STATE_READY_TO_DRIVE);
+        // }
+        // break;
 
         case MCU_STATE_READY_TO_DRIVE:
         if (timer_motor_controller_send.check()) {
-            MC_command_message mc_command_message = MC_command_message(0, 0, 0, 1, 0, 0);
+            MC_command_message mc_command_message = MC_command_message(0, 0, 1, 1, 0, 0);
             //read_pedal_values();
 
             // Check for accelerator implausibility FSAE EV2.3.10
@@ -347,7 +313,7 @@ void loop() {
                 mcu_pedal_readings.set_accelerator_implausibility(true);
             }
 
-            int calculated_torque = calculate_torque_with_regen();
+            int calculated_torque = calculate_torque();
 
             // FSAE EV2.5 APPS / Brake Pedal Plausibility Check
             if (mcu_pedal_readings.get_brake_implausibility() && calculated_torque < (MAX_TORQUE / 20)) {
@@ -382,6 +348,7 @@ void loop() {
 
             // Serial.print("RPM: ");
             // Serial.println(mc_motor_position_information.get_motor_speed());
+            //Serial.println(calculated_torque);
 
             mc_command_message.set_torque_command(0);
 
@@ -398,15 +365,15 @@ void loop() {
      * Send a message to the Motor Controller over CAN when vehicle is not ready to drive
      */
     if (mcu_status.get_state() < MCU_STATE_READY_TO_DRIVE && timer_motor_controller_send.check()) {
-        MC_command_message mc_command_message = MC_command_message(0, 0, 0, 0, 0, 0);
+        MC_command_message mc_command_message = MC_command_message(0, 0, 1, 0, 0, 0);
 
-        if (mcu_status.get_state() >= MCU_STATE_ENABLING_INVERTER) {
-             mc_command_message.set_inverter_enable(true);
-        }
+        // if (mcu_status.get_state() >= MCU_STATE_ENABLING_INVERTER) {
+        //      mc_command_message.set_inverter_enable(true);
+        // }
 
         mc_command_message.write(tx_msg.buf);
         tx_msg.id = ID_MC_COMMAND_MESSAGE;
-        tx_msg.len = 8;//
+        tx_msg.len = 8;
         CAN.write(tx_msg);
     }
 }
@@ -429,7 +396,8 @@ void parse_can_message() {
         if (rx_msg.id == ID_MC_INTERNAL_STATES) {
             MC_internal_states mc_internal_states = MC_internal_states(rx_msg.buf);
             if (mc_internal_states.get_inverter_enable_state() && mcu_status.get_state() == MCU_STATE_ENABLING_INVERTER) {
-                set_state(MCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
+                //set_state(MCU_STATE_WAITING_READY_TO_DRIVE_SOUND);
+                set_state(MCU_STATE_READY_TO_DRIVE);
             }
             if (!mc_internal_states.get_inverter_enable_state() && mcu_status.get_state() == MCU_STATE_READY_TO_DRIVE) {
                 set_state(MCU_STATE_TRACTIVE_SYSTEM_ACTIVE);
@@ -447,6 +415,17 @@ void parse_can_message() {
         if (rx_msg.id == ID_BMS_TEMPERATURES) {
             bms_temperatures.load(rx_msg.buf);
         }
+
+        if (rx_msg.id == ID_BMS_VOLTAGES) {
+            bms_voltages.load(rx_msg.buf);
+        }
+
+        if (rx_msg.id == ID_MC_CURRENT_INFORMATION) {
+            if (mcu_status.get_state() == MCU_STATE_READY_TO_DRIVE) {
+                mc_current_informtarion.load(rx_msg.buf);
+                update_couloumb_count();
+            }
+        }
     }
 
 }
@@ -456,7 +435,7 @@ void reset_inverter() {
     digitalWrite(SSR_INVERTER, LOW);
     timer_restart_inverter.reset();
     mcu_status.set_inverter_powered(false);
-    //Serial.println("INVERTER RESET");
+    Serial.println("INVERTER RESET");
 }
 
 /*
@@ -464,37 +443,38 @@ void reset_inverter() {
  */
 void read_pedal_values() {
 
-    int accel1_raw_reading = ADC.read_adc(ADC_ACCEL_1_CHANNEL);
-    int accel2_raw_reading = ADC.read_adc(ADC_ACCEL_2_CHANNEL);
+    /*
+     * Filter ADC readings
+     */
+    int accel1 = ADC.read_adc(ADC_ACCEL_1_CHANNEL);
+    int accel2 = ADC.read_adc(ADC_ACCEL_2_CHANNEL);
+    int brake  = ADC.read_adc(ADC_BRAKE_CHANNEL);
 
-    rolling_accel1_reading = ALPHA * rolling_accel1_reading + (1 - ALPHA) * accel1_raw_reading;
-    rolling_accel2_reading = ALPHA * rolling_accel2_reading + (1 - ALPHA) * accel2_raw_reading;
+    filtered_accel1_reading = ALPHA * filtered_accel1_reading + (1 - ALPHA) * accel1;
+    filtered_accel2_reading = ALPHA * filtered_accel2_reading + (1 - ALPHA) * accel2;
+    filtered_brake_reading  = ALPHA * filtered_brake_reading  + (1 - ALPHA) * brake;
+    // Serial.print("ACCEL 1: "); Serial.println(filtered_accel1_reading);
+    // Serial.print("ACCEL 2: "); Serial.println(filtered_accel2_reading);
+    // Serial.print("BRAKE: "); Serial.println(filtered_brake_reading);
 
-    Serial.print(accel1_raw_reading); Serial.print("\t");
-    Serial.print(rolling_accel1_reading); Serial.print("\t");
-    Serial.print(accel2_raw_reading); Serial.print("\t");
-    Serial.print(rolling_accel2_reading); Serial.print("\t");
+    Serial.print(accel1); Serial.print(" ");
+    Serial.print(filtered_accel1_reading); Serial.print(" ");
+    Serial.print(accel2); Serial.print(" ");
+    Serial.print(filtered_accel2_reading); Serial.print(" ");
+    Serial.print(brake); Serial.print(" ");
+    Serial.print(filtered_brake_reading); Serial.print(" ");
     Serial.println(micros());
 
-
-    mcu_pedal_readings.set_brake_pedal_active(ADC.read_adc(ADC_BRAKE_CHANNEL) >= BRAKE_ACTIVE);
-
-    // /*
-    //  * Calculate rolling weighted average of  multiple pedal readings
-    //  */
-    // for (int i = 0; i < 25; i++) {
-    //     rolling_accel1_reading = ALPHA * rolling_accel1_reading + (1 - ALPHA) * ADC.read_adc(ADC_ACCEL_1_CHANNEL);
-    //     rolling_accel2_reading = ALPHA * rolling_accel2_reading + (1 - ALPHA) * ADC.read_adc(ADC_ACCEL_2_CHANNEL);
-    //     rolling_brake_reading  = ALPHA * rolling_brake_reading + (1 - ALPHA) * ADC.read_adc(ADC_BRAKE_CHANNEL);
-    // }
 
     //Serial.println(ADC.read_adc(ADC_ACCEL_1_CHANNEL));
 
     // set the brake pedal active flag if the median reading is above the threshold
-    //mcu_pedal_readings.set_brake_pedal_active(rolling_brake_reading >= BRAKE_ACTIVE);
-
+    mcu_pedal_readings.set_brake_pedal_active(filtered_brake_reading >= BRAKE_ACTIVE);
     digitalWrite(SSR_BRAKE_LIGHT, mcu_pedal_readings.get_brake_pedal_active());
 
+    /*
+     * Print values for debugging
+     */
     if (debug && timer_debug.check()) {
         Serial.print("MCU PEDAL ACCEL 1: ");
         Serial.println(mcu_pedal_readings.get_accelerator_pedal_raw_1());
@@ -512,10 +492,12 @@ void read_pedal_values() {
 void read_status_values() {
 
     /*
-     * Calculate rolling weighted average of glv voltage readings
+     * Filter ADC readings of GLV voltage
      */
-    rolling_glv_reading += ALPHA * rolling_glv_reading + (1 - ALPHA) * ADC.read_adc(ADC_12V_SUPPLY_CHANNEL);
-    mcu_status.set_glv_battery_voltage(rolling_glv_reading * GLV_VOLTAGE_MULTIPLIER);
+    //filtered_glv_reading += ALPHA * filtered_glv_reading + (1 - ALPHA) * ADC.read_adc(ADC_12V_SUPPLY_CHANNEL);
+
+    mcu_status.set_glv_battery_voltage(ADC.read_adc(ADC_12V_SUPPLY_CHANNEL) * GLV_VOLTAGE_MULTIPLIER); // convert GLV voltage and to send it over CAN
+
 
     /*
      * Check for BMS fault
@@ -525,7 +507,7 @@ void read_status_values() {
     } else {
         mcu_status.set_bms_ok_high(false);
         if (timer_bms_print_fault.check()) {
-            //Serial.println("BMS fault detected");
+            Serial.println("BMS fault detected");
         }
     }
 
@@ -537,7 +519,7 @@ void read_status_values() {
     } else {
         mcu_status.set_imd_okhs_high(false);
         if (timer_imd_print_fault.check()) {
-            //Serial.println("IMD fault detected");
+            Serial.println("IMD fault detected");
         }
     }
 
@@ -553,7 +535,7 @@ void read_status_values() {
      /*
       * Measure the temperature from on-board thermistors
       */
-     mcu_status.set_temperature(ADC.read_adc(ADC_TEMPSENSE_CHANNEL));
+     mcu_status.set_temperature(ADC.read_adc(ADC_TEMPSENSE_CHANNEL) * 100); // send temperatures in 0.01 C
 }
 
 /*
@@ -570,11 +552,12 @@ void set_mode_led(uint8_t type) {
             return;
         }
         if (type == 1) {
+            timer_led_mode_blink_fast.reset();
             if (debug) {
                 Serial.println("MCU Setting Mode LED solid on");
             }
         } else if (type == 2) {
-            timer_led_mode_blink_fast.reset();
+            // timer_led_mode_blink_fast.reset();
             if (debug) {
                 Serial.println("MCU Setting Mode LED fast blink");
             }
@@ -633,10 +616,13 @@ void set_state(uint8_t new_state) {
         set_start_led(2);
     }
     if (new_state == MCU_STATE_ENABLING_INVERTER) {
+        EXPANDER.digitalWrite(EXPANDER_READY_SOUND, LOW);
+        // states are switched to fix the RTDS not being loud enough
+        Serial.println("RTDS deactivated");
 
         set_start_led(1);
-        //Serial.println("MCU Enabling inverter");
-        MC_command_message mc_command_message = MC_command_message(0, 0, 0, 1, 0, 0);
+        Serial.println("MCU Enabling inverter");
+        MC_command_message mc_command_message = MC_command_message(0, 0, 1, 1, 0, 0);
         tx_msg.id = 0xC0;
         tx_msg.len = 8;
 
@@ -655,18 +641,20 @@ void set_state(uint8_t new_state) {
             CAN.write(tx_msg);
         }
 
-        //Serial.println("MCU Sent enable command");
+        Serial.println("MCU Sent enable command");
         timer_inverter_enable.reset();
     }
     if (new_state == MCU_STATE_WAITING_READY_TO_DRIVE_SOUND) {
         timer_ready_sound.reset();
-        // Serial.println("Inverter enabled");
-        // Serial.println("RTDS enabled");
+        //Serial.println("Inverter enabled");
+        Serial.println("RTDS enabled");
     }
     if (new_state == MCU_STATE_READY_TO_DRIVE) {
-        EXPANDER.digitalWrite(EXPANDER_READY_SOUND, LOW);
-        // Serial.println("RTDS deactivated");
-        // Serial.println("Ready to drive");
+        //EXPANDER.digitalWrite(EXPANDER_READY_SOUND, LOW);
+
+        Serial.println("Inverter enabled");
+        //Serial.println("RTDS deactivated");
+        Serial.println("Ready to drive");
     }
 }
 
@@ -674,8 +662,8 @@ int calculate_torque() {
     int calculated_torque = 0;
 
     //if (!mcu_pedal_readings.get_accelerator_implausibility()) {
-        int torque1 = map(round(rolling_accel1_reading), START_ACCELERATOR_PEDAL_1, END_ACCELERATOR_PEDAL_1, 0, MAX_TORQUE);
-        int torque2 = map(round(rolling_accel2_reading), START_ACCELERATOR_PEDAL_2, END_ACCELERATOR_PEDAL_2, 0, MAX_TORQUE);
+        int torque1 = map(round(filtered_accel1_reading), START_ACCELERATOR_PEDAL_1, END_ACCELERATOR_PEDAL_1, 0, MAX_TORQUE);
+        int torque2 = map(round(filtered_accel2_reading), START_ACCELERATOR_PEDAL_2, END_ACCELERATOR_PEDAL_2, 0, MAX_TORQUE);
 
         // torque values are greater than the max possible value, set them to max
         if (torque1 > MAX_TORQUE) {
@@ -740,24 +728,30 @@ void read_dashboard_buttons() {
     if (btn_mode_debouncing && timer_btn_mode.check()) {                        // debounce period finishes
         btn_mode_pressed = !btn_mode_pressed;
         if (btn_mode_pressed) {
-            torque_mode = (torque_mode + 1) % 4;
+            torque_mode = (torque_mode + 1) % 3;
             if (torque_mode == 0) {
                 set_mode_led(0);
+                // 40
+                MAX_TORQUE = 400;
                 MAX_ACCEL_REGEN = 0;
                 MAX_BRAKE_REGEN = 0;
             } else if (torque_mode == 1) {
+                // blink 80
+                MAX_TORQUE = 800;
                 set_mode_led(1);
                 MAX_ACCEL_REGEN = 0;
                 MAX_BRAKE_REGEN = -400;
             } else if (torque_mode == 2) {
+                // solid 160
+                MAX_TORQUE = 1600;
                 set_mode_led(2);
                 MAX_ACCEL_REGEN = -100;
                 MAX_BRAKE_REGEN = -400;
-            } else if (torque_mode == 3) {
-                set_mode_led(3);
-                MAX_ACCEL_REGEN = -400;
-                MAX_BRAKE_REGEN = 0;
-            }
+            } //else if (torque_mode == 3) {
+            //     set_mode_led(3);
+            //     MAX_ACCEL_REGEN = -400;
+            //     MAX_BRAKE_REGEN = 0;
+            // }
         }
     }
 
@@ -782,7 +776,7 @@ void set_dashboard_leds() {
     /*
      * Set torque mode led
      */
-    if ((led_mode_type == 2 && timer_led_mode_blink_fast.check()) || (led_mode_type == 3 && timer_led_mode_blink_slow.check())) {
+    if ((led_mode_type == 1 && timer_led_mode_blink_fast.check())) { //|| (led_mode_type == 3 && timer_led_mode_blink_slow.check())) {
         if (led_mode_active) {
             dash_values |= (1 << EXPANDER_LED_MODE);
         }
@@ -792,8 +786,20 @@ void set_dashboard_leds() {
 
         led_mode_active = !led_mode_active;
     }
-    if (led_mode_type < 2) {
+    if (led_mode_type == 0) {
         led_mode_active = led_mode_type;
+
+        if (led_mode_active) {
+            dash_values |= (1 << EXPANDER_LED_MODE);
+        }
+        else {
+            dash_values &= ~(1 << EXPANDER_LED_MODE);
+        }
+    }
+
+    if (led_mode_type == 2) {
+        led_mode_active = 1;
+
         if (led_mode_active) {
             dash_values |= (1 << EXPANDER_LED_MODE);
         }
@@ -851,10 +857,15 @@ int calculate_torque_with_regen() {
     }
 
     int calculated_torque = 0;
+    double lowest_cell_voltage = bms_voltages.get_low() / 10000.0;
 
-    int torque1 = map(round(rolling_accel1_reading), START_ACCEL1_PEDAL_WITH_REGEN, END_ACCELERATOR_PEDAL_1, MAX_ACCEL_REGEN, MAX_TORQUE);
-    int torque2 = map(round(rolling_accel2_reading), START_ACCEL2_PEDAL_WITH_REGEN, END_ACCELERATOR_PEDAL_2, MAX_ACCEL_REGEN, MAX_TORQUE);
-    int torque3 = map(round(rolling_brake_reading), START_BRAKE_PEDAL_WITH_REGEN, END_BRAKE_PEDAL_WITH_REGEN, 0, MAX_BRAKE_REGEN);
+    if (lowest_cell_voltage < TORQUE_ADJUSTMENT_VOLTAGE) { // TODO: adjust this
+        MAX_TORQUE = map(lowest_cell_voltage, 0, TORQUE_ADJUSTMENT_VOLTAGE, 0, MAX_POSSIBLE_TORQUE);
+    }
+
+    int torque1 = map(round(filtered_accel1_reading), START_ACCEL1_PEDAL_WITH_REGEN, END_ACCELERATOR_PEDAL_1, MAX_ACCEL_REGEN, MAX_TORQUE);
+    int torque2 = map(round(filtered_accel2_reading), START_ACCEL2_PEDAL_WITH_REGEN, END_ACCELERATOR_PEDAL_2, MAX_ACCEL_REGEN, MAX_TORQUE);
+    int torque3 = map(round(filtered_brake_reading), START_BRAKE_PEDAL_WITH_REGEN, END_BRAKE_PEDAL_WITH_REGEN, 0, MAX_BRAKE_REGEN);
 
     if (torque1 > MAX_TORQUE) {
         torque1 = MAX_TORQUE;
@@ -898,4 +909,13 @@ int calculate_torque_with_regen() {
     }
 
     return calculated_torque;
+}
+
+void update_couloumb_count() {
+    int new_current = mc_current_informtarion.get_dc_bus_current() * 10; // get current in Amps * 100
+    if (new_current > 0) {
+        total_discharge_amount += new_current; //
+    } else {
+        total_charge_amount -= new_current;
+    }
 }
