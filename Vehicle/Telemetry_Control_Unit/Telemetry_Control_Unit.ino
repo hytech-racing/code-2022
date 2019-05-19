@@ -149,7 +149,7 @@ void setup() {
   SdFile::dateTimeCallback(sd_date_time);                               // Set date/time callback function
   //SD.begin(10);                                                     // Begin Arduino SD API (Teensy 3.2)
   if (!SD.begin(BUILTIN_SDCARD)) {                                    // Begin Arduino SD API (Teensy 3.5)
-    Serial.println("SD card failed, or not present");
+    Serial.println("SD card failed or not present");
   }
   char filename[] = "data0000.CSV";
   for (uint8_t i = 0; i < 10000; i++) {
@@ -173,7 +173,7 @@ void setup() {
   logger.println("time,msg.id,msg.len,data");                         // Print CSV heading to the logfile
   logger.flush();
 
-  setupAccelerometer();
+  setup_accelerometer();
 
   XB.begin(115200);
 
@@ -187,25 +187,33 @@ void setup() {
 }
 
 void loop() {
-  parse_can_message(); // Poll CAN controller for new messages
+  /* Process and log incoming CAN messages */
+  parse_can_message();
 
+  /* Send messages over XBee */
+  send_xbee();
+
+  /* Flush data to SD card occasionally */
   if (timer_flush.check()) {
     logger.flush(); // Flush data to disk (data is also flushed whenever the 512 Byte buffer fills up, but this call ensures we don't lose more than a second of data when the car turns off)
   }
 
-  send_xbee();
-    
+  /* Print timestamp to serial occasionally */
   if (timer_debug_RTC.check()) {
     Serial.println(Teensy3Clock.get());
   }
-    
+  
+  /* Process accelerometer readings occasionally */
   if (timer_accelerometer.check()) {
       process_accelerometer(); 
   }
+
+  /* Process current sensor readings occasionally */
   if (timer_current.check()) {
     process_current();  
   }
-    
+  
+  /* Process GPS readings */
   GPS.read();
   if (GPS.newNMEAreceived()) {
     GPS.parse(GPS.lastNMEA());
@@ -373,7 +381,7 @@ time_t getTeensy3Time()
   return Teensy3Clock.get();
 }
 
-void setupAccelerometer() {
+void setup_accelerometer() {
       
   // Initialise the sensor
   if(!accel.begin())
