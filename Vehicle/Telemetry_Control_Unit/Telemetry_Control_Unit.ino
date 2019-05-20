@@ -361,8 +361,6 @@ void parse_can_message() {
 
 void write_to_SD(CAN_message_t *msg) { // Note: This function does not flush data to disk! It will happen when the buffer fills or when the above flush timer fires
     logger.print(Teensy3Clock.get());
-    logger.print(".");
-    logger.print(millis() % 1000); // TODO millis is basically a hack to get millisecond precision, but there's probably a better way
     logger.print(",");
     logger.print(msg->id, HEX);
     logger.print(",");
@@ -383,12 +381,10 @@ time_t getTeensy3Time() {
 
 void setup_accelerometer() {
     // Initialise the sensor
-    if(!accel.begin())
-    {
+    if(!accel.begin()) {
         // There was a problem detecting the ADXL345 ... check your connections
         Serial.println("Sensor not detected!!!!!");
-    }
-    else {
+    } else {
         accel.setRange(ADXL345_RANGE_4_G);
     }
 }
