@@ -465,7 +465,7 @@ void process_gps() {
     TimeElements tm = {Second : GPS.seconds, Minute : GPS.minute, Hour : GPS.hour, Wday : 0, Day : GPS.day, Month : GPS.month, Year : GPS.year};
     mcu_gps_readings_gamma.set_timestamp_seconds((uint32_t) makeTime(tm));
     mcu_gps_readings_gamma.set_timestamp_milliseconds(GPS.milliseconds);
-    msg_tx.id = ID_MCU_GPS_READINGS_BETA;
+    msg_tx.id = ID_MCU_GPS_READINGS_GAMMA;
     msg_tx.len = sizeof(CAN_message_mcu_gps_readings_gamma_t);
     CAN.write(msg_tx);
 

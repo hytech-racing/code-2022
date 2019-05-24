@@ -16,6 +16,7 @@
 #define PCB_THERM_PER_IC 2              // Number of PCB thermistors per IC
 
 #define CHARGE_ENABLE 0
+#define POWER 8
 
 CCU_status ccu_status;
 
@@ -37,6 +38,8 @@ Metro timer_update_CAN = Metro(100);
 Metro timer_update_serial = Metro(500);
 
 void setup() {
+    pinMode(POWER, OUTPUT);
+    digitalWrite(POWER, HIGH);
 
     Serial.begin(115200);
     CAN.begin();
