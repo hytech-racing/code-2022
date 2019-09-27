@@ -7,6 +7,7 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include "can_msg_def.h"
 
 using namespace std;
 
@@ -15,48 +16,14 @@ struct dataPoint{
     double time;
     unsigned int ID;
     int length;
-    unsigned long response;
+    unsigned long long response;
 };
-
-struct definition { 
-    int offset;
-    int len;
-    bool isSigned;
-    string field;
-    string description;
-    vector<string> booleanMappings;
-
-    definition(int o, int l, bool s, string f, string d, vector<string> m = {}) : offset(o), len(l), isSigned(s), field(f), description(d), booleanMappings(m) {}        
-
-    int parse(unsigned long u, int messageLen, vector<bool> &boolmap) {
-        unsigned mask = (1 << (8 * len)) - 1;
-        int rawData = (u >> (8*(messageLen-offset-len))) & mask; 
-
-        if (!booleanMappings.empty()) {
-            boolmap = vector<bool>(8);
-            mask = 1 << (len - 1);
-            for(int i = 0; i < booleanMappings.size(); i++) {
-                boolmap[i] = (bool)(mask & rawData);
-                mask >>= 1;
-            }
-        } else if(isSigned) {
-            mask = 1 << (len - 1);
-            if((rawData & mask) != 0) {
-                mask = (mask << 1) - 1;
-                rawData = (rawData ^ mask) + 1;
-                return -rawData;
-            }            
-        }
-        return rawData;
-    }
-};
-
 
 //Helper function to convert string in CSV file to hex code stored as an int
-unsigned long parseHex(string &s) {
+unsigned long long parseHex(string &s) {
   stringstream ss;
   ss << hex << s;
-  unsigned long x; ss >> x;
+  unsigned long long x; ss >> x;
   return x;
 }
 
@@ -80,7 +47,7 @@ void readCSV(string filename, vector<vector<dataPoint>> &byteArray){
         string cell;
         vector<string> parsedRow;
         while(getline(lineStream,cell,',')){ //seperates the line of CSV into individual string elements seperated by commas
-            parsedRow.push_back(cell); //adds elements to string vector 
+            parsedRow.push_back(cell); //adds elements to string vector
         }
         tempCSV.push_back(dataPoint()); //creates space in memory to add a dataPoint
         //Conversion and assignment of unformatted string to tempCSV with proper formating
@@ -99,7 +66,7 @@ void readCSV(string filename, vector<vector<dataPoint>> &byteArray){
         int_hex.push_back(parseHex(string_hex[i]));
         i++;
     }
-    
+
     int size_tempCSV = static_cast<int>(tempCSV.size()); //when obtaining size of a 2D vector of struct, static_cast is required
     int y = 0;
     int z = 0;
@@ -176,16 +143,10 @@ void readCSV(string filename, vector<vector<dataPoint>> &byteArray){
 */
 void dataAnalyze(vector<vector<dataPoint>> &csv){
     //definition(int o, int l, TYPE_CAST t, string f, string d, vector<string> m = {})
-    
-    vector<definition> MCU_PEDAL_READINGS {
-        definition(0, 2, false, "accelerator_pedal_raw_1", "Accelerator Pedal 1 Raw ADC Reading"),
-        definition(2, 2, false, "accelerator_pedal_raw_2", "Accelerator Pedal 2 Raw ADC Reading"),
-        definition(4, 2, false, "break_pedal_raw", "Brake Pedal Raw ADC Reading"),
-        definition(6, 1, true, "pedal_flags", "Pedal Error Flags", {"accelerator_implausibility", "brake_implausibility", "brake_pedal_active"}),
-        definition(7, 1, false, "torque_map_mode", "Torque map mode in use (pedal mapping, regen, etc)")
-    };
 
-    unsigned long message = 0xB5074408A0010000;
+    vector<definition> MCU_PEDAL_READINGS = CAN_MSG_DEFINITION[0xC4].second;
+
+    unsigned long long message = 0xB5074408A0010000;
     for(definition d : MCU_PEDAL_READINGS) {
         vector<bool> map;
         int parsedData = d.parse(message, 8, map);
@@ -197,17 +158,10 @@ void dataAnalyze(vector<vector<dataPoint>> &csv){
             cout << d.field << ": " << parsedData << endl;
         }
     }
-    
-    vector<definition> ID_MC_TEMPERATURES_1 {
-        definition(0, 2, false, "module_a_temperature", ""),
-        definition(2, 2, false, "module_b_temperature", ""),
-        definition(4, 2, false, "module_c_temperature", ""),
-        definition(6, 2, false, "gate_driver_board_temperature", ""),
-    };
-    
 }
 
 int main(){
+    loadLookupTable();
     vector<vector<dataPoint>> sortedCSV(29, vector<dataPoint>(0)); //if you add more CAN ID Definitions, update the interger and the string_hex list
     readCSV("../../../DATA0000.csv", sortedCSV);
     dataAnalyze(sortedCSV);
