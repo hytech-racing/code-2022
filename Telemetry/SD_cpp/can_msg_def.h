@@ -1,7 +1,7 @@
 #ifndef CAN_MSG_DEF_H
 #define CAN_MSG_DEF_H
 
-#include <bits/stdc++.h>
+#include <vector.h>
 using namespace std;
 
 struct definition {
