@@ -15,22 +15,24 @@ struct definition {
     definition(int o, int l, bool s, string f, string d = "", vector<string> m = {}) : offset(o), len(l), isSigned(s), field(f), description(d), booleanMappings(m) {}
 
     int parse(unsigned long long u, int messageLen, vector<bool> &boolmap) {
-        unsigned long long mask = (1 << (8 * len)) - 1;
+        unsigned long long mask = (1ULL << (8 * len)) - 1;
         int rawData = (u >> (8*(messageLen-offset-len))) & mask;
 
         if (!booleanMappings.empty()) {
-            boolmap = vector<bool>(8);
-            mask = 1 << (len - 1);
+            boolmap = vector<bool>(8*len);
+            mask = 1ULL << (8*len - 1);
             for(int i = 0; i < booleanMappings.size(); i++) {
                 boolmap[i] = (bool)(mask & rawData);
                 mask >>= 1;
             }
         } else if(isSigned) {
-            mask = 1 << (len - 1);
+            mask = 1ULL << (8*len - 1);
             if((rawData & mask) != 0) {
                 mask = (mask << 1) - 1;
-                rawData = (rawData ^ mask) + 1;
-                return -rawData;
+                return rawData | ~mask;
+                // cout << bitset<64>(rawData) << endl << bitset<64>(mask) << endl << endl;
+                // rawData = (rawData ^ mask) + 1;
+                // return -rawData;
             }
         }
         return rawData;

@@ -160,12 +160,78 @@ void dataAnalyze(vector<vector<dataPoint>> &csv){
     }
 }
 
+void analyze(double ts, int srcId, int messageLen, unsigned long long message, ofstream& output) {
+  vector<definition> msg_definition = CAN_MSG_DEFINITION[srcId].second;
+  ts *= 1000;
+
+  // cout << srcId << " " << hex << message << endl;
+
+  for(definition d : msg_definition) {
+    vector<bool> map;
+    int parsedData = d.parse(message, messageLen, map);
+    if(map.size()) {
+      for(int i = 0; i < d.booleanMappings.size(); i++) {
+        output << setprecision (numeric_limits<double>::digits10 + 1) << ts
+          << "," << d.booleanMappings[i] << "," << map[i] << endl;
+      }
+    }
+    else {
+      output << setprecision (numeric_limits<double>::digits10 + 1) << ts
+          << "," << d.field << "," << hex << parsedData << endl;
+    }
+  }
+}
+
 int main(){
     loadLookupTable();
-    vector<vector<dataPoint>> sortedCSV(29, vector<dataPoint>(0)); //if you add more CAN ID Definitions, update the interger and the string_hex list
-    readCSV("../../../DATA0000.csv", sortedCSV);
-    dataAnalyze(sortedCSV);
-    cout<<sortedCSV[28][5].response<<endl;
+    ifstream in; ofstream out;
+
+    // ofstream tout ("./test");
+    // analyze(0, 0xAA, 8, 0x400090000000001ULL, tout);
+    // tout.close();
+
+    do {
+      cout << "Enter path to input file: ";
+      string filepath; getline(cin, filepath);
+      if(filepath.length() < 4 || filepath.compare(filepath.length() - 4, 4, ".csv"))
+        filepath += ".csv";
+      filepath = "./DATA0000.CSV";
+      in = ifstream(filepath);
+      if(!in.is_open()) cout << "Could not open file to read.";
+    } while(!in.is_open());
+    in.ignore(256, '\n');
+
+    do {
+      cout << "Enter path to output file: ";
+      string filepath; getline(cin, filepath);
+      if(filepath.length() < 4 || filepath.compare(filepath.length() - 4, 4, ".csv"))
+        filepath += ".csv";
+      filepath = "./DATA0000_PARSED.csv";
+      out = ofstream (filepath);
+      if(!out.is_open()) cout << "Could not create file to write.";
+    } while(!out.is_open());
+
+    out << "Timestamp, Field, Value, Units\n";
+
+    string inputLine;
+    while(in.good()) {
+      getline(in, inputLine);
+      stringstream lineStream(inputLine);
+      double timestamp;
+      int srcId, length;
+      unsigned long long message;
+      lineStream >> timestamp;
+      lineStream.ignore(256, ',');
+      lineStream >> hex >> srcId;
+      lineStream.ignore(256, ',');
+      lineStream >> length;
+      lineStream.ignore(256, ',');
+      lineStream >> message;
+
+      analyze(timestamp, srcId, length, message, out);
+    }
+    in.close();
+    out.close();
 }
 
 /* example definition - MCU pedal readings = 0xC4
