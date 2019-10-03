@@ -44,21 +44,21 @@ static vector<pair<string, vector<definition>>> CAN_MSG_DEFINITION (0x100, pair<
 static void loadLookupTable() {
   vector<definition> empty;
   CAN_MSG_DEFINITION[0xA0] = pair<string, vector<definition>> ("ID_MC_TEMPERATURES_1", {
-    definition(0, 2, true, "module_a_temperature"),
-    definition(2, 2, true, "module_b_temperature"),
-    definition(4, 2, true, "module_c_temperature"),
-    definition(6, 2, true, "gate_driver_board_temperature")
+    definition(0, 2, true, "module_a_temperature"), //degrees Celsius
+    definition(2, 2, true, "module_b_temperature"), //degrees Celsius
+    definition(4, 2, true, "module_c_temperature"), //degrees Celsius
+    definition(6,2, true, "gate_driver_board_temperature") //degrees Celsius
   });
   CAN_MSG_DEFINITION[0xA1] = pair<string, vector<definition>> ("ID_MC_TEMPERATURES_2", {
-    definition(0, 2, true, "control_board_temperature"),
-    definition(2, 2, true, "rtd_1_temperature"),
-    definition(4, 2, true, "rtd_2_temperature"),
-    definition(6, 2, true, "rtd_3_temperature")
+    definition(0, 2, true, "control_board_temperature"), //degrees Celsius
+    definition(2, 2, true, "rtd_1_temperature"), //degrees Celsius
+    definition(4, 2, true, "rtd_2_temperature"), //degrees Celsius
+    definition(6, 2, true, "rtd_3_temperature") //degrees Celsius
   });
   CAN_MSG_DEFINITION[0xA2] = pair<string, vector<definition>> ("ID_MC_TEMPERATURES_3", {
-    definition(0, 2, true, "rtd_4_temperature"),
-    definition(2, 2, true, "rtd_5_temperature"),
-    definition(4, 2, true, "motor_temperature"),
+    definition(0, 2, true, "rtd_4_temperature"), //degrees Celsius
+    definition(2, 2, true, "rtd_5_temperature"), //degrees Celsius
+    definition(4, 2, true, "motor_temperature"), //degrees Celsius
     definition(6, 2, true, "torque_shudder")
   });
   CAN_MSG_DEFINITION[0xA3] = pair<string, vector<definition>> ("ID_MC_ANALOG_INPUTS_VOLTAGES", {
@@ -71,22 +71,22 @@ static void loadLookupTable() {
     definition(0, 1, false, "", "", {"digital_input_1", "digital_input_2", "digital_input_3", "digital_input_4", "digital_input_5", "digital_input_6", "digital_input_7", "digital_input_8"})
   });
   CAN_MSG_DEFINITION[0xA5] = pair<string, vector<definition>> ("ID_MC_MOTOR_POSITION_INFORMATION", {
-    definition(0, 2, true, "motor_angle"),
-    definition(2, 2, true, "motor_speed"),
-    definition(4, 2, true, "electrical_output_frequency"),
+    definition(0, 2, true, "motor_angle"), // degrees or radians
+    definition(2, 2, true, "motor_speed"), // m/s
+    definition(4, 2, true, "electrical_output_frequency"), //hertz
     definition(6, 2, true, "delta_resolver_filtered")
   });
   CAN_MSG_DEFINITION[0xA6] = pair<string, vector<definition>> ("ID_MC_CURRENT_INFORMATION", {
-    definition(0, 2, true, "phase_a_current"),
-    definition(2, 2, true, "phase_b_current"),
-    definition(4, 2, true, "phase_c_current"),
-    definition(6, 2, true, "dc_bus_current")
+    definition(0, 2, true, "phase_a_current"), //Amperes
+    definition(2, 2, true, "phase_b_current"), //Amperes
+    definition(4, 2, true, "phase_c_current"), //Amperes
+    definition(6, 2, true, "dc_bus_current")  //Amperes
   });
   CAN_MSG_DEFINITION[0xA7] = pair<string, vector<definition>> ("ID_MC_VOLTAGE_INFORMATION", {
-    definition(0, 2, true, "dc_bus_voltage"),
-    definition(2, 2, true, "output_voltage"),
-    definition(4, 2, true, "phase_ab_voltage"),
-    definition(6, 2, true, "phase_bc_voltage")
+    definition(0, 2, true, "dc_bus_voltage"), //Volts
+    definition(2, 2, true, "output_voltage"), //Volts
+    definition(4, 2, true, "phase_ab_voltage"), //Volts
+    definition(6, 2, true, "phase_bc_voltage") //Volts
   });
   CAN_MSG_DEFINITION[0xA8] = pair<string, vector<definition>> ("ID_MC_FLUX_INFORMATION", {
   });
@@ -126,7 +126,7 @@ static void loadLookupTable() {
   });
   CAN_MSG_DEFINITION[0xC0] = pair<string, vector<definition>> ("ID_MC_COMMAND_MESSAGE", {
     definition(0, 2, true, "torque_command"),
-    definition(2, 2, true, "angular_velocity"),
+    definition(2, 2, true, "angular_velocity"), //radians/second
     definition(4, 1, false, {"direction"}),
     definition(5, 1, false, "inverter_enable_discharge_enable"),
     definition(6, 2, true, "commanded_torque_limit")
@@ -146,45 +146,45 @@ static void loadLookupTable() {
   CAN_MSG_DEFINITION[0xC3] = pair<string, vector<definition>> ("ID_MCU_STATUS", {
     definition(0, 1, false, "state", "ECU State"),
     definition(1, 1, false, "flags", "ECU Flags (packed booleans)", {"bms_ok_high", "imd_okhs_high", "inverter_powered", "shutdown_b_above_threshold", "shutdown_c_above_threshold", "shutdown_d_above_threshold", "shutdown_e_above_threshold", "shutdown_f_above_threshold"}),
-    definition(3, 2, true, "temperature", "Temperature of the board (in ºC) times 100"),
-    definition(5, 2, false, "glv_battery_voltage", "GLV battery voltage reading (in Volts) times 1000")
+    definition(3, 2, true, "temperature", "Temperature of the board (in ºC) times 100"), //degrees Celsius
+    definition(5, 2, false, "glv_battery_voltage", "GLV battery voltage reading (in Volts) times 1000") //volts
   });
   CAN_MSG_DEFINITION[0xC4] = pair<string, vector<definition>> ("ID_MCU_PEDAL_READINGS", {
-    definition(0, 2, false, "accelerator_pedal_raw_1", "Accelerator Pedal 1 Raw ADC Reading"),
-    definition(2, 2, false, "accelerator_pedal_raw_2", "Accelerator Pedal 2 Raw ADC Reading"),
-    definition(4, 2, false, "brake_pedal_raw", "Brake Pedal Raw ADC Reading"),
+    definition(0, 2, false, "accelerator_pedal_raw_1", "Accelerator Pedal 1 Raw ADC Reading"), // m/s???
+    definition(2, 2, false, "accelerator_pedal_raw_2", "Accelerator Pedal 2 Raw ADC Reading"), // m/s???
+    definition(4, 2, false, "brake_pedal_raw", "Brake Pedal Raw ADC Reading"), 
     definition(6, 1, false, "pedal_flags", "Pedal Error Flags (packed booleans)",	{"accelerator_implausibility", "brake_implausibility", "brake_pedal_active"}),
     definition(7, 1, false, "torque_map_mode", "Torque map mode in use (pedal mapping, regen, etc)")
   });
   CAN_MSG_DEFINITION[0xCC] = pair<string, vector<definition>> ("ID_GLV_CURRENT_READINGS", {
   });
   CAN_MSG_DEFINITION[0xD7] = pair<string, vector<definition>> ("ID_BMS_VOLTAGES", {
-    definition(0, 2, false, "average_voltage"),
-    definition(2, 2, true, "low_voltage"),
-    definition(4, 2, true, "high_voltage"),
-    definition(6, 2, true, "total_voltage")
+    definition(0, 2, false, "average_voltage"), //Volts
+    definition(2, 2, true, "low_voltage"), //Volts
+    definition(4, 2, true, "high_voltage"), //Volts
+    definition(6, 2, true, "total_voltage") //Volts
   });
   CAN_MSG_DEFINITION[0xD8] = pair<string, vector<definition>> ("ID_BMS_DETAILED_VOLTAGES", {
     definition(0, 1, true, "ic_id_group_id"),
-    definition(1, 2, true, "voltage_0"),
-    definition(3, 2, true, "voltage_1"),
-    definition(5, 2, true, "voltage_2")
+    definition(1, 2, true, "voltage_0"), //Volts
+    definition(3, 2, true, "voltage_1"), //Volts
+    definition(5, 2, true, "voltage_2") //Volts
   });
   CAN_MSG_DEFINITION[0xD9] = pair<string, vector<definition>> ("ID_BMS_TEMPERATURES", {
-    definition(0, 2, true, "average_temperature"),
-    definition(2, 2, true, "low_temperature"),
-    definition(4, 2, true, "high_temperature")
+    definition(0, 2, true, "average_temperature"), //degrees Celsius
+    definition(2, 2, true, "low_temperature"), //degrees Celsius
+    definition(4, 2, true, "high_temperature") //degrees Celsius
   });
   CAN_MSG_DEFINITION[0xDA] = pair<string, vector<definition>> ("ID_DETAILED_TEMPERATURES", {
     definition(0, 1, false, "ic_id"),
-    definition(1, 2, true, "temperature_0"),
-    definition(3, 2, true, "temperature_1"),
-    definition(5, 2, true, "temperature_2")
+    definition(1, 2, true, "temperature_0"), //degrees Celsius
+    definition(3, 2, true, "temperature_1"), //degrees Celsius
+    definition(5, 2, true, "temperature_2") //degrees Celsius
   });
   CAN_MSG_DEFINITION[0xDB] = pair<string, vector<definition>> ("ID_BMS_STATUS", {
     definition(0, 1, false, "state"),
     definition(1, 2, false, "error_flags"),
-    definition(3, 2, true, "current"),
+    definition(3, 2, true, "current"), //amperes
     definition(5, 1, false, "flags")
   });
   CAN_MSG_DEFINITION[0xDC] = pair<string, vector<definition>> ("ID_FH_WATCHDOG_TEST", {
@@ -204,8 +204,8 @@ static void loadLookupTable() {
   CAN_MSG_DEFINITION[0xE0] = pair<string, vector<definition>> ("ID_BMS_READ_WRITE_PARAMETER_COMMAND", empty);
   CAN_MSG_DEFINITION[0xE1] = pair<string, vector<definition>> ("ID_BMS_PARAMETER_RESPONSE", empty);
   CAN_MSG_DEFINITION[0xE2] = pair<string, vector<definition>> ("ID_BMS_COULOMB_COUNTS", {
-    definition(0, 4, true, "total_charge"),
-    definition(4, 4, true, "total_discharge")
+    definition(0, 4, true, "total_charge"), //coulombs
+    definition(4, 4, true, "total_discharge") //coulombs
   });
   CAN_MSG_DEFINITION[0xE7] = pair<string, vector<definition>> ("ID_MCU_GPS_READINGS_ALPHA", empty);
   CAN_MSG_DEFINITION[0xE8] = pair<string, vector<definition>> ("ID_MCU_GPS_READINGS_GAMMA", empty);
