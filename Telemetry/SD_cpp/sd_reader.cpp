@@ -2,7 +2,7 @@
 #include <string.h>
 #include <iostream>
 #include <fstream>
-#include <vector>
+#include <bits/stdc++.h>
 #include <string>
 #include <sstream>
 #include <iomanip>
@@ -164,8 +164,6 @@ void analyze(double ts, int srcId, int messageLen, unsigned long long message, o
   vector<definition> msg_definition = CAN_MSG_DEFINITION[srcId].second;
   ts *= 1000;
 
-  // cout << srcId << " " << hex << message << endl;
-
   for(definition d : msg_definition) {
     vector<bool> map;
     int parsedData = d.parse(message, messageLen, map);
@@ -177,7 +175,7 @@ void analyze(double ts, int srcId, int messageLen, unsigned long long message, o
     }
     else {
       output << setprecision (numeric_limits<double>::digits10 + 1) << ts
-          << "," << d.field << "," << hex << parsedData << endl;
+          << "," << d.field << "," << parsedData << endl;
     }
   }
 }
