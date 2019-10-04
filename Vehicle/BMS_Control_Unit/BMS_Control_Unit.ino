@@ -47,7 +47,6 @@
  * Uncomment whichever board this code is being uploaded to
  * Used to set pins correctly and only enable features compatible with board
  */
-//#define BOARD_VERSION_HYTECH_2018_HV_REV_4
 #define BOARD_VERSION_HYTECH_2019_HV_REV_11
 
 /*
@@ -86,14 +85,6 @@
 /*
  * Pin definitions
  */
-#ifdef BOARD_VERSION_HYTECH_2018_HV_REV_4 // 2018 HV Board rev4
-#define ADC_CS 9
-#define BMS_OK A8
-#define LED_STATUS 7
-#define LTC6820_CS 10
-#define WATCHDOG A0
-#endif
-
 #ifdef BOARD_VERSION_HYTECH_2019_HV_REV_11 // 2019 HV Board rev11
 #define ADC_CS 9
 #define BMS_OK A1
@@ -357,11 +348,10 @@ void loop() {
 
     if (timer_process_cells_slow.check()) {
         process_voltages(); // Poll controllers, process values, populate bms_voltages
-        #ifndef BOARD_VERSION_HYTECH_2018_HV_REV_4 // Don't try to balance cells or use onboard ADC values on 2018 HV board
         balance_cells(); // Check local cell voltage data and balance individual cells as necessary
-        process_adc(); // Poll ADC, process values, populate bms_status
-        #endif
         process_temps(); // Poll controllers, process values, populate populate bms_temperatures, bms_detailed_temperatures, bms_onboard_temperatures, and bms_onboard_detailed_temperatures
+        process_adc(); // Poll ADC, process values, populate bms_status
+        
         print_temps(); // Print cell and pcb temperatures to serial
         print_cells(); // Print the cell voltages and balancing status to serial
         print_current(); // Print measured current sensor value
