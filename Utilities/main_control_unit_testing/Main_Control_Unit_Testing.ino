@@ -237,6 +237,7 @@ void setup() {
     mcu_status.set_bms_ok_high(true);
     mcu_status.set_imd_okhs_high(true);
     mcu_status.set_inverter_powered(true);
+    print_menu();
 }
 
 void loop() {
@@ -245,7 +246,7 @@ void loop() {
     read_dashboard_buttons();
     set_dashboard_leds();
 
-    if (Serial.available()) {     // Check for user input
+    if (Serial.available()) {           // Check for user input
         char user_command;
         user_command = read_int();      // Read the user command
         Serial.println(user_command);
@@ -419,40 +420,71 @@ void loop() {
     }
 }
 
+/*
+ * Menu selection
+ * 1. Pedal Input Testing with 0 Torque
+ * 2. Pedal Input Testing with Constant Torque
+ * 3. Dashboard Testing
+ */
 void run_command(char cmd) {
-    int8_t error = 0;
-
     char input = 0;
-    if (cmd == 'm' || cmd == 'M') { 
-        print_menu();
-    } else {
-        switch (cmd) {
-            case 1: //start Pedal Input Testing Mode
-                Serial.println("transmit 'm' to quit");
-                while (input != 'm') {
-                    if (Serial.available() > 0) {
-                        input = read_char();
-                    }
-                print_cells();
-                //   delay(500);
+    switch (cmd) {
+        case m:
+            print menu();
+            break;
+
+        case M:
+            print_menu();
+            break;
+
+        case 1: //start Pedal Input Testing Mode with 0 Torque
+            Serial.println("transmit 'm' to quit");
+            while (input != 'm') {
+                if (Serial.available() > 0) {
+                    input = read_char();
                 }
-                print_menu();
-                break;
+            print_pedal_values();
+            //   delay(500);
+            }
+            print_menu();
+            break;
+
+        case 2: //start Pedal Input Testing Mode with Constant Torque
+            while (input != 'm') {
+                if (Serial.available() > 0) {
+                    input = read_char();
+                }
+            print_pedal_values();
+            //   delay(500);
+            }
+            print_menu();
+            break;
     
-            case 2: //start aux voltage measurement loop
-                print_menu();
-                break;
-        
-            case 9: //start aux aux voltage measurement with register clearing the loop
-                print_menu();
-                break;
-    
-            default:
-                Serial.println("Incorrect Option");
-                break;
-        }
+        case 3: //start Dashboard Testing
+            print_menu();
+            break;
+
+        default:
+            Serial.println("Incorrect Option");
+            break;
     }
 }
+
+/*
+ * Print Menu
+ */
+void print_menu() {
+    Serial.println("Please enter a Command");
+    Serial.println("1. Pedal Input Testing Mode with 0 Torque");
+    Serial.println("2. Pedal Input Testing Mode with Constant Torque");
+    Serial.println("3. Dashboard Testing");
+    Serial.println("Please enter a number (1 - 3): ");
+    Serial.println();
+}
+
+/*
+ * Print Pedal Readings
+ */
 
 /*
  * Parse incoming CAN messages
