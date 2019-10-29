@@ -438,24 +438,31 @@ void run_command(char cmd) {
             break;
 
         case 1: //start Pedal Input Testing Mode with 0 Torque
+            //need to set torque to 0 so engine won't run
             Serial.println("transmit 'm' to quit");
             while (input != 'm') {
                 if (Serial.available() > 0) {
                     input = read_char();
                 }
-            print_pedal_values();
-            //   delay(500);
+                read_pedal_values();
+                print_pedal_values();
+                //   delay(500);
             }
             print_menu();
             break;
 
         case 2: //start Pedal Input Testing Mode with Constant Torque
+            //set torque to a user-input constant
+            Serial.println("Enter the constant torque: ")
+            float torqueInput = Serial.parseFloat(); //get torque from the user
+            Serial.println("transmit 'm' to quit");
             while (input != 'm') {
                 if (Serial.available() > 0) {
                     input = read_char();
                 }
-            print_pedal_values();
-            //   delay(500);
+                read_pedal_values();
+                print_pedal_values();
+                //   delay(500);
             }
             print_menu();
             break;
@@ -485,6 +492,28 @@ void print_menu() {
 /*
  * Print Pedal Readings
  */
+void print_pedal_values() {
+    Serial.println("FILTERED READINGS")
+    Serial.print("\tACCEL 1: ");
+    Serial.println(filtered_accel1_reading);
+    Serial.print("\tACCEL 2: ");
+    Serial.println(filtered_accel2_reading);
+    Serial.print("\tBRAKE:   ");
+    Serial.println(filtered_brake_reading);
+    Serial.println("")
+    Serial.println("UNFILTERED READINGS")
+    Serial.print("\tMCU PEDAL ACCEL 1: ");
+    Serial.println(mcu_pedal_readings.get_accelerator_pedal_raw_1());
+    Serial.print("\tMCU PEDAL ACCEL 2: ");
+    Serial.println(mcu_pedal_readings.get_accelerator_pedal_raw_2());
+    Serial.print("\tMCU PEDAL BRAKE:   ");
+    Serial.println(mcu_pedal_readings.get_brake_pedal_raw());
+    Serial.print("\tMCU BRAKE ACT:     ");
+    Serial.println(mcu_pedal_readings.get_brake_pedal_active());
+    Serial.println("");
+    Serial.print("\tMCU STATE: ");
+    Serial.println(mcu_status.get_state());
+}
 
 /*
  * Parse incoming CAN messages
@@ -557,10 +586,6 @@ void read_pedal_values() {
     filtered_accel1_reading = ALPHA * filtered_accel1_reading + (1 - ALPHA) * ADC.read_adc(ADC_ACCEL_1_CHANNEL);
     filtered_accel2_reading = ALPHA * filtered_accel2_reading + (1 - ALPHA) * ADC.read_adc(ADC_ACCEL_2_CHANNEL);
     filtered_brake_reading  = ALPHA * filtered_brake_reading  + (1 - ALPHA) * ADC.read_adc(ADC_BRAKE_CHANNEL);
-    // Serial.print("ACCEL 1: "); Serial.println(filtered_accel1_reading);
-    // Serial.print("ACCEL 2: "); Serial.println(filtered_accel2_reading);
-    // Serial.print("BRAKE: "); Serial.println(filtered_brake_reading);
-
 
     //Serial.println(ADC.read_adc(ADC_ACCEL_1_CHANNEL));
 
