@@ -248,7 +248,7 @@ void loop() {
 
     if (Serial.available()) {           // Check for user input
         char user_command;
-        user_command = read_int();      // Read the user command
+        user_command = Serial.parseInt();      // Read the user command
         Serial.println(user_command);
         run_command(user_command);
     }
@@ -429,11 +429,11 @@ void loop() {
 void run_command(char cmd) {
     char input = 0;
     switch (cmd) {
-        case m:
-            print menu();
+        case 'm':
+            print_menu();
             break;
 
-        case M:
+        case 'M':
             print_menu();
             break;
 
@@ -442,7 +442,7 @@ void run_command(char cmd) {
             Serial.println("transmit 'm' to quit");
             while (input != 'm') {
                 if (Serial.available() > 0) {
-                    input = read_char();
+                    input = Serial.read();
                 }
                 read_pedal_values();
                 print_pedal_values();
@@ -453,12 +453,12 @@ void run_command(char cmd) {
 
         case 2: //start Pedal Input Testing Mode with Constant Torque
             //set torque to a user-input constant
-            Serial.println("Enter the constant torque: ")
-            float torqueInput = Serial.parseFloat(); //get torque from the user
+            Serial.println("Enter the constant torque: ");
+            //float torqueInput = Serial.parseFloat(); //get torque from the user
             Serial.println("transmit 'm' to quit");
             while (input != 'm') {
                 if (Serial.available() > 0) {
-                    input = read_char();
+                    input = Serial.read();
                 }
                 read_pedal_values();
                 print_pedal_values();
@@ -473,7 +473,6 @@ void run_command(char cmd) {
 
         default:
             Serial.println("Incorrect Option");
-            break;
     }
 }
 
@@ -493,15 +492,15 @@ void print_menu() {
  * Print Pedal Readings
  */
 void print_pedal_values() {
-    Serial.println("FILTERED READINGS")
+    Serial.println("FILTERED READINGS");
     Serial.print("\tACCEL 1: ");
     Serial.println(filtered_accel1_reading);
     Serial.print("\tACCEL 2: ");
     Serial.println(filtered_accel2_reading);
     Serial.print("\tBRAKE:   ");
     Serial.println(filtered_brake_reading);
-    Serial.println("")
-    Serial.println("UNFILTERED READINGS")
+    Serial.println("");
+    Serial.println("UNFILTERED READINGS");
     Serial.print("\tMCU PEDAL ACCEL 1: ");
     Serial.println(mcu_pedal_readings.get_accelerator_pedal_raw_1());
     Serial.print("\tMCU PEDAL ACCEL 2: ");
