@@ -1,3 +1,4 @@
+
 #include <ADC_SPI.h>
 #include <HyTech_FlexCAN.h>
 #include <HyTech_CAN.h>
@@ -5,33 +6,6 @@
 #include <Metro.h>
 #include <Wire.h>
 #include <MCP23S17.h>
-
-/*
- * ADC_SPI.h is the library is used to communicate with
- * the Microchip MCP3208 12-bit ADC using the Teensy/Arduino
- * SPI library
- * 
- * FlexCAN is a serial communication driver for the CAN peripherial
- * built into the Teensy CPUs.
- * HyTech_FlexCAN.h sets the pins involved in this and reads
- * and writes messages with FIFO? Also transmits a "frame"
- * HyTech_CAN.h serves as a central location for ECU state IDs,
- * CAN message IDs, and CAN message parsers.
- * For more information look at the README.md for each library!
- * 
- * kinetis_flexcan.h contains register and pin definitions. 
- *
- * Metro.h is the library which contains the functions to keep
- * set of the number of ms (milliseconds) for a process and
- * check whether that has been finished.
- * 
- * Wire.h allows you to communicate with I2C / TWI devices.
- *
- * MCP23S17.h, as the name suggests, is the code for the
- * microchip. It is a 16-bit, general purpose parallel I/O expansion
- * for I2C bus or SPI applications
- */
-
 /*
  * Teensy Pin definitions
  */
@@ -50,7 +24,6 @@
 
 /*
  * ADC pin definitions
- * ADC = analog to digital
  */
 #define ADC_BRAKE_CHANNEL 0
 #define ADC_ACCEL_1_CHANNEL 1
@@ -76,7 +49,6 @@
 
 /*
  * Global variables
- * MCU = microcontroller unit
  */
 MCU_status mcu_status;
 MCU_pedal_readings mcu_pedal_readings;
@@ -117,7 +89,7 @@ BMS_coulomb_counts bms_coulomb_counts;
 #define START_ACCEL2_PEDAL_WITH_REGEN 3890 // TODO: calibrate this constant
 #define START_BRAKE_PEDAL_WITH_REGEN 450   // TODO: calibrate this constant
 #define END_BRAKE_PEDAL_WITH_REGEN 1000    // TODO: calibrate this constant
-#define ALPHA 0.9772                    // parameter for the software filter used on ADC pedal channels
+#define ALPHA 0.9772                    // parameter for the sowftware filter used on ADC pedal channels
 #define EXPANDER_SPI_SPEED 9000000      // max SPI clock frequency for MCP23S17 is 10MHz in ideal conditions
 #define ADC_SPI_SPEED 1800000           // max SPI clokc frequency for MCP3208 is 2MHz in ideal conditions
 #define TORQUE_ADJUSTMENT_VOLTAGE 3.5242   //
@@ -181,11 +153,27 @@ uint16_t dash_values = 0;
 uint32_t total_charge_amount = 0;
 uint32_t total_discharge_amount = 0;
 
-static CAN_message_t rx_msg; //rx and tx are pins
+/*
+ * Flags for testing utilities
+ */
+bool pedal_input_testing=false;
+bool dashboard_btn_testing=false;
+
+static CAN_message_t rx_msg;
 static CAN_message_t tx_msg;
 ADC_SPI ADC(ADC_CS, ADC_SPI_SPEED);
 MCP23S17 EXPANDER(0, EXPANDER_CS, EXPANDER_SPI_SPEED);
 FlexCAN CAN(500000);
+
+void parse_can_message();
+void set_state(uint8_t new_state);
+void read_pedal_values();
+void read_dashboard_buttons();
+void set_dashboard_leds();
+void read_status_values();
+int calculate_torque();
+void print_menu();
+
 
 void setup() {
     EXPANDER.begin();
@@ -213,8 +201,7 @@ void setup() {
     pinMode(SENSE_SHUTDOWN_E, INPUT);
 
     Serial.begin(115200);
-    //Sets the data rate in bits per second (baud) for serial data transmission
-
+    print_menu();
     CAN.begin();
 
     /* Configure CAN rx interrupt */
@@ -237,22 +224,49 @@ void setup() {
     mcu_status.set_bms_ok_high(true);
     mcu_status.set_imd_okhs_high(true);
     mcu_status.set_inverter_powered(true);
-    print_menu();
 }
 
 void loop() {
 
+    if (Serial.available()) {     // Check for user input
+        int cmd=Serial.read();
+        switch (cmd)
+        {
+          case '1':
+          {
+            pedal_input_testing=true;
+            Serial.println("Enter pedal testing mode");
+            Serial.println("Enter m to quit");
+            break;
+          }
+          case '2':
+          {
+            dashboard_btn_testing=true;
+            Serial.println("Enter dashboard button testing mode");
+            Serial.println("Enter m to quit");
+            break;
+          }
+          case 'm':
+          {
+            pedal_input_testing=false;
+            dashboard_btn_testing=false;
+            Serial.println("Exit testing");
+            Serial.println();
+            print_menu();
+            break;
+          }
+          default:
+          {
+            Serial.println("Invalid input");
+            break;
+          }
+        }
+    }
+
+    
     read_pedal_values();
     read_dashboard_buttons();
     set_dashboard_leds();
-
-    if (Serial.available()) {           // Check for user input
-        char user_command;
-        user_command = Serial.parseInt();      // Read the user command
-        Serial.println(user_command);
-        run_command(user_command);
-    }
-
     /*
      * Send state over CAN
      */
@@ -343,10 +357,6 @@ void loop() {
             //read_pedal_values();
 
             // Check for accelerator implausibility FSAE EV2.3.10
-            /* Should be in the range of:
-             * pedal1: (-inf, 1850) OR (2500, inf)
-             * pedal2: (1590, 2250)
-             */
             mcu_pedal_readings.set_accelerator_implausibility(false);
             if (mcu_pedal_readings.get_accelerator_pedal_raw_1() < MIN_ACCELERATOR_PEDAL_1 || mcu_pedal_readings.get_accelerator_pedal_raw_1() > MAX_ACCELERATOR_PEDAL_1) {
                 mcu_pedal_readings.set_accelerator_implausibility(true);
@@ -393,11 +403,14 @@ void loop() {
             Serial.println(calculated_torque);
 
             mc_command_message.set_torque_command(calculated_torque);
-
-            mc_command_message.write(tx_msg.buf);
-            tx_msg.id = ID_MC_COMMAND_MESSAGE;
-            tx_msg.len = 8;
-            CAN.write(tx_msg);
+            
+            if (!pedal_input_testing)
+            {
+              mc_command_message.write(tx_msg.buf);
+              tx_msg.id = ID_MC_COMMAND_MESSAGE;
+              tx_msg.len = 8;
+              CAN.write(tx_msg);
+            }
         }
         break;
 
@@ -420,98 +433,12 @@ void loop() {
     }
 }
 
-/*
- * Menu selection
- * 1. Pedal Input Testing with 0 Torque
- * 2. Pedal Input Testing with Constant Torque
- * 3. Dashboard Testing
- */
-void run_command(char cmd) {
-    char input = 0;
-    switch (cmd) {
-        case 'm':
-            print_menu();
-            break;
-
-        case 'M':
-            print_menu();
-            break;
-
-        case 1: //start Pedal Input Testing Mode with 0 Torque
-            //need to set torque to 0 so engine won't run
-            Serial.println("transmit 'm' to quit");
-            while (input != 'm') {
-                if (Serial.available() > 0) {
-                    input = Serial.read();
-                }
-                read_pedal_values();
-                print_pedal_values();
-                //   delay(500);
-            }
-            print_menu();
-            break;
-
-        case 2: //start Pedal Input Testing Mode with Constant Torque
-            //set torque to a user-input constant
-            Serial.println("Enter the constant torque: ");
-            //float torqueInput = Serial.parseFloat(); //get torque from the user
-            Serial.println("transmit 'm' to quit");
-            while (input != 'm') {
-                if (Serial.available() > 0) {
-                    input = Serial.read();
-                }
-                read_pedal_values();
-                print_pedal_values();
-                //   delay(500);
-            }
-            print_menu();
-            break;
-    
-        case 3: //start Dashboard Testing
-            print_menu();
-            break;
-
-        default:
-            Serial.println("Incorrect Option");
-    }
-}
-
-/*
- * Print Menu
- */
 void print_menu() {
     Serial.println("Please enter a Command");
     Serial.println("1. Pedal Input Testing Mode with 0 Torque");
-    Serial.println("2. Pedal Input Testing Mode with Constant Torque");
-    Serial.println("3. Dashboard Testing");
-    Serial.println("Please enter a number (1 - 3): ");
+    Serial.println("2. Dashboard Testing");
+    Serial.println("Please enter a number (1 - 2): ");
     Serial.println();
-}
-
-/*
- * Print Pedal Readings
- */
-void print_pedal_values() {
-    Serial.println("FILTERED READINGS");
-    Serial.print("\tACCEL 1: ");
-    Serial.println(filtered_accel1_reading);
-    Serial.print("\tACCEL 2: ");
-    Serial.println(filtered_accel2_reading);
-    Serial.print("\tBRAKE:   ");
-    Serial.println(filtered_brake_reading);
-    Serial.println("");
-    Serial.println("UNFILTERED READINGS");
-    Serial.print("\tMCU PEDAL ACCEL 1: ");
-    Serial.println(mcu_pedal_readings.get_accelerator_pedal_raw_1());
-    Serial.print("\tMCU PEDAL ACCEL 2: ");
-    Serial.println(mcu_pedal_readings.get_accelerator_pedal_raw_2());
-    Serial.print("\tMCU PEDAL BRAKE:   ");
-    Serial.println(mcu_pedal_readings.get_brake_pedal_raw());
-    Serial.print("\tMCU BRAKE ACT:     ");
-    Serial.println(mcu_pedal_readings.get_brake_pedal_active());
-    Serial.println("");
-    Serial.print("\tMCU STATE: ");
-    Serial.println(mcu_status.get_state());
 }
 
 /*
@@ -595,7 +522,10 @@ void read_pedal_values() {
     /*
      * Print values for debugging
      */
-    if (debug && timer_debug.check()) {
+    if (pedal_input_testing && timer_debug.check()) {
+        Serial.print("ACCEL 1: "); Serial.println(filtered_accel1_reading);
+        Serial.print("ACCEL 2: "); Serial.println(filtered_accel2_reading);
+        Serial.print("BRAKE: "); Serial.println(filtered_brake_reading);
         Serial.print("MCU PEDAL ACCEL 1: ");
         Serial.println(mcu_pedal_readings.get_accelerator_pedal_raw_1());
         Serial.print("MCU PEDAL ACCEL 2: ");
@@ -835,6 +765,10 @@ void read_dashboard_buttons() {
     }
     if (btn_start_debouncing && timer_btn_start.check()) { // Debounce period finishes without value returning
         btn_start_pressed = !btn_start_pressed;
+        if (btn_start_pressed && dashboard_btn_testing)
+        {
+          Serial.println("Start button pressed");
+        }
     }
 
     // debounce torque mode button
@@ -848,6 +782,10 @@ void read_dashboard_buttons() {
     if (btn_mode_debouncing && timer_btn_mode.check()) {                        // debounce period finishes
         btn_mode_pressed = !btn_mode_pressed;
         if (btn_mode_pressed) {
+            if (dashboard_btn_testing)
+            {
+              Serial.println("Mode button pressed");
+            }
             torque_mode = (torque_mode + 1) % 3;
             if (torque_mode == 0) {
                 set_mode_led(0);
@@ -886,7 +824,14 @@ void read_dashboard_buttons() {
     if (btn_restart_inverter_debouncing && timer_btn_restart_inverter.check()) {
         btn_restart_inverter_pressed = !btn_restart_inverter_pressed;
         if (btn_restart_inverter_pressed) {
-            reset_inverter();
+            if (dashboard_btn_testing)
+            {
+              Serial.println("Restart inverter button pressed");
+            }
+            else 
+            {
+              reset_inverter();
+            }
         }
     }
 }
