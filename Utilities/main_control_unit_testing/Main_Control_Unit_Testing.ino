@@ -535,13 +535,13 @@ void read_pedal_values() {
      */
     if (pedal_input_testing && timer_debug.check()) {
         Serial.println("ACCEL 1 | ACCEL 2 | BRAKE | MCU PEDAL ACCEL 1 | MCU PEDAL ACCEL 2 | MCU PEDAL BRAKE | MCU BRAKE ACT | MCU STATE");
-        Serial.print(filtered_accel1_reading, 2); Serial.print("| ");
-        Serial.print(filtered_accel2_reading, 2); Serial.print("| ");
-        Serial.print(filtered_brake_reading, 0); Serial.print("| ");
-        Serial.print(mcu_pedal_readings.get_accelerator_pedal_raw_1(), 18); Serial.print("| \t");
-        Serial.print(mcu_pedal_readings.get_accelerator_pedal_raw_2(), 18); Serial.print("| \t");
-        Serial.print(mcu_pedal_readings.get_brake_pedal_raw(), 16); Serial.print("| \t");
-        Serial.print(mcu_pedal_readings.get_brake_pedal_active(), 14); Serial.print("| \t");
+        Serial.print(filtered_accel1_reading, 2); Serial.print(" | ");
+        Serial.print(filtered_accel2_reading, 2); Serial.print(" | ");
+        Serial.print(filtered_brake_reading, 0); Serial.print("   | \t");
+        Serial.print(mcu_pedal_readings.get_accelerator_pedal_raw_1(), 18); Serial.print(" \t      | \t");
+        Serial.print(mcu_pedal_readings.get_accelerator_pedal_raw_2(), 18); Serial.print("       | \t    ");
+        Serial.print(mcu_pedal_readings.get_brake_pedal_raw(), 16); Serial.print("  \t    | \t    ");
+        Serial.print(mcu_pedal_readings.get_brake_pedal_active(), 14); Serial.print(" \t    |");
         Serial.println(mcu_status.get_state());
         Serial.println("-----------------------------------------------------------------------------------------------------------------");
     }
