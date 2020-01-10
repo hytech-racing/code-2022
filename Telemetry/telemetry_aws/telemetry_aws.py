@@ -4,7 +4,8 @@ import time
 import binascii
 from cobs import cobs
 import codecs
-import msvcrt
+# import msvcrt
+import threading
 import struct
 import paho.mqtt.client as mqtt
 from influxdb import InfluxDBClient
@@ -60,7 +61,7 @@ def mqtt_message(client, userdata, msg):
     # print(data)
 
     if data != -1:
-        timestamp = int(1e9 * float(timestamp.decode()))
+        timestamp = int(timestamp.decode()) + 946771200 - 68359 #  LTE Module stuck in 1990. Fix if you can.
         json_body = []
         for readout in decode(data):
             json_body.append({
@@ -71,10 +72,10 @@ def mqtt_message(client, userdata, msg):
                     "units": readout[2]
                 }
             })
-        print("Writing docuemnt: ")
+        print("Writing document: ")
         print(json_body)
         try:
-            influx_client.write_points(json_body)
+            influx_client.write_points(points=json_body, time_precision='s')
         except Exception as e:
             print("Operation failed. Printing error:")
             print(e)
@@ -88,15 +89,14 @@ def live():
     mqtt_client.loop_start()
     print("Loop start")
 
+    threading.Event().wait()
     # Wait for q to quit
-    char = 0
-    while char != ord('q') and char != ord('Q'):
-        char = ord(msvcrt.getch())
+    # input()
 
     # Time to quit, disconnect MQTT
-    print("Loop stop")
-    client.loop_stop()
-    client.disconnect() # TODO unsure if this should be called
+    # print("Loop stop")
+    # client.loop_stop()
+    # client.disconnect() # TODO unsure if this should be called
 
 def unpack(frame):
     # print("----------------")
