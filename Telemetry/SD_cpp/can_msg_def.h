@@ -1,24 +1,33 @@
 #ifndef CAN_MSG_DEF_H
 #define CAN_MSG_DEF_H
 
-#ifdef USE_VECTOR_HEADER
-  #include <vector.h>
-#else
-  #include <bits/stdc++.h>
-#endif
+#include <vector>
 
 using namespace std;
 
 struct definition {
     int offset;
     int len;
-    bool isSigned;
-    string field;
-    string units;
+    bool isSigned = false;
+    double multiplier = 0;
+    string field = "";
+    string units = "";
     vector<string> booleanMappings;
 
-    definition(int o, int l, bool s, string f, string u = "") : offset(o), len(l), isSigned(s), field(f), units(u), booleanMappings(vector<string>()) {}
-    definition(int o, int l, vector<string> m = {}) : offset(o), len(l), isSigned(false), field(""), units(""), booleanMappings(m) {}
+    definition(int o, int l, bool s, string f, string u = "", double m = 0) {
+      offset = o;
+      len = l;
+      isSigned = s;
+      field = f;
+      units = u;
+      multiplier = m;
+    }
+
+    definition(int o, int l, vector<string> m) {
+      offset = o;
+      len = l;
+      booleanMappings = m;
+    }
 
     long long parse(unsigned long long u, int messageLen, vector<bool> &boolmap) {
         unsigned long long mask = (1ULL << (8 * len)) - 1;
@@ -144,10 +153,10 @@ static void loadLookupTable() {
     definition(4, 4, false, "DATA")
   });
   CAN_MSG_DEFINITION[0xC3] = pair<string, vector<definition>> ("ID_MCU_STATUS", {
-    definition(0, 1, false, "sTATE"),
+    definition(0, 1, false, "STATE"),
     definition(1, 1, {"BMS OK HIGH", "IMD OKHS HIGH", "INVERTER POWERED", "SHUTDOWN B ABOVE THRESHOLD", "SHUTDOWN C ABOVE THRESHOLD", "SHUTDOWN D ABOVE THRESHOLD", "SHUTDOWN E ABOVE THRESHOLD", "SHUTDOWN F ABOVE THRESHOLD"}),
-    definition(3, 2, true, "TEMPERATURE"),
-    definition(5, 2, false, "GLV BATTERY VOLTAGE")
+    definition(3, 2, true, "TEMPERATURE", "C", 0.01),
+    definition(5, 2, false, "GLV BATTERY VOLTAGE", "V", 0.001)
   });
   CAN_MSG_DEFINITION[0xC4] = pair<string, vector<definition>> ("ID_MCU_PEDAL_READINGS", {
     definition(0, 2, false, "ACCELERATOR PEDAL RAW 1"),
@@ -157,11 +166,21 @@ static void loadLookupTable() {
     definition(7, 1, false, "TORQUE MAP MODE" )
   });
   CAN_MSG_DEFINITION[0xCC] = pair<string, vector<definition>> ("ID_GLV_CURRENT_READINGS", {});
+  CAN_MSG_DEFINITION[0xD5] = pair<string, vector<definition>> ("ID_BMS_ONBOARD_TEMPERATURES", {
+    definition(0, 2, true, "AVERAGE TEMPERATURE", "C", 0.01),
+    definition(2, 2, true, "LOW TEMPERATURE", "C", 0.01),
+    definition(4, 2, true, "HIGH TEMPERATURE", "C", 0.01)
+  });
+  CAN_MSG_DEFINITION[0xD6] = pair<string, vector<definition>> ("ID_BMS_ONBOARD_DETAILED_TEMPERATURES", {
+    definition(0, 1, false, "IC ID"),
+    definition(1, 2, true, "TEMPERATURE 0", "C", 0.01),
+    definition(3, 2, true, "TEMPERATURE 1", "C", 0.01)
+  });
   CAN_MSG_DEFINITION[0xD7] = pair<string, vector<definition>> ("ID_BMS_VOLTAGES", {
-    definition(0, 2, false, "BMS VOLTAGE AVERAGE", "V"),
-    definition(2, 2, true, "BMS VOLTAGE LOW", "V"),
-    definition(4, 2, true, "BMS VOLTAGE HIGH", "V"),
-    definition(6, 2, true, "BMS VOLTAGE TOTAL", "V")
+    definition(0, 2, false, "BMS VOLTAGE AVERAGE", "V", 0.001),
+    definition(2, 2, true, "BMS VOLTAGE LOW", "V", 0.001),
+    definition(4, 2, true, "BMS VOLTAGE HIGH", "V", 0.001),
+    definition(6, 2, true, "BMS VOLTAGE TOTAL", "V", 0.001)
   });
   CAN_MSG_DEFINITION[0xD8] = pair<string, vector<definition>> ("ID_BMS_DETAILED_VOLTAGES", {
     definition(0, 1, true, "IC ID GROUP ID"),

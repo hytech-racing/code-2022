@@ -1,5 +1,3 @@
-// #define USE_VECTOR_HEADER
-
 // #define OUTPUT_MODE std::ios::app // append data
 #define OUTPUT_MODE std::ios::trunc // overwrite data
 
@@ -12,11 +10,7 @@
 #include <algorithm>
 #include "can_msg_def.h"
 
-#ifdef USE_VECTOR_HEADER
-  #include <vector.h>
-#else
-  #include <bits/stdc++.h>
-#endif
+#include <vector>
 
 using namespace std;
 
@@ -35,7 +29,7 @@ void analyze(double ts, int srcId, int messageLen, unsigned long long message, f
     }
     else {
       output << setprecision (numeric_limits<double>::digits10 + 1) << ts
-          << "," << d.field << "," << parsedData;
+          << "," << d.field << "," << (d.multiplier ? d.multiplier * parsedData : parsedData);
       if(d.units != "") output << "," << d.units;
       output << endl;
     }
