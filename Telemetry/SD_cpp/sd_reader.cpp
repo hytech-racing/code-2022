@@ -41,9 +41,9 @@ fstream getFile(string function, ios_base::openmode mode, bool secondTry = false
 
   if(secondTry) cout << "Error opening " << function << " file. ";
   while(true) {
-    cout << "Enter path to " << function << "file: ";
+    cout << "Enter path to " << function << " file: ";
     string filepath; getline(cin, filepath);
-    if (filepath.length() < 4 || filepath.compare(filepath.length() - 4, 4, ".csv"))
+    if (filepath.length() < 4 || (filepath.compare(filepath.length() - 4, 4, ".csv") && filepath.compare(filepath.length() - 4, 4, ".CSV")))
       filepath += ".csv";
     file.open(filepath, mode);
     if (file.is_open()) return file;
@@ -58,8 +58,8 @@ int main(int argc, char* argv[]){
   if(argc > 1) in.open(argv[1], ios::in);
   if(argc > 2) out.open(argv[2], ios::out | OUTPUT_MODE);
 
-  if (!in.is_open()) in = getFile("input", ios::in, argc > 0);
-  if (!out.is_open()) out = getFile("output", ios::out | OUTPUT_MODE, argc > 1);
+  if (!in.is_open()) in = getFile("input", ios::in, argc > 1);
+  if (!out.is_open()) out = getFile("output", ios::out | OUTPUT_MODE, argc > 2);
 
   in.ignore(256, '\n');
   out << "Timestamp, Field, Value, Units\n";
