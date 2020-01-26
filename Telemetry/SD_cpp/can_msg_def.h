@@ -161,8 +161,8 @@ static void loadLookupTable() {
   CAN_MSG_DEFINITION[0xC3] = pair<string, vector<definition>> ("ID_MCU_STATUS", {
     definition(5, 1, false, "STATE"),
     definition(4, 1, {"BMS OK HIGH", "IMD OK HIGH", "INVERTER POWERED", "SHUTDOWN B ABOVE THRESHOLD", "SHUTDOWN C ABOVE THRESHOLD", "SHUTDOWN D ABOVE THRESHOLD", "SHUTDOWN E ABOVE THRESHOLD", "SHUTDOWN F ABOVE THRESHOLD"}),
-    definition(2, 2, true, "TEMPERATURE", "C", 0.01)
-    definition(0, 2, false, "GLV BATTERY VOLTAGE", "V", 0.01),
+    definition(2, 2, true, "TEMPERATURE", "C", 0.01),
+    definition(0, 2, false, "GLV BATTERY VOLTAGE", "V", 0.01)
   });
   CAN_MSG_DEFINITION[0xC4] = pair<string, vector<definition>> ("ID_MCU_PEDAL_READINGS", {
     definition(6, 2, false, "ACCELERATOR PEDAL RAW 1"),
@@ -192,7 +192,7 @@ static void loadLookupTable() {
     definition(0, 2, false, "BMS VOLTAGE TOTAL", "V", 0.0001)
   });
   CAN_MSG_DEFINITION[0xD8] = pair<string, vector<definition>> ("ID_BMS_DETAILED_VOLTAGES", {
-    definition(6, 1, false, "IC ID GROUP ID"),
+    definition(6, 1, false, "IC ID GROUP ID", "", 0.0625),
     definition(4, 2, false, "VOLTAGE 0", "V", 0.001),
     definition(2, 2, false, "VOLTAGE 1", "V", 0.001),
     definition(0, 2, false, "VOLTAGE 2", "V", 0.001)
@@ -203,9 +203,9 @@ static void loadLookupTable() {
     definition(0, 2, true, "BMS HIGH TEMPERATURE", "C", 0.01)
   });
   CAN_MSG_DEFINITION[0xDA] = pair<string, vector<definition>> ("ID_DETAILED_TEMPERATURES", {
-    definition(6, 1, false, "IC ID", "", 0.01),
+    definition(6, 1, false, "IC ID", "", 0.0625),
     definition(4, 2, true, "TEMPERATURE 0", "C", 0.01),
-    definition(2, 2, true, "TEMPERATURE 1", "C", 0.01)
+    definition(2, 2, true, "TEMPERATURE 1", "C", 0.01),
     definition(0, 2, true, "TEMPERATURE 2", "C", 0.01)
   });
   CAN_MSG_DEFINITION[0xDB] = pair<string, vector<definition>> ("ID_BMS_STATUS", {
