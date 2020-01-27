@@ -8,28 +8,36 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+// #include <time>
 #include "can_msg_def.h"
 
 #include <vector>
 
 using namespace std;
 
-void analyze(double ts, int srcId, int messageLen, unsigned long long message, fstream& output) {
+void analyze(time_t _ts, int srcId, int messageLen, unsigned long long message, fstream& output) {
   vector<definition> msg_definition = CAN_MSG_DEFINITION[srcId].second;
-  ts *= 1000;
+
+  struct tm* ptm = gmtime(&_ts);
+  stringstream ts_stream;
+  ts_stream << setw(4) << setfill('0') << ptm->tm_year + 1900 << '-'
+            << setw(2) << setfill('0') << ptm->tm_mon + 1 << '-'
+            << setw(2) << setfill('0') << ptm->tm_mday << ' '
+            << setw(2) << setfill('0') << ptm->tm_hour << ':'
+            << setw(2) << setfill('0') << ptm->tm_min << ':'
+            << setw(2) << setfill('0') << ptm->tm_sec;
+  string ts = ts_stream.str();
 
   for(definition d : msg_definition) {
     vector<bool> map;
     long long parsedData = d.parse(message, messageLen, map);
     if(map.size()) {
       for(int i = 0; i < d.booleanMappings.size(); i++) {
-        output << setprecision (numeric_limits<double>::digits10 + 1) << ts
-          << "," << d.booleanMappings[i] << "," << map[i] << endl;
+        output << ts << "," << d.booleanMappings[i] << "," << map[i] << endl;
       }
     }
     else {
-      output << setprecision (numeric_limits<double>::digits10 + 1) << ts
-          << "," << d.field << "," << (d.multiplier ? d.multiplier * parsedData : parsedData);
+      output << ts << "," << d.field << "," << (d.multiplier ? d.multiplier * parsedData : parsedData);
       if(d.units != "") output << "," << d.units;
       output << endl;
     }
@@ -68,7 +76,7 @@ int main(int argc, char* argv[]){
   while(in.good()) {
     getline(in, inputLine);
     stringstream lineStream(inputLine);
-    double timestamp;
+    time_t timestamp;
     int srcId, length;
     unsigned long long message;
     lineStream >> timestamp;
