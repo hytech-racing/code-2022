@@ -117,10 +117,10 @@ static void loadLookupTable() {
     definition(0, 1, false, "DIRECTION COMMAND")
   });
   CAN_MSG_DEFINITION[0xAB] = pair<string, vector<definition>> ("ID_MC_FAULT_CODES", {
-    definition(6, 2, false, "POST FAULT LO"),
-    definition(4, 2, false, "POST FAULT HI"),
-    definition(2, 2, false, "RUN FAULT LO"),
-    definition(0, 2, false, "RUN FAULT HI")
+    definition(6, 2, false, "MC POST FAULT LO"),
+    definition(4, 2, false, "MC POST FAULT HI"),
+    definition(2, 2, false, "MC RUN FAULT LO"),
+    definition(0, 2, false, "MC RUN FAULT HI")
   });
   CAN_MSG_DEFINITION[0xAC] = pair<string, vector<definition>> ("ID_MC_TORQUE_TIMER_INFORMATION", {
     definition(4, 2, true, "COMMANDED TORQUE", "Nm", 0.1),
