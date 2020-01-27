@@ -192,10 +192,10 @@ static void loadLookupTable() {
     definition(0, 2, false, "BMS VOLTAGE TOTAL", "V", 0.0001)
   });
   CAN_MSG_DEFINITION[0xD8] = pair<string, vector<definition>> ("ID_BMS_DETAILED_VOLTAGES", {
-    definition(6, 1, false, "IC ID GROUP ID", "", 0.0625),
-    definition(4, 2, false, "VOLTAGE 0", "V", 0.001),
-    definition(2, 2, false, "VOLTAGE 1", "V", 0.001),
-    definition(0, 2, false, "VOLTAGE 2", "V", 0.001)
+    definition(6, 1, false, "IC ID GROUP ID"),
+    definition(4, 2, false, "VOLTAGE 0", "V", 0.0001),
+    definition(2, 2, false, "VOLTAGE 1", "V", 0.0001),
+    definition(0, 2, false, "VOLTAGE 2", "V", 0.0001)
   });
   CAN_MSG_DEFINITION[0xD9] = pair<string, vector<definition>> ("ID_BMS_TEMPERATURES", {
     definition(4, 2, true, "BMS AVERAGE TEMPERATURE", "C", 0.01),
@@ -203,7 +203,7 @@ static void loadLookupTable() {
     definition(0, 2, true, "BMS HIGH TEMPERATURE", "C", 0.01)
   });
   CAN_MSG_DEFINITION[0xDA] = pair<string, vector<definition>> ("ID_DETAILED_TEMPERATURES", {
-    definition(6, 1, false, "IC ID", "", 0.0625),
+    definition(6, 1, false, "IC ID"),
     definition(4, 2, true, "TEMPERATURE 0", "C", 0.01),
     definition(2, 2, true, "TEMPERATURE 1", "C", 0.01),
     definition(0, 2, true, "TEMPERATURE 2", "C", 0.01)
