@@ -651,8 +651,8 @@ def unpack(frame):
 
 def decode(msg):
     ret = []
-    id = msg[0]
-    #print("CAN ID:        0x" + binascii.hexlify(msg[0]).upper())
+    id = msg[0] #not an endianness problem
+    # print("CAN ID:        " + hex(msg[0]).upper()) #at this point, no C3 messages print. JK it happened twice - maybe its a timer thing?
     size = msg[4]
     #print("MSG LEN:       " + str(size))
     if (id == 0xA0):
@@ -682,18 +682,18 @@ def decode(msg):
         ret.append("PHASE BC VOLTAGE: " + str(b2i16(msg[11:13]) / 10.) + " V")
     if (id == 0xAA):
         ret.append("VSM STATE: " + str(b2ui16(msg[5:7])))
-        ret.append("INVERTER STATE: " + str(ord(msg[7])))
-        ret.append("INVERTER RUN MODE: " + str(ord(msg[9]) & 0x1))
-        ret.append("INVERTER ACTIVE DISCHARGE STATE: " + str((ord(msg[9]) & 0xE0) >> 5))
-        ret.append("INVERTER COMMAND MODE: " + str(ord(msg[10])))
-        ret.append("INVERTER ENABLE: " + str(ord(msg[11]) & 0x1))
-        ret.append("INVERTER LOCKOUT: " + str((ord(msg[11]) & 0x80) >> 7))
-        ret.append("DIRECTION COMMAND: " + str(ord(msg[12])))
+        ret.append("INVERTER STATE: " + str(msg[7]))
+        ret.append("INVERTER RUN MODE: " + str(msg[9] & 0x1))
+        ret.append("INVERTER ACTIVE DISCHARGE STATE: " + str((msg[9] & 0xE0) >> 5))
+        ret.append("INVERTER COMMAND MODE: " + str(msg[10]))
+        ret.append("INVERTER ENABLE: " + str(msg[11] & 0x1))
+        ret.append("INVERTER LOCKOUT: " + str((msg[11] & 0x80) >> 7))
+        ret.append("DIRECTION COMMAND: " + str(msg[12]))
     if (id == 0xAB):
-        ret.append("POST FAULT LO: 0x" + binascii.hexlify(msg[6]).upper() + binascii.hexlify(msg[5]).upper())
-        ret.append("POST FAULT HI: 0x" + binascii.hexlify(msg[8]).upper() + binascii.hexlify(msg[7]).upper())
-        ret.append("RUN FAULT LO: 0x" + binascii.hexlify(msg[10]).upper() + binascii.hexlify(msg[9]).upper())
-        ret.append("RUN FAULT HI: 0x" + binascii.hexlify(msg[12]).upper() + binascii.hexlify(msg[11]).upper())
+        ret.append("POST FAULT LO: 0x" + hex(msg[6]).upper()[2:] + hex(msg[5]).upper()[2:])
+        ret.append("POST FAULT HI: 0x" + hex(msg[8]).upper()[2:] + hex(msg[7]).upper()[2:])
+        ret.append("RUN FAULT LO: 0x" + hex(msg[10]).upper()[2:] + hex(msg[9]).upper()[2:])
+        ret.append("RUN FAULT HI: 0x" + hex(msg[12]).upper()[2:] + hex(msg[11]).upper()[2:])
     if (id == 0xAC):
         ret.append("COMMANDED TORQUE: " + str(b2i16(msg[5:7]) / 10.) + " Nm")
         ret.append("TORQUE FEEDBACK: " + str(b2i16(msg[7:9]) / 10.) + " Nm")
@@ -702,21 +702,21 @@ def decode(msg):
         ret.append("REQUESTED TORQUE: " + str(b2i16(msg[5:7]) / 10.) + " Nm")
         #ret.append("FCU REQUESTED INVERTER ENABLE: " + str(ord(msg[10]) & 0x1))
     if (id == 0xC3):
-        ret.append("MCU STATE: " + str(ord(msg[5])))
-        ret.append("MCU BMS FAULT: " + str(not ord(msg[6]) & 0x1))
-        ret.append("MCU IMD FAULT: " + str(not (ord(msg[6]) & 0x2) >> 1))
-        ret.append("MCU INVERTER POWER: " + ("ON" if ((ord(msg[6]) & 0x4) >> 2) == 1 else "OFF"))
-        ret.append("MCU SHUTDOWN ABOVE THRESH: " + shutdown_from_flags(ord(msg[6])))
+        ret.append("MCU STATE: " + str(msg[5])) #this stuff no working.
+        ret.append("MCU BMS FAULT: " + str(not msg[6] & 0x1))
+        ret.append("MCU IMD FAULT: " + str(not (msg[6] & 0x2) >> 1))
+        ret.append("MCU INVERTER POWER: " + ("ON" if (((msg[6]) & 0x4) >> 2) == 1 else "OFF"))
+        ret.append("MCU SHUTDOWN ABOVE THRESH: " + shutdown_from_flags(msg[6]))
         ret.append("MCU TEMPERATURE: " + str(b2i16(msg[7:9])))
         ret.append("MCU GLV VOLTAGE: " + str(b2ui16(msg[9:11]) / 100.) + " V")
     if (id == 0xC4):
         ret.append("MCU PEDAL ACCEL 1: " + str(b2ui16(msg[5:7])))
         ret.append("MCU PEDAL ACCEL 2: " + str(b2ui16(msg[7:9])))
         ret.append("MCU PEDAL BRAKE: " + str(b2ui16(msg[9:11])))
-        ret.append("MCU BRAKE ACT: " + str((ord(msg[12]) & 0x4) >> 2))
-        ret.append("MCU IMPLAUS ACCEL: " + str(ord(msg[12]) & 0x1))
-        ret.append("MCU IMPLAUS BRAKE: " + str((ord(msg[12]) & 0x2) >> 1))
-        ret.append("MCU TORQUE MAP MODE: " + str(ord(msg[13])))
+        ret.append("MCU BRAKE ACT: " + str((msg[12] & 0x4) >> 2))
+        ret.append("MCU IMPLAUS ACCEL: " + str(msg[12] & 0x1))
+        ret.append("MCU IMPLAUS BRAKE: " + str((msg[12] & 0x2) >> 1))
+        ret.append("MCU TORQUE MAP MODE: " + str(msg[13]))
     if (id == 0xCC):
         ret.append("ECU CURRENT: " + str(b2ui16(msg[5:7]) / 100.) + " A")
         ret.append("COOLING CURRENT: " + str(b2ui16(msg[7:9]) / 100.) + " A")
@@ -743,8 +743,8 @@ def decode(msg):
         ret.append("BMS VOLTAGE HIGH: " + str(b2ui16(msg[9:11]) / 10e3) + " V")
         ret.append("BMS VOLTAGE TOTAL: " + str(b2ui16(msg[11:13]) / 100.) + " V")
     if (id == 0xD8):
-        ic = ord(msg[5]) & 0xF
-        group = (ord(msg[5]) & 0xF0) >> 4
+        ic = msg[5] & 0xF
+        group = (msg[5] & 0xF0) >> 4
         ret.append("IC " + str(ic) + " CELL " + str(group * 3) + ": " + '%.4f' % (b2ui16(msg[6:8]) / 10e3) + " V")
         ret.append("IC " + str(ic) + " CELL " + str(group * 3 + 1) + ": " + '%.4f' % (b2ui16(msg[8:10]) / 10e3) + " V")
         ret.append("IC " + str(ic) + " CELL " + str(group * 3 + 2) + ": " + '%.4f' % (b2ui16(msg[10:12]) / 10e3) + " V")
@@ -753,13 +753,13 @@ def decode(msg):
         ret.append("BMS LOW TEMPERATURE: " + str(b2i16(msg[7:9]) / 100.) + " C")
         ret.append("BMS HIGH TEMPERATURE: " + str(b2i16(msg[9:11]) / 100.) + " C")
     if (id == 0xDA):
-        ic = ord(msg[5])
+        ic = msg[5]
         ret.append("IC " + str(ic) + " THERM 0: " + '%.2f' % (b2ui16(msg[6:8]) / 100.) + " C")
         ret.append("IC " + str(ic) + " THERM 1: " + '%.2f' % (b2ui16(msg[8:10]) / 100.) + " C")
         ret.append("IC " + str(ic) + " THERM 2: " + '%.2f' % (b2ui16(msg[10:12]) / 100.) + " C")
     if (id == 0xDB):
-        ret.append("BMS STATE: " + str(ord(msg[5])))
-        ret.append("BMS ERROR FLAGS: 0x" + binascii.hexlify(msg[7]).upper() + binascii.hexlify(msg[6]).upper())
+        ret.append("BMS STATE: " + str(msg[5]))
+        ret.append("BMS ERROR FLAGS: 0x" + hex(msg[7]).upper()[2:] + hex(msg[6]).upper()[2:])
         ret.append("BMS CURRENT: " + str(b2i16(msg[8:10]) / 100.) + " A")
     if (id == 0xDE):
         bal = "BAL "
