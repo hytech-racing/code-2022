@@ -36,11 +36,11 @@ def influx_connect():
             if not db_exists:
                 requests.get('http://{}:{}/query?q=CREATE+DATABASE+"{}"'.format(INFLUX_HOST, INFLUX_PORT, INFLUX_DB_NAME))
                 client.switch_database(INFLUX_DB_NAME)
-                print("Connected using database {}".format(INFLUX_DB_NAME))
             break
         except Exception as e:
             print("Influx connection refused. Trying again in ten seconds.")
             time.sleep(10)
+    print("Connected using database {}".format(INFLUX_DB_NAME))
     return client
 
 
@@ -49,6 +49,8 @@ def mqtt_connect(client, userdata, flags, rc):
     print("Subscribed to", MQTT_TOPIC)
     client.publish(MQTT_TOPIC, "Python client connected")
 
+# id_map = [False] * 256;
+
 def mqtt_message(client, userdata, msg):
     timestamp = msg.payload[0:msg.payload.find(b',')]
     frame = msg.payload[msg.payload.find(b',') + 1:-1]
@@ -56,7 +58,7 @@ def mqtt_message(client, userdata, msg):
     s = ""
     for c in frame:
         s += chr(c)
-    # print(s)
+    #  print(s)
     data = unpack(s)
     # print(data)
 
@@ -64,14 +66,28 @@ def mqtt_message(client, userdata, msg):
         timestamp = int(timestamp.decode()) + 946771200 - 68359 #  LTE Module stuck in 1990. Fix if you can.
         json_body = []
         for readout in decode(data):
-            json_body.append({
-                "measurement": readout[0],
-                "time": timestamp,
-                "fields": {
-                    "value": readout[1],
-                    "units": readout[2]
-                }
-            })
+            if len(str(readout[1])) == 0:
+                continue
+            if len(readout) == 2:
+                json_body.append({
+                    "measurement": readout[0],
+                    "time": timestamp,
+                    "fields": {
+                        "value": readout[1]
+                    }
+                })
+            else:
+                json_body.append({
+                    "measurement": readout[0],
+                    "time": timestamp,
+                    "fields": {
+                        "value": readout[1],
+                        "units": readout[2]
+                    }
+                })
+            # if (not id_map[data[0]]):
+                # print (hex(data[0]).upper())
+                # id_map[data[0]] = True
         print("Writing document: ")
         print(json_body)
         try:
@@ -135,7 +151,7 @@ def decode(msg):
     ret = []
     id = msg[0]
     # id = ord(msg[0])
-    #print("CAN ID:        0x" + binascii.hexlify(msg[0]).upper())
+    # print("CAN ID:        0x" + hex(msg[0]).upper()[2:])
     size = msg[4]
     # size = ord(msg[4])
     #print("MSG LEN:       " + str(size))
