@@ -26,7 +26,7 @@ static CAN_message_t xb_msg;
  * Writes data currently in global xb_msg variable to the Xbee serial bus.
  * Calculates Fletcher checksum and byte-stuffs so that messages are
  * delimited by 0x0 bytes.
- * 
+ *
  * returns: number of bytes written to the Xbee serial bus
  */
 int write_xbee_data() {
@@ -70,10 +70,9 @@ int write_xbee_data() {
 int main() {
     //MC_command_message command = MC_command_message(250, 0, 0, 1, 0, 0);
     FCU_status command = FCU_status(3, 0, 1);
-    xb_msg.id = ID_FCU_STATUS;
+    xb_msg.id = ID_MCU_STATUS;
     //xb_msg.len = sizeof(CAN_message_mc_command_message_t);
     xb_msg.len = sizeof(CAN_message_fcu_status_t);
     write_xbee_data();
     return 0;
 }
-

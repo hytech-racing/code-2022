@@ -13,7 +13,7 @@ class TelemetryClient:
         self.ecu_version = 0
         self.countGoodFrames = 0
         self.countBadFrames = 0
-        
+
         # Set up filenames for logging
         timestamp = str(datetime.datetime.now())
         self.filename = timestamp + ".txt"
@@ -32,13 +32,13 @@ class TelemetryClient:
         timestamp = msg.payload[0:msg.payload.find(b',')]
         frame = msg.payload[msg.payload.find(b',') + 1:-1]
         frame = binascii.hexlify(frame)
-        data = unpack(frame)
+        data = unpack("".join(chr(c) for c in frame))
 
         if data != -1:
-            with open(self.filenameRaw, "a") as f:
-                size = ord(data[4])
-                raw = binascii.hexlify(data[0]).upper() + "," + binascii.hexlify(data[5:5 + size]).upper()
-                f.write(str(datetime.datetime.now()) + ',' + raw + "\n")
+            # with open(self.filenameRaw, "a") as f:
+            #     size = ord(data[4])
+            #     raw = binascii.hexlify(data[0]).upper() + "," + binascii.hexlify(data[5:5 + size]).upper()
+            #     f.write(str(datetime.datetime.now()) + ',' + raw + "\n")
             self.countGoodFrames += 1
             lines = decode(data)
             with open(self.filename, "a") as f:
@@ -296,17 +296,17 @@ class TelemetryClient:
     def live(self):
         # Set up mqtt connection
         client = mqtt.Client()
-        client.connect("hytech-telemetry.ryangallaway.me", 1883, 60)
+        client.connect("ec2-3-134-2-166.us-east-2.compute.amazonaws.com", 1883, 60)
         client.on_connect = self.mqtt_connect
         client.on_message = self.mqtt_message
         client.loop_start()
-        
+
         self.screen.nodelay(True)
 
         # Write CSV Header
         with open(self.filenameRaw, "a") as f:
             f.write("timestamp,CAN ID,msg\n")
-        
+
         # Wait for q to quit
         char = self.screen.getch()
         while char != ord('q') and char != ord('Q'):
@@ -620,8 +620,8 @@ def unpack(frame):
     #print("----------------")
     frame = ''.join(char for char in frame if char.isalnum())
     if (len(frame) != 32):
-        # TODO throw an error up on screen
-        #print("Malformed frame len " + str(len(frame)) + " encountered - skipping")
+    #     # TODO throw an error up on screen
+    #     #print("Malformed frame len " + str(len(frame)) + " encountered - skipping")
         return -1
     '''frameprint = ''
     odd = False
@@ -638,8 +638,8 @@ def unpack(frame):
         return -1
     # Calculate checksum
     checksum = fletcher16(decoded[0:13])
-    cs_calc = binascii.hexlify(chr(checksum >> 8)).upper() + " " + binascii.hexlify(chr(checksum & 0xFF)).upper()
-    cs_rcvd = binascii.hexlify(decoded[14]).upper() + " " + binascii.hexlify(decoded[13]).upper()
+    cs_calc = chr(checksum >> 8) + " " + chr(checksum & 0xFF)
+    cs_rcvd = chr(decoded[14]) + " " + chr(decoded[13])
     if cs_calc != cs_rcvd:
         #print("Decode failed: Checksum mismatch - calc: " + cs_calc + " - rcvd: " + cs_rcvd)
         return -1
@@ -651,9 +651,9 @@ def unpack(frame):
 
 def decode(msg):
     ret = []
-    id = ord(msg[0])
-    #print("CAN ID:        0x" + binascii.hexlify(msg[0]).upper())
-    size = ord(msg[4])
+    id = msg[0] #not an endianness problem
+    # print("CAN ID:        " + hex(msg[0]).upper()) #at this point, no C3 messages print. JK it happened twice - maybe its a timer thing?
+    size = msg[4]
     #print("MSG LEN:       " + str(size))
     if (id == 0xA0):
         ret.append("MODULE A TEMP: " + str(b2i16(msg[5:7]) / 10.) + " C")
@@ -682,18 +682,18 @@ def decode(msg):
         ret.append("PHASE BC VOLTAGE: " + str(b2i16(msg[11:13]) / 10.) + " V")
     if (id == 0xAA):
         ret.append("VSM STATE: " + str(b2ui16(msg[5:7])))
-        ret.append("INVERTER STATE: " + str(ord(msg[7])))
-        ret.append("INVERTER RUN MODE: " + str(ord(msg[9]) & 0x1))
-        ret.append("INVERTER ACTIVE DISCHARGE STATE: " + str((ord(msg[9]) & 0xE0) >> 5))
-        ret.append("INVERTER COMMAND MODE: " + str(ord(msg[10])))
-        ret.append("INVERTER ENABLE: " + str(ord(msg[11]) & 0x1))
-        ret.append("INVERTER LOCKOUT: " + str((ord(msg[11]) & 0x80) >> 7))
-        ret.append("DIRECTION COMMAND: " + str(ord(msg[12])))
+        ret.append("INVERTER STATE: " + str(msg[7]))
+        ret.append("INVERTER RUN MODE: " + str(msg[9] & 0x1))
+        ret.append("INVERTER ACTIVE DISCHARGE STATE: " + str((msg[9] & 0xE0) >> 5))
+        ret.append("INVERTER COMMAND MODE: " + str(msg[10]))
+        ret.append("INVERTER ENABLE: " + str(msg[11] & 0x1))
+        ret.append("INVERTER LOCKOUT: " + str((msg[11] & 0x80) >> 7))
+        ret.append("DIRECTION COMMAND: " + str(msg[12]))
     if (id == 0xAB):
-        ret.append("POST FAULT LO: 0x" + binascii.hexlify(msg[6]).upper() + binascii.hexlify(msg[5]).upper())
-        ret.append("POST FAULT HI: 0x" + binascii.hexlify(msg[8]).upper() + binascii.hexlify(msg[7]).upper())
-        ret.append("RUN FAULT LO: 0x" + binascii.hexlify(msg[10]).upper() + binascii.hexlify(msg[9]).upper())
-        ret.append("RUN FAULT HI: 0x" + binascii.hexlify(msg[12]).upper() + binascii.hexlify(msg[11]).upper())
+        ret.append("POST FAULT LO: 0x" + hex(msg[6]).upper()[2:] + hex(msg[5]).upper()[2:])
+        ret.append("POST FAULT HI: 0x" + hex(msg[8]).upper()[2:] + hex(msg[7]).upper()[2:])
+        ret.append("RUN FAULT LO: 0x" + hex(msg[10]).upper()[2:] + hex(msg[9]).upper()[2:])
+        ret.append("RUN FAULT HI: 0x" + hex(msg[12]).upper()[2:] + hex(msg[11]).upper()[2:])
     if (id == 0xAC):
         ret.append("COMMANDED TORQUE: " + str(b2i16(msg[5:7]) / 10.) + " Nm")
         ret.append("TORQUE FEEDBACK: " + str(b2i16(msg[7:9]) / 10.) + " Nm")
@@ -702,21 +702,21 @@ def decode(msg):
         ret.append("REQUESTED TORQUE: " + str(b2i16(msg[5:7]) / 10.) + " Nm")
         #ret.append("FCU REQUESTED INVERTER ENABLE: " + str(ord(msg[10]) & 0x1))
     if (id == 0xC3):
-        ret.append("MCU STATE: " + str(ord(msg[5])))
-        ret.append("MCU BMS FAULT: " + str(not ord(msg[6]) & 0x1))
-        ret.append("MCU IMD FAULT: " + str(not (ord(msg[6]) & 0x2) >> 1))
-        ret.append("MCU INVERTER POWER: " + ("ON" if ((ord(msg[6]) & 0x4) >> 2) == 1 else "OFF"))
-        ret.append("MCU SHUTDOWN ABOVE THRESH: " + shutdown_from_flags(ord(msg[6])))
+        ret.append("MCU STATE: " + str(msg[5])) #this stuff no working.
+        ret.append("MCU BMS FAULT: " + str(not msg[6] & 0x1))
+        ret.append("MCU IMD FAULT: " + str(not (msg[6] & 0x2) >> 1))
+        ret.append("MCU INVERTER POWER: " + ("ON" if (((msg[6]) & 0x4) >> 2) == 1 else "OFF"))
+        ret.append("MCU SHUTDOWN ABOVE THRESH: " + shutdown_from_flags(msg[6]))
         ret.append("MCU TEMPERATURE: " + str(b2i16(msg[7:9])))
         ret.append("MCU GLV VOLTAGE: " + str(b2ui16(msg[9:11]) / 100.) + " V")
     if (id == 0xC4):
         ret.append("MCU PEDAL ACCEL 1: " + str(b2ui16(msg[5:7])))
         ret.append("MCU PEDAL ACCEL 2: " + str(b2ui16(msg[7:9])))
         ret.append("MCU PEDAL BRAKE: " + str(b2ui16(msg[9:11])))
-        ret.append("MCU BRAKE ACT: " + str((ord(msg[12]) & 0x4) >> 2))
-        ret.append("MCU IMPLAUS ACCEL: " + str(ord(msg[12]) & 0x1))
-        ret.append("MCU IMPLAUS BRAKE: " + str((ord(msg[12]) & 0x2) >> 1))
-        ret.append("MCU TORQUE MAP MODE: " + str(ord(msg[13])))
+        ret.append("MCU BRAKE ACT: " + str((msg[12] & 0x4) >> 2))
+        ret.append("MCU IMPLAUS ACCEL: " + str(msg[12] & 0x1))
+        ret.append("MCU IMPLAUS BRAKE: " + str((msg[12] & 0x2) >> 1))
+        ret.append("MCU TORQUE MAP MODE: " + str(msg[13]))
     if (id == 0xCC):
         ret.append("ECU CURRENT: " + str(b2ui16(msg[5:7]) / 100.) + " A")
         ret.append("COOLING CURRENT: " + str(b2ui16(msg[7:9]) / 100.) + " A")
@@ -743,8 +743,8 @@ def decode(msg):
         ret.append("BMS VOLTAGE HIGH: " + str(b2ui16(msg[9:11]) / 10e3) + " V")
         ret.append("BMS VOLTAGE TOTAL: " + str(b2ui16(msg[11:13]) / 100.) + " V")
     if (id == 0xD8):
-        ic = ord(msg[5]) & 0xF
-        group = (ord(msg[5]) & 0xF0) >> 4
+        ic = msg[5] & 0xF
+        group = (msg[5] & 0xF0) >> 4
         ret.append("IC " + str(ic) + " CELL " + str(group * 3) + ": " + '%.4f' % (b2ui16(msg[6:8]) / 10e3) + " V")
         ret.append("IC " + str(ic) + " CELL " + str(group * 3 + 1) + ": " + '%.4f' % (b2ui16(msg[8:10]) / 10e3) + " V")
         ret.append("IC " + str(ic) + " CELL " + str(group * 3 + 2) + ": " + '%.4f' % (b2ui16(msg[10:12]) / 10e3) + " V")
@@ -753,13 +753,13 @@ def decode(msg):
         ret.append("BMS LOW TEMPERATURE: " + str(b2i16(msg[7:9]) / 100.) + " C")
         ret.append("BMS HIGH TEMPERATURE: " + str(b2i16(msg[9:11]) / 100.) + " C")
     if (id == 0xDA):
-        ic = ord(msg[5])
+        ic = msg[5]
         ret.append("IC " + str(ic) + " THERM 0: " + '%.2f' % (b2ui16(msg[6:8]) / 100.) + " C")
         ret.append("IC " + str(ic) + " THERM 1: " + '%.2f' % (b2ui16(msg[8:10]) / 100.) + " C")
         ret.append("IC " + str(ic) + " THERM 2: " + '%.2f' % (b2ui16(msg[10:12]) / 100.) + " C")
     if (id == 0xDB):
-        ret.append("BMS STATE: " + str(ord(msg[5])))
-        ret.append("BMS ERROR FLAGS: 0x" + binascii.hexlify(msg[7]).upper() + binascii.hexlify(msg[6]).upper())
+        ret.append("BMS STATE: " + str(msg[5]))
+        ret.append("BMS ERROR FLAGS: 0x" + hex(msg[7]).upper()[2:] + hex(msg[6]).upper()[2:])
         ret.append("BMS CURRENT: " + str(b2i16(msg[8:10]) / 100.) + " A")
     if (id == 0xDE):
         bal = "BAL "
@@ -780,20 +780,19 @@ def decode(msg):
     return ret
 
 def b2i8(data):
-    return struct.unpack("<1b", chr(ord(data[0])))[0]
+    return struct.unpack("<1b", data[0])[0]
 
 def b2i16(data):
-    return struct.unpack("<1h", chr(ord(data[0])) + chr(ord(data[1])))[0]
+    return struct.unpack("<1h", data[0:2])[0]
 
 def b2ui16(data):
-    return struct.unpack("<1H", chr(ord(data[0])) + chr(ord(data[1])))[0]
+    return struct.unpack("<1H", data[0:2])[0]
 
 def b2ui32(data):
-    return struct.unpack("<1I", chr(ord(data[0])) + chr(ord(data[1])) + chr(ord(data[2])) + chr(ord(data[3])))[0]
+    return struct.unpack("<1I", data[0:4])[0]
 
 def b2ui64(data):
-    return struct.unpack("<1Q", chr(ord(data[0])) + chr(ord(data[1])) + chr(ord(data[2])) + chr(ord(data[3])) \
-        + chr(ord(data[4])) + chr(ord(data[5])) + chr(ord(data[6])) + chr(ord(data[7])))[0]
+    return struct.unpack("<1Q", data[0:8])[0]
 
 def shutdown_from_flags(flags):
     shutdown = ''
@@ -812,7 +811,7 @@ def shutdown_from_flags(flags):
     return shutdown
 
 def fletcher16(data):
-    d = map(ord,data)
+    d = data
     index = 0
     c0 = 0
     c1 = 0
@@ -826,7 +825,7 @@ def fletcher16(data):
         c0 %= 255
         c1 %= 255
         length -= 5802
-    
+
     index = 0
     for i in range(len(data)):
         c0 += d[index]

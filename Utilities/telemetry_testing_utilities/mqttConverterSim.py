@@ -1,31 +1,23 @@
-import micropython
-micropython.kbd_intr(-1)
-from umqtt.robust import MQTTClient
-from machine import Pin
 import binascii
 import time
 import sys
-MESSAGE_LENGTH = 15
+import paho.mqtt.client as mqtt
+
+# MQTT_SERVER = 'localhost'
 MQTT_SERVER = 'ec2-3-134-2-166.us-east-2.compute.amazonaws.com'
 # MQTT_SERVER = 'hytech-telemetry.ryangallaway.me'     # MQTT broker hostname
+
+MESSAGE_LENGTH = 15
 MQTT_PORT = 1883                    # MQTT broker port (non-SSL)
-connectedLight = Pin("D0", Pin.OUT, value=1)
+MQTT_TOPIC = 'hytech_car/telemetry'
+
 def create_client():
-    i = 0       # retry delay
-    c = MQTTClient('hytech_car', MQTT_SERVER, MQTT_PORT)
-    while True:
-        _ = sys.stdin.buffer.read(-1) # pull stuff off the buffer so it doesn't crash
-        try:
-            print('attempting to connect...')
-            c.connect()
-            print('connected to MQTT broker')
-            connectedLight.value(0)
-            c.publish('hytech_car/telemetry', 'Xbee Connected')
-            return c
-        except OSError as e:
-            print('failed connection attempt #', i)
-            i += 1
-            c.delay(i)
+    print('attempting to connect...')
+    client = mqtt.Client()
+    client.connect(MQTT_SERVER, MQTT_PORT, 60)
+    print('connected to MQTT broker')
+    return client
+
 c = create_client()
 def read_uart():
     incomingFrame = b''
@@ -59,8 +51,8 @@ def read_uart():
                 incomingFrame = incomingFrame[end_index + 1:]
 def send_mqtt(timestamp, data):
     msg = timestamp + b',' + data
-    #print('XBee says: sent message')
-    #print(msg)
+    print('XBee says: sent message')
+    print(msg)
     c.publish('hytech_car/telemetry', msg)
 def send_timestamp():
     timestamp = str.encode(str(time.time()))
