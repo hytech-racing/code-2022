@@ -66,6 +66,7 @@
 #define ID_MCU_GPS_READINGS_ALPHA 0xE7
 #define ID_MCU_GPS_READINGS_BETA 0xE8
 #define ID_MCU_GPS_READINGS_GAMMA 0xE9
+#define ID_DASHBOARD_STATUS 0xEA
 
 /*
 
@@ -331,6 +332,14 @@ typedef struct CAN_message_rcu_status_t {
     int16_t temperature;
 } CAN_msg_rcu_status;
 
+typedef struct CAN_message_dashboard_status {
+    bool mark;
+    bool mode;
+    bool mc_cycle;
+    bool start;
+    bool extra;
+} CAN_msg_rcu_status;
+
 typedef struct Telem_message {
     //bool cobs_flag;
     uint32_t msg_id;
@@ -373,6 +382,7 @@ typedef struct Telem_message {
         CAN_message_mcu_pedal_readings_t        mcu_pedal_readings;
         CAN_message_mcu_status_t                mcu_status;
         CAN_msg_rcu_status                      rcu_status;
+        CAN_message_dashboard_status            dashboard_status
     } contents;
     uint16_t checksum;
 } Telem_message_t;
@@ -584,6 +594,30 @@ class CCU_status {
     private:
         CAN_message_ccu_status_t message;
 };
+
+class Dashboard_status {
+    public:
+        Dashboard_status();
+        Dashboard_status(uint8_t buf[]);
+        Dashboard_status(bool mark, bool mode, bool MC_cycle, bool start, bool extra);
+        void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
+        void write(bool mark, bool mode, bool MC_cycle, bool start, bool extra);
+        bool get_mark;
+        bool get_mode;
+        bool get_mc_cycle;
+        bool get_start;
+        bool get_extra;
+        void set_mark;
+        void set_mode;
+        void set_mc_cycle;
+        void set_start;
+        void set_extra;
+
+private:
+    CAN_message_dashboard_status message;
+};
+
 
 class FCU_accelerometer_values {
     public:
