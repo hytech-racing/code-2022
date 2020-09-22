@@ -53,7 +53,7 @@
 MCU_status mcu_status;
 MCU_pedal_readings mcu_pedal_readings;
 BMS_status bms_status;
-BMS_temperatures bms_temperatures;
+  BMS_temperatures bms_temperatures;
 BMS_voltages bms_voltages;
 MC_motor_position_information mc_motor_position_information;
 MC_current_information mc_current_informtarion;

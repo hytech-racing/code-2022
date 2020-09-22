@@ -2,14 +2,7 @@
 #include <mcp_can.h>
 #include <HyTech_CAN.h>
 #include <Metro.h>
-
-/*
-   MCP2511 pin definition
-*/
-#define MCP2511_CS 14
-#define MCP2511_MOSI 15
-#define MCP2511_MISO 16
-#define MCP2511_SCK 17
+#include <SPI.h>
 
 /*
    Button pin definition
@@ -55,11 +48,15 @@ Metro timer_btn_extra = Metro(100);
 */
 
 Metro timer_can_update = Metro(100);
+#define SPI_CS 14
+MCP_CAN CAN(SPI_CS);
+
+
 
 /*
    Global Variables
 */
-Dashboard_staus dashboard_status;
+Dashboard_status dashboard_status;
 
 void setup() {
   pinMode(BTN_MARK, INPUT);
@@ -68,10 +65,17 @@ void setup() {
   pinMode(BTN_START, INPUT);
   pinMode(BTN_EXTRA, INPUT);
 
-  pinMode(MCP2511_CS, OUTPUT);
-  pinMode(MCP2511_MOSI, OUTPUT);
-  pinMode(MCP2511_MISO, INPUT);
-  pinMode(MCP2511_SCK, OUTPUT);
+  //Sets SPI data transmission rate
+  Serial.begin(115200);
+
+  while (CAN_OK != CAN.begin(CAN_250KBPS))              // init can bus : baudrate = 250K
+    {
+        Serial.println("CAN BUS Module Failed to Initialized");
+        Serial.println("Retrying....");
+        delay(200);
+        
+    }
+  Serial.println("CAN BUS Shield init ok!");
 
 }
 
@@ -79,11 +83,16 @@ void loop() {
   read_buttons();
 
   //Update the dashboard status
-  dashboard_status.write(btn_mark_value, btn_mode_value, btn_mc_cycle_value, btn_start_value, btn_extra_value); 
+  dashboard_status.update(btn_mark_value, btn_mode_value, btn_mc_cycle_value, btn_start_value, btn_extra_value); 
 
-  if(timer_can_update.check()){
+  //Send CAN message
+  if(timer_can_update.check()){ //Timer to ensure dashboard isn't flooding data bus
 
+    //create message to send
+    byte msg[8] = {btn_mark_value, btn_mode_value, btn_mc_cycle_value, btn_start_value, btn_extra_value};
+    byte sndStat = CAN0.sendMsgBuf(ID_DASHBOARD_STATUS, 0, 8, msg);
 
+    //rest update timer
     timer_can_update.reset();
   }
   

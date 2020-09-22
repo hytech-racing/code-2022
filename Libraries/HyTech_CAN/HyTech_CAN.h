@@ -599,10 +599,10 @@ class Dashboard_status {
     public:
         Dashboard_status();
         Dashboard_status(uint8_t buf[]);
-        Dashboard_status(bool mark, bool mode, bool MC_cycle, bool start, bool extra);
+        Dashboard_status(bool mark, bool mode, bool mc_cycle, bool start, bool extra);
         void load(uint8_t buf[8]);
         void write(uint8_t buf[8]);
-        void write(bool mark, bool mode, bool MC_cycle, bool start, bool extra);
+        void update(bool mark, bool mode, bool mc_cycle, bool start, bool extra);
         bool get_mark;
         bool get_mode;
         bool get_mc_cycle;
