@@ -32,8 +32,16 @@ void analyze(time_t _ts, int srcId, int messageLen, unsigned long long message, 
     vector<bool> map;
     long long parsedData = d.parse(message, messageLen, map);
     if(map.size()) {
-      for(int i = 0; i < d.booleanMappings.size(); i++) {
-        output << ts << "," << d.booleanMappings[i] << "," << map[i] << endl;
+      if (srcId ==  0xAB) {
+        for(int i = 0; i < d.booleanMappings.size(); i++) {
+          if (map[i])
+            output << ts << ",MC FAULT: " << d.booleanMappings[i] << "," << map[i] << endl;
+        }
+      }
+      else {
+        for (int i = 0; i < d.booleanMappings.size(); i++) {
+          output << ts << "," << d.booleanMappings[i] << "," << map[i] << endl;
+        }
       }
     }
     else {
