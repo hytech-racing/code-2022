@@ -157,6 +157,11 @@ class TelemetryClient:
             self.screen.addstr(31,55,'MCU TORQUE MAP MODE: ')
             self.screen.addstr(32,55,'REQUESTED TORQUE: ')
 
+        self.screen.addstr(38,55,'TCU WHEEL RPM REAR LEFT: ')
+        self.screen.addstr(39,55,'TCU WHEEL RPM REAR RIGHT: ')
+        self.screen.addstr(40,55,'TCU WHEEL RPM FRONT LEFT: ')
+        self.screen.addstr(41,55,'TCU WHEEL RPM FRONT RIGHT: ')
+
         self.screen.addstr(3,105,'BATTERY MANAGEMENT SYSTEM DETAILED VOLTAGES')
         self.screen.addstr(4,105,'IC 0 CELL 0: ')
         self.screen.addstr(5,105,'IC 0 CELL 1: ')
@@ -532,6 +537,18 @@ class TelemetryClient:
         if ('RCU IMD FAULT' in incomingLine):
             self.clearLine(36,55)
             self.screen.addstr(36,55,incomingLine)
+        if ('TCU WHEEL RPM REAR LEFT' in incomingLine):
+            self.clearLine(38,55)
+            self.screen.addstr(38,55,incomingLine)
+        if ('TCU WHEEL RPM REAR RIGHT' in incomingLine):
+            self.clearLine(39,55)
+            self.screen.addstr(39,55,incomingLine)
+        if ('TCU WHEEL RPM FRONT LEFT' in incomingLine):
+            self.clearLine(40,55)
+            self.screen.addstr(40,55,incomingLine)
+        if ('TCU WHEEL RPM FRONT RIGHT' in incomingLine):
+            self.clearLine(41,55)
+            self.screen.addstr(41,55,incomingLine)
         if ('IC 0 C' in incomingLine):
             row = 4 + int(incomingLine[10])
             self.clearLineShort(row,105)
@@ -777,6 +794,12 @@ def decode(msg):
     if (id == 0xE2):
         ret.append("BMS TOTAL CHARGE: " + str(b2ui32(msg[5:9]) / 10000. + " C"))
         ret.append("BMS TOTAL DISCHARGE: " + str(b2ui32(msg[9:13]) / 10000. + " C"))
+    if (id == 0xEA):
+        ret.append("TCU WHEEL RPM REAR LEFT: " + str(b2i16(msg[5:7]) + " RPM"))
+        ret.append("TCU WHEEL RPM REAR RIGHT: " + str(b2i16(msg[7:9]) + " RPM"))
+    if (id == 0xEB):
+        ret.append("TCU WHEEL RPM FRONT LEFT: " + str(b2i16(msg[5:7]) + " RPM"))
+        ret.append("TCU WHEEL RPM FRONT RIGHT: " + str(b2i16(msg[7:9]) + " RPM"))
     return ret
 
 def b2i8(data):

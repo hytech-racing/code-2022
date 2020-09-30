@@ -51,6 +51,8 @@ Metro timer_debug_rms_temperatures_1 = Metro(3000);
 Metro timer_debug_rms_temperatures_3 = Metro(3000);
 Metro timer_debug_rms_torque_timer_information = Metro(200);
 Metro timer_debug_rms_voltage_information = Metro(100);
+Metro timer_debug_tcu_wheel_rpm_rear = Metro(200);
+Metro timer_debug_tcu_wheel_rpm_front = Metro(200);
 Metro timer_detailed_voltages = Metro(1000);
 Metro timer_status_send = Metro(100);
 Metro timer_status_send_xbee = Metro(2000);
@@ -356,6 +358,10 @@ void parse_can_message() {
             fcu_accelerometer_values.load(msg_rx.buf);
             flag_fcu_accelerometer_values = time_now;
         }
+        if (msg_rx.id == ID_TCU_WHEEL_RPM_REAR)
+            tcu_wheel_rpm_rear.load(msg_rx.buf);
+        if (msg_rx.id == ID_TCU_WHEEL_RPM_FRONT)
+            tcu_wheel_rpm_front.load(msg_rx.buf);
     }
 }
 
@@ -743,6 +749,20 @@ void send_xbee() {
             xb_msg.id = ID_BMS_BALANCING_STATUS;
             write_xbee_data();
         }
+    }
+
+    if (timer_debug_tcu_wheel_rpm_rear.check()) {
+        tcu_wheel_rpm_rear.write(xb_msg.buf);
+        xb_msg.len = sizeof(CAN_message_tcu_wheel_rpm_t);
+        xb_msg.id = ID_TCU_WHEEL_RPM_REAR;
+        write_xbee_data();
+    }
+
+    if (timer_debug_tcu_wheel_rpm_front.check()) {
+        tcu_wheel_rpm_front.write(xb_msg.buf);
+        xb_msg.len = sizeof(CAN_message_tcu_wheel_rpm_t);
+        xb_msg.id = ID_TCU_WHEEL_RPM_FRONT;
+        write_xbee_data();
     }
 }
 

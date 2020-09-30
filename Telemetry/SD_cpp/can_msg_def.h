@@ -246,6 +246,14 @@ static void loadLookupTable() {
     definition(2, 4, true, "TIMESTAMP SECONDS"),
     definition(0, 2, true, "TIMESTAMP MILLISECONDS")
   });
+  CAN_MSG_DEFINITION[0xEA] = pair<string, vector<definition>> ("ID_TCU_WHEEL_RPM_REAR", {
+    definition(2, 2, true, "TCU WHEEL RPM REAR LEFT", "RPM"),
+    definition(0, 2, false, "TCU WHEEL RPM REAR RIGHT", "RPM")
+  });
+  CAN_MSG_DEFINITION[0xEB] = pair<string, vector<definition>> ("ID_TCU_WHEEL_RPM_FRONT", {
+    definition(2, 2, true, "TCU WHEEL RPM FRONT LEFT", "RPM"),
+    definition(0, 2, false, "TCU WHEEL RPM FRONT RIGHT", "RPM")
+  });
 }
 
 #endif

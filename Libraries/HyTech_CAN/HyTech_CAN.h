@@ -66,6 +66,10 @@
 #define ID_MCU_GPS_READINGS_ALPHA 0xE7
 #define ID_MCU_GPS_READINGS_BETA 0xE8
 #define ID_MCU_GPS_READINGS_GAMMA 0xE9
+#define ID_TCU_WHEEL_RPM_REAR 0xEA
+#define ID_TCU_WHEEL_RPM_FRONT 0xEB
+#define ID_MCU_LAUNCH_CONTROL 0xEC
+#define ID_TCU_DISTANCE_TRAVELED 0xED
 
 /*
 
@@ -331,6 +335,20 @@ typedef struct CAN_message_rcu_status_t {
     int16_t temperature;
 } CAN_msg_rcu_status;
 
+typedef struct CAN_message_tcu_wheel_rpm_t {
+    int16_t wheel_rpm_left;
+    int16_t wheel_rpm_right;
+} CAN_message_tcu_wheel_rpm_t;
+
+typedef struct CAN_message_mcu_launch_control_t {
+    int16_t slip_ratio;
+    int16_t slip_limiting_factor;
+} CAN_message_mcu_launch_control_t;
+
+typedef struct CAN_message_tcu_distanced_traveled_t {
+    int16_t distance_traveled;
+} CAN_message_tcu_distance_traveled_t;
+
 typedef struct Telem_message {
     //bool cobs_flag;
     uint32_t msg_id;
@@ -373,6 +391,9 @@ typedef struct Telem_message {
         CAN_message_mcu_pedal_readings_t        mcu_pedal_readings;
         CAN_message_mcu_status_t                mcu_status;
         CAN_msg_rcu_status                      rcu_status;
+        CAN_message_tcu_wheel_rpm_t             tcu_wheel_rpm;
+        CAN_message_mcu_launch_control_t        mcu_launch_control;
+        CAN_message_tcu_distance_traveled_t     tcu_distance_traveled;
     } contents;
     uint16_t checksum;
 } Telem_message_t;
@@ -1103,6 +1124,46 @@ class RCU_status {
         void set_temperature(int16_t temperature);
     private:
         CAN_message_rcu_status_t message;
+};
+
+class TCU_wheel_rpm {
+    public:
+        TCU_wheel_rpm();
+        TCU_wheel_rpm(uint8_t buf[8]);
+        void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
+        int16_t get_wheel_rpm_left();
+        int16_t get_wheel_rpm_right();
+        void set_wheel_rpm_left(uint16_t value);
+        void set_wheel_rpm_right(uint16_t value);
+    private:
+        CAN_message_tcu_wheel_rpm_t message;
+};
+
+class MCU_launch_control {
+    public:
+        MCU_launch_control();
+        MCU_launch_control(uint8_t buf[8]);
+        void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
+        int16_t get_slip_ratio();
+        int16_t get_slip_limiting_factor();
+        void set_slip_ratio(uint16_t value);
+        void set_slip_limiting_factor(uint16_t value);
+    private:
+        CAN_message_mcu_launch_control_t message;
+};
+
+class TCU_distance_traveled {
+    public:
+        TCU_distance_traveled();
+        TCU_distance_traveled(uint8_t buf[8]);
+        void load(uint8_t buf[8]);
+        void write(uint8_t buf[8]);
+        int16_t get_distance_traveled();
+        void set_distance_traveled(uint16_t value);
+    private:
+        CAN_message_tcu_distance_traveled_t message;
 };
 
 #endif
