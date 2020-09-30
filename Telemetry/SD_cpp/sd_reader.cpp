@@ -15,7 +15,13 @@
 
 using namespace std;
 
-void analyze(time_t _ts, int srcId, int messageLen, unsigned long long message, fstream& output) {
+void analyze(time_t _ts, int srcId, int messageLen, unsigned long long _message, fstream& output) {
+  unsigned long long message = 0;
+  for (int i = 0; i < messageLen; i++) {
+    message = (message << 8) + (_message & 0xFF);
+    _message >>= 8;
+  }
+  
   vector<definition> msg_definition = CAN_MSG_DEFINITION[srcId].second;
 
   struct tm* ptm = gmtime(&_ts);
@@ -28,7 +34,7 @@ void analyze(time_t _ts, int srcId, int messageLen, unsigned long long message, 
             << setw(2) << setfill('0') << ptm->tm_sec;
   string ts = ts_stream.str();
 
-  for(definition d : msg_definition) {
+  for(definition& d : msg_definition) {
     vector<bool> map;
     long long parsedData = d.parse(message, messageLen, map);
     if(map.size()) {

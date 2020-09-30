@@ -30,12 +30,6 @@ struct definition {
     }
 
     long long parse(unsigned long long _u, int messageLen, vector<bool> &boolmap) {
-        unsigned long long u = 0;
-        for (int i = 0; i < messageLen; i++) {
-          u = (u << 8) + (_u & 0xFF);
-          _u >>= 8;
-        }
-
         unsigned long long mask = (1ULL << (8 * len)) - 1;
         long long rawData = (u >> (8*(messageLen-offset-len))) & mask;
 
