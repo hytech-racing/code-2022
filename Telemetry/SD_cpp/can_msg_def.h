@@ -29,7 +29,7 @@ struct definition {
       booleanMappings = m;
     }
 
-    long long parse(unsigned long long _u, int messageLen, vector<bool> &boolmap) {
+    long long parse(unsigned long long u, int messageLen, vector<bool> &boolmap) {
         unsigned long long mask = (1ULL << (8 * len)) - 1;
         long long rawData = (u >> (8*(messageLen-offset-len))) & mask;
 
@@ -111,10 +111,10 @@ static void loadLookupTable() {
     definition(0, 1, false, "DIRECTION COMMAND")
   });
   CAN_MSG_DEFINITION[0xAB] = pair<string, vector<definition>> ("ID_MC_FAULT_CODES", {
-    definition(7, 1, { "Inverter Response Time-out Fault", "Direction Command Fault", "Accelerator Input Open Fault", "Accelerator Input Shorted Fault", "Inverter Over-temperature Fault", "Over-voltage Fault", "Over-current Fault", "Motor Over-speed Fault" }),
+    definition(7, 1, { "Inverter Discharge Active (warning)", "Resolver Not Connected", "Reserved", "Reserved", "Reserved", "Reserved", "Current Sensor Fault", "Gate Drive Board 3 Over-temperature Fault" }),
     definition(6, 1, { "Gate Drive Board 2 Over-temperature Fault", "Gate Drive Board 1 Over-temperature Fault", "PCB Over-temperature Fault", "Module C Over-temperature Fault", "Module B Over-temperature Fault", "Module A Over-temperature Fault", "Brake Input Open Fault", "Brake Input Shorted Fault" }),
     definition(5, 1, { "Reserved", "Reserved", "Reserved", "Motor Over-temperature Fault", "CAN Command Message Lost Fault", "Under-voltage Fault", "Hardware Over-current Fault", "Hardware Gate/Desaturation Fault" }),
-    definition(4, 1, { "Motor Over-speed Fault", "Over-current Fault", "Over-voltage Fault", "Inverter Over-temperature Fault", "Accelerator Input Shorted Fault", "Accelerator Input Open Fault", "Direction Command Fault", "Inverter Response Time-out Fault" }),
+    definition(4, 1, { "Inverter Response Time-out Fault", "Direction Command Fault", "Accelerator Input Open Fault", "Accelerator Input Shorted Fault", "Inverter Over-temperature Fault", "Over-voltage Fault", "Over-current Fault", "Motor Over-speed Fault" }),
     definition(3, 1, { "Brake Open", "Brake Shorted", "Reserved", "Reserved", "Reserved", "EEPROM Update Required (warning)", "EEPROM Data Out of Range", "EEPROM Checksum Invalid" }),
     definition(2, 1, { "Pre-charge Voltage Failure", "Pre-charge Timeout", "DC Bus Voltage Low", "DC Bus Voltage High", "1.5V Sense Voltage High", "1.5V Sense Voltage Low", "2.5V Sense Voltage High", "2.5V Sense Voltage Low" }),
     definition(1, 1, { "12V Sense Voltage High", "12V Sense Voltage Low", "5V Sense Voltage High", "5V Sense Voltage Low", "Gate Drive PCB Temperature High", "Gate Drive PCB Temperature Low", "Control PCB Temperature High", "Control PCB Temperature Low" }),
