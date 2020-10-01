@@ -8,7 +8,7 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
-// #include <time>
+#include <time.h>
 #include "can_msg_def.h"
 
 #include <vector>
@@ -25,14 +25,8 @@ void analyze(time_t _ts, int srcId, int messageLen, unsigned long long _message,
   vector<definition> msg_definition = CAN_MSG_DEFINITION[srcId].second;
 
   struct tm* ptm = gmtime(&_ts);
-  stringstream ts_stream;
-  ts_stream << setw(4) << setfill('0') << ptm->tm_year + 1900 << '-'
-            << setw(2) << setfill('0') << ptm->tm_mon + 1 << '-'
-            << setw(2) << setfill('0') << ptm->tm_mday << ' '
-            << setw(2) << setfill('0') << ptm->tm_hour << ':'
-            << setw(2) << setfill('0') << ptm->tm_min << ':'
-            << setw(2) << setfill('0') << ptm->tm_sec;
-  string ts = ts_stream.str();
+  char ts [20];
+  sprintf(&ts[0], "%d-%02d-%02d %02d:%02d:%02d", ptm->tm_year + 1900, ptm->tm_mon + 1, ptm->tm_mday, ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
 
   for(definition& d : msg_definition) {
     vector<bool> map;
