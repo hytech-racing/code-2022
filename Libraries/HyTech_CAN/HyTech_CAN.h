@@ -332,13 +332,13 @@ typedef struct CAN_message_rcu_status_t {
     int16_t temperature;
 } CAN_msg_rcu_status;
 
-typedef struct CAN_message_dashboard_status {
+typedef struct CAN_message_dashboard_status_t {
     bool mark;
     bool mode;
     bool mc_cycle;
     bool start;
     bool extra;
-} CAN_msg_rcu_status;
+} CAN_msg_rcu_status_t;
 
 typedef struct Telem_message {
     //bool cobs_flag;
@@ -382,7 +382,7 @@ typedef struct Telem_message {
         CAN_message_mcu_pedal_readings_t        mcu_pedal_readings;
         CAN_message_mcu_status_t                mcu_status;
         CAN_msg_rcu_status                      rcu_status;
-        CAN_message_dashboard_status            dashboard_status
+        CAN_message_dashboard_status_t          dashboard_status
     } contents;
     uint16_t checksum;
 } Telem_message_t;
@@ -615,7 +615,7 @@ class Dashboard_status {
         void set_extra;
 
 private:
-    CAN_message_dashboard_status message;
+    CAN_message_dashboard_status_t message;
 };
 
 
