@@ -34,25 +34,24 @@ bool led_mc_err = false;
 bool led_start = false;
 
 /*
-   Button debouncing and input variables
+ * LED Variables
+ */
+
+_VariableLED variable_led_ams;
+_VariableLED variable_led_imd;
+_VariableLED variable_led_mode;
+_VariableLED variable_led_mc_err;
+_VariableLED variable_led_start;
+
+/*
+   Button debouncing variables
 */
-bool btn_mark_pressed = false;
-bool btn_mode_pressed = false;
-bool btn_mc_cycle_pressed = false;
-bool btn_start_pressed = false;
-bool btn_extra_pressed = false;
 
-bool btn_mark_debouncing = false;
-bool btn_mode_debouncing = false;
-bool btn_mc_cycle_debouncing = false;
-bool btn_start_debouncing = false;
-bool btn_extra_debouncing = false;
-
-Metro timer_btn_mark = Metro(100);
-Metro timer_btn_mode = Metro(100);
-Metro timer_btn_mc_cycle = Metro(100);
-Metro timer_btn_start = Metro(100);
-Metro timer_btn_extra = Metro(100);
+_DebouncedButton debounced_btn_mark(100);
+_DebouncedButton debounced_btn_mode(100);
+_DebouncedButton debounced_btn_mc_cycle(100);
+_DebouncedButton debounced_btn_start(100);
+_DebouncedButton debounced_btn_extra(100);
 
 /*
    CAN Variables
@@ -96,7 +95,7 @@ void setup() {
 void loop() {
   read_buttons();
   read_can()
-  update();
+  btn_update();
 
   //Send CAN message
   if(timer_can_update.check()){ //Timer to ensure dashboard isn't flooding data bus
@@ -111,40 +110,65 @@ void loop() {
   
 }
 
-void update(){
-
-  //Update start LED
-  if(led_start){
-    digitalWrite(BTN_START, HIGH);
+void led_update(){
+  //BMS/AMS LED (bms and ams are the same thing)
+  if(!mcu_status.get_bms_ok_high()){ //get_bms_ok_high outputs 1 if things are good.  We want light on when things are bad.
+    variable_led_ams.setMode(1);
   }
   else{
-  digitalWrite(BTN_START, LOW);
+    variable_led_ams.setMode(0);
+  }
+
+  //IMD LED
+  if(!mcu_status.get_imd_okhs_high()){ //get_imd_okhs_high outputs 1 if things are good.  We want light on when things are bad.
+    variable_led_imd.setMode(1);
+  }
+  else{
+    variable_led_imd.setMode(0);
+  }
+
+  //Start LED
+  if(!mcu_status.get_imd_okhs_high()){ //get_imd_okhs_high outputs 1 if things are good.  We want light on when things are bad.
+    variable_led_imd.setMode(1);
+  }
+  else{
+    variable_led_imd.setMode(0);
+  }
+
+  switch(mcu_status.getState()){
+    case MCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE:
+    variable_led_start(0);
+    break;
+    case MCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
+    variable_led_start(2);
+    break;
+    case MCU_STATE_ENABLING_INVERTER:
+    variable_led_start(1);
+    break;
   }
   
-  //Update LED values from MCU Status
-  if(mcu_status.get_imd_okhs_high()){
-    digitalWrite(LED_IMD, HIGH);
-  }
-  else{
-    digitalWrite(LED_IMD, LOW);
-  }
+  
 }
 
-/*DELETE COMMENT AFTER 
- * #define BUZZER = 28
-#define LED_AMS = 30
+void btn_update(){
 
-#define LED_MODE = 32
-#define LED_MC_ERR = 1
-
-still need to do:
-buzzer
-ams (is this bms?)
-mode (can't find)
-mc_err (can't find)
-
- */
-
+  if(debounced_btn_mark.update(digitalRead(BTN_MARK))){
+    dashboard_status.set_mark(!dashboard_status.get_mark());
+  }
+  if(debounced_btn_mode.update(digitalRead(BTN_MODE))){
+    dashboard_status.set_mode(!dashboard_status.get_mode());
+  }
+  if(debounced_btn_mc_cycle.update(digitalRead(BTN_MC_CYCLE))){
+    dashboard_status.set_mc_cycle(!dashboard_status.get_mc_cycle());
+  }
+  if(debounced_btn_start.update(digitalRead(BTN_START))){
+    dashboard_status.set_start(!dashboard_status.get_start());
+  }
+  if(debounced_btn_extra.update(digitalRead(BTN_EXTRA))){
+    dashboard_status.set_extra(!dashboard_status.get_extra());
+  }
+  
+}
 
 void read_can(){
 
@@ -160,61 +184,7 @@ void read_can(){
     switch(canID){
       case ID_MCU_STATUS:
         mcu_status.load(buf);
-      
+        break;
     }
-    
-  }
-}
-
-
-
-void read_buttons(){
-//Check if buttons have been pressed
-  //mark button
-  if(digitalRead(BTN_MARK) == HIGH && !btn_mark_debouncing){
-    btn_mark_debouncing = true;
-    timer_btn_mark.reset();
-    dashboard_status.set_mark(!dashboard_status.get_mark());
-  }
-  //mode button
-  if(digitalRead(BTN_MODE) == HIGH && !btn_mode_debouncing){
-    btn_mode_debouncing = true;
-    timer_btn_mode.reset();
-    dashboard_status.set_mode(!dashboard_status.get_mode());
-  }
-  //mc_cycle button
-  if(digitalRead(BTN_MC_CYCLE) == HIGH && !btn_mc_cycle_debouncing){
-    btn_mc_cycle_debouncing = true;
-    timer_btn_mc_cycle.reset();
-    dashboard_status.set_mc_cycle(!dashboard_status.get_mc_cycle());
-  }
-  //start button
-  if(digitalRead(BTN_START) == HIGH && !btn_start_debouncing){
-    btn_start_debouncing = true;
-    timer_btn_start.reset();
-    dashboard_status.set_start(!dashboard_status.get_start());
-  }
-  //extra button
-  if(digitalRead(BTN_EXTRA) == HIGH && !btn_extra_debouncing){
-    btn_extra_debouncing = true;
-    timer_btn_extra.reset();
-    dashboard_status.set_extra(!dashboard_status.get_extra());
-  }
-
-//Reset debouncing timers
-  if(timer_btn_mark.check()){        //mark button
-    btn_mark_debouncing = false;
-  }
-  if(timer_btn_mode.check()){        //mode button
-    btn_mode_debouncing = false;
-  }
-  if(timer_btn_mc_cycle.check()){    //mc cycle button
-    btn_mc_cycle_debouncing = false;
-  }
-  if(timer_btn_start.check()){      //start button
-    btn_start_debouncing = false;
-  }
-  if(timer_btn_extra.check()){      //extra button
-    btn_extra_debouncing = false;
   }
 }
