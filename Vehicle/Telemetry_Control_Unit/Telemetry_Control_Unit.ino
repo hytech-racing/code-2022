@@ -156,15 +156,6 @@ void setup() {
     GPS.sendCommand(PMTK_SET_NMEA_UPDATE_10HZ); // set update rate (10Hz)
     GPS.sendCommand(PGCMD_ANTENNA); // report data about antenna
 
-    /* Initialize IC IDs */
-    for (int ic = 0; ic < 8; ++ic) {
-        bms_detailed_temperatures[ic].set_ic_id(ic);
-        for (int group = 0; group < 3; ++group) {
-            bms_detailed_voltages[ic][group].set_ic_id(ic);
-            bms_detailed_voltages[ic][group].set_group_id(group);
-        }
-    }
-
     /* Set up SD card */
     Serial.println("Initializing SD card...");
     SdFile::dateTimeCallback(sd_date_time); // Set date/time callback function
