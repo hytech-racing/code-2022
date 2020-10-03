@@ -356,6 +356,14 @@ void parse_can_message() {
             fcu_accelerometer_values.load(msg_rx.buf);
             flag_fcu_accelerometer_values = time_now;
         }
+        if (msg_rx.id == ID_TCU_WHEEL_RPM_REAR)
+            tcu_wheel_rpm_rear.load(msg_rx.buf);
+        if (msg_rx.id == ID_TCU_WHEEL_RPM_FRONT)
+            tcu_wheel_rpm_front.load(msg_rx.buf);
+        if (msg_rx.id == ID_TCU_DISTANCE_TRAVELED)
+            tcu_distance_traveled.load(msg_rx.buf);
+        if (msg_rx.id == ID_MCU_LAUNCH_CONTROL)
+            mcu_launch_control.load(msg_rx.buf);
     }
 }
 
@@ -743,6 +751,34 @@ void send_xbee() {
             xb_msg.id = ID_BMS_BALANCING_STATUS;
             write_xbee_data();
         }
+    }
+
+    if (timer_debug_tcu_wheel_rpm_rear.check()) {
+        tcu_wheel_rpm_rear.write(xb_msg.buf);
+        xb_msg.len = sizeof(CAN_message_tcu_wheel_rpm_t);
+        xb_msg.id = ID_TCU_WHEEL_RPM_REAR;
+        write_xbee_data();
+    }
+
+    if (timer_debug_tcu_wheel_rpm_front.check()) {
+        tcu_wheel_rpm_front.write(xb_msg.buf);
+        xb_msg.len = sizeof(CAN_message_tcu_wheel_rpm_t);
+        xb_msg.id = ID_TCU_WHEEL_RPM_FRONT;
+        write_xbee_data();
+    }
+
+    if (timer_debug_mcu_launch_control.check()) {
+        mcu_launch_control.write(xb_msg.buf);
+        xb_msg.len = sizeof(CAN_message_mcu_launch_control_t);
+        xb_msg.id = ID_MCU_LAUNCH_CONTROL;
+        write_xbee_data();
+    }
+
+    if (timer_debug_tcu_distance_traveled.check()) {
+        tcu_distance_traveled.write(xb_msg.buf);
+        xb_msg.len = sizeof(CAN_message_tcu_distanced_traveled_t);
+        xb_msg.id = ID_TCU_DISTANCE_TRAVELED;
+        write_xbee_data();
     }
 }
 
