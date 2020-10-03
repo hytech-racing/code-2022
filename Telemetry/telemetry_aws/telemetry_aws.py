@@ -272,12 +272,6 @@ def decode(msg):
     elif (id == 0xE2):
         ret.append("BMS_TOTAL_CHARGE: " + str(b2ui32(msg[5:9]) / 10000. + " C"))
         ret.append("BMS_TOTAL_DISCHARGE: " + str(b2ui32(msg[9:13]) / 10000. + " C"))
-    elif (id == 0xEA):
-        ret.append(["TCU_WHEEL_RPM_REAR_LEFT",          b2i16(msg[5:7]),                "RPM"  ])
-        ret.append(["TCU_WHEEL_RPM_REAR_RIGHT",         b2i16(msg[7:9]),                "RPM"  ])
-    elif (id == 0xEB):
-        ret.append(["TCU_WHEEL_RPM_FRONT_LEFT",         b2i16(msg[5:7]),                "RPM"  ])
-        ret.append(["TCU_WHEEL_RPM_FRONT_RIGHT",        b2i16(msg[7:9]),                "RPM"  ])
     return ret
 
 def b2i8(data):

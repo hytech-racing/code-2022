@@ -51,10 +51,6 @@ Metro timer_debug_rms_temperatures_1 = Metro(3000);
 Metro timer_debug_rms_temperatures_3 = Metro(3000);
 Metro timer_debug_rms_torque_timer_information = Metro(200);
 Metro timer_debug_rms_voltage_information = Metro(100);
-Metro timer_debug_tcu_wheel_rpm_rear = Metro(200);
-Metro timer_debug_tcu_wheel_rpm_front = Metro(200);
-Metro timer_debug_tcu_distance_traveled = Metro(200);
-Metro timer_debug_mcu_launch_control = Metro(200);
 Metro timer_detailed_voltages = Metro(1000);
 Metro timer_status_send = Metro(100);
 Metro timer_status_send_xbee = Metro(2000);
@@ -95,10 +91,6 @@ FCU_accelerometer_values fcu_accelerometer_values;
 MCU_GPS_readings_alpha mcu_gps_readings_alpha;
 MCU_GPS_readings_beta mcu_gps_readings_beta;
 MCU_GPS_readings_gamma mcu_gps_readings_gamma;
-TCU_wheel_rpm tcu_wheel_rpm_front;
-TCU_wheel_rpm tcu_wheel_rpm_rear;
-TCU_distance_traveled tcu_distance_traveled;
-MCU_launch_control mcu_launch_control;
 
 // flags double in function as timestamps
 static int flag_mcu_status;
