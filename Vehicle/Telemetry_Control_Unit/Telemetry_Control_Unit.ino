@@ -51,6 +51,9 @@ Metro timer_debug_rms_temperatures_1 = Metro(3000);
 Metro timer_debug_rms_temperatures_3 = Metro(3000);
 Metro timer_debug_rms_torque_timer_information = Metro(200);
 Metro timer_debug_rms_voltage_information = Metro(100);
+Metro timer_debug_tcu_wheel_rpm_rear = Metro(200);
+Metro timer_debug_tcu_wheel_rpm_front = Metro(200);
+Metro timer_debug_tcu_distance_traveled = Metro(200);
 Metro timer_detailed_voltages = Metro(1000);
 Metro timer_status_send = Metro(100);
 Metro timer_status_send_xbee = Metro(2000);
@@ -125,6 +128,7 @@ static int flag_mc_read_write_parameter_response;
 static int flag_fcu_accelerometer_values;
 static int flag_gps;
 
+static double total_revs;
 static bool pending_gps_data;
 
 void setup() {
@@ -183,6 +187,8 @@ void setup() {
     }
     logger.println("time,msg.id,msg.len,data"); // Print CSV heading to the logfile
     logger.flush();
+
+    total_revs = 0;
 }
 
 void loop() {
@@ -362,8 +368,6 @@ void parse_can_message() {
             tcu_wheel_rpm_front.load(msg_rx.buf);
         if (msg_rx.id == ID_TCU_DISTANCE_TRAVELED)
             tcu_distance_traveled.load(msg_rx.buf);
-        if (msg_rx.id == ID_MCU_LAUNCH_CONTROL)
-            mcu_launch_control.load(msg_rx.buf);
     }
 }
 
@@ -764,13 +768,6 @@ void send_xbee() {
         tcu_wheel_rpm_front.write(xb_msg.buf);
         xb_msg.len = sizeof(CAN_message_tcu_wheel_rpm_t);
         xb_msg.id = ID_TCU_WHEEL_RPM_FRONT;
-        write_xbee_data();
-    }
-
-    if (timer_debug_mcu_launch_control.check()) {
-        mcu_launch_control.write(xb_msg.buf);
-        xb_msg.len = sizeof(CAN_message_mcu_launch_control_t);
-        xb_msg.id = ID_MCU_LAUNCH_CONTROL;
         write_xbee_data();
     }
 
