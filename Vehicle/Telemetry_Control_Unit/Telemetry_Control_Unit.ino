@@ -128,7 +128,6 @@ static int flag_mc_read_write_parameter_response;
 static int flag_fcu_accelerometer_values;
 static int flag_gps;
 
-static double total_revs;
 static bool pending_gps_data;
 
 void setup() {
@@ -187,8 +186,6 @@ void setup() {
     }
     logger.println("time,msg.id,msg.len,data"); // Print CSV heading to the logfile
     logger.flush();
-
-    total_revs = 0;
 }
 
 void loop() {
