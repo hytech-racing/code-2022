@@ -94,6 +94,9 @@ FCU_accelerometer_values fcu_accelerometer_values;
 MCU_GPS_readings_alpha mcu_gps_readings_alpha;
 MCU_GPS_readings_beta mcu_gps_readings_beta;
 MCU_GPS_readings_gamma mcu_gps_readings_gamma;
+TCU_wheel_rpm tcu_wheel_rpm_front;
+TCU_wheel_rpm tcu_wheel_rpm_rear;
+TCU_distance_traveled tcu_distance_traveled;
 
 // flags double in function as timestamps
 static int flag_mcu_status;
