@@ -227,16 +227,16 @@ static void loadLookupTable() {
   CAN_MSG_DEFINITION[0xE0] = pair<string, vector<definition>> ("ID_BMS_READ_WRITE_PARAMETER_COMMAND", {});
   CAN_MSG_DEFINITION[0xE1] = pair<string, vector<definition>> ("ID_BMS_PARAMETER_RESPONSE", {});
   CAN_MSG_DEFINITION[0xE2] = pair<string, vector<definition>> ("ID_BMS_COULOMB_COUNTS", {
-    definition(4, 4, false, "TOTAL CHARGE", "C"),
-    definition(0, 4, false, "TOTAL DISCHARGE", "C")
+    definition(4, 4, false, "TOTAL CHARGE", "C", 0.0001),
+    definition(0, 4, false, "TOTAL DISCHARGE", "C", 0.0001)
   });
   CAN_MSG_DEFINITION[0xE7] = pair<string, vector<definition>> ("ID_MCU_GPS_READINGS_ALPHA", {
-    definition(4, 4, true, "LATITUDE"),
-    definition(0, 4, true, "LONGITUDE")
+    definition(4, 4, true, "LATITUDE", "", 0.0001),
+    definition(0, 4, true, "LONGITUDE", "", 0.0001)
   });
   CAN_MSG_DEFINITION[0xE8] = pair<string, vector<definition>> ("ID_MCU_GPS_READINGS_BETA", {
-    definition(4, 4, true, "ALTITUDE"),
-    definition(0, 4, true, "SPEED")
+    definition(4, 4, true, "ALTITUDE", "", 0.0001),
+    definition(0, 4, true, "SPEED", "", 0.0001)
   });
   CAN_MSG_DEFINITION[0xE9] = pair<string, vector<definition>> ("ID_MCU_GPS_READINGS_GAMMA", {
     definition(7, 1, false, "FIX QUALITY"),
@@ -253,7 +253,7 @@ static void loadLookupTable() {
     definition(0, 2, true, "TCU WHEEL RPM FRONT RIGHT", "RPM", 0.01)
   });
   CAN_MSG_DEFINITION[0xED] = pair<string, vector<definition>> ("ID_TCU_DISTANCE_TRAVELED", {
-    definition(0, 2, true, "TCU DISTANCE TRAVELED", "RPM", 0.01)
+    definition(0, 2, true, "TCU DISTANCE TRAVELED", "", 0.01)
   });
 }
 
