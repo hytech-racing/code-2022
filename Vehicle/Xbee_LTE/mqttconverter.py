@@ -21,6 +21,7 @@ def create_client():
             print('connected to MQTT broker')
             connectedLight.value(0)
             c.publish('hytech_car/telemetry', 'Xbee Connected')
+            c.publish('hytech_car/timezone_registration', str.encode(str(time.time())))
             return c
         except OSError as e:
             print('failed connection attempt #', i)
@@ -28,6 +29,10 @@ def create_client():
             c.delay(i)
 c = create_client()
 def read_uart():
+    sec_mark = time.time()
+    while time.time() == sec_mark:
+        continue
+    sec_mark = time.ticks_ms()
     incomingFrame = b''
     zeros = 0
     while True:
@@ -52,7 +57,11 @@ def read_uart():
                     #print('First byte:', incomingFrame[0])
                     #print('End index:', end_index)
                     frame = incomingFrame[0:end_index + 1]
-                    timestamp = str.encode(str(time.time()))        # epoch time
+                    ms_raw = time.ticks_ms()
+                    ms_offset = time.ticks_diff(ms_raw, sec_mark)  % 1000
+                    sec_mark = ms_raw - ms_offset
+                    timestamp = str.encode(str(time.time()) + '{0:03d}'.format(ms_offset))
+                    # timestamp = str.encode(str(time.time()))        # epoch time
                     #print('sending message...', type(frame))
                     #print(timestamp, binascii.hexlify(frame))
                     send_mqtt(timestamp, frame)
