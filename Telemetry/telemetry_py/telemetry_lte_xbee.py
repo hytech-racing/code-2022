@@ -6,7 +6,7 @@ import paho.mqtt.client as mqtt
 
 sys.path.insert(1, '../telemetry_aws')
 from db import decode, unpack, fletcher16
-from console_config import get_config
+from console_config import CONSOLE_CONFIG
 
 MQTT_SERVER = 'localhost'
 # MQTT_SERVER = 'ec2-3-134-2-166.us-east-2.compute.amazonaws.com'
@@ -18,7 +18,6 @@ MQTT_TOPIC  = 'hytech_car/telemetry'
 class TelemetryClient:
     def __init__(self):
         self.screen = None
-        self.ecu_version = 0
         self.countGoodFrames = 0
         self.countBadFrames = 0
 
@@ -79,7 +78,7 @@ class TelemetryClient:
                         if "ON" in line:
                             self.screen.addstr(row, col, "BAL")
                     else:
-                        [row, col] = self.config[key]
+                        [row, col] = CONSOLE_CONFIG[key]
                         self.clearLine(row,col)
                         self.screen.addstr(row, col, line)
         else:
@@ -87,12 +86,6 @@ class TelemetryClient:
 
     def setupScreen(self, initScreen):
         self.screen = initScreen
-        self.config = get_config(sys.argv[1])
-
-        if sys.argv[1] == 'fcu':
-            self.ecu_version = 0
-        else:
-            self.ecu_version = 1
 
         self.screen.border('#', '#', '#', '#', 0, 0, 0, 0)
         self.screen.addstr(0,5,'HYTECH RACING 2019 VEHICLE SERIAL DEBUGGER')
@@ -104,13 +97,9 @@ class TelemetryClient:
         self.screen.addstr(3,105,'BATTERY MANAGEMENT SYSTEM DETAILED VOLTAGES')
         self.screen.addstr(3,155,'BATTERY MANAGEMENT SYSTEM DETAILED TEMPERATURES')
 
-        if self.ecu_version == 0:
-            self.screen.addstr(17,55,'FRONT CONTROL UNIT')
-            self.screen.addstr(30,55,'REAR CONTROL UNIT')
-        else:
-            self.screen.addstr(17,55,'MAIN CONTROL UNIT')
+        self.screen.addstr(17,55,'MAIN CONTROL UNIT')
 
-        for key, pos in self.config.items():
+        for key, pos in CONSOLE_CONFIG.items():
             self.screen.addstr(pos[0], pos[1], key + ":")
 
         self.screen.addstr(20,155,'BATTERY MANAGEMENT SYSTEM BALANCING STATUS')
@@ -160,11 +149,6 @@ class TelemetryClient:
     def clearLineBal(self, y, x):
         blanks = '   '
         self.screen.addstr(y,x,blanks)
-
-if len(sys.argv) != 2:
-    print('Usage:')
-    print('telemetry_lte_xbee.py [fcu|mcu]\n')
-    quit()
 
 telemClient = TelemetryClient()
 curses.wrapper(telemClient.setupScreen)

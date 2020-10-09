@@ -1,4 +1,4 @@
-SCREEN_CONFIG_COMMON = {
+CONSOLE_CONFIG = {
     # RMS INVERTER
     'MODULE A TEMP'                  : [ 4 , 5 ],
     'MODULE B TEMP'                  : [ 5 , 5 ],
@@ -53,6 +53,23 @@ SCREEN_CONFIG_COMMON = {
     'BMS VOLTAGE TOTAL'              : [ 13 , 55 ],
     'BMS TOTAL CHARGE'               : [ 14 , 55 ],
     'BMS TOTAL DISCHARGE'            : [ 15 , 55 ],
+
+	# MAIN CONTROL UNIT
+	'MCU STATE'                 	 : [ 18 , 55 ],
+	'MCU BMS FAULT'             	 : [ 19 , 55 ],
+	'MCU IMD FAULT'             	 : [ 20 , 55 ],
+	'MCU INVERTER POWER'        	 : [ 21 , 55 ],
+	'MCU SHUTDOWN ABOVE THRESH' 	 : [ 22 , 55 ],
+	'MCU TEMPERATURE'           	 : [ 23 , 55 ],
+	'MCU GLV VOLTAGE'           	 : [ 24 , 55 ],
+	'MCU PEDAL ACCEL 1'         	 : [ 25 , 55 ],
+	'MCU PEDAL ACCEL 2'         	 : [ 26 , 55 ],
+	'MCU PEDAL BRAKE'           	 : [ 27 , 55 ],
+	'MCU BRAKE ACT'             	 : [ 28 , 55 ],
+	'MCU IMPLAUS ACCEL'         	 : [ 29 , 55 ],
+	'MCU IMPLAUS BRAKE'         	 : [ 30 , 55 ],
+	'MCU TORQUE MAP MODE'       	 : [ 31 , 55 ],
+	'REQUESTED TORQUE'          	 : [ 32 , 55 ],
 
     'TCU WHEEL RPM REAR LEFT'        : [ 38 , 55 ],
     'TCU WHEEL RPM REAR RIGHT'       : [ 39 , 55 ],
@@ -178,48 +195,3 @@ SCREEN_CONFIG_COMMON = {
     'IC 7 THERM 1'                   : [ 17 , 180 ],
     'IC 7 THERM 2'                   : [ 18 , 180 ]
 }
-
-SCREEN_CONFIG_FCU = {
-    'FCU UPTIME'        : [ 18 , 55 ],
-    'FCU STATE'         : [ 19 , 55 ],
-    'START BUTTON ID'   : [ 20 , 55 ],
-    'FCU RAW TORQUE'    : [ 21 , 55 ],
-    'REQUESTED TORQUE'  : [ 22 , 55 ],
-
-    'FCU PEDAL ACCEL 1' : [ 23 , 55 ],
-    'FCU PEDAL ACCEL 2' : [ 24 , 55 ],
-    'FCU PEDAL BRAKE'   : [ 25 , 55 ],
-    'FCU BRAKE ACT'     : [ 26 , 55 ],
-    'FCU IMPLAUS ACCEL' : [ 27 , 55 ],
-    'FCU IMPLAUS BRAKE' : [ 28 , 55 ],
-
-    # REAR CONTROL UNIT
-    'RCU UPTIME'        : [ 31 , 55 ],
-    'RCU STATE'         : [ 32 , 55 ],
-    'RCU FLAGS'         : [ 33 , 55 ],
-    'GLV BATT VOLTAGE'  : [ 34 , 55 ],
-    'RCU BMS FAULT'     : [ 35 , 55 ],
-    'RCU IMD FAULT'     : [ 36 , 55 ]
-}
-
-# MAIN CONTROL UNIT
-SCREEN_CONFIG_MCU = {
-  'MCU STATE'                 : [ 18 , 55 ],
-  'MCU BMS FAULT'             : [ 19 , 55 ],
-  'MCU IMD FAULT'             : [ 20 , 55 ],
-  'MCU INVERTER POWER'        : [ 21 , 55 ],
-  'MCU SHUTDOWN ABOVE THRESH' : [ 22 , 55 ],
-  'MCU TEMPERATURE'           : [ 23 , 55 ],
-  'MCU GLV VOLTAGE'           : [ 24 , 55 ],
-  'MCU PEDAL ACCEL 1'         : [ 25 , 55 ],
-  'MCU PEDAL ACCEL 2'         : [ 26 , 55 ],
-  'MCU PEDAL BRAKE'           : [ 27 , 55 ],
-  'MCU BRAKE ACT'             : [ 28 , 55 ],
-  'MCU IMPLAUS ACCEL'         : [ 29 , 55 ],
-  'MCU IMPLAUS BRAKE'         : [ 30 , 55 ],
-  'MCU TORQUE MAP MODE'       : [ 31 , 55 ],
-  'REQUESTED TORQUE'          : [ 32 , 55 ]
-}
-
-def get_config(type):
-    return { **(SCREEN_CONFIG_FCU if type == "fcu" else SCREEN_CONFIG_MCU), **SCREEN_CONFIG_COMMON }
