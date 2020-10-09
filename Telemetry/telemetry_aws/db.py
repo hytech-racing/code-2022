@@ -117,10 +117,10 @@ def decode(msg):
         ret.append(["INVERTER_LOCKOUT",                 ((msg[11] & 0x80) >> 7)                 ])
         ret.append(["DIRECTION_COMMAND",                msg[12]                                 ])
     elif (id == 0xAB):
-        ret.append(["POST FAULT LO", "0x" + hex(msg[6]).upper()[2:] + hex(msg[5]).upper()[2:]])
-        ret.append(["POST FAULT HI", "0x" + hex(msg[8]).upper()[2:] + hex(msg[7]).upper()[2:]])
-        ret.append(["RUN FAULT LO", "0x" + hex(msg[10]).upper()[2:] + hex(msg[9]).upper()[2:]])
-        ret.append(["RUN FAULT HI", "0x" + hex(msg[12]).upper()[2:] + hex(msg[11]).upper()[2:]])
+        ret.append(["POST_FAULT_LO", "0x" + hex(msg[6]).upper()[2:] + hex(msg[5]).upper()[2:]])
+        ret.append(["POST_FAULT_HI", "0x" + hex(msg[8]).upper()[2:] + hex(msg[7]).upper()[2:]])
+        ret.append(["RUN_FAULT_LO", "0x" + hex(msg[10]).upper()[2:] + hex(msg[9]).upper()[2:]])
+        ret.append(["RUN_FAULT_HI", "0x" + hex(msg[12]).upper()[2:] + hex(msg[11]).upper()[2:]])
     elif (id == 0xAC):
         ret.append(["COMMANDED_TORQUE",                 (b2i16(msg[5:7]) / 10.),         "Nm"    ])
         ret.append(["TORQUE_FEEDBACK",                  (b2i16(msg[7:9]) / 10.),         "Nm"    ])
