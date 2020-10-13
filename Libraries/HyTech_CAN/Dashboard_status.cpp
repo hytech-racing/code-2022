@@ -43,7 +43,7 @@ Dashboard_status::Dashboard_status(uint8_t buf[8]) {
  *     - Extra value
  */
 
-Dashboard_status::MCU_status(bool mark, bool mode, bool mc_cycle, bool start, bool extra) {
+Dashboard_status::Dashboard_status(bool mark, bool mode, bool mc_cycle, bool start, bool extra) {
     set_mark(mark);
     set_mode(mode);
     set_mc_cycle(mc_cycle);
@@ -85,14 +85,6 @@ void Dashboard_status::write(uint8_t buf[8]) {
     memcpy(&buf[2], &(message.mc_cycle), sizeof(bool));
     memcpy(&buf[3], &(message.start), sizeof(bool));
     memcpy(&buf[4], &(message.extra), sizeof(bool));
-}
-
-void Dashboard_status::write(bool mark, bool mode, bool mc_cycle, bool start, bool extra) {
-    set_mark(mark);
-    set_mode(mode);
-    set_mc_cycle(mc_cycle);
-    set_start(start);
-    set_extra(extra);
 }
 
 /* Get functions

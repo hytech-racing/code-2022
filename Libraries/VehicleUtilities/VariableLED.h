@@ -1,38 +1,37 @@
 #pragma once
 #include <Metro.h>
-#include <PackedValues.h>
 
-enum BLINK_MODES { OFF = 0, ON = 1, FAST = 2, SLOW = 3 };
+enum class BLINK_MODES { OFF = 0, ON = 1, FAST = 2, SLOW = 3 };
 const int BLINK_RATES[4] = { 0, 0, 150, 400 }; // OFF, ON, FAST, SLOW
 
 typedef struct _VariableLED {
     int pin;
     Metro blinker;
-    int mode;
+    BLINK_MODES mode;
     bool led_value = false;
 
     _VariableLED(int p, bool metro_should_autoreset = true) : blinker(0, metro_should_autoreset) {pin = p; }
 
-    void setMode(int m) {
+    void setMode(BLINK_MODES m) {
         if (mode == m)
             return;
         mode = m;
-        if (BLINK_RATES[m]) {
-            blinker.interval(BLINK_RATES[m]);
+        if (BLINK_RATES[(int)m]) {
+            blinker.interval(BLINK_RATES[(int)m]);
             blinker.reset();
         }
     }
 
-    void update(PackedValues& values) {
-        if (mode == OFF)
+    void update() {
+        if (mode == BLINK_MODES::OFF)
         {
             digitalWrite(pin, LOW);
-            led_value = OFF;
+            led_value = LOW;
         }
-        else if (mode == ON)
+        else if (mode == BLINK_MODES::ON)
         {
             digitalWrite(pin, HIGH);
-            led_value = ON;
+            led_value = HIGH;
         }
         else if (blinker.check()) // blinker mode
         {

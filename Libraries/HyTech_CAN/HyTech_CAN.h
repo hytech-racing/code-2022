@@ -382,7 +382,7 @@ typedef struct Telem_message {
         CAN_message_mcu_pedal_readings_t        mcu_pedal_readings;
         CAN_message_mcu_status_t                mcu_status;
         CAN_msg_rcu_status                      rcu_status;
-        CAN_message_dashboard_status_t          dashboard_status
+        CAN_message_dashboard_status_t          dashboard_status;
     } contents;
     uint16_t checksum;
 } Telem_message_t;

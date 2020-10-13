@@ -4,7 +4,6 @@
 #include <Metro.h>
 #include <SPI.h>
 #include <DebouncedButton.h>
-#include <VariableLED.h>
 
 /*
    Button pin definition
@@ -18,12 +17,12 @@
 /*
    LED and buzzer pin definition
 */
-#define BUZZER 28
-#define LED_AMS 30
-#define LED_IMD 31
-#define LED_MODE 32
-#define LED_MC_ERR 1
-#define LED_START 2
+#define BUZZER = 28
+#define LED_AMS = 30
+#define LED_IMD = 31
+#define LED_MODE = 32
+#define LED_MC_ERR = 1
+#define LED_START = 2
 
 /*
    LED and buzzer values
@@ -62,7 +61,7 @@ MCP_CAN CAN(SPI_CS);
    Global Variables
 */
 Dashboard_status dashboard_status;
-MCU_status mcu_status;
+MCU_status mcu_status
 
 void setup() {
   pinMode(BTN_MARK, INPUT_PULLUP);
@@ -87,7 +86,7 @@ void setup() {
 
 }
 
-void loop() { 
+void loop() {
   read_can();
   led_update();
   btn_update();
@@ -96,9 +95,8 @@ void loop() {
   if(timer_can_update.check()){ //Timer to ensure dashboard isn't flooding data bus
 
     //create message to send
-    byte msg[8];
-    dashboard_status.write(msg);
-    byte sndStat = CAN.sendMsgBuf(ID_DASHBOARD_STATUS, 0, 8, msg);
+    byte msg[8] = dashboard_status.write();
+    byte sndStat = CAN0.sendMsgBuf(ID_DASHBOARD_STATUS, 0, 8, msg);
 
     //rest update timer
     timer_can_update.reset();
@@ -118,18 +116,19 @@ inline void led_update(){
 
 
   //Start LED
-  switch(mcu_status.get_state()){
+  switch(mcu_status.getState()){
     case MCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE:
-      variable_led_start.setMode(BLINK_MODES::OFF);
-      break;
+    variable_led_start.setMode(0);
+    break;
     case MCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
-      variable_led_start.setMode(BLINK_MODES::FAST);
-      break;
+    variable_led_start.setMode(2);
+    break;
     case MCU_STATE_ENABLING_INVERTER:
-      variable_led_start.setMode(BLINK_MODES::ON);
-      break;
-  }
+    variable_led_start.setMode(1);
+    break;
   variable_led_start.update();
+  }
+  
   
 }
 
