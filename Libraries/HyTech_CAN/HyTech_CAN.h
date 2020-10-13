@@ -603,16 +603,21 @@ class Dashboard_status {
         void load(uint8_t buf[8]);
         void write(uint8_t buf[8]);
         void update(bool mark, bool mode, bool mc_cycle, bool start, bool extra);
-        bool get_mark;
-        bool get_mode;
-        bool get_mc_cycle;
-        bool get_start;
-        bool get_extra;
-        void set_mark;
-        void set_mode;
-        void set_mc_cycle;
-        void set_start;
-        void set_extra;
+        bool get_mark();
+        bool get_mode();
+        bool get_mc_cycle();
+        bool get_start();
+        bool get_extra();
+        void set_mark(bool mark);
+        void set_mode(bool mode);
+        void set_mc_cycle(bool mc_cycle);
+        void set_start(bool start);
+        void set_extra(bool extra);
+        void toggle_mark();
+        void toggle_mode();
+        void toggle_mc_cycle();
+        void toggle_start();
+        void toggle_extra();
 
 private:
     CAN_message_dashboard_status_t message;

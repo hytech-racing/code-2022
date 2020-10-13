@@ -3,6 +3,7 @@
 #include <HyTech_CAN.h>
 #include <Metro.h>
 #include <SPI.h>
+#include <DebouncedButton.h>
 
 /*
    Button pin definition
@@ -26,32 +27,25 @@
 /*
    LED and buzzer values
 */
-bool buzzer = false;
-bool led_ams = false;
-bool led_imd = false;
-bool led_mode =  false;
-bool led_mc_err = false;
-bool led_start = false;
+
+bool is_mc_err = false;
+
 
 /*
  * LED Variables
  */
 
-_VariableLED variable_led_ams;
-_VariableLED variable_led_imd;
-_VariableLED variable_led_mode;
-_VariableLED variable_led_mc_err;
-_VariableLED variable_led_start;
+VariableLED variable_led_start(LED_START);
 
 /*
    Button debouncing variables
 */
 
-_DebouncedButton debounced_btn_mark(100);
-_DebouncedButton debounced_btn_mode(100);
-_DebouncedButton debounced_btn_mc_cycle(100);
-_DebouncedButton debounced_btn_start(100);
-_DebouncedButton debounced_btn_extra(100);
+DebouncedButton debounced_btn_mark(100);
+DebouncedButton debounced_btn_mode(100);
+DebouncedButton debounced_btn_mc_cycle(100);
+DebouncedButton debounced_btn_start(100);
+DebouncedButton debounced_btn_extra(100);
 
 /*
    CAN Variables
@@ -70,11 +64,11 @@ Dashboard_status dashboard_status;
 MCU_status mcu_status
 
 void setup() {
-  pinMode(BTN_MARK, INPUT);
-  pinMode(BTN_MODE, INPUT);
-  pinMode(BTN_MC_CYCLE, INPUT);
-  pinMode(BTN_START, INPUT);
-  pinMode(BTN_EXTRA, INPUT);
+  pinMode(BTN_MARK, INPUT_PULLUP);
+  pinMode(BTN_MODE, INPUT_PULLUP);
+  pinMode(BTN_MC_CYCLE, INPUT_PULLUP);
+  pinMode(BTN_START, INPUT_PULLUP);
+  pinMode(BTN_EXTRA, INPUT_PULLUP);
 
   pinMode(BUZZER, OUTPUT);
   pinMode(LED_AMS, OUTPUT);
@@ -88,13 +82,13 @@ void setup() {
     {
         delay(200);
     }
-  Serial.println("CAN BUS Shield init ok!");
+
 
 }
 
 void loop() {
-  read_buttons();
-  read_can()
+  read_can();
+  led_update();
   btn_update();
 
   //Send CAN message
@@ -110,73 +104,61 @@ void loop() {
   
 }
 
-void led_update(){
+inline void led_update(){
   //BMS/AMS LED (bms and ams are the same thing)
-  if(!mcu_status.get_bms_ok_high()){ //get_bms_ok_high outputs 1 if things are good.  We want light on when things are bad.
-    variable_led_ams.setMode(1);
-  }
-  else{
-    variable_led_ams.setMode(0);
-  }
-
+  digitalWrite(LED_AMS, !mcu_status.get_bms_ok_high()); //get_bms_ok_high outputs 1 if things are good.  We want light on when things are bad so negate 
+  
   //IMD LED
-  if(!mcu_status.get_imd_okhs_high()){ //get_imd_okhs_high outputs 1 if things are good.  We want light on when things are bad.
-    variable_led_imd.setMode(1);
-  }
-  else{
-    variable_led_imd.setMode(0);
-  }
+  digitalWrite(LED_IMD, !mcu_status.get_imd_okhs_high());//get_imd_okhs_high outputs 1 if things are good.  We want light on when things are bad so negate
+
+  //MC Error LED
+  digitalWrite(LED_MC_ERR, is_mc_err);
+
 
   //Start LED
-  if(!mcu_status.get_imd_okhs_high()){ //get_imd_okhs_high outputs 1 if things are good.  We want light on when things are bad.
-    variable_led_imd.setMode(1);
-  }
-  else{
-    variable_led_imd.setMode(0);
-  }
-
   switch(mcu_status.getState()){
     case MCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE:
-    variable_led_start(0);
+    variable_led_start.setMode(0);
     break;
     case MCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
-    variable_led_start(2);
+    variable_led_start.setMode(2);
     break;
     case MCU_STATE_ENABLING_INVERTER:
-    variable_led_start(1);
+    variable_led_start.setMode(1);
     break;
+  variable_led_start.update();
   }
   
   
 }
 
-void btn_update(){
+inline void btn_update(){
 
   if(debounced_btn_mark.update(digitalRead(BTN_MARK))){
-    dashboard_status.set_mark(!dashboard_status.get_mark());
+    dashboard_status.toggle_mark();
   }
   if(debounced_btn_mode.update(digitalRead(BTN_MODE))){
-    dashboard_status.set_mode(!dashboard_status.get_mode());
+    dashboard_status.toggle_mode();
   }
   if(debounced_btn_mc_cycle.update(digitalRead(BTN_MC_CYCLE))){
-    dashboard_status.set_mc_cycle(!dashboard_status.get_mc_cycle());
+    dashboard_status.toggle_mc_cycle();
   }
   if(debounced_btn_start.update(digitalRead(BTN_START))){
-    dashboard_status.set_start(!dashboard_status.get_start());
+    dashboard_status.toggle_start();
   }
   if(debounced_btn_extra.update(digitalRead(BTN_EXTRA))){
-    dashboard_status.set_extra(!dashboard_status.get_extra());
+    dashboard_status.toggle_extra();
   }
   
 }
 
-void read_can(){
+inline void read_can(){
 
   //len is message length, buf is the actual data from the CAN message
   unsigned char len = 0;
   unsigned char buf[8];
   
-  if(CAN_MSGAVAIL == CAN.checkReceive()){
+  while(CAN_MSGAVAIL == CAN.checkReceive()){
     CAN.readMsgBuf(&len, buf);
     unsigned long canID = CAN.getCanId();
 
@@ -185,6 +167,15 @@ void read_can(){
       case ID_MCU_STATUS:
         mcu_status.load(buf);
         break;
+      case ID_MC_FAULT_CODES:
+        is_mc_err = false;
+        for(int i = 0; i < 8; i++){
+          if(buf[i] != 0){
+            is_mc_err = true;
+          }
+        }
+        break;
+        
     }
   }
 }

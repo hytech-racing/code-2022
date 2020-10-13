@@ -135,3 +135,22 @@ void Dashboard_status::set_start(bool start) {
 void Dashboard_status::set_extra(bool extra) {
     message.extra = extra;
 }
+
+/* Toggle Functions
+ *
+ */
+void Dashboard_status::toggle_mark() {
+    message.mark = !message.mark;
+}
+void Dashboard_status::toggle_mode() {
+    message.mode = !message.mode;
+}
+void Dashboard_status::toggle_mc_cycle() {
+    message.mc_cycle = !message.mc_cycle;
+}
+void Dashboard_status::toggle_start() {
+    message.start = !message.start;
+}
+void Dashboard_status::toggle_extra() {
+    message.extra = !message.extra;
+}

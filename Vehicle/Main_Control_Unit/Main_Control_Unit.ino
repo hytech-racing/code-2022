@@ -6,6 +6,10 @@
 #include <Wire.h>
 #include <MCP23S17.h>
 
+//These come from Atul's VehicleUtilities folder under the refactored branch.  currently not in master
+#include <DebouncedButton.h>
+#include <VariableLED.h> 
+
 /*
  * Teensy Pin definitions
  */
