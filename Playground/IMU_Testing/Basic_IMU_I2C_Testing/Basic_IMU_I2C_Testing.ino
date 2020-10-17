@@ -36,6 +36,8 @@ void loop()
   sensors_event_t event;
   bno.getEvent(&event);
 
+  // TEST PASSED
+  
   /* Display the floating point data */
   Serial.print("X: ");
   Serial.print(event.orientation.x, 4);
@@ -45,5 +47,20 @@ void loop()
   Serial.print(event.orientation.z, 4);
   Serial.println();
 
-  delay(100);
+  imu::Vector<3> accel = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+
+  // TEST PASSED
+  
+  /* Display the floating point data */
+  Serial.print("X: ");
+  Serial.print(accel.x());
+  Serial.print("\tY: ");
+  Serial.print(accel.y());
+  Serial.print("\tZ: ");
+  Serial.print(accel.z());
+  Serial.println();
+  
+  Serial.println();
+  
+  delay(500);
 }
