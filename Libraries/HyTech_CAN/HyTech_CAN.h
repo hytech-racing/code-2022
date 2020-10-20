@@ -619,15 +619,15 @@ class Dashboard_status {
         uint8_t get_led_flags();
         bool get_ams_led();
         bool get_imd_led();
-        int get_mode_led();
+        uint8_t get_mode_led();
         bool get_mc_error_led();
-        int get_start_led();
+        uint8_t get_start_led();
         void set_led_flags(uint8_t flags);
         void set_ams_led(bool ams);
         void set_imd_led(bool imd);
-        void set_mode_led(int mode);
+        void set_mode_led(uint8_t mode);
         void set_mc_error_led(bool mc_error);
-        void set_start_led(int start_led);
+        void set_start_led(uint8_t start_led);
 
 private:
     CAN_message_dashboard_status_t message;
