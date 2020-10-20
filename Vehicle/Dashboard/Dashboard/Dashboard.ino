@@ -83,8 +83,6 @@ void setup() {
     {
         delay(200);
     }
-
-
 }
 
 void loop() { 
@@ -109,24 +107,29 @@ void loop() {
 inline void led_update(){
   //BMS/AMS LED (bms and ams are the same thing)
   digitalWrite(LED_AMS, !mcu_status.get_bms_ok_high()); //get_bms_ok_high outputs 1 if things are good.  We want light on when things are bad so negate 
+  dashboard_status.set_ams_led(!mcu_status.get_bms_ok_high());
   
   //IMD LED
   digitalWrite(LED_IMD, !mcu_status.get_imd_okhs_high());//get_imd_okhs_high outputs 1 if things are good.  We want light on when things are bad so negate
+  dashboard_status.set_imd_led(!mcu_status.get_imd_okhs_high());
 
   //MC Error LED
   digitalWrite(LED_MC_ERR, is_mc_err);
-
+  dashboard_status.set_mc_error_led(is_mc_err);
 
   //Start LED
   switch(mcu_status.get_state()){
     case MCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE:
       variable_led_start.setMode(BLINK_MODES::OFF);
+      dashboard_status.set_start_led(0);
       break;
     case MCU_STATE_TRACTIVE_SYSTEM_ACTIVE:
       variable_led_start.setMode(BLINK_MODES::FAST);
+      dashboard_status.set_start_led(2);
       break;
     case MCU_STATE_ENABLING_INVERTER:
       variable_led_start.setMode(BLINK_MODES::ON);
+      dashboard_status.set_start_led(1);
       break;
   }
   variable_led_start.update();
@@ -136,19 +139,19 @@ inline void led_update(){
 inline void btn_update(){
 
   if(debounced_btn_mark.update(digitalRead(BTN_MARK))){
-    dashboard_status.toggle_mark();
+    dashboard_status.toggle_mark_btn();
   }
   if(debounced_btn_mode.update(digitalRead(BTN_MODE))){
-    dashboard_status.toggle_mode();
+    dashboard_status.toggle_mode_btn();
   }
   if(debounced_btn_mc_cycle.update(digitalRead(BTN_MC_CYCLE))){
-    dashboard_status.toggle_mc_cycle();
+    dashboard_status.toggle_mc_cycle_btn();
   }
   if(debounced_btn_start.update(digitalRead(BTN_START))){
-    dashboard_status.toggle_start();
+    dashboard_status.toggle_start_btn();
   }
   if(debounced_btn_extra.update(digitalRead(BTN_EXTRA))){
-    dashboard_status.toggle_extra();
+    dashboard_status.toggle_extra_btn();
   }
   
 }

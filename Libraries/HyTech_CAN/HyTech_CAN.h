@@ -333,11 +333,8 @@ typedef struct CAN_message_rcu_status_t {
 } CAN_msg_rcu_status;
 
 typedef struct CAN_message_dashboard_status_t {
-    bool mark;
-    bool mode;
-    bool mc_cycle;
-    bool start;
-    bool extra;
+    uint8_t button_flags;
+    uint8_t led_flags;
 } CAN_msg_rcu_status_t;
 
 typedef struct Telem_message {
@@ -599,25 +596,38 @@ class Dashboard_status {
     public:
         Dashboard_status();
         Dashboard_status(uint8_t buf[]);
-        Dashboard_status(bool mark, bool mode, bool mc_cycle, bool start, bool extra);
+        Dashboard_status(uint8_t btn_flags, uint8_t led_flags);
         void load(uint8_t buf[8]);
         void write(uint8_t buf[8]);
-        void update(bool mark, bool mode, bool mc_cycle, bool start, bool extra);
-        bool get_mark();
-        bool get_mode();
-        bool get_mc_cycle();
-        bool get_start();
-        bool get_extra();
-        void set_mark(bool mark);
-        void set_mode(bool mode);
-        void set_mc_cycle(bool mc_cycle);
-        void set_start(bool start);
-        void set_extra(bool extra);
-        void toggle_mark();
-        void toggle_mode();
-        void toggle_mc_cycle();
-        void toggle_start();
-        void toggle_extra();
+        uint8_t get_button_flags();
+        bool get_mark_btn();
+        bool get_mode_btn();
+        bool get_mc_cycle_btn();
+        bool get_start_btn();
+        bool get_extra_btn();
+        void set_button_flags(uint8_t flags);
+        void set_mark_btn(bool mark);
+        void set_mode_btn(bool mode);
+        void set_mc_cycle_btn(bool mc_cycle);
+        void set_start_btn(bool start);
+        void set_extra_btn(bool extra);
+        void toggle_mark_btn();
+        void toggle_mode_btn();
+        void toggle_mc_cycle_btn();
+        void toggle_start_btn();
+        void toggle_extra_btn();
+        uint8_t get_led_flags();
+        bool get_ams_led();
+        bool get_imd_led();
+        int get_mode_led();
+        bool get_mc_error_led();
+        int get_start_led();
+        void set_led_flags(uint8_t flags);
+        void set_ams_led(bool ams);
+        void set_imd_led(bool imd);
+        void set_mode_led(int mode);
+        void set_mc_error_led(bool mc_error);
+        void set_start_led(int start_led);
 
 private:
     CAN_message_dashboard_status_t message;

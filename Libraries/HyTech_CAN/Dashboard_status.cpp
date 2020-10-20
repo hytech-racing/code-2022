@@ -26,29 +26,12 @@ Dashboard_status::Dashboard_status(uint8_t buf[8]) {
     load(buf);
 }
 
-/* Constructor for Dashboard_status
- *
- * Used to copy data from msg variable in
- * microcontroller code to instance variable
- *
- * Param (bool) - Board
- *     - Mark value
- * Param (bool) - Mark
- *     - Mode value
- * Param (bool) - MC_cycle
- *     - MC Cycle value
- * Param (bool) - Start
- *     - Start value
- * Param (bool) - Extra
- *     - Extra value
+/* Constructor for Dashboard_status w/flags
  */
 
-Dashboard_status::Dashboard_status(bool mark, bool mode, bool mc_cycle, bool start, bool extra) {
-    set_mark(mark);
-    set_mode(mode);
-    set_mc_cycle(mc_cycle);
-    set_start(start);
-    set_extra(extra);
+Dashboard_status::Dashboard_status(uint8_t btn_flags, uint8_t led_flags) {
+    set_button_flags(btn_flags);
+    set_led_flags(led_flags);
 }
 
 /* Load from buffer & write to variable instance
@@ -63,11 +46,15 @@ Dashboard_status::Dashboard_status(bool mark, bool mode, bool mc_cycle, bool sta
 void Dashboard_status::load(uint8_t buf[8]) {
     message = {};
 
-    memcpy(&(message.mark), &buf[0], sizeof(bool));
+    /*memcpy(&(message.mark), &buf[0], sizeof(bool));
     memcpy(&(message.mode), &buf[1], sizeof(bool));
     memcpy(&(message.mc_cycle), &buf[2], sizeof(bool));
     memcpy(&(message.start), &buf[3], sizeof(bool));
-    memcpy(&(message.extra), &buf[4], sizeof(bool));
+    memcpy(&(message.extra), &buf[4], sizeof(bool));*/
+    //dont delete might use later if stuff below doesnt work
+
+    memcpy(&message, buf, sizeof(message));
+
 }
 
 /* Write to buffer
@@ -80,69 +67,116 @@ void Dashboard_status::load(uint8_t buf[8]) {
  */
 
 void Dashboard_status::write(uint8_t buf[8]) {
-    memcpy(&buf[0], &(message.mark), sizeof(bool));
-    memcpy(&buf[1], &(message.mode), sizeof(bool));
-    memcpy(&buf[2], &(message.mc_cycle), sizeof(bool));
-    memcpy(&buf[3], &(message.start), sizeof(bool));
-    memcpy(&buf[4], &(message.extra), sizeof(bool));
+    //memcpy(&buf[0], &(message.mark), sizeof(bool));
+    //memcpy(&buf[1], &(message.mode), sizeof(bool));
+    //memcpy(&buf[2], &(message.mc_cycle), sizeof(bool));
+    //memcpy(&buf[3], &(message.start), sizeof(bool));
+    //memcpy(&buf[4], &(message.extra), sizeof(bool));
+
+    memcpy(buf, &message, sizeof(message));
+
 }
 
-/* Get functions
+//Button get functions
+
+uint8_t Dashboard_status::get_button_flags() {
+    return message.button_flags;
+}
+bool Dashboard_status::get_mark_btn() {
+    return message.button_flags & 0x1;
+}
+bool Dashboard_status::get_mode_btn() {
+    return (message.button_flags & 0x2) >> 1;
+}
+bool Dashboard_status::get_mc_cycle_btn() {
+    return (message.button_flags & 0x4) >> 2;
+}
+bool Dashboard_status::get_start_btn() {
+    return (message.button_flags & 0x8) >> 3;
+}
+bool Dashboard_status::get_extra_btn() {
+    return (message.button_flags & 0x10) >> 4;
+}
+
+//Button set functions
+
+void Dashboard_status::set_button_flags(uint8_t flags){
+    message.button_flags =  flags;
+}
+void Dashboard_status::set_mark_btn(bool mark_btn) {
+    message.button_flags = (message.button_flags & 0xFE) | (mark_btn & 0x1); 
+}
+void Dashboard_status::set_mode_btn(bool mode_btn) {
+    message.button_flags = (message.button_flags & 0xFD) | ((mode_btn & 0x1) << 1);
+}
+void Dashboard_status::set_mc_cycle_btn(bool mc_cycle_btn) {
+    message.button_flags = (message.button_flags & 0xFB) | ((mc_cycle_btn & 0x1) << 2);
+}
+void Dashboard_status::set_start_btn(bool start_btn) {
+    message.button_flags = (message.button_flags & 0xF7) | ((start_btn & 0x1) << 3);
+}
+void Dashboard_status::set_extra_btn(bool extra_btn) {
+    message.button_flags = (message.button_flags & 0xEF) | ((extra_btn & 0x1) << 4);
+}
+
+/* button toggle Functions
  *
  */
-
-bool Dashboard_status::get_mark() {
-    return message.mark;
+void Dashboard_status::toggle_mark_btn() {
+    set_mark_btn(!get_mark_btn());
 }
-bool Dashboard_status::get_mode() {
-    return message.mode;
+void Dashboard_status::toggle_mode_btn() {
+    set_mode_btn(!get_mode_btn());
 }
-bool Dashboard_status::get_mc_cycle() {
-    return message.mc_cycle;
+void Dashboard_status::toggle_mc_cycle_btn() {
+    set_mc_cycle_btn(!get_mc_cycle_btn());
 }
-bool Dashboard_status::get_start() {
-    return message.start;
+void Dashboard_status::toggle_start_btn() {
+    set_start_btn(!get_start_btn());
 }
-bool Dashboard_status::get_extra() {
-    return message.extra;
-}
-
-/* Set functions
- *
- * Param (bool) - Variable to replace old data
- */
-
-void Dashboard_status::set_mark(bool mark) {
-    message.mark = mark;
-}
-void Dashboard_status::set_mode(bool mode) {
-    message.mode = mode;
-}
-void Dashboard_status::set_mc_cycle(bool mc_cycle) {
-    message.mc_cycle = mc_cycle;
-}
-void Dashboard_status::set_start(bool start) {
-    message.start = start;
-}
-void Dashboard_status::set_extra(bool extra) {
-    message.extra = extra;
+void Dashboard_status::toggle_extra_btn() {
+    set_extra_btn(!get_extra_btn());
 }
 
-/* Toggle Functions
- *
- */
-void Dashboard_status::toggle_mark() {
-    message.mark = !message.mark;
+
+//LED get functions
+
+uint8_t Dashboard_status::get_led_flags() {
+    return message.led_flags;
 }
-void Dashboard_status::toggle_mode() {
-    message.mode = !message.mode;
+bool Dashboard_status::get_ams_led() {
+    return message.led_flags & 0x1;
 }
-void Dashboard_status::toggle_mc_cycle() {
-    message.mc_cycle = !message.mc_cycle;
+bool Dashboard_status::get_imd_led() {
+    return (message.led_flags & 0x2) >> 1;
 }
-void Dashboard_status::toggle_start() {
-    message.start = !message.start;
+int Dashboard_status::get_mode_led() {
+    return (message.led_flags & 0xC) >> 2; //2 bits required to store mode
 }
-void Dashboard_status::toggle_extra() {
-    message.extra = !message.extra;
+bool Dashboard_status::get_mc_error_led() {
+    return (message.led_flags & 0x10) >> 4;
+}
+int Dashboard_status::get_start_led() {
+    return (message.led_flags & 0x60) >> 5;//2 bits required to store start
+}
+
+//LED set functions
+
+void Dashboard_status::set_led_flags(uint8_t flags){
+    message.led_flags = flags;
+}
+void Dashboard_status::set_ams_led(bool ams_led) {
+    message.led_flags = (message.led_flags & 0xFE) | (ams_led & 0x1); 
+}
+void Dashboard_status::set_imd_led(bool imd_led) {
+    message.led_flags = (message.led_flags & 0xFD) | ((imd_led & 0x1) << 1);
+}
+void Dashboard_status::set_mode_led(int mode_led) {
+    message.led_flags = (message.led_flags & 0xF3) | ((mode_led & 0x3) << 2);
+}
+void Dashboard_status::set_mc_error_led(bool mc_error_led) {
+    message.led_flags = (message.led_flags & 0xEF) | ((mc_error_led & 0x1) << 4);
+}
+void Dashboard_status::set_start_led(int start_led) {
+    message.led_flags = (message.led_flags & 0x9F) | ((start_led & 0x3) << 5);
 }
