@@ -1,0 +1,2 @@
+#define HYTECH_ARDUINO_TEENSY_32
+#define NUM_PINS 22

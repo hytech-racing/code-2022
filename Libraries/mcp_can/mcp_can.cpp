@@ -87,7 +87,7 @@ byte MCP_CAN::mcp2515_readRegister(const byte address)
     MCP2515_UNSELECT();
 #ifdef SPI_HAS_TRANSACTION
     SPI_END();
-#endif
+#endifboolean 
 
     return ret;
 }

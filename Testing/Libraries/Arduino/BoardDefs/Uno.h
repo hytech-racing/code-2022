@@ -1,0 +1,2 @@
+#define HYTECH_ARDUINO_UNO
+#define NUM_PINS 25
