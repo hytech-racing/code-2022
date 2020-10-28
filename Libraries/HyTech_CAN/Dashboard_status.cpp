@@ -4,7 +4,22 @@
  */
 
 #include "HyTech_CAN.h"
+#include <iostream>
+#include <vector>
+#include <string>
+#include <gtest/gtest.h>
+using namespace std;
 
+int main()
+{
+    vector<string> msg {"Hello", "C++", "World", "from", "VS Code", "and the C++ extension!"};
+
+    for (const string& word : msg)
+    {
+        cout << word << " ";
+    }
+    cout << endl;
+}
 /*  Blank Constructor for Dashboard_status
  *
  * Used to initialize instance of Dashboard_status with no data
@@ -168,3 +183,4 @@ void Dashboard_status::set_mc_error_led(bool mc_error_led) {
 void Dashboard_status::set_start_led(uint8_t start_led) {
     message.led_flags = (message.led_flags & 0x9F) | ((start_led & 0x3) << 5);
 }
+
