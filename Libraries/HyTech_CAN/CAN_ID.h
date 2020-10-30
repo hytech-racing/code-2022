@@ -14,12 +14,14 @@
 #define ID_MC_MODULATION_INDEX_FLUX_WEAKENING_OUTPUT_INFORMATION	0xAD
 #define ID_MC_FIRMWARE_INFORMATION									0xAE
 #define ID_MC_DIAGNOSTIC_DATA										0xAF
+
 #define ID_MC_COMMAND_MESSAGE										0xC0
 #define ID_MC_READ_WRITE_PARAMETER_COMMAND							0xC1
 #define ID_MC_READ_WRITE_PARAMETER_RESPONSE							0xC2
 #define ID_MCU_STATUS												0xC3
 #define ID_MCU_PEDAL_READINGS										0xC4
 #define ID_GLV_CURRENT_READINGS										0xCC
+
 #define ID_BMS_ONBOARD_TEMPERATURES									0xD5
 #define ID_BMS_ONBOARD_DETAILED_TEMPERATURES						0xD6 // TODO rename to bms_detailed_onboard_temperatures when we're not in the middle of a development cycle
 #define ID_BMS_VOLTAGES												0xD7
@@ -31,6 +33,7 @@
 #define ID_CCU_STATUS												0xDD
 #define ID_BMS_BALANCING_STATUS										0xDE // TODO rename to bms_balancing_cells when we're not in the middle of a development cycle
 #define ID_FCU_ACCELEROMETER										0xDF // TODO rename to mcu_accelerometer_readings when we're not in the middle of a development cycle
+
 #define ID_BMS_READ_WRITE_PARAMETER_COMMAND							0xE0 // TODO define this message
 #define ID_BMS_PARAMETER_RESPONSE									0xE1 // TODO define this message
 #define ID_BMS_COULOMB_COUNTS										0xE2
