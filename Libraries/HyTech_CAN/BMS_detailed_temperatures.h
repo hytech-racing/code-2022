@@ -20,13 +20,13 @@ public:
         set_temperature_2(temperature_2);
     }
 
-    inline void load(uint8_t buf[]) { memcpy(this, buf, sizeof(*this)); }
-    inline void write(uint8_t buf[]) { memcpy(buf, this, sizeof(*this)); }
+    inline void load(uint8_t buf[])     { memcpy(this, buf, sizeof(*this)); }
+    inline void write(uint8_t buf[])    { memcpy(buf, this, sizeof(*this)); }
 
-    inline uint8_t get_ic_id() { return ic_id; }
-    inline int16_t get_temperature_0() { return temperature_0; }
-    inline int16_t get_temperature_1() { return temperature_1; }
-    inline int16_t get_temperature_2() { return temperature_2; }
+    inline uint8_t get_ic_id()          { return ic_id; }
+    inline int16_t get_temperature_0()  { return temperature_0; }
+    inline int16_t get_temperature_1()  { return temperature_1; }
+    inline int16_t get_temperature_2()  { return temperature_2; }
     int16_t get_temperature(uint8_t temperature_id) {
         switch (temperature_id) {
             case 0: return temperature_0;

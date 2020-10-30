@@ -19,14 +19,14 @@ public:
         set_total_discharge(total_discharge);
     }
 
-    inline void load(uint8_t buf[]) { memcpy(this, buf, sizeof(*this)); }
-    inline void write(uint8_t buf[]) { memcpy(buf, this, sizeof(*this)); }
+    inline void load(uint8_t buf[])     { memcpy(this, buf, sizeof(*this)); }
+    inline void write(uint8_t buf[])    { memcpy(buf, this, sizeof(*this)); }
 
-    inline uint32_t get_total_charge() { return total_charge; }
-    inline uint32_t get_total_discharge() { return total_discharge; }
+    inline uint32_t get_total_charge()      const { return total_charge; }
+    inline uint32_t get_total_discharge()   const { return total_discharge; }
 
-    inline void set_total_charge(uint32_t total_charge) { this->total_charge = total_charge; }
-    inline void set_total_discharge(uint32_t total_discharge) { this->total_discharge = total_discharge; }
+    inline void set_total_charge(uint32_t total_charge)         { this->total_charge = total_charge; }
+    inline void set_total_discharge(uint32_t total_discharge)   { this->total_discharge = total_discharge; }
 
 private:
     uint32_t total_charge;

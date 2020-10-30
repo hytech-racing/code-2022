@@ -20,18 +20,18 @@ public:
         set_total(total_voltage);
     }
 
-    inline void load(uint8_t buf[]) { memcpy(this, buf, sizeof(*this)); }
-    inline void write(uint8_t buf[]) { memcpy(buf, this, sizeof(*this)); }
+    inline void load(uint8_t buf[])     { memcpy(this, buf, sizeof(*this)); }
+    inline void write(uint8_t buf[])    { memcpy(buf, this, sizeof(*this)); }
 
-    inline uint16_t get_average() { return average_voltage; }
-    inline uint16_t get_low() { return low_voltage; }
-    inline uint16_t get_high() { return high_voltage; }
-    inline uint16_t get_total() { return total_voltage; }
+    inline uint16_t get_average()   const { return average_voltage; }
+    inline uint16_t get_low()       const { return low_voltage; }
+    inline uint16_t get_high()      const { return high_voltage; }
+    inline uint16_t get_total()     const { return total_voltage; }
 
     inline void set_average(uint16_t average_voltage) { this->average_voltage = average_voltage; }
-    inline void set_low(uint16_t low_voltage) { this->low_voltage = low_voltage; }
-    inline void set_high(uint16_t high_voltage) { this->high_voltage = high_voltage; }
-    inline void set_total(uint16_t total_voltage) { this->total_voltage = total_voltage; }
+    inline void set_low(uint16_t low_voltage)         { this->low_voltage     = low_voltage; }
+    inline void set_high(uint16_t high_voltage)       { this->high_voltage    = high_voltage; }
+    inline void set_total(uint16_t total_voltage)     { this->total_voltage   = total_voltage; }
 
 private:
     uint16_t average_voltage;

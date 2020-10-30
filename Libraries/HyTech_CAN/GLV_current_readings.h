@@ -13,13 +13,13 @@ public:
         set_cooling_current_value(cooling_current_value);
     }
 
-    inline void load(uint8_t buf[]) { memcpy(this, buf, sizeof(*this)); }
-    inline void write(uint8_t buf[]) { memcpy(buf, this, sizeof(*this)); }
+    inline void load(uint8_t buf[])     { memcpy(this, buf, sizeof(*this)); }
+    inline void write(uint8_t buf[])    { memcpy(buf, this, sizeof(*this)); }
 
-    inline uint16_t get_ecu_current_value() { return ecu_current_value; }
-    inline uint16_t get_cooling_current_value() { return cooling_current_value; }
+    inline uint16_t get_ecu_current_value()     const { return ecu_current_value; }
+    inline uint16_t get_cooling_current_value() const { return cooling_current_value; }
 
-    inline void set_ecu_current_value(uint16_t ecu_current_value) { this->ecu_current_value = ecu_current_value; }
+    inline void set_ecu_current_value(uint16_t ecu_current_value)         { this->ecu_current_value = ecu_current_value; }
     inline void set_cooling_current_value(uint16_t cooling_current_value) { this->cooling_current_value = cooling_current_value; }
 
 private:

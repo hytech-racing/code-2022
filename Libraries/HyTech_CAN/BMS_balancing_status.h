@@ -31,10 +31,10 @@ class BMS_balancing_status {
             set_balancing(balancing_status);
         }
 
-        inline void load(uint8_t buf[]) { memcpy(this, buf, sizeof(*this)); }
-        inline void write(uint8_t buf[]) { memcpy(buf, this, sizeof(*this)); }
+        inline void load(uint8_t buf[])     { memcpy(this, buf, sizeof(*this)); }
+        inline void write(uint8_t buf[])    { memcpy(buf, this, sizeof(*this)); }
 
-        inline uint8_t get_group_id() { return message & 0xF; }
+        inline uint8_t get_group_id()   { return message & 0xF; }
         inline uint64_t get_balancing() { return message >> 0x4; }
         inline uint16_t get_ic_balancing(uint8_t ic_id) { return (message >> (0x4 + 0x9 * ic_id)) & 0x1FF; }
         inline bool get_cell_balancing(uint8_t ic_id, uint16_t cell_id) { return (get_ic_balancing(ic_id) >> cell_id) & 0x1; }

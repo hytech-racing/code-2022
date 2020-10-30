@@ -19,13 +19,13 @@ public:
         set_temperature_1(temperature_1);
     }
 
-    inline void load(uint8_t buf[]) { memcpy(this, buf, sizeof(*this)); }
-    inline void write(uint8_t buf[]) { memcpy(buf, this, sizeof(*this)); }
+    inline void load(uint8_t buf[])     { memcpy(this, buf, sizeof(*this)); }
+    inline void write(uint8_t buf[])    { memcpy(buf, this, sizeof(*this)); }
 
-    inline uint8_t get_ic_id() { return ic_id; }
-    inline int16_t get_temperature_0() { return temperature_0; }
-    inline int16_t get_temperature_1() { return temperature_1; }
-    int16_t get_temperature(uint8_t temperature_id) {
+    inline uint8_t get_ic_id()          const { return ic_id; }
+    inline int16_t get_temperature_0()  const { return temperature_0; }
+    inline int16_t get_temperature_1()  const { return temperature_1; }
+    int16_t get_temperature(uint8_t temperature_id) const {
         switch (temperature_id) {
             case 0: return temperature_0;
             case 1: return temperature_1;
@@ -33,7 +33,7 @@ public:
         return 0;
     }
 
-    inline void set_ic_id(uint8_t ic_id) { this->ic_id = ic_id; }
+    inline void set_ic_id(uint8_t ic_id)                 { this->ic_id = ic_id; }
     inline void set_temperature_0(int16_t temperature_0) { this->temperature_0 = temperature_0; }
     inline void set_temperature_1(int16_t temperature_1) { this->temperature_1 = temperature_1; }
     void set_temperature(uint8_t temperature_id, int16_t temperature) {
