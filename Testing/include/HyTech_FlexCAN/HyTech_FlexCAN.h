@@ -1,7 +1,7 @@
 #pragma once
 
-#include <BoardDef.h>
-#include <HyTech_FlexCAN/HyTech_FlexCAN.h>
+#include "BoardDef.h"
+#include "../../../Libraries/HyTech_FlexCAN/HyTech_FlexCAN.h"
 
 #ifdef HYTECH_ARDUINO_TEENSY_32
 	#define IRQ_CAN_MESSAGE 29

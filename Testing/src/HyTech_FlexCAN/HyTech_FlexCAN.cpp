@@ -1,6 +1,6 @@
 #include "HyTech_FlexCAN.h"
-#include <CAN_sim.h>
-#include <Interrupts.h>
+#include "CAN_sim.h"
+#include "Interrupts.h"
 
 inline void setBase(uint32_t& packed, int tx, int rx) { packed = tx << 16 | rx; }
 

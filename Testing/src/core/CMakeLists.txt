@@ -1,4 +1,4 @@
-set(CORE_INC_DIR ${SIMULATION_INCLUDE_DIR}/core)
+set(CORE_INC_DIR ${SIMULATION_INC_DIR}/core)
 set(CORE_SRC Arduino.cpp
              HTException.cpp
              Interrupts.cpp
