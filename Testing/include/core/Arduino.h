@@ -1,6 +1,6 @@
 #pragma once
 
-#define ARDUINO 0
+#define ARDUINO 101
 
 #include "BoardDef.h"
 #include <Serial.h>

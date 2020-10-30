@@ -1,0 +1,7 @@
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(BUILD_SHARED_LIBS ON)
+set(CMAKE_AUTOMOC ON)
+
+add_subdirectory(core)
+add_subdirectory(HyTech_CAN)
+add_subdirectory(Metro)
