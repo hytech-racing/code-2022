@@ -4,5 +4,6 @@ set(CMAKE_AUTOMOC ON)
 
 add_subdirectory(CAN_sim)
 add_subdirectory(core)
+add_subdirectory(gtest)
 add_subdirectory(HyTech_CAN)
 add_subdirectory(Metro)
