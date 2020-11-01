@@ -2,7 +2,7 @@
 
 #include <queue>
 
-#include "../../../Libraries/HyTech_FlexCAN/HyTech_FlexCAN.h"
+#include "HyTech_FlexCAN.h"
 
 namespace CAN_simulator {
 	int push(const CAN_message_t& msg);
