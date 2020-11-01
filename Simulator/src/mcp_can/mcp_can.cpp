@@ -1,7 +1,7 @@
 
 #include "mcp_can.h"
-#include <CAN_sim.h>
-#include <Arduino.h>
+#include "CAN_sim.h"
+#include "Arduino.h"
 
 MCP_CAN::MCP_CAN(byte pin) {
     SPICS = pin;
