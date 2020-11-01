@@ -1,8 +1,3 @@
-/*
- * MC_read_write_parameter_command.cpp - CAN message parser: RMS Motor Controller read / write parameter command message - sent to PM
- * Created by Nathan Cheek, November 22, 2016.
- */
-
 #pragma once
 #include <string.h>
 #include <cstdint>

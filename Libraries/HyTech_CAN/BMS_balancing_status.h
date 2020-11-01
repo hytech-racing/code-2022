@@ -1,17 +1,10 @@
 /*
- * BMS_balancing_status.cpp - CAN message parser: Battery Management System balancing status message
- * Created by Nathan Cheek, March 25, 2019.
- */
-
-/*
  * 5-byte message structure from MSB to LSB
  * [3 bits: empty] [1 bit: group][9 bits: IC 4 balancing data] [9 bits: IC 3 balancing data] [9 bits: IC 2 balancing data] [9 bits: IC 1 balancing data] 
  * 
  * Structure of each IC section from MSB to LSB
  * [Cell 9 balancing] [Cell 8 balancing] [Cell 7 balancing] [Cell 6 balancing] [Cell 5 balancing] [Cell 4 balancing] [Cell 3 balancing] [Cell 2 balancing] [Cell 1 balancing]
  */
-
-// Make sure to cast things to uint64_t before doing large bit-shifts (>32 bits)
 
 #pragma once
 

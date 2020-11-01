@@ -1,8 +1,3 @@
-/*
- * MC_digital_input_status.cpp - CAN message parser: RMS Motor Controller digital input status message
- * Created by Ryan Gallaway, December 1, 2016.
- */
-
 #pragma once
 #include <string.h>
 #include <cstdint>

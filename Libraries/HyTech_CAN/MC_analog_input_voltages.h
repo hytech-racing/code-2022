@@ -1,7 +1,3 @@
-/*
- * MC_analog_input_voltages.cpp - CAN message parser: RMS Motor Controller analog input voltages message
- * Created by Ryan Gallaway, December 1, 2016.
- */
 
 #pragma once
 #include <string.h>

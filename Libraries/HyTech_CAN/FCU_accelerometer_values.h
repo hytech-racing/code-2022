@@ -1,8 +1,3 @@
-/*
- * FCU_accelerometer_values.cpp - retrieving and packaging accelerometer values via CAN
- * Created by Soohyun Kim, July 12, 2018.
- */
-
 #pragma once
 #include <string.h>
 #include <cstdint>

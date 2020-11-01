@@ -1,8 +1,3 @@
-/*
- * BMS_onboard_detailed_temperatures.cpp - CAN message parser: Battery Management System PCB onboard detailed temperatures message
- * Created by Yvonne Yeh, February 8, 2018.
- */
-
 #pragma once
 #include <string.h>
 #include <cstdint>

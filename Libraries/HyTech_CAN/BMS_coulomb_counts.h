@@ -1,8 +1,3 @@
-/*
- *BMS_coulomb_counts - CAN message parser: Battery Management System coulomb count message
- * Created by Shaan Dhawan, March 26, 2019.
- */
-
 #pragma once
 
 #include <string.h>

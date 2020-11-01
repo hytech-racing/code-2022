@@ -1,8 +1,3 @@
-/*
- * CCU_status.cpp - CAN message parser: Charger Control Unit status message
- * Created by Nathan Cheek, December 17, 2017.
- */
-
 #pragma once
 #include <string.h>
 #include <cstdint>

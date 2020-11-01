@@ -1,8 +1,3 @@
-/*
- * MCU_status.cpp - CAN message parser: Main Control Unit status message
- * Created Feb, 2019.
- */
-
 #pragma once
 #include <string.h>
 #include <cstdint>

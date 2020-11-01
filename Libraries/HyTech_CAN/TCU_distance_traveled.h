@@ -1,8 +1,3 @@
-/*
- * TCU_distance_traveled.cpp - CAN message parser: Total distance traveled
- * Created by Peter Wagstaff, March 1, 2020.
- */
-
 #pragma once
 #include <string.h>
 #include <cstdint>

@@ -1,8 +1,3 @@
-/*
- * MC_motor_position_information.cpp - CAN message parser: RMS Motor Controller motor position information message
- * Created by Nathan Cheek, November 22, 2016.
- */
-
 #pragma once
 #include <string.h>
 #include <cstdint>

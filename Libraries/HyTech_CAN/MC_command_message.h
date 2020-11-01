@@ -1,8 +1,3 @@
-/*
- * MC_command_message.cpp - CAN message parser: RMS Motor Controller command message
- * Created by Nathan Cheek, November 20, 2016.
- */
-
 #pragma once
 #include <string.h>
 #include <cstdint>

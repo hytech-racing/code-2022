@@ -1,8 +1,3 @@
-/*
- * MC_fault_codes.cpp - CAN message parser: RMS Motor Controller fault codes message
- * Created by Nathan Cheek, November 22, 2016.
- */
-
 #pragma once
 #include <string.h>
 #include <cstdint>

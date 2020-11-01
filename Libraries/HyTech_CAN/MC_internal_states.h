@@ -1,8 +1,3 @@
-/*
- * MC_internal_states.cpp - CAN message parser: RMS Motor Controller internal states message
- * Created by Nathan Cheek, November 20, 2016.
- */
-
 #pragma once
 #include <string.h>
 #include <cstdint>

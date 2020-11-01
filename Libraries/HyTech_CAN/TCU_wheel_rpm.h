@@ -1,8 +1,3 @@
-/*
- * TCU_wheel_rpm.cpp - CAN message parser: Wheel rpm sensor information message
- * Created by Nathan Cheek, November 22, 2016.
- */
-
 #pragma once
 #include <string.h>
 #include <cstdint>

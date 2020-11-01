@@ -1,8 +1,3 @@
-/*
- * MCU_GPS_readings_alpha.cpp - CAN message parser: MCU_GPS Alpha message
- * Created by Nathan Cheek, May 19, 2019.
- */
-
 #pragma once
 #include <string.h>
 #include <cstdint>

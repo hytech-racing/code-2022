@@ -1,8 +1,3 @@
-/*
- * BMS_temperatures.cpp - CAN message parser: Battery Management System temperatures message
- * Created by Shrivathsav Seshan, February 7, 2017.
- */
-
 #pragma once
 #include <string.h>
 #include <cstdint>

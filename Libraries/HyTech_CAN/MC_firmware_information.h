@@ -1,8 +1,3 @@
-/*
- * MC_firmware_information.cpp - CAN message parser: RMS Motor Controller firmware information message
- * Created by Nathan Cheek, November 23, 2016.
- */
-
 #pragma once
 #include <string.h>
 #include <cstdint>

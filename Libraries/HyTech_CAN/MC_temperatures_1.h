@@ -1,8 +1,3 @@
-/*
- * MC_temperatures_1.cpp - CAN message parser: RMS Motor Controller temperatures 1 message
- * Created by Nathan Cheek, November 22, 2016.
- */
-
 #pragma once
 #include <string.h>
 #include <cstdint>

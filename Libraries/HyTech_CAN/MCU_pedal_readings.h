@@ -1,8 +1,3 @@
-/*
- * MCU_pedal_readings.cpp - CAN message parser: Main Control Unit pedal readings message
- * Created Feb, 2019.
- */
-
 #pragma once
 #include <string.h>
 #include <cstdint>

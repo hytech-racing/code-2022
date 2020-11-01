@@ -1,8 +1,3 @@
-/*
- * MC_modulation_index_flux_weakening_output_information.cpp - CAN message parser: RMS Motor Controller modulation index & flux weakening output information message
- * Created by Ryan Gallaway, December 1, 2016.
- */
-
 #pragma once
 #include <string.h>
 #include <cstdint>

@@ -1,8 +1,3 @@
-/*
- * MC_current_information.cpp - CAN message parser: RMS Motor Controller voltage information message
- * Created by Nathan Cheek, November 20, 2016.
- */
-
 #pragma once
 #include <string.h>
 #include <cstdint>
