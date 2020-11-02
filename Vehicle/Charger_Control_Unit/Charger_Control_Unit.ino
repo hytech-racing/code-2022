@@ -66,7 +66,7 @@ void loop() {
     if (timer_update_CAN.check()) {
         ccu_status.write(tx_msg.buf);
         tx_msg.id = ID_CCU_STATUS;
-        tx_msg.len = sizeof(CAN_message_ccu_status_t);
+        tx_msg.len = sizeof(CCU_status);
         CAN.write(tx_msg);
     }
     
