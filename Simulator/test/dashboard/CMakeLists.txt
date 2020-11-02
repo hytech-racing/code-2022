@@ -1,7 +1,8 @@
 set(BINARY dashboard_test)
 set(VEHICLE_CODE ${PROJECT_SOURCE_DIR}/../Vehicle/Dashboard/Dashboard.ino)
-set_source_files_properties(${VEHICLE_CODE} PROPERTIES COMPILE_FLAGS "-x c++")
-set(TEST_SOURCES testing.cpp ${VEHICLE_CODE})
+# set_source_files_properties(${VEHICLE_CODE} PROPERTIES COMPILE_FLAGS "-x c++")
+# set(TEST_SOURCES ${VEHICLE_CODE} testing.cpp)
+set(TEST_SOURCES testing.cpp Dashboard.cpp)
 
 add_executable(${BINARY} ${TEST_SOURCES})
 
