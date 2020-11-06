@@ -41,3 +41,4 @@
 #define ID_TCU_WHEEL_RPM_REAR										0xEA
 #define ID_TCU_WHEEL_RPM_FRONT										0xEB
 #define ID_TCU_DISTANCE_TRAVELED									0xED
+#define ID_DASHBOARD_STATUS                                         0xEE

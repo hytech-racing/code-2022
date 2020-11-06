@@ -1,6 +1,6 @@
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(BUILD_SHARED_LIBS ON)
-set(CMAKE_AUTOMOC ON)
+
 
 add_subdirectory(CAN_sim)
 add_subdirectory(core)

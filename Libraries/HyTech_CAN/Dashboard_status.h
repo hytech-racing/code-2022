@@ -9,8 +9,8 @@ class Dashboard_status {
         Dashboard_status() = default;
         Dashboard_status(uint8_t buf[]){load(buf);}
 
-        void load(uint8_t buf[8]);{
-            memccpy(this,buf,sizeof(*this));
+        void load(uint8_t buf[8]){
+            memcpy(this,buf,sizeof(*this));
         }
         
         void write(uint8_t buf[8]){

@@ -25,6 +25,7 @@
 #include "BMS_temperatures.h"
 #include "BMS_voltages.h"
 #include "CCU_status.h"
+#include "Dashboard_status.h"
 #include "FCU_accelerometer_values.h"
 #include "GLV_current_readings.h"
 #include "MCU_GPS_readings.h"
