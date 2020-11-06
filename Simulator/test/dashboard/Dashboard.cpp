@@ -61,8 +61,8 @@ MCP_CAN CAN(SPI_CS);
 /*
    Global Variables
 */
-Dashboard_status dashboard_status;
-MCU_status mcu_status;
+Dashboard_status dashboard_status{};
+MCU_status mcu_status{};
 
 inline void led_update();
 inline void read_can();
@@ -83,7 +83,7 @@ void setup() {
   pinMode(LED_START, OUTPUT);
 
   //Initiallizes CAN
-  while (CAN_OK != CAN.begin(CAN_250KBPS))              // init can bus : baudrate = 250K
+  while (CAN_OK != CAN.begin(CAN_500KBPS))              // init can bus : baudrate = 250K
     {
         delay(200);
     }

@@ -12,6 +12,7 @@ byte MCP_CAN::begin(byte speed) {
         throw CustomException("CAN must use 500 kpbs baud rate");
     pinMode(SPICS, RESERVED);
     filhit = true;
+    return 0;
 }
 
 byte MCP_CAN::checkReceive(void) {
