@@ -29,6 +29,6 @@ private:
     bool rw_command;
     uint8_t reserved1;
     uint32_t data;
-} CAN_message_mc_read_write_parameter_command_t;
+};
 
 #pragma pack(pop)

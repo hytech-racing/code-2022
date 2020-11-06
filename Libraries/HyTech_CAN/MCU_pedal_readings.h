@@ -43,6 +43,6 @@ private:
     uint16_t brake_pedal_raw;
     uint8_t pedal_flags;
     uint8_t torque_map_mode;
-} CAN_message_mcu_pedal_readings_t;
+};
 
 #pragma pack(pop)
