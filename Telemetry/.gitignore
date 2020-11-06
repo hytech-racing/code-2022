@@ -1,3 +1,4 @@
 receiver
 *.o
 *.log
+__pycache__/

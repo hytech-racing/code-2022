@@ -4,41 +4,50 @@
 #include "../Libraries/XBTools/XBTools.h"
 #include <MQTTClient.h>
 
-struct {
-    uint64_t                                timestamp;
-    CAN_msg_rcu_status                      rcu_status;
-    CAN_msg_fcu_status                      fcu_status;
-    CAN_msg_fcu_readings                    fcu_readings;
-    CAN_message_bms_voltages_t              bms_voltages;
-    CAN_message_bms_detailed_voltages_t     bms_detailed_voltages;
-    CAN_message_bms_temperatures_t          bms_temperatures;
-    CAN_message_bms_detailed_temperatures_t bms_detailed_temperatures;
-    CAN_message_bms_onboard_temperatures_t  bms_onboard_temperatures;
-    CAN_message_bms_onboard_detailed_temperatures_t bms_onboard_detailed_temperatures;
-    CAN_message_bms_status_t                bms_status;
-    CAN_message_bms_balancing_status_t      bms_balancing_status;
-    CAN_message_ccu_status_t                ccu_status;
-    CAN_message_mc_temperatures_1_t         mc_temperatures_1;
-    CAN_message_mc_temperatures_2_t         mc_temperatures_2;
-    CAN_message_mc_temperatures_3_t         mc_temperatures_3;
-    CAN_message_mc_analog_input_voltages_t  mc_analog_input_voltages;
-    CAN_message_mc_digital_input_status_t   mc_digital_input_status;
-    CAN_message_mc_motor_position_information_t mc_motor_position_information;
-    CAN_message_mc_current_information_t    mc_current_information;
-    CAN_message_mc_voltage_information_t    mc_voltage_information;
-    CAN_message_mc_internal_states_t        mc_internal_states;
-    CAN_message_mc_fault_codes_t            mc_fault_codes;
-    CAN_message_mc_torque_timer_information_t mc_torque_timer_information;
-    CAN_message_mc_modulation_index_flux_weakening_output_information_t
-        mc_modulation_index_flux_weakening_output_information;
-    CAN_message_mc_firmware_information_t   mc_firmware_information;
-    CAN_message_mc_command_message_t        mc_command_message;
-    CAN_message_mc_read_write_parameter_command_t
-        mc_read_write_parameter_command;
-    CAN_message_mc_read_write_parameter_response_t
-        mc_read_write_parameter_response;
-    CAN_message_fcu_accelerometer_values_t  fcu_accelerometer_values;
-} current_status;
+typedef struct Telem_message {
+    //bool cobs_flag;
+    uint32_t msg_id;
+    uint8_t length;
+    union {
+        BMS_balancing_status                                    bms_balancing_status;
+        BMS_coulomb_counts                                      bms_coulomb_counts;
+        BMS_detailed_temperatures                               bms_detailed_temperatures;
+        BMS_detailed_voltages                                   bms_detailed_voltages;
+        BMS_onboard_detailed_temperatures                       bms_onboard_detailed_temperatures;
+        BMS_onboard_temperatures                                bms_onboard_temperatures;
+        BMS_status                                              bms_status;
+        BMS_temperatures                                        bms_temperatures;
+        BMS_voltages                                            bms_voltages;
+        CCU_status                                              ccu_status;
+        FCU_accelerometer_values                                fcu_accelerometer_values;
+        GLV_current_readings                                    glv_current_readings;
+        MCU_GPS_readings                                        mcu_gps_readings;
+        MCU_pedal_readings                                      mcu_pedal_readings;
+        MCU_status                                              mcu_status;
+        MC_analog_input_voltages                                mc_analog_input_voltages;
+        MC_command_message                                      mc_command_message;
+        MC_current_information                                  mc_current_information;
+        MC_digital_input_status                                 mc_digital_input_status;
+        MC_fault_codes                                          mc_fault_codes;
+        MC_firmware_information                                 mc_firmware_information;
+        MC_internal_states                                      mc_internal_states;
+        MC_modulation_index_flux_weakening_output_information   mc_modulation_index_flux_weakening_output_information;
+        MC_motor_position_information                           mc_motor_position_information;
+        MC_read_write_parameter_command                         mc_read_write_parameter_command;
+        MC_read_write_parameter_response                        mc_read_write_parameter_response;
+        MC_temperatures_1                                       mc_temperatures_1;
+        MC_temperatures_2                                       mc_temperatures_2;
+        MC_temperatures_3                                       mc_temperatures_3;
+        MC_torque_timer_information                             mc_torque_timer_information;
+        MC_voltage_information                                  mc_voltage_information;
+        TCU_distance_traveled                                   tcu_wheel_rpm;
+        TCU_wheel_rpm                                           tcu_distance_traveled;
+    } contents;
+    uint16_t checksum;
+} Telem_message_t;
+
+
+Telem_message_t current_status;
 
 static void process_message(uint64_t timestamp, Telem_message_t *msg)
 {

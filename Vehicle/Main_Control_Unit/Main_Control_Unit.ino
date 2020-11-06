@@ -248,7 +248,7 @@ void loop() {
         bms_coulomb_counts.set_total_charge(total_charge_amount);
         bms_coulomb_counts.set_total_discharge(total_discharge_amount);
         tx_msg.id = ID_BMS_COULOMB_COUNTS;
-        tx_msg.len = sizeof(CAN_message_bms_coulomb_counts_t);
+        tx_msg.len = sizeof(BMS_coulomb_counts);
         CAN.write(tx_msg);
     }
 
