@@ -1,4 +1,4 @@
-#include <BoardDef.h>
+#include "BoardDef.h"
 
 #ifdef HYTECH_ARDUINO_TEENSY_32
 

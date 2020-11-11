@@ -10,6 +10,7 @@ MockSerial::~MockSerial() {
         ((std::ofstream*)(fos))->close();
         delete fos;
     }
+    fos = nullptr;
 }
 
 void MockSerial::setOutputPath(std::string filepath) { fFilepath = filepath; }

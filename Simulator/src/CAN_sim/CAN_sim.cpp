@@ -20,4 +20,9 @@ namespace CAN_simulator {
 		inbox.pop();
 		return true;
 	}
+
+	void purge() {
+		inbox = std::queue<CAN_message_t>();
+		outbox = std::queue<CAN_message_t>();
+	}
 }

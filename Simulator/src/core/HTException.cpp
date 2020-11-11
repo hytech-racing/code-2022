@@ -3,7 +3,7 @@
 #include <cstring>
 
 CustomException::CustomException() {}
-CustomException::CustomException(const char* msg) { strcpy((char*) msg, this->msg); }
+CustomException::CustomException(const char* msg) { strcpy(this->msg, msg); }
 const char* CustomException::what() const throw() { return msg; }
 
 DoublePinModeException::

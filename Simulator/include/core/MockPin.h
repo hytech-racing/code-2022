@@ -12,13 +12,12 @@ class MockPin {
 public:
     MockPin();
     MockPin(int pin);
-    unsigned sim_value();
-    void sim_write(unsigned value);
-    void sim_pinMode(int mode);
-    int value();
-    void setValue(unsigned value);
-    void setInputToPullup();
-    int pinMode();
+
+    unsigned vehicle_read();
+    void vehicle_write(unsigned value);
+    void vehicle_pinMode(int mode);
+
+    friend class Simulator;
 private:
     int fPin;
     int fInputValue = -1;

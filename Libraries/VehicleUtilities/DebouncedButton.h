@@ -1,30 +1,40 @@
 #pragma once
-#include <Metro.h>
+#include "Metro.h"
+#include "Arduino.h" // ETHAN: DELET THIS
 
-typedef struct _DebouncedButton {
-    bool pressed;
-    bool debouncing;
-    Metro metro;
+class DebouncedButton {
+public:
+    DebouncedButton() : metro(0) {}
 
-    _DebouncedButton(unsigned long interval);
-    bool update(bool);
-} DebouncedButton;
-
-DebouncedButton::_DebouncedButton(unsigned long interval) : metro(interval) {
-    pressed = false;
-    debouncing = false;
-}
-
-bool DebouncedButton::update(bool reading) {
-    if (reading == pressed && !debouncing) {
-        debouncing = true;
-        metro.reset();
-    }
-    if (debouncing && reading != pressed)
+    void begin(int p, unsigned long interval, int mode = INPUT_PULLUP) {
+        pin = p;
+        pinMode(pin, mode);
+        pressed = false;
+        reading = (mode == INPUT_PULLUP);
         debouncing = false;
-    if (debouncing && metro.check()) {
-        pressed = !pressed;
+        metro = Metro(interval);
+    }
+
+    bool check() {
+        reading = digitalRead(pin);
+        if (reading == pressed && !debouncing) {
+            debouncing = true;
+            metro.reset();
+        }
+        if (debouncing && reading != pressed)
+            debouncing = false;
+        if (debouncing && metro.check()) {
+            pressed = !pressed;
+        }
         return pressed;
     }
-    return false;
-}
+
+private:
+    bool pressed;
+    bool reading;
+    bool debouncing;
+    int pin;
+    Metro metro;
+};
+
+

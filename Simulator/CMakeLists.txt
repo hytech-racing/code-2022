@@ -12,6 +12,10 @@ find_package(Threads REQUIRED)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_SRANDARD_REQUIRED ON)
 
+string(TOUPPER "${arduino}" arduino)
+message("Building simulator for board: ${arduino}")
+add_compile_options(-DHYTECH_ARDUINO_${arduino})
+
 set(SIMULATION_INC_DIR ${PROJECT_SOURCE_DIR}/include)
 set(SIMULATION_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
 
