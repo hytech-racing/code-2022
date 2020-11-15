@@ -48,6 +48,6 @@ private:
     uint8_t flags;
     int16_t temperature;
     uint16_t glv_battery_voltage;
-} CAN_message_mcu_status_t;
+};
 
 #pragma pack(pop)

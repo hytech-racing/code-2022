@@ -21,6 +21,6 @@ private:
     int16_t module_b_temperature;
     int16_t module_c_temperature;
     int16_t gate_driver_board_temperature;
-} CAN_message_mc_temperatures_1_t;
+};
 
 #pragma pack(pop)

@@ -21,6 +21,6 @@ private:
     int16_t rtd_1_temperature;
     int16_t rtd_2_temperature;
     int16_t rtd_3_temperature;
-} CAN_message_mc_temperatures_2_t;
+};
 
 #pragma pack(pop)
