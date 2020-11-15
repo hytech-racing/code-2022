@@ -1,2 +1,2 @@
 add_library(VEHICLE_UTILITIES INTERFACE)
-target_include_directories(VEHICLE_UTILITIES INTERFACE ${PROJECT_SOURCE_DIR}/../Libraries/VehicleUtilities)
+target_include_directories(VEHICLE_UTILITIES INTERFACE ${SIMULATION_INC_DIR}/VehicleUtilities)
