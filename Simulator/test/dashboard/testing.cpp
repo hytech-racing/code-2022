@@ -28,21 +28,52 @@ protected:
 	}	
 };
 
-TEST_F(DashboardTesting, First){
+TEST_F(DashboardTesting, Startup){
 	Simulator simulator (100);
 	CAN_message_t msg;
 
-	delay(100);
 	simulator.next();
 	ASSERT_TRUE(CAN_simulator::get(msg));
 	ASSERT_EQ(msg.id,ID_DASHBOARD_STATUS);
 	Dashboard_status status;
 	status.load(msg.buf);
 	EXPECT_EQ(status.get_button_flags(),0);
+	ASSERT_EQ(status.get_led_flags(),3); //On startup all MC Status flags are 0, which cause the AMS and IMD LED flags to go to 1 which sets the flags to 00000011
+}
+
+TEST_F(DashboardTesting, MarkButton){
+	Simulator simulator;
+	CAN_message_t msg;
+	Dashboard_status status;
+
+	//Press Mark, Check, Press Mark, Check
+	simulator.digitalWrite(BTN_MARK, 0);
+
+	simulator.next();
+	delay(50);
+	simulator.next();
+	delay(50);
+	simulator.next();
+
+	CAN_simulator::get(msg);
+	status.load(msg.buf);
+	EXPECT_EQ(status.get_button_flags(),1);
+	EXPECT_EQ(status.get_led_flags(),3);
+	simulator.digitalWrite(BTN_MARK, 0);
+
+	simulator.next();
+	delay(50);
+	simulator.next();
+	delay(50);
+	simulator.next();
+
+	CAN_simulator::get(msg);
+	status.load(msg.buf);
+	EXPECT_EQ(status.get_button_flags(),0);
 	EXPECT_EQ(status.get_led_flags(),3);
 }
 
-TEST_F(DashboardTesting, Second){
+TEST_F(DashboardTesting, Third){
 	Simulator simulator;
 	CAN_message_t msg;
 

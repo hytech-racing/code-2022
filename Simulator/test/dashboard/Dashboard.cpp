@@ -61,12 +61,14 @@ void loop() {
  	//Send CAN message
   	if(timer_can_update.check()){ //Timer to ensure dashboard isn't flooding data bus
 		//create message to send
+		
 		byte msg[8];
 		dashboard_status.write(msg);
 		byte sndStat = CAN.sendMsgBuf(ID_DASHBOARD_STATUS, 0, 8, msg);
 
 		//rest update timer
 		timer_can_update.reset();
+		//Serial.println(millis());
   	}
 }
 
