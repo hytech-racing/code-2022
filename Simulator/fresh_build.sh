@@ -2,6 +2,5 @@
 rm -r build
 mkdir build
 cd build/
-cmake ../ -Darduino=UNO
+cmake ../ -Darduino=$1
 make
-

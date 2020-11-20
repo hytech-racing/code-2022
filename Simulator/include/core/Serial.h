@@ -1,10 +1,11 @@
 #pragma once
 
-#include <MockPin.h>
-#include <HTException.h>
+#include <bitset>
 #include <fstream>
 #include <sstream>
-#include <bitset>
+
+#include "HTException.h"
+#include "MockPin.h"
 
 #define HEX 16
 
@@ -25,7 +26,7 @@ private:
     int fId;
     std::string fFilepath;
     std::ostream *fos = nullptr;
-    inline void validate() { if (!fos) throw InvalidPinConfigurationException(-1, OUTPUT, -1); }
+    inline void validate() { if (!fos) throw InvalidPinConfigurationException(-1, OUTPUT, UNUSED); }
 
     template <typename T> inline std::stringstream format(T value, int base) {
         std::stringstream ss;
