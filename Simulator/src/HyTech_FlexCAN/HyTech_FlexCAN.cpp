@@ -69,7 +69,7 @@ int FlexCAN::write(const CAN_message_t &msg) {
 	CAN_simulator::vehicle_outbox.push(msg); 
 
 	#ifdef HYTECH_ARDUINO_TEENSY_35
-	    if (FLEXCAN0_MCR != 0xFFFDFFFF)
+	    if (FLEXCAN0_MCR == 0xFFFDFFFF)
 			CAN_simulator::vehicle_inbox.write(msg);
 	#endif
 
