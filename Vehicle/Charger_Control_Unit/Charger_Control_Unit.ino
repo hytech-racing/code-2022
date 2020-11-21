@@ -15,8 +15,14 @@
 #define THERMISTORS_PER_IC 3            // Number of cell thermistors per IC
 #define PCB_THERM_PER_IC 2              // Number of PCB thermistors per IC
 
-#define CHARGE_ENABLE 0
-#define POWER 8
+#define CHARGE_ENABLE 11
+#define SHUTDOWN_B 8
+#define SHUTDOWN_C 9
+#define SHUTDOWN_D 10
+#define SOFTWARE_SHUTDOWN 12
+
+#define LED A8
+
 
 CCU_status ccu_status;
 
@@ -35,11 +41,18 @@ static CAN_message_t tx_msg;
 FlexCAN CAN(500000);
 
 Metro timer_update_CAN = Metro(100);
-Metro timer_update_serial = Metro(500);
+Metro timer_update_serial = Metro(1000);
 
 void setup() {
-    pinMode(POWER, OUTPUT);
-    digitalWrite(POWER, HIGH);
+    pinMode(LED, OUTPUT);
+    digitalWrite(LED, HIGH);
+
+    pinMode(SHUTDOWN_B, INPUT);
+    pinMode(SHUTDOWN_C, INPUT);
+    pinMode(SHUTDOWN_D, INPUT);
+
+    pinMode(SOFTWARE_SHUTDOWN, OUTPUT);
+    digitalWrite(SOFTWARE_SHUTDOWN, HIGH);
 
     Serial.begin(115200);
     CAN.begin();
@@ -74,6 +87,10 @@ void loop() {
         Serial.print("BMS state: ");
         Serial.println(bms_status.get_state());
     }
+    
+    check_shutdown_signals();
+    
+    delay(10);
 }
 
 void print_cells() {
@@ -200,4 +217,22 @@ void parse_can_message() {
             bms_balancing_status[temp.get_group_id()].load(rx_msg.buf);
         }
     }
+}
+
+void check_shutdown_signals() {
+  int shutdown_b = digitalRead(SHUTDOWN_B);
+  int shutdown_c = digitalRead(SHUTDOWN_C);
+  int shutdown_d = digitalRead(SHUTDOWN_D);
+
+  if(shutdown_b == 0 || shutdown_c == 0) {
+    digitalWrite(SOFTWARE_SHUTDOWN, LOW);
+    digitalWrite(CHARGE_ENABLE, LOW);
+  }
+  
+  Serial.print("SHUTDOWN B: ");
+  Serial.println(digitalRead(SHUTDOWN_B));
+  Serial.print("SHUTDOWN C: ");
+  Serial.println(digitalRead(SHUTDOWN_C));
+  Serial.print("SHUTDOWN D: ");
+  Serial.println(digitalRead(SHUTDOWN_D));
 }
