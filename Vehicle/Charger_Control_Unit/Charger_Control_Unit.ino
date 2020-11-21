@@ -36,6 +36,8 @@ BMS_onboard_detailed_temperatures bms_onboard_detailed_temperatures[TOTAL_IC];
 BMS_onboard_temperatures bms_onboard_temperatures;
 BMS_balancing_status bms_balancing_status[(TOTAL_IC + 3) / 4]; // Round up TOTAL_IC / 4 since data from 4 ICs can fit in a single message
 
+int charge_state = 0;
+
 static CAN_message_t rx_msg;
 static CAN_message_t tx_msg;
 FlexCAN CAN(500000);
@@ -50,6 +52,11 @@ void setup() {
     pinMode(SHUTDOWN_B, INPUT);
     pinMode(SHUTDOWN_C, INPUT);
     pinMode(SHUTDOWN_D, INPUT);
+
+    //for testing only
+    pinMode(CHARGE_ENABLE, OUTPUT);
+    charge_state = 0;
+    digitalWrite(CHARGE_ENABLE, charge_state);
 
     pinMode(SOFTWARE_SHUTDOWN, OUTPUT);
     digitalWrite(SOFTWARE_SHUTDOWN, HIGH);
@@ -209,7 +216,8 @@ void parse_can_message() {
         if (rx_msg.id == ID_BMS_STATUS) {
             bms_status = BMS_status(rx_msg.buf);
             ccu_status.set_charger_enabled(bms_status.get_state() == BMS_STATE_CHARGING);
-            digitalWrite(CHARGE_ENABLE, ccu_status.get_charger_enabled());
+            charge_state = ccu_status.get_charger_enabled();
+            digitalWrite(CHARGE_ENABLE, charge_state);
         }
 
         if (rx_msg.id == ID_BMS_BALANCING_STATUS) {
@@ -226,7 +234,8 @@ void check_shutdown_signals() {
 
   if(shutdown_b == 0 || shutdown_c == 0) {
     digitalWrite(SOFTWARE_SHUTDOWN, LOW);
-    digitalWrite(CHARGE_ENABLE, LOW);
+    charge_state = 0;
+    digitalWrite(CHARGE_ENABLE, charge_state);
   }
   
   Serial.print("SHUTDOWN B: ");
@@ -235,4 +244,6 @@ void check_shutdown_signals() {
   Serial.println(digitalRead(SHUTDOWN_C));
   Serial.print("SHUTDOWN D: ");
   Serial.println(digitalRead(SHUTDOWN_D));
+  Serial.print("CHARGE ENABLE: ");
+  Serial.println(digitalRead(CHARGE_ENABLE));
 }
