@@ -237,13 +237,4 @@ void check_shutdown_signals() {
     charge_state = 0;
     digitalWrite(CHARGE_ENABLE, charge_state);
   }
-  
-  Serial.print("SHUTDOWN B: ");
-  Serial.println(digitalRead(SHUTDOWN_B));
-  Serial.print("SHUTDOWN C: ");
-  Serial.println(digitalRead(SHUTDOWN_C));
-  Serial.print("SHUTDOWN D: ");
-  Serial.println(digitalRead(SHUTDOWN_D));
-  Serial.print("CHARGE ENABLE: ");
-  Serial.println(digitalRead(CHARGE_ENABLE));
 }
