@@ -1,11 +1,4 @@
-#include "CAN_sim.h"
-#include "Dashboard.h"
-#include "DebouncedButton.h"
-#include "gtest/gtest.h"
-#include "HyTech_CAN.h"
-#include "mcp_can.h"
-#include "Simulator.h"
-#include "VariableLED.h"
+
 
 class DashboardTesting : public ::testing::Test {
 protected:
@@ -34,7 +27,7 @@ TEST_F(DashboardTesting, Startup){
 	CAN_message_t msg;
 
 	simulator.next();
-	ASSERT_TRUE(CAN_simulator::get(msg));
+	ASSERT_TRUE(CAN_simulator::read(msg));
 	ASSERT_EQ(msg.id,ID_DASHBOARD_STATUS);
 	Dashboard_status status;
 	status.load(msg.buf);
@@ -57,26 +50,250 @@ TEST_F(DashboardTesting, MarkButton){
 	delay(51);
 	simulator.next();
 
-	ASSERT_TRUE(CAN_simulator::get(msg));
-	ASSERT_EQ(msg.id,ID_DASHBOARD_STATUS);
+	CAN_simulator::read(msg);
 	status.load(msg.buf);
 	EXPECT_EQ(status.get_button_flags(),1);
 	EXPECT_EQ(status.get_led_flags(),3);
 	simulator.digitalWrite(BTN_MARK, 0);
 
+	simulator.next();
+	delay(50);
+	simulator.next();
+	delay(50);
+	simulator.next();
+
+	CAN_simulator::read(msg);
+	status.load(msg.buf);
+	EXPECT_EQ(status.get_button_flags(),0);
+	EXPECT_EQ(status.get_led_flags(),3);
+}
+
+TEST_F(DashboardTesting, ModeButton){
+	Simulator simulator;
+	CAN_message_t msg;
+	Dashboard_status status;
+
+	//Press Mode, Check, Press Mode, Check
+	simulator.digitalWrite(BTN_MODE, 0);
+
+	simulator.next();
+	delay(50);
+	simulator.next();
+	delay(50);
+	simulator.next();
+
+	CAN_simulator::read(msg);
+	status.load(msg.buf);
+	EXPECT_EQ(status.get_button_flags(),2);
+	EXPECT_EQ(status.get_led_flags(),3);
+	simulator.digitalWrite(BTN_MODE, 0);
+
+	simulator.next();
+	delay(50);
+	simulator.next();
+	delay(50);
+	simulator.next();
+
+	CAN_simulator::read(msg);
+	status.load(msg.buf);
+	EXPECT_EQ(status.get_button_flags(),0);
+	EXPECT_EQ(status.get_led_flags(),3);
+}
+
+TEST_F(DashboardTesting, MC_CycleButton){
+	Simulator simulator;
+	CAN_message_t msg;
+	Dashboard_status status;
+
+	//Press MC Cycle, Check, Press MC Cycle, Check
+	simulator.digitalWrite(BTN_MC_CYCLE, 0);
+
+	simulator.next();
+	delay(50);
+	simulator.next();
+	delay(50);
+	simulator.next();
+
+	CAN_simulator::read(msg);
+	status.load(msg.buf);
+	EXPECT_EQ(status.get_button_flags(),4);
+	EXPECT_EQ(status.get_led_flags(),3);
+	simulator.digitalWrite(BTN_MC_CYCLE, 0);
+
+	simulator.next();
+	delay(50);
+	simulator.next();
+	delay(50);
+	simulator.next();
+
+	CAN_simulator::read(msg);
+	status.load(msg.buf);
+	EXPECT_EQ(status.get_button_flags(),0);
+	EXPECT_EQ(status.get_led_flags(),3);
+}
+
+TEST_F(DashboardTesting, StartButton){
+	Simulator simulator;
+	CAN_message_t msg;
+	Dashboard_status status;
+
+	//Press Start, Check, Press Start, Check
+	simulator.digitalWrite(BTN_START, 0);
+
+	simulator.next();
+	delay(50);
+	simulator.next();
+	delay(50);
+	simulator.next();
+
+	CAN_simulator::read(msg);
+	status.load(msg.buf);
+	EXPECT_EQ(status.get_button_flags(),8);
+	EXPECT_EQ(status.get_led_flags(),3);
+	simulator.digitalWrite(BTN_START, 0);
+
+	simulator.next();
+	delay(50);
+	simulator.next();
+	delay(50);
+	simulator.next();
+
+	CAN_simulator::read(msg);
+	status.load(msg.buf);
+	EXPECT_EQ(status.get_button_flags(),0);
+	EXPECT_EQ(status.get_led_flags(),3);
+}
+
+TEST_F(DashboardTesting, ExtraButton){
+	Simulator simulator;
+	CAN_message_t msg;
+	Dashboard_status status;
+
+	//Press Extra, Check, Press Extra, Check
+	simulator.digitalWrite(BTN_EXTRA, 0);
+
+	simulator.next();
+	delay(50);
+	simulator.next();
+	delay(50);
+	simulator.next();
+
+	CAN_simulator::read(msg);
+	status.load(msg.buf);
+	EXPECT_EQ(status.get_button_flags(),16);
+	EXPECT_EQ(status.get_led_flags(),3);
+	simulator.digitalWrite(BTN_EXTRA, 0);
+
+	simulator.next();
+	delay(50);
+	simulator.next();
+	delay(50);
+	simulator.next();
+
+	CAN_simulator::read(msg);
+	status.load(msg.buf);
+	EXPECT_EQ(status.get_button_flags(),0);
+	EXPECT_EQ(status.get_led_flags(),3);
+}
+
+
+//All Buttons Down
+TEST_F(DashboardTesting, AllButtonsDown){
+	Simulator simulator;
+	CAN_message_t msg;
+	Dashboard_status status;
+
+	//Press All Buttons
 	simulator.digitalWrite(BTN_MARK, 0);
 	simulator.next();
 	delay(50);
 	simulator.digitalWrite(BTN_MARK, 1);
 	simulator.next();
-	delay(51);
+	delay(50);
 	simulator.next();
-	ASSERT_TRUE(CAN_simulator::get(msg));
-	ASSERT_EQ(msg.id,ID_DASHBOARD_STATUS);
+
+	CAN_simulator::read(msg);
+	status.load(msg.buf);
+	EXPECT_EQ(status.get_button_flags(),31);
+	EXPECT_EQ(status.get_led_flags(),3);
+	simulator.digitalWrite(BTN_MARK, 0);
+	simulator.digitalWrite(BTN_MODE, 0);
+	simulator.digitalWrite(BTN_MC_CYCLE, 0);
+	simulator.digitalWrite(BTN_START, 0);
+	simulator.digitalWrite(BTN_EXTRA, 0);
+
+	simulator.next();
+	delay(50);
+	simulator.next();
+	delay(50);
+	simulator.next();
+
+	CAN_simulator::read(msg);
+	status.load(msg.buf);
+	EXPECT_EQ(status.get_button_flags(),0);
+	EXPECT_EQ(status.get_led_flags(),3);
+}
+
+
+//Cycle Through Buttons
+TEST_F(DashboardTesting, CycleThroughButtons){
+	Simulator simulator;
+	CAN_message_t msg;
+	Dashboard_status status;
+
+	//Press Mark, Check, Press Mark, Check
+	simulator.digitalWrite(BTN_MARK, 0);
+
+	simulator.next();
+	delay(50);
+	simulator.next();
+	delay(50);
+	simulator.next();
+
+	CAN_simulator::read(msg);
 	status.load(msg.buf);
 	EXPECT_EQ(status.get_button_flags(),1);
 	EXPECT_EQ(status.get_led_flags(),3);
 	simulator.digitalWrite(BTN_MARK, 0);
+
+	simulator.next();
+	delay(50);
+	simulator.next();
+	delay(50);
+	simulator.next();
+
+	CAN_simulator::read(msg);
+	status.load(msg.buf);
+	EXPECT_EQ(status.get_button_flags(),0);
+	EXPECT_EQ(status.get_led_flags(),3);
+	simulator.next();
+
+
+	//Press Mode
+	simulator.digitalWrite(BTN_MODE, 0);
+
+	simulator.next();
+	delay(50);
+	simulator.next();
+	delay(50);
+	simulator.next();
+
+	CAN_simulator::read(msg);
+	status.load(msg.buf);
+	EXPECT_EQ(status.get_button_flags(),2);
+	EXPECT_EQ(status.get_led_flags(),3);
+	simulator.digitalWrite(BTN_MODE, 0);
+
+	simulator.next();
+	delay(50);
+	simulator.next();
+	delay(50);
+	simulator.next();
+
+	CAN_simulator::read(msg);
+	status.load(msg.buf);
+	EXPECT_EQ(status.get_button_flags(),0);
+	EXPECT_EQ(status.get_led_flags(),3);
 }
 
 
@@ -91,7 +308,7 @@ TEST_F(DashboardTesting, LEDTest){
 
 
 	//Nothing should happen to LEDs on Startup
-	CAN_simulator::get(msg);
+	CAN_simulator::read(msg);
 	status.load(msg.buf);
 	EXPECT_EQ(status.get_led_flags(),3);
 
@@ -110,7 +327,7 @@ TEST_F(DashboardTesting, LEDTest){
 	delay(50);
 	simulator.next();
 
-	CAN_simulator::get(msg);
+	CAN_simulator::read(msg);
 	status.load(msg.buf);
 	EXPECT_EQ(status.get_button_flags(),0);
 	EXPECT_EQ(status.get_led_flags(),2);
@@ -126,7 +343,7 @@ TEST_F(DashboardTesting, Third){
 	simulator.next();
 	delay(100);
 	simulator.next();
-	ASSERT_TRUE(CAN_simulator::get(msg));
+	ASSERT_TRUE(CAN_simulator::read(msg));
 	ASSERT_EQ(msg.id,ID_DASHBOARD_STATUS);
 	Dashboard_status status;
 	status.load(msg.buf);

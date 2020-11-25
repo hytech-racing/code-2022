@@ -1,5 +1,5 @@
+#include "CAN_simulator.h"
 #include "HyTech_FlexCAN.h"
-#include "CAN_sim.h"
 #include "Interrupts.h"
 
 inline void setBase(uint32_t& packed, int tx, int rx) { packed = tx << 16 | rx; }
@@ -38,11 +38,6 @@ void FlexCAN::begin(const CAN_filter_t &mask) {
 		if (interruptsEnabled && FLEXCAN0_IMASK1 != FLEXCAN_IMASK1_BUF5M && interruptsEnabled)
 			throw CustomException("If interrupts enabled, Teensy 3.2 requires FLEXCAN0_IMASK1 = FLEXCAN_IMASK1_BUF5M");
 	#endif
-
-	#ifdef HYTECH_ARDUINO_TEENSY_35
-	    if (FLEXCAN0_MCR != 0xFFFDFFFF)
-			throw CustomException("Teensy 3.5 expects CAN self-reception enabled (FLEXCAN0_MCR = 0xFFFDFFFF)");
-	#endif
 }
 
 void FlexCAN::setFilter(const CAN_filter_t &filter, uint8_t n) {
@@ -63,7 +58,7 @@ void FlexCAN::setFilter(const CAN_filter_t &filter, uint8_t n) {
 void FlexCAN::end(void) { 
 	int txPin, rxPin;
 	getBase(flexcanBase, txPin, rxPin);
-	pinMode(txPin, -1); pinMode(rxPin, -1); 
+	pinMode(txPin, UNUSED); pinMode(rxPin, UNUSED); 
 }
 
 int FlexCAN::available(void) { return true; }
@@ -71,7 +66,13 @@ int FlexCAN::available(void) { return true; }
 int FlexCAN::write(const CAN_message_t &msg) { 
 	if (defaultMask.id == ~0u) 
 		throw CustomException("CAN configuration not valid");
-	CAN_simulator::outbox.push(msg); 
+	CAN_simulator::vehicle_outbox.push(msg); 
+
+	#ifdef HYTECH_ARDUINO_TEENSY_35
+	    if (FLEXCAN0_MCR == 0xFFFDFFFF)
+			CAN_simulator::vehicle_inbox.write(msg);
+	#endif
+
 	return true;
 }
 
@@ -79,7 +80,7 @@ int FlexCAN::read(CAN_message_t &msg) {
 	if (defaultMask.id == ~0u) 
 		throw CustomException("CAN configuration not valid");
 	do {
-		if (!CAN_simulator::sim_read(msg))
+		if (!CAN_simulator::vehicle_read(msg))
 			return false; 
 	} while (msg.rtr == defaultMask.rtr && msg.id == defaultMask.id && msg.ext == defaultMask.ext);
 	return true;

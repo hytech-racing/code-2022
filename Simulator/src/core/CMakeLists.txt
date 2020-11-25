@@ -1,6 +1,5 @@
 set(CORE_INC_DIR ${SIMULATION_INC_DIR}/core)
-set(CORE_SRC Arduino.cpp
-             HTException.cpp
+set(CORE_SRC HTException.cpp
              Interrupts.cpp
              MockPin.cpp
              Simulator.cpp

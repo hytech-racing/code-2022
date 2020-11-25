@@ -1,6 +1,7 @@
-#include <Arduino.h>
 #include <iostream>
-#include <HTException.h>
+
+#include "Arduino.h"
+#include "HTException.h"
 #include "Serial.h"
 
 MockSerial::MockSerial(int id) { fId = id; }

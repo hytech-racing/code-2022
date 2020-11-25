@@ -1,8 +1,9 @@
 #pragma once
 
-#include "fstream"
-#include "string"
+#include <fstream>
+#include <string>
 
+#define UNUSED -1
 #define INPUT 0
 #define OUTPUT 1
 #define INPUT_PULLUP 2
@@ -22,7 +23,7 @@ private:
     int fPin;
     int fInputValue = -1;
     int fOutputValue = -1;
-    int fMode = -1;
+    int fMode = UNUSED;
 };
 
 std::string decodePinMode(int mode);

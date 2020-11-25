@@ -1,6 +1,6 @@
 #include "Arduino.h"
-#include "MockPin.h"
 #include "HTException.h"
+#include "MockPin.h"
 
 inline bool isInput(int pinMode) { return (pinMode & 1) == INPUT; }
 
@@ -29,14 +29,14 @@ void MockPin::vehicle_write(unsigned value) {
 }
 
 void MockPin::vehicle_pinMode(int mode) {
-    if (fMode != -1)
+    if (fMode != UNUSED)
         throw DoublePinModeException(fPin, fMode, mode);
     fMode = mode;
 }
 
 std::string decodePinMode(int mode) {
     switch(mode) {
-        case -1: return "__NOT_INITIALIZED__";
+        case UNUSED: return "UNUSED";
         case INPUT: return "INPUT";
         case OUTPUT: return "OUTPUT";
         case INPUT_PULLUP: return "INPUT_PULLUP";

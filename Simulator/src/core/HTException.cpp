@@ -1,6 +1,7 @@
+#include <cstring>
+
 #include "HTException.h"
 #include "MockPin.h"
-#include <cstring>
 
 CustomException::CustomException() {}
 CustomException::CustomException(const char* msg) { strcpy(this->msg, msg); }
