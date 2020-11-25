@@ -57,15 +57,16 @@ void loop() {
 	read_can();
 	led_update();
 	btn_update();
-
+	byte previous_msg[8];
+	byte new_msg[8];
+	dashboard_status.write(new_msg);
  	//Send CAN message
-  	if(timer_can_update.check() && debounced_btn_mark.check()
-	  &&debounced_btn_mode.check()&&debounced_btn_mc_cycle.check()
-	  &&debounced_btn_start.check()&&debounced_btn_extra.check()){ //Timer to ensure dashboard isn't flooding data bus, also fires after a button is pressed
+  	if(timer_can_update.check()||previous_msg!=new_msg){ //Timer to ensure dashboard isn't flooding data bus, also fires after a button is pressed
 		//create message to send
 		
 		byte msg[8];
 		dashboard_status.write(msg);
+		dashboard_status.write(previous_msg);
 		byte sndStat = CAN.sendMsgBuf(ID_DASHBOARD_STATUS, 0, 8, msg);
 
 		//rest update timer
@@ -107,11 +108,17 @@ inline void led_update(){
 }
 
 inline void btn_update(){
-	dashboard_status.set_mark_btn(debounced_btn_mark.check());
-	dashboard_status.set_mode_btn(debounced_btn_mode.check());
-	dashboard_status.set_mc_cycle_btn(debounced_btn_mc_cycle.check());
-	dashboard_status.set_start_btn(debounced_btn_start.check());
-	dashboard_status.set_extra_btn(debounced_btn_extra.check());
+	// dashboard_status.set_mark_btn(debounced_btn_mark.check());
+	// dashboard_status.set_mode_btn(debounced_btn_mode.check());
+	// dashboard_status.set_mc_cycle_btn(debounced_btn_mc_cycle.check());
+	// dashboard_status.set_start_btn(debounced_btn_start.check());
+	// dashboard_status.set_extra_btn(debounced_btn_extra.check());
+	if(debounced_btn_mark.check()){dashboard_status.toggle_mark_btn();}
+	if(debounced_btn_mode.check()){dashboard_status.toggle_mode_btn();}
+	if(debounced_btn_mc_cycle.check()){dashboard_status.toggle_mc_cycle_btn();}
+	if(debounced_btn_start.check()){dashboard_status.toggle_start_btn();}
+	if(debounced_btn_extra.check()){dashboard_status.toggle_extra_btn();}
+
 }
 
 inline void read_can(){
