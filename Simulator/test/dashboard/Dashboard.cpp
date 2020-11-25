@@ -59,7 +59,9 @@ void loop() {
 	btn_update();
 
  	//Send CAN message
-  	if(timer_can_update.check()){ //Timer to ensure dashboard isn't flooding data bus
+  	if(timer_can_update.check() && debounced_btn_mark.check()
+	  &&debounced_btn_mode.check()&&debounced_btn_mc_cycle.check()
+	  &&debounced_btn_start.check()&&debounced_btn_extra.check()){ //Timer to ensure dashboard isn't flooding data bus, also fires after a button is pressed
 		//create message to send
 		
 		byte msg[8];
@@ -105,16 +107,11 @@ inline void led_update(){
 }
 
 inline void btn_update(){
-	if(debounced_btn_mark.check())
-		dashboard_status.toggle_mark_btn();
-	if(debounced_btn_mode.check())
-		dashboard_status.toggle_mode_btn();
-	if(debounced_btn_mc_cycle.check())
-		dashboard_status.toggle_mc_cycle_btn();
-	if(debounced_btn_start.check())
-		dashboard_status.toggle_start_btn();
-	if(debounced_btn_extra.check())
-		dashboard_status.toggle_extra_btn();
+	dashboard_status.set_mark_btn(debounced_btn_mark.check());
+	dashboard_status.set_mode_btn(debounced_btn_mode.check());
+	dashboard_status.set_mc_cycle_btn(debounced_btn_mc_cycle.check());
+	dashboard_status.set_start_btn(debounced_btn_start.check());
+	dashboard_status.set_extra_btn(debounced_btn_extra.check());
 }
 
 inline void read_can(){
