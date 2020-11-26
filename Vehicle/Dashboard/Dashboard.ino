@@ -55,17 +55,19 @@ void loop() {
     read_can();
     led_update();
     btn_update();
-    static uint8_t prev_buttons{}, curr_buttons{};
+    static uint8_t prev_buttons{}, curr_buttons{}, temp_buttons{};
     prev_buttons = curr_buttons;
     curr_buttons = dashboard_status.get_button_flags();
+    temp_buttons = curr_buttons & (curr_buttons ^ prev_buttons);
     //Send CAN message
     //Timer to ensure dashboard isn't flooding data bus, also fires after a button is pressed
     // How does the check for button press work
     // the xor against previous buttons removes the button flags that were sent previously
     // the and enforces that only buttons that are currently pressed are allowed to be sent
-    if(timer_can_update.check() || (curr_buttons & (curr_buttons ^ prev_buttons))){
+    if(timer_can_update.check() || (temp_buttons)){
         //create message to send
         static byte msg[8] = {0};
+        dashboard_status.set_button_flags(temp_buttons);
         dashboard_status.write(msg);
         CAN.sendMsgBuf(ID_DASHBOARD_STATUS, 0, sizeof(dashboard_status), msg);
         //rest update timer
