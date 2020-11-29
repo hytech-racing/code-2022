@@ -10,14 +10,17 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_SRANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 string(TOUPPER "${arduino}" arduino)
-message("Building simulator for board: ${arduino}")
 add_compile_options(-DHYTECH_ARDUINO_${arduino})
 
 set(SIMULATION_INC_DIR ${PROJECT_SOURCE_DIR}/include)
 set(SIMULATION_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
+set(VEHICLE_DIR ${PROJECT_SOURCE_DIR}/../Vehicle)
+
+
+### ADD NEW TEST FOLDERS HERE ###
 
 add_subdirectory(src)
 add_subdirectory(test)

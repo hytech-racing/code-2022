@@ -66,7 +66,7 @@ int FlexCAN::available(void) { return true; }
 int FlexCAN::write(const CAN_message_t &msg) { 
 	if (defaultMask.id == ~0u) 
 		throw CustomException("CAN configuration not valid");
-	CAN_simulator::vehicle_outbox.push(msg); 
+	CAN_simulator::vehicle_write(msg); 
 
 	#ifdef HYTECH_ARDUINO_TEENSY_35
 	    if (FLEXCAN0_MCR == 0xFFFDFFFF)

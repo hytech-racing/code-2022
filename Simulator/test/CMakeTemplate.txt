@@ -1,0 +1,20 @@
+######################## Fill in the following values ########################
+
+set(BINARY        <name>   )  # Name of testing output executable
+set(VEHICLE_CODE  <path>   )  # Path to .ino file (relative to '/Vehicle')
+set(TEST_SOURCES  <tests>  )  # Space-separated list of test source files
+set(CODE_DEPS     <modules>)  # Space-separated list of library dependencies
+                              # Always included: GTEST, CORE, CAN_SIMULATOR
+
+################### Do not change anything past this point ###################
+
+set(VEHICLE_CODE ${VEHICLE_DIR}/${VEHICLE_CODE})
+set_source_files_properties(${VEHICLE_CODE} PROPERTIES LANGUAGE CXX)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  add_definitions("-x c++")
+endif()
+
+add_executable(${BINARY} ${VEHICLE_CODE} ${TEST_SOURCES})
+target_link_libraries(${BINARY} PUBLIC GTEST CORE CAN_SIMULATOR ${CODE_DEPS})
+
+################################ End template ################################

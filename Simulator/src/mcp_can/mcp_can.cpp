@@ -31,7 +31,7 @@ byte MCP_CAN::sendMsgBuf(unsigned long id, byte ext, byte len, byte *buf) {
     msg.ext = ext;
     msg.len = len;
     memcpy(msg.buf, buf, len);
-    CAN_simulator::vehicle_outbox.push(msg);
+    CAN_simulator::vehicle_write(msg);
     return true;
 }
 
