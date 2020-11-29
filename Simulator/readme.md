@@ -17,7 +17,7 @@ Note about dos2unix: Git encodes end-of-line characters using CRLF (`'\r\n'`). M
 
 If running `fresh_build` causes an illegal-character error, run `dos2unix fresh_build` to fix line endings.
 
-To build the simulator, run 
+To build the simulator, run
 
 `./fresh_build <board>`
 
@@ -31,7 +31,7 @@ where `<board>` represents the specific microcontroller version for which test c
 
 # Writing Test Cases
 
-Test cases should be added to the [test](./test) subfolder. Tests are written using the [GoogleTest C++ Testing Framework](https://github.com/google/googletest/blob/master/googletest/docs/primer.md). This readme will not cover GTest in detail. 
+Test cases should be added to the [test](./test) subfolder. Tests are written using the [GoogleTest C++ Testing Framework](https://github.com/google/googletest/blob/master/googletest/docs/primer.md). This readme will not cover GTest in detail.
 
 Due to the nature of Arduino, note that global variables do not reset to their default states between tests. As such, it is important to define a teardown class to reset internal states.
 
@@ -54,7 +54,7 @@ protected:
 		CAN = MCP_CAN(SPI_CS);
 		dashboard_status = {};
 		mcu_status = {};
-	}	
+	}
 };
 ```
 
