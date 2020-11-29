@@ -1,6 +1,6 @@
 #pragma once
 #include <string.h>
-#include <cstdint>
+#include <stdint.h>
 
 #pragma pack(push,1)
 
