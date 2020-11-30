@@ -33,13 +33,13 @@ where `<board>` represents the specific microcontroller version for which test c
 
 Test cases should be added to the [test](./test) subfolder. Tests are written using the [GoogleTest C++ Testing Framework](https://github.com/google/googletest/blob/master/googletest/docs/primer.md). This readme will not cover GTest in detail.
 
-Due to the nature of Arduino, note that global variables do not reset to their default states between tests. As such, it is important to define a teardown class to reset internal states.
+Due to the nature of Arduino, note that global variables do not reset to their default states between tests. As such, it is important to define a SetUp method in a Testing Framework class to reset internal states.
 
 ```C++
 class DashboardTesting : public ::testing::Test {
 protected:
 	DashboardTesting () = default;
-	void TearDown() {
+	void SetUp() {
 		extern bool is_mc_err;
 		extern VariableLED variable_led_start;
 		extern Metro timer_can_update;
@@ -58,7 +58,7 @@ protected:
 };
 ```
 
-To utilize the teardown class, test headers must be declared using `TEST_F` instead of `TEST`
+To utilize the setup class, test headers must be declared using `TEST_F` instead of `TEST`
 
 `TEST_F(DashboardTesting, <TEST NAME>) { ... }`
 

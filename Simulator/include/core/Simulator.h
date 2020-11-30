@@ -29,6 +29,6 @@ public:
     friend void delay (unsigned long long time);
 private:
     static unsigned long long sys_time;
-    const unsigned long long LOOP_PERIOD;
+    unsigned long long LOOP_PERIOD;
     static MockPin* io;
 };

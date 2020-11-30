@@ -66,15 +66,15 @@ void loop() {
     // the and enforces that only buttons that are currently pressed are allowed to be sent
     if(timer_can_update.check() || (temp_buttons)){
         //create message to send
-        static byte msg[8] = {0};
+        static uint8_t msg[8] = {0};
         dashboard_status.set_button_flags(temp_buttons);
         dashboard_status.write(msg);
         CAN.sendMsgBuf(ID_DASHBOARD_STATUS, 0, sizeof(dashboard_status), msg);
         //rest update timer
         timer_can_update.reset();
-        // clear buttons so they can be retoggled on in the loop
-        dashboard_status.set_button_flags(0);
     }
+    // clear buttons so they can be retoggled on in the loop
+    dashboard_status.set_button_flags(0);
 }
 
 inline void led_update(){
@@ -135,7 +135,7 @@ inline void read_can(){
             case ID_MC_FAULT_CODES:
                 is_mc_err = false;
                 static int i;
-                for(i = 0; i < 8; i++){
+                for(i = 7; i--;){
                     if(buf[i] != 0){
                         is_mc_err = true;
                         break;

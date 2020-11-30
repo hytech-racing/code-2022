@@ -7,10 +7,13 @@
 #include "Simulator.h"
 #include "VariableLED.h"
 
+#define next() simulator->next()
+#define digitalWrite(pin,val) simulator->digitalWrite(pin, val);
+
 class DashboardTesting : public ::testing::Test {
 protected:
-	DashboardTesting () = default;
-	void TearDown() {
+	DashboardTesting () : simulator(0) {}
+	void SetUp() {
 		extern bool is_mc_err;
 		extern VariableLED variable_led_start;
 		extern Metro timer_can_update;
@@ -25,15 +28,21 @@ protected:
 		CAN = MCP_CAN(SPI_CS);
 		dashboard_status = {};
 		mcu_status = {};
-	}	
+		simulator = new Simulator;
+	}
+
+	Simulator* simulator;
+
+	void TearDown() {
+		delete simulator;
+	}
 };
 
 //Startup Test
 TEST_F(DashboardTesting, Startup){
-	Simulator simulator (100);
 	CAN_message_t msg;
-
-	simulator.next();
+	delay(100);
+	next();
 	ASSERT_TRUE(CAN_simulator::read(msg));
 	ASSERT_EQ(msg.id,ID_DASHBOARD_STATUS);
 	Dashboard_status status;
@@ -45,29 +54,28 @@ TEST_F(DashboardTesting, Startup){
 
 //Indiviual Button Tests.  Press, wait 50 ms, depress, wait 51 ms, press, wait 50 ms, depress
 TEST_F(DashboardTesting, MarkButton){
-	Simulator simulator;
 	CAN_message_t msg;
 	Dashboard_status status;
 
-	simulator.digitalWrite(BTN_MARK, 0);
-	simulator.next();
+	digitalWrite(BTN_MARK, LOW);
+	next();
 	delay(50);
-	simulator.digitalWrite(BTN_MARK, 1);
-	simulator.next();
+	digitalWrite(BTN_MARK, HIGH);
+	next();
 	delay(51);
-	simulator.next();
+	next();
 
 	CAN_simulator::read(msg);
 	status.load(msg.buf);
 	EXPECT_EQ(status.get_button_flags(),1);
 	EXPECT_EQ(status.get_led_flags(),3);
-	simulator.digitalWrite(BTN_MARK, 0);
+	digitalWrite(BTN_MARK, LOW);
 
-	simulator.next();
+	next();
 	delay(50);
-	simulator.next();
+	next();
 	delay(50);
-	simulator.next();
+	next();
 
 	CAN_simulator::read(msg);
 	status.load(msg.buf);
@@ -78,7 +86,6 @@ TEST_F(DashboardTesting, MarkButton){
 
 //LED Tests
 TEST_F(DashboardTesting, LEDTest){
-	Simulator simulator;
 	CAN_message_t msg;
 	Dashboard_status status;
 	MCU_status mcu_stat;
@@ -99,11 +106,11 @@ TEST_F(DashboardTesting, LEDTest){
 	//CAN_simulator::push(msg);
 	//how do you send this message?
 
-	simulator.next();
+	next();
 	delay(50);
-	simulator.next();
+	next();
 	delay(50);
-	simulator.next();
+	next();
 
 	CAN_simulator::read(msg);
 	status.load(msg.buf);
@@ -113,14 +120,13 @@ TEST_F(DashboardTesting, LEDTest){
 
 //Example Test
 TEST_F(DashboardTesting, Third){
-	Simulator simulator;
 	CAN_message_t msg;
 
 	delay(50);
-	simulator.digitalWrite(23, 0);
-	simulator.next();
+	digitalWrite(BTN_MARK, LOW);
+	next();
 	delay(100);
-	simulator.next();
+	next();
 	ASSERT_TRUE(CAN_simulator::read(msg));
 	ASSERT_EQ(msg.id,ID_DASHBOARD_STATUS);
 	Dashboard_status status;
