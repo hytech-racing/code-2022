@@ -36,7 +36,7 @@ void Parser::run() {
 		switch (type) {
 			case ParseType::Variable: parseVar(); break;
 			case ParseType::Class: parseClass(); break;
-			case ParseType::Flag: puts("FLAG"); break;
+			case ParseType::Flag: parseFlag(); break;
 			default: puts("NONE");
 		}
 
@@ -50,7 +50,7 @@ void Parser::run() {
 		switch (type) {
 			case ParseType::Variable: parseVarNameline(); break;
 			case ParseType::Class: parseClassNameline(); break;
-			// case ParseType::Flag: parseFlagNameline(); break;
+			case ParseType::Flag: parseFlagNameline(); break;
 		}
 
 		input.setStopMode(StopMode::FILE);
@@ -67,7 +67,7 @@ ParseType Parser::getType () {
 				return ParseType::Variable;
 			if (eatToken(input, CLASS) && input.eatspace())
 				return ParseType::Class;
-			if (eatToken(input, FLAG) && input.eatspace())
+			if (eatToken(input, FLAG) && input.eat('('))
 				return ParseType::Flag;
 		}
 	}

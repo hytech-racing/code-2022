@@ -23,4 +23,5 @@ private:
 	void parseVarNameline();
 
 	void parseFlag();
+	void parseFlagNameline();
 };

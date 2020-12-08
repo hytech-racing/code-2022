@@ -11,7 +11,7 @@
 #include "Utils.h"
 
 int main() {
-	Parser p("../../Libraries/HyTech_CAN/BMS_Detailed_Voltages.h");
+	Parser p("../../Libraries/HyTech_CAN/MC_fault_codes.h");
 	p.run();
 	return 0;
 }
@@ -31,5 +31,5 @@ int main() {
  * - FLAGLIST(flag1, flag2...), assumes standard getter names
  * - FLAGPREFIX(str?), default to varname
  * function level
- * - FLAGSET(set_id, flagname), map to flagset variable, flagname defaults to functionname minus "get_"
+ * - FLAGSET(set_id, flagname?), map to flagset variable, flagname defaults to functionname minus "get_"
  */

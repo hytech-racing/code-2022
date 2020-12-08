@@ -39,35 +39,34 @@ void Parser::parseVar() {
 		}
 		else if (eatToken(input, FLAGPREFIX)) {
 			if (vdef.flags == nullptr)
-				vdef.flags = new FlagDef;
-			if (!input.eat('(') || !input.getParam(vdef.flags->prefix) || !input.eat(')'))
+				vdef.flags = new FlagSetDef;
+			if (input.eatspace())
+				strcpy(vdef.flags->prefix, "-");
+			else if (!input.eat('('))
+				return;
+			else if (input.eat(')'))
+				strcpy(vdef.flags->prefix, "-");
+			else if (!input.getParam(vdef.flags->prefix) || !input.eat(')'))
 				return;
 		}
 		else if (eatToken(input, FLAGLIST)) {
-			if (vdef.flags == nullptr)
-				vdef.flags = new FlagDef;
 			if (!input.eat('('))
 				return;
+			if (vdef.flags == nullptr)
+				vdef.flags = new FlagSetDef;
 			do {
-				char* name = new char [128];
-				char* getter = new char [128];
-				if (!input.getToken(name)) {
-					delete [] name;
-					delete [] getter;
+				FlagDef fdef;
+				if (!input.getToken(fdef.name))
 					return;
-				}
 				if (input.eat('(')) {
-					if (!input.getParam(getter) || !input.eat(')')) {
-						delete [] name;
-						delete [] getter;
+					if (!input.getParam(fdef.getter) || !input.eat(')'))
 						return;
-					}
 				}
 				else {
-					strcpy(getter, "get_");
-					strcpy(getter + ct_strlen("get_"), name);
+					strcpy(fdef.getter, "get_");
+					strcpy(fdef.getter + ct_strlen("get_"), fdef.name);
 				}
-				vdef.flags->flags.push_back(std::make_pair(name, getter));
+				vdef.flags->flags.push_back(fdef);
 			} while (input.eat(','));
 			if (!input.eat(')')) {
 				delete vdef.flags;
@@ -75,12 +74,9 @@ void Parser::parseVar() {
 			}
 		}
 		else if (eatToken(input, FLAGSET)) {
-			bool noparam = input.eatspace();
-			noparam = noparam && !input.eat('(');
-			if (noparam)
-				puts("FLAGSET AUTOID");
-			else
-				puts(FLAGSET);
+			if (input.eatspace() || (input.eat('(') && input.eat(')')))
+				if (vdef.flags == nullptr)
+					vdef.flags = new FlagSetDef;
 		}
 	}
 
@@ -93,8 +89,8 @@ void Parser::parseVar() {
 
 	if (vdef.flags) {
 		printf("FLAG PREFIX\t%s\n", vdef.flags->prefix);
-		for (std::pair<char*, char*> p : vdef.flags->flags)
-			printf("FLAG:\t\t%s %s\n", p.first, p.second);
+		for (FlagDef& fdef : vdef.flags->flags)
+			printf("FLAG:\t\t%s %s\n", fdef.name, fdef.getter);
 	}
 }
 
