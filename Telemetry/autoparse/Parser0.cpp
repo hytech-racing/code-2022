@@ -6,58 +6,72 @@ Parser::Parser(const char* const filepath, int bufferlength) :
 
 Parser::~Parser() {
 	delete [] stash;
+	for (VarDef& vdef : vars)
+		if (vdef.flags)
+			delete vdef.flags;
 }
 
 void Parser::run() {
-	bool multiline;
-	int len;
-
 	char* commentStart;
 	while (commentStart = input.find('/')) {
-		bool sameline = commentStart != input.lineStart();
+		bool oneline = commentStart != input.lineStart();
 
 		char c = input.get();
 		if (c != '/' && c != '*')
 			continue;
 		
-		multiline = c == '*';
-
-		if (sameline && multiline && !strstr(commentStart, M_COMMENT_CLOSE)) {
-			input.skip();
-			continue;
-		}
-		if (sameline)
+		if (oneline) {
+			if (c == '*' && !strstr(commentStart, M_COMMENT_CLOSE)) {
+				input.skip();
+				continue;
+			}
 			input.stash(stash);
-
-		input.setStopMode(multiline ? StopMode::COMMENT : StopMode::LINE);
-
+			input.setStopMode(StopMode::LINE);
+		}
+		else
+			input.setStopMode(StopMode::COMMENT);
+		
 		ParseType type = getType();
-
 		switch (type) {
 			case ParseType::Variable: parseVar(); break;
 			case ParseType::Class: parseClass(); break;
 			case ParseType::Flag: parseFlag(); break;
-			default: puts("NONE");
+			case ParseType::None: continue;
 		}
 
 		input.setStopMode(StopMode::FILE);
-
-		if (sameline)
-			input.load(stash);
-		else
-			input.getline();
+		if (oneline) input.load(stash);
+		else input.getline();
 
 		switch (type) {
 			case ParseType::Variable: parseVarNameline(); break;
 			case ParseType::Class: parseClassNameline(); break;
 			case ParseType::Flag: parseFlagNameline(); break;
 		}
-
+		
 		input.setStopMode(StopMode::FILE);
 		input.getline();
 	}
-}
 
+	printf("Generated Parser Config for %s\n", classname);
+	puts("\nClass Definition(s)");
+	puts("-------------------");
+	for (ClassDef& cdef : classdefs)
+		cdef.print();
+
+	for (FlagSetDef& fsdef : floaters) {
+		for (VarDef& vdef : vars) {
+			if (vdef.flags && streq(vdef.name, fsdef.set))
+				for (FlagDef& fdef : fsdef.flags)
+					vdef.flags->flags.push_back(fdef);
+		}
+	}
+
+	puts("\nVariable Definition(s)");
+	puts("------------------------");
+	for (VarDef& vdef : vars)
+		vdef.print();
+}
 
 ParseType Parser::getType () {
 	while (input.find('@')) {

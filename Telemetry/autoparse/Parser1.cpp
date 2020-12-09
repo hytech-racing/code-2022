@@ -2,6 +2,51 @@
 #include "Parser.h"
 #include "Utils.h"
 
+void Parser::parseClassNameline() {
+	if (!eatToken(input, CLASS) || !input.getToken(classname))
+		classname[0] = '\0';
+}
+
+void Parser::parseClass() {
+	ClassDef defaultProps;
+
+	while (input.find('@')) {
+		ClassDef cdef;
+		input.get();
+		if (eatToken(input, ID)) {
+			if (parseClassID(cdef))
+				cdef.addSelfTo(classdefs);
+		}
+		else if (eatToken(input, PREFIX)) {
+			if (parseClassPrefix(cdef)) {
+				if (!strempty(cdef.id))
+					cdef.addSelfTo(classdefs);
+				else if (!attemptCopy(defaultProps.prefix, cdef.prefix))
+					puts("Duplicate default prefix");
+			}
+		}
+		else if (eatToken(input, CUSTOM)) {
+			if (!strempty(defaultProps.custom))
+				puts("Repeat @CUSTOM");
+			else {
+				if (!input.eat('(') || !input.getParam(defaultProps.custom))
+					puts("Invalid @CUSTOM");
+				if (!input.eat(')'))
+					defaultProps.custom[0] = '\0';
+			}
+		}
+	}
+
+	for (ClassDef& def : classdefs) {
+		if (strempty(def.name)) {
+			puts("Prefix not associated with valid ID");
+			continue;
+		}
+		attemptCopy(def.prefix, defaultProps.prefix);
+		strcpy(def.custom, defaultProps.custom);
+	}
+}
+
 bool Parser::parseClassID(ClassDef& cdef) {
 	if (!input.eat('(') || !input.getParam(cdef.id)) {
 		puts("Invalid @ID");
@@ -39,56 +84,4 @@ bool Parser::parseClassPrefix(ClassDef& cdef) {
 	}
 
 	return input.eat(')');
-}
-
-void Parser::parseClass() {
-	std::list<ClassDef> list;
-	ClassDef defaultProps;
-
-	while (input.find('@')) {
-		ClassDef cdef;
-		input.get();
-		if (eatToken(input, ID)) {
-			if (parseClassID(cdef))
-				cdef.addSelfTo(list);
-		}
-		else if (eatToken(input, PREFIX)) {
-			if (parseClassPrefix(cdef)) {
-				if (!strempty(cdef.id))
-					cdef.addSelfTo(list);
-				else if (!attemptCopy(defaultProps.prefix, cdef.prefix))
-					puts("Duplicate default prefix");
-			}
-		}
-		else if (eatToken(input, CUSTOM)) {
-			if (!strempty(defaultProps.custom))
-				puts("Repeat @CUSTOM");
-			else {
-				if (!input.eat('(') || !input.getParam(defaultProps.custom))
-					puts("Invalid @CUSTOM");
-				if (!input.eat(')'))
-					defaultProps.custom[0] = '\0';
-			}
-		}
-	}
-
-	for (ClassDef& def : list) {
-		if (strempty(def.name)) {
-			puts("Prefix not associated with valid ID");
-			continue;
-		}
-		attemptCopy(def.prefix, defaultProps.prefix);
-		strcpy(def.custom, defaultProps.custom);
-
-		puts("CLASSDEF: ");
-		printf("ID:\t\t%s\n", def.id);
-		printf("NAME:\t\t%s\n", def.name);
-		printf("PREFIX:\t\t%s\n", def.prefix);
-		printf("CUSTOM:\t\t%s\n\n", def.custom);
-	}
-}
-
-void Parser::parseClassNameline() {
-	if (eatToken(input, CLASS) && input.getToken(stash))
-		printf("CLASSNAME:  %s\n\n", stash);
 }

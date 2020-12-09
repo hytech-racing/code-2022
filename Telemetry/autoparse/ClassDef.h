@@ -30,4 +30,11 @@ typedef struct ClassDef {
 		}
 		list.push_back(*this);
 	}
+
+	void print() {
+		printf("ID:\t\t%s\n", id);
+		printf("NAME:\t\t%s\n", name);
+		printf("PREFIX:\t\t%s\n", prefix);
+		printf("CUSTOM:\t\t%s\n\n", custom);
+	}
 } ClassDef;

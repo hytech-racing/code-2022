@@ -1,6 +1,17 @@
 #include "Parser.h"
 #include "VarDef.h"
 
+void Parser::parseVarNameline() {
+	input.eat('u');
+	if (eatToken(input, "int")) {
+		int size = input.getInt();
+		if (isPow2(size) && isValidDataLength(size)) {
+			if (eatToken(input, "_t") && input.getToken(vars.back().name));
+				// printf("VARNAME: %s\n\n", stash);
+		}
+	}
+}
+
 void Parser::parseVar() {
 	VarDef vdef;
 	while (input.find('@')) {
@@ -80,28 +91,5 @@ void Parser::parseVar() {
 		}
 	}
 
-	puts("VARDEF");
-	printf("NAME:\t\t%s\n", vdef.name);
-	printf("GETTER:\t\t%s\n", vdef.getter);
-	printf("UNIT:\t\t%s\n", vdef.unit);
-	printf("SCALE:\t\t%d\n", vdef.scale);
-	printf("PRECISION:\t%d\n\n", vdef.precision);
-
-	if (vdef.flags) {
-		printf("FLAG PREFIX\t%s\n", vdef.flags->prefix);
-		for (FlagDef& fdef : vdef.flags->flags)
-			printf("FLAG:\t\t%s %s\n", fdef.name, fdef.getter);
-	}
-}
-
-
-void Parser::parseVarNameline() {
-	input.eat('u');
-	if (eatToken(input, "int")) {
-		int size = input.getInt();
-		if (isPow2(size) && isValidDataLength(size)) {
-			if (eatToken(input, "_t") && input.getToken(stash)) 
-				printf("VARNAME: %s\n\n", stash);
-		}
-	}
+	vars.push_back(vdef);
 }

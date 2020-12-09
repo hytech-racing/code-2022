@@ -11,7 +11,7 @@
 #include "Utils.h"
 
 int main() {
-	Parser p("../../Libraries/HyTech_CAN/MC_fault_codes.h");
+	Parser p("../../Libraries/HyTech_CAN/dummy.h");
 	p.run();
 	return 0;
 }

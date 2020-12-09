@@ -1,20 +1,5 @@
 #pragma once
-
-typedef struct FlagDef {
-	FlagDef() {
-		name[0] = getter[0] = '\0';
-	}
-	char name [128];
-	char getter [128];
-} FlagDef;
-
-typedef struct FlagSetDef {
-	union {
-		char prefix [128];
-		char set [128];
-	};
-	std::list<FlagDef> flags;
-} FlagSetDef;
+#include "FlagDef.h"
 
 typedef struct VarDef {
 	VarDef() {
@@ -23,8 +8,8 @@ typedef struct VarDef {
 		flags = nullptr;
 	}
 	~VarDef() {
-		if (flags)
-			delete flags;
+		// if (flags)
+		// 	delete flags;
 	}
 
 	char name [128];
@@ -34,4 +19,17 @@ typedef struct VarDef {
 	int precision;
 	FlagSetDef* flags;
 	bool hex;
+
+	void print() {
+		printf("NAME:\t\t%s\n", name);
+		printf("GETTER:\t\t%s\n", getter);
+		printf("UNIT:\t\t%s\n", unit);
+		printf("SCALE:\t\t%d\n", scale);
+		printf("PRECISION:\t%d\n", precision);
+
+		if (flags)
+			flags->print();
+
+		putchar('\n');
+	}
 } VarDef;

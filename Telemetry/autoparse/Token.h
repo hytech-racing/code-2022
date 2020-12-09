@@ -1,6 +1,6 @@
 #pragma once
 
-enum class ParseType { Variable, Class, Flag, None };
+enum class ParseType { None, Variable, Class, Flag };
 
 constexpr char S_COMMENT [] = "//";
 constexpr char M_COMMENT_START [] = "/*";

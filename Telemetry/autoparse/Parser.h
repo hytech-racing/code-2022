@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ClassDef.h"
+#include "VarDef.h"
 #include "InputBuffer.h"
 #include "Token.h"
 
@@ -12,8 +13,15 @@ public:
 private:
 	InputBuffer input;
 	char* const stash;
+
+	char classname [128];
+	std::list<ClassDef> classdefs;
+	std::list<VarDef> vars;
+	std::list<FlagSetDef> floaters;
+	FlagDef* currentFlag;
 	
-	ParseType getType ();
+	ParseType getType();
+
 	void parseClass();
 	bool parseClassID(ClassDef& cdef);
 	bool parseClassPrefix(ClassDef& cdef);

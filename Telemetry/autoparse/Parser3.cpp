@@ -10,10 +10,17 @@ void Parser::parseFlag() {
 		return;
 	if (!input.eat(')'))
 		return;
-	puts("FLAGDEF:");
-	printf("SET:\t\t%s\n", fsdef.set);
-	printf("NAME:\t\t%s\n", fdef.name);
-	printf("GETTER:\t\t%s\n\n", fdef.getter);
+
+
+	for (FlagSetDef& other : floaters)
+		if (streq(fsdef.set, other.set)) {
+			other.flags.push_back(fdef);
+			currentFlag = &other.flags.back();
+			return;
+		}
+	fsdef.flags.push_back(fdef);
+	floaters.push_back(fsdef);
+	currentFlag = &floaters.back().flags.back();
 }
 
 void Parser::parseFlagNameline() {
@@ -21,13 +28,8 @@ void Parser::parseFlagNameline() {
 	input.eatspace();
 	if (!eatToken(input, "bool"))
 		return;
-	FlagDef fdef;
-	input.getToken(fdef.getter);
-	if (strempty(fdef.name) && strstart(fdef.getter, "get_"))
-		strcpy(fdef.name, fdef.getter + ct_strlen("get_"));
 
-	puts("FLAGDEF:");
-	printf("NAME:\t\t%s\n", fdef.name);
-	printf("GETTER:\t\t%s\n\n", fdef.getter);
-
+	input.getToken(currentFlag->getter);
+	if (strempty(currentFlag->name) && strstart(currentFlag->getter, "get_"))
+		strcpy(currentFlag->name, currentFlag->getter + ct_strlen("get_"));
 }
