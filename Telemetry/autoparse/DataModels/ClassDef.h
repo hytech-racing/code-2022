@@ -3,7 +3,7 @@
 #include <list>
 #include <stdio.h>
 
-#include "Utils.h"
+#include "StringUtils.h"
 
 typedef struct ClassDef {
 	ClassDef() {

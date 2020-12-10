@@ -8,7 +8,7 @@
 #include "ClassDef.h"
 #include "VarDef.h"
 #include "Parser.h"
-#include "Utils.h"
+#include "StringUtils.h"
 
 int main() {
 	Parser p("../../Libraries/HyTech_CAN/dummy.h");

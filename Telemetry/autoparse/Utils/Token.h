@@ -25,6 +25,7 @@ constexpr char FLAGSET [] = "Flagset";
 constexpr char FLAGPREFIX [] = "Flagprefix";
 
 constexpr char ID_PREFIX [] = "ID_";
+constexpr char GET_PREFIX [] = "get_";
 
 inline size_t constexpr ct_strlen(const char* str) {
 	size_t len = 0;

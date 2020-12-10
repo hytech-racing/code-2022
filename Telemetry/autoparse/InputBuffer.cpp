@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 #include "Exception.h"
-#include "Utils.h"
+#include "StringUtils.h"
 
 InputBuffer::InputBuffer(const char* filepath, size_t len) : 
 	SIZE(len),

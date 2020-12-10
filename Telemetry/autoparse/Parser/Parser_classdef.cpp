@@ -1,6 +1,7 @@
 
 #include "Parser.h"
-#include "Utils.h"
+#include "Canonicalize.h"
+#include "StringUtils.h"
 
 void Parser::parseClass() {
 	ClassDef* cdef = nullptr;
@@ -47,11 +48,7 @@ void Parser::parseClassDef(ClassDef*& cdef) {
 			getOneParam(defaultProps.custom, CUSTOM);
 	}
 
-	for (ClassDef* def : classdefs) {
-		if (strempty(def->prefix))
-			strcpy(def->prefix, defaultProps.prefix);
-		strcpy(def->custom, defaultProps.custom);
-	}
+	Canonicalize::applyDefaultClassProps(classdefs, defaultProps);
 }
 
 void Parser::parseClassDefParams(char* target, char* optional, const char* const TOK1, const char* const TOK2) {

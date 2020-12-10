@@ -1,5 +1,7 @@
 #include "Parser.h"
 
+#include "Canonicalize.h"
+
 Parser::Parser(const char* const filepath, int bufferlength) :
 	input(filepath, bufferlength) {}
 
@@ -28,28 +30,15 @@ void Parser::run() {
 		input.getline();
 	}
 
+	Canonicalize::classDefs(classdefs, classname);
+	Canonicalize::mapFlagDefs(floaters, vars);
+	Canonicalize::varDef(vars);
+
 	printf("Generated Parser Config for %s\n", classname);
 	puts("\nClass Definition(s)");
 	puts("-------------------");
 	for (ClassDef* cdef : classdefs)
 		cdef->print();
-
-	for (FlagSetDef* fsdef : floaters) {
-		bool ok = false;
-		for (VarDef* vdef : vars) {
-			if (vdef->flags && streq(vdef->name, fsdef->set)) {
-				while (fsdef->flags.size()) {
-					vdef->flags->flags.push_back(fsdef->flags.front());
-					fsdef->flags.pop_front();
-				}
-				ok = true;
-				break;
-			}
-		}
-		if (!ok)
-			throw UnmappedFlagException(fsdef->set);
-		delete fsdef;
-	}
 
 	puts("\nVariable Definition(s)");
 	puts("------------------------");
@@ -69,7 +58,7 @@ bool Parser::validComment(char* const commentStart) {
 		return false;
 	}
 
-	input.setStopMode(samelineComment ? StopMode::LINE : StopMode::COMMENT);
+	input.setStopMode(samelineComment || c == '/' ? StopMode::LINE : StopMode::COMMENT);
 	return true;
 }
 

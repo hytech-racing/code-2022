@@ -3,6 +3,16 @@
 #include <exception>
 #include <stdio.h>
 
+struct AutoParseException : virtual public std::exception {
+	const char* const ERROR;
+	AutoParseException(const char* const ERROR) : ERROR(ERROR) {}
+	const char* what() const throw () {
+		puts("Auto Parse Exception");
+		printf("Unable to generate parser configuration (%s\n)", ERROR);
+		return "Auto Parse Exception";
+	}
+};
+
 struct InvalidDatatypeException : virtual public std::exception {
 	const char* const EXPECTED;
 	InvalidDatatypeException(const char* const EXPECTED) : EXPECTED(EXPECTED) {}

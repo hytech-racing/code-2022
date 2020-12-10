@@ -1,7 +1,6 @@
 #include "Parser.h"
 #include "VarDef.h"
 
-
 void Parser::parseFlag() {
 	FlagSetDef* fsdef = new FlagSetDef;
 	FlagDef* fdef = new FlagDef;
@@ -37,6 +36,4 @@ void Parser::parseFlagNameline(FlagDef* fdef) {
 		throw InvalidDatatypeException("bool");
 
 	input.getToken(fdef->getter);
-	if (strempty(fdef->name) && strstart(fdef->getter, "get_"))
-		strcpy(fdef->name, fdef->getter + ct_strlen("get_"));
 }
