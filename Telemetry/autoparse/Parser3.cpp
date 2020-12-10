@@ -2,23 +2,24 @@
 #include "VarDef.h"
 
 void Parser::parseFlag() {
-	FlagSetDef fsdef;
-	FlagDef fdef;
+	FlagSetDef* fsdef = new FlagSetDef;
+	FlagDef* fdef = new FlagDef;
 
-	input.getParam(fsdef.set, FLAG);
+	input.getParam(fsdef->set, FLAG);
 	if (input.eat(','))
-		input.getParam(fdef.name, NAME);
+		input.getParam(fdef->name, NAME);
 	closeParen();
 
-	for (FlagSetDef& other : floaters)
-		if (streq(fsdef.set, other.set)) {
-			other.flags.push_back(fdef);
-			currentFlag = &other.flags.back();
+	for (FlagSetDef* other : floaters)
+		if (streq(fsdef->set, other->set)) {
+			other->flags.push_back(fdef);
+			currentFlag = fdef;
+			delete fsdef;
 			return;
 		}
-	fsdef.flags.push_back(fdef);
+	fsdef->flags.push_back(fdef);
 	floaters.push_back(fsdef);
-	currentFlag = &floaters.back().flags.back();
+	currentFlag = fdef;
 }
 
 void Parser::parseFlagNameline() {

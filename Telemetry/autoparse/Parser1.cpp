@@ -9,31 +9,35 @@ void Parser::parseClassNameline() {
 
 void Parser::parseClass() {
 	ClassDef defaultProps;
+	ClassDef* cdef;
 
 	while (input.find('@')) {
-		ClassDef cdef;
 		input.get();
 		if (eatToken(input, ID)) {
-			parseClassDefParams(cdef.id, cdef.name, ID, NAME);
-			if (strempty(cdef.name))
-				strcpy(cdef.name, "-");
-			cdef.addSelfTo(classdefs);
+			cdef = new ClassDef;
+			parseClassDefParams(cdef->id, cdef->name, ID, NAME);
+			if (strempty(cdef->name))
+				strcpy(cdef->name, "-");
+			addClassDef(cdef);
 		}
 		else if (eatToken(input, PREFIX)) {
-			parseClassDefParams(cdef.prefix, cdef.id, PREFIX, ID);
-			if (!strempty(cdef.id))
-				cdef.addSelfTo(classdefs);
-			else
-				attemptCopy(defaultProps.prefix, cdef.prefix, PREFIX);
+			cdef = new ClassDef;
+			parseClassDefParams(cdef->prefix, cdef->id, PREFIX, ID);
+			if (!strempty(cdef->id))
+				addClassDef(cdef);
+			else {
+				attemptCopy(defaultProps.prefix, cdef->prefix, PREFIX);
+				delete cdef;
+			}
 		}
 		else if (eatToken(input, CUSTOM))
 			getOneParam(defaultProps.custom, CUSTOM);
 	}
 
-	for (ClassDef& def : classdefs) {
-		if (strempty(def.prefix))
-			strcpy(def.prefix, defaultProps.prefix);
-		strcpy(def.custom, defaultProps.custom);
+	for (ClassDef* def : classdefs) {
+		if (strempty(def->prefix))
+			strcpy(def->prefix, defaultProps.prefix);
+		strcpy(def->custom, defaultProps.custom);
 	}
 }
 
@@ -43,4 +47,18 @@ void Parser::parseClassDefParams(char* target, char* optional, const char* const
 	if (input.eat(','))
 		input.getParam(optional, TOK2);
 	closeParen();
+}
+
+void Parser::addClassDef(ClassDef* cdef) {
+	for (ClassDef* other : classdefs) {
+		if (!streq(cdef->id, other->id))
+			continue;
+		if (!strempty(cdef->name))
+			attemptCopy(other->name, cdef->name, NAME);
+		else if (!strempty(cdef->prefix))
+			attemptCopy(other->prefix, cdef->prefix, PREFIX);
+		delete cdef;
+		return;
+	}
+	classdefs.push_back(cdef);
 }

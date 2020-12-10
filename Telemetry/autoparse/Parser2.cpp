@@ -65,11 +65,11 @@ void Parser::parseVarFlagList(VarDef* vdef) {
 		vdef->flags = new FlagSetDef;
 
 	do {
-		FlagDef fdef;
-		if (!input.getToken(fdef.name))
+		FlagDef* fdef = new FlagDef;
+		if (!input.getToken(fdef->name))
 			throw InvalidParameterException(FLAGLIST);
 		if (input.eat('(')) {
-			input.getParam(fdef.getter, GETTER);
+			input.getParam(fdef->getter, GETTER);
 			closeParen();
 		}
 		vdef->flags->flags.push_back(fdef);

@@ -16,12 +16,16 @@ typedef struct FlagSetDef {
 		char prefix [128];
 		char set [128];
 	};
-	std::list<FlagDef> flags;
+	std::list<FlagDef*> flags;
 
 	FlagSetDef() { prefix[0] = '\0'; }
+	~FlagSetDef() {
+		for (FlagDef* fdef : flags)
+			delete fdef;
+	}
 	void print() {
 		printf("FLAG PREFIX\t%s\n", prefix);
-		for (FlagDef& fdef : flags)
-			fdef.print();
+		for (FlagDef* fdef : flags)
+			fdef->print();
 	}
 } FlagSetDef;

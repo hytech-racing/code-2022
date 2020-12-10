@@ -18,9 +18,9 @@ private:
 	bool samelineComment;
 
 	char classname [128];
-	std::list<ClassDef> classdefs;
+	std::list<ClassDef*> classdefs;
 	std::list<VarDef*> vars;
-	std::list<FlagSetDef> floaters;
+	std::list<FlagSetDef*> floaters;
 	FlagDef* currentFlag;
 	
 	bool validComment(char* const commentStart);
@@ -30,6 +30,7 @@ private:
 	void parseClass();
 	void parseClassDefParams(char* target, char* optional, const char* const TOK1, const char* const TOK2);
 	void parseClassNameline();
+	void addClassDef(ClassDef* cdef);
 
 	void parseVar();
 	void parseVarFlagPrefix(VarDef* vdef);

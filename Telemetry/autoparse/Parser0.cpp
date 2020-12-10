@@ -4,6 +4,8 @@ Parser::Parser(const char* const filepath, int bufferlength) :
 	input(filepath, bufferlength) {}
 
 Parser::~Parser() {
+	for (ClassDef* cdef : classdefs)
+		delete cdef;
 	for (VarDef* vdef : vars)
 		delete vdef;
 }
@@ -40,15 +42,24 @@ void Parser::run() {
 	printf("Generated Parser Config for %s\n", classname);
 	puts("\nClass Definition(s)");
 	puts("-------------------");
-	for (ClassDef& cdef : classdefs)
-		cdef.print();
+	for (ClassDef* cdef : classdefs)
+		cdef->print();
 
-	for (FlagSetDef& fsdef : floaters) {
+	for (FlagSetDef* fsdef : floaters) {
+		bool ok = false;
 		for (VarDef* vdef : vars) {
-			if (vdef->flags && streq(vdef->name, fsdef.set))
-				for (FlagDef& fdef : fsdef.flags)
-					vdef->flags->flags.push_back(fdef);
+			if (vdef->flags && streq(vdef->name, fsdef->set)) {
+				while (fsdef->flags.size()) {
+					vdef->flags->flags.push_back(fsdef->flags.front());
+					fsdef->flags.pop_front();
+				}
+				ok = true;
+				break;
+			}
 		}
+		if (!ok)
+			throw "UnmappedFlagException";
+		delete fsdef;
 	}
 
 	puts("\nVariable Definition(s)");
