@@ -1,47 +1,31 @@
 #include "Parser.h"
 
 Parser::Parser(const char* const filepath, int bufferlength) :
-	input(filepath, bufferlength),
-	stash(new char[bufferlength]) {}
+	input(filepath, bufferlength) {}
 
 Parser::~Parser() {
-	delete [] stash;
-	for (VarDef& vdef : vars)
-		if (vdef.flags)
-			delete vdef.flags;
+	for (VarDef* vdef : vars)
+		delete vdef;
 }
 
 void Parser::run() {
 	char* commentStart;
-	while (commentStart = input.find('/')) {
-		bool oneline = commentStart != input.lineStart();
 
-		char c = input.get();
-		if (c != '/' && c != '*')
+	while (commentStart = input.find('/')) {
+		if (!validComment(commentStart))
 			continue;
-		
-		if (oneline) {
-			if (c == '*' && !strstr(commentStart, M_COMMENT_CLOSE)) {
-				input.skip();
-				continue;
-			}
-			input.stash(stash);
-			input.setStopMode(StopMode::LINE);
-		}
-		else
-			input.setStopMode(StopMode::COMMENT);
 		
 		ParseType type = getType();
 		switch (type) {
 			case ParseType::Variable: parseVar(); break;
 			case ParseType::Class: parseClass(); break;
 			case ParseType::Flag: parseFlag(); break;
-			case ParseType::None: continue;
+			case ParseType::None: 
+				input.setStopMode(StopMode::FILE);
+				continue;
 		}
 
-		input.setStopMode(StopMode::FILE);
-		if (oneline) input.load(stash);
-		else input.getline();
+		loadNameline();
 
 		switch (type) {
 			case ParseType::Variable: parseVarNameline(); break;
@@ -60,17 +44,33 @@ void Parser::run() {
 		cdef.print();
 
 	for (FlagSetDef& fsdef : floaters) {
-		for (VarDef& vdef : vars) {
-			if (vdef.flags && streq(vdef.name, fsdef.set))
+		for (VarDef* vdef : vars) {
+			if (vdef->flags && streq(vdef->name, fsdef.set))
 				for (FlagDef& fdef : fsdef.flags)
-					vdef.flags->flags.push_back(fdef);
+					vdef->flags->flags.push_back(fdef);
 		}
 	}
 
 	puts("\nVariable Definition(s)");
 	puts("------------------------");
-	for (VarDef& vdef : vars)
-		vdef.print();
+	for (VarDef* vdef : vars)
+		vdef->print();
+}
+
+bool Parser::validComment(char* const commentStart) {
+	samelineComment = commentStart != input.lineStart();
+
+	char c = input.get();
+	if (c != '/' && c != '*')
+		return false;
+	
+	if (samelineComment && c == '*' && !strstr(commentStart, M_COMMENT_CLOSE)) {
+		input.skip(StopMode::COMMENT);
+		return false;
+	}
+
+	input.setStopMode(samelineComment ? StopMode::LINE : StopMode::COMMENT);
+	return true;
 }
 
 ParseType Parser::getType () {
@@ -86,4 +86,15 @@ ParseType Parser::getType () {
 		}
 	}
 	return ParseType::None;
+}
+
+void Parser::loadNameline() {
+	if (samelineComment) {
+		input.setStopMode(StopMode::LINE);
+		input.restartLine();
+	}
+	else {
+		input.setStopMode(StopMode::FILE);
+		input.getline();
+	}
 }

@@ -1,10 +1,14 @@
 #include "InputBuffer.h"
+
 #include <stdio.h>
+#include "Exception.h"
+#include "Utils.h"
 
 InputBuffer::InputBuffer(const char* filepath, size_t len) : 
 	SIZE(len),
 	buffer(new char[len]),
-	infile(filepath)
+	infile(filepath),
+	FILEPATH(filepath)
 {
 	current = buffer;
 	*current = '\0';
@@ -26,19 +30,22 @@ char* InputBuffer::find(const char c) {
 }
 
 size_t InputBuffer::getline() {
-	current = buffer;
-
-	if (atStopPoint()) {
-		buffer[0] = '\0';
+	if (atStopPoint())
 		return false;
-	}
+
+	++linenum;
+	current = buffer;
 
 	int i = 0;
 	while (i < SIZE) {
 		char c = infile.get();
 		switch(c) {
 			case '\r':	c = infile.get(); // skip this
-			case '\n': if (i == 0) break; // ignore empty lines
+			case '\n':
+				if (i == 0) {
+					++linenum;
+					break; // ignore empty lines
+				}
 			case EOF:
 				if (i != 0 && buffer[i - 1] == ' ')
 					--i;
@@ -68,11 +75,14 @@ bool InputBuffer::eat(const char* token, size_t len) {
 	return true;
 }
 
-bool InputBuffer::getParam(char* token) {
+void InputBuffer::getParam(char* token, const char* const ANNOTATION) {
+	if (!strempty(token))
+		throw ReassignmentException(ANNOTATION, token);	
+
 	char* const start = token;
 	eatspace();
 	if (!wrap())
-		return false;
+		throw InvalidParameterException(ANNOTATION);	
 
 	int parenStack = 1;
 
@@ -82,19 +92,19 @@ bool InputBuffer::getParam(char* token) {
 			break;
 		*token++ = *current++;
 	}
+
 	if (token == start)
-		return false;
+		throw InvalidParameterException(ANNOTATION);	
 
 	if (*(token - 1) == ' ')
 		--token;
  	*token = '\0';
-	return true;
 }
 
 bool InputBuffer::getToken(char* token) {
 	char* const start = token;
 	eatspace();
-	if (!wrap())
+	if (!wrap()) 
 		return false;
 
 	while (isalnum(*current) || *current == '_')

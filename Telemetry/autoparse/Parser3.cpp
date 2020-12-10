@@ -4,13 +4,11 @@
 void Parser::parseFlag() {
 	FlagSetDef fsdef;
 	FlagDef fdef;
-	if (!input.getParam(fsdef.set))
-		return;
-	if (input.eat(',') && !input.getParam(fdef.name))
-		return;
-	if (!input.eat(')'))
-		return;
 
+	input.getParam(fsdef.set, FLAG);
+	if (input.eat(','))
+		input.getParam(fdef.name, NAME);
+	closeParen();
 
 	for (FlagSetDef& other : floaters)
 		if (streq(fsdef.set, other.set)) {
@@ -27,7 +25,7 @@ void Parser::parseFlagNameline() {
 	eatToken(input, "inline");
 	input.eatspace();
 	if (!eatToken(input, "bool"))
-		return;
+		throw InvalidDatatypeException("bool");
 
 	input.getToken(currentFlag->getter);
 	if (strempty(currentFlag->name) && strstart(currentFlag->getter, "get_"))

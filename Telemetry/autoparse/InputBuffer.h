@@ -17,7 +17,7 @@ public:
 	size_t getline();
 	bool eat(const char* const token, size_t len);
 	bool getToken(char* token);
-	bool getParam(char* token);
+	void getParam(char* token, const char* const ANNOTATION);
 	inline int getInt() { eatspace(); return wrap() ? (int) strtol(current, &current, 10) : 0; };
 	
 	inline void setStopMode(StopMode mode) { stop = mode; }
@@ -27,12 +27,12 @@ public:
 	inline bool eatspace() { return *current == ' ' ? (bool) ++current : *current == '\0'; }
 	inline bool eat(const char c) { eatspace(); wrap(); return *current == c ? (bool) (current += (c != '\0')) : false; }
 
-	inline void skip() { while(getline()); }
+	inline void skip(StopMode mode) { std::swap(mode, stop); while(getline()); stop = mode; }
 	inline const char* lineStart() { return buffer; }
-	inline void stash(char* stash) { strcpy(stash, buffer); }
+	inline void restartLine() { current = buffer; }
 	inline void load(char* stash) { strcpy(buffer, stash); current = buffer; stop = StopMode::LINE; }
 
-	inline void show() { puts(current); }
+	inline void show() { printf("%s:%d\n%s\n\n", FILEPATH, linenum, buffer); }
 private:
 	inline bool atStopPoint() {
 		if (stop == StopMode::FILE)
@@ -42,8 +42,10 @@ private:
 		return true;
 	}
 
+	int linenum = 0;
 	char* current;
 	char* const buffer;
+	const char* const FILEPATH;
 	const size_t SIZE;
 	StopMode stop;
 	std::ifstream infile;

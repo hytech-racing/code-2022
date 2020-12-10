@@ -18,14 +18,10 @@ typedef struct ClassDef {
 		for (ClassDef& other : list) {
 			if (!streq(id, other.id))
 				continue;
-			if (!strempty(name)) {
-				if (!attemptCopy(other.name, name))
-					puts("No duplicate id allowed");
-			}
-			else if (!strempty(prefix)) {
-				if (!attemptCopy(other.name, name))
-					puts("No duplicate prefix allowed");
-			}
+			if (!strempty(name))
+				attemptCopy(other.name, name, NAME);
+			else if (!strempty(prefix))
+				attemptCopy(other.prefix, prefix, PREFIX);
 			return;
 		}
 		list.push_back(*this);

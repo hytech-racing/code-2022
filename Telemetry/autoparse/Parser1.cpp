@@ -14,74 +14,33 @@ void Parser::parseClass() {
 		ClassDef cdef;
 		input.get();
 		if (eatToken(input, ID)) {
-			if (parseClassID(cdef))
-				cdef.addSelfTo(classdefs);
+			parseClassDefParams(cdef.id, cdef.name, ID, NAME);
+			if (strempty(cdef.name))
+				strcpy(cdef.name, "-");
+			cdef.addSelfTo(classdefs);
 		}
 		else if (eatToken(input, PREFIX)) {
-			if (parseClassPrefix(cdef)) {
-				if (!strempty(cdef.id))
-					cdef.addSelfTo(classdefs);
-				else if (!attemptCopy(defaultProps.prefix, cdef.prefix))
-					puts("Duplicate default prefix");
-			}
+			parseClassDefParams(cdef.prefix, cdef.id, PREFIX, ID);
+			if (!strempty(cdef.id))
+				cdef.addSelfTo(classdefs);
+			else
+				attemptCopy(defaultProps.prefix, cdef.prefix, PREFIX);
 		}
-		else if (eatToken(input, CUSTOM)) {
-			if (!strempty(defaultProps.custom))
-				puts("Repeat @CUSTOM");
-			else {
-				if (!input.eat('(') || !input.getParam(defaultProps.custom))
-					puts("Invalid @CUSTOM");
-				if (!input.eat(')'))
-					defaultProps.custom[0] = '\0';
-			}
-		}
+		else if (eatToken(input, CUSTOM))
+			getOneParam(defaultProps.custom, CUSTOM);
 	}
 
 	for (ClassDef& def : classdefs) {
-		if (strempty(def.name)) {
-			puts("Prefix not associated with valid ID");
-			continue;
-		}
-		attemptCopy(def.prefix, defaultProps.prefix);
+		if (strempty(def.prefix))
+			strcpy(def.prefix, defaultProps.prefix);
 		strcpy(def.custom, defaultProps.custom);
 	}
 }
 
-bool Parser::parseClassID(ClassDef& cdef) {
-	if (!input.eat('(') || !input.getParam(cdef.id)) {
-		puts("Invalid @ID");
-		return false;
-	}
-	
-	if (input.eat(',')) {
-		if (!input.getParam(cdef.name)) {
-			puts("Invalid @ID name");
-			return false;
-		}
-	}
-	else if (!strstart(cdef.id, ID_PREFIX)) {
-		puts ("Unable to determine name from ID, must be provided");
-		return false;
-	}
-	else
-		strcpy(cdef.name, cdef.id + ct_strlen(ID_PREFIX));
-
-	return input.eat(')');
-}
-
-bool Parser::parseClassPrefix(ClassDef& cdef) {
-	if (!input.eat('(') || !input.getParam(cdef.prefix)) {
-		puts("Invalid @PREFIX");
-		return false;
-	}
-
-	if (input.eat(',')) {
-		strcpy(cdef.id, cdef.prefix);
-		if (!input.getParam(cdef.prefix)) {
-			puts("Invalid @PREFIX");
-			return false;
-		}
-	}
-
-	return input.eat(')');
+void Parser::parseClassDefParams(char* target, char* optional, const char* const TOK1, const char* const TOK2) {
+	openParen();
+	input.getParam(target, TOK1);
+	if (input.eat(','))
+		input.getParam(optional, TOK2);
+	closeParen();
 }

@@ -6,22 +6,23 @@ constexpr char S_COMMENT [] = "//";
 constexpr char M_COMMENT_START [] = "/*";
 constexpr char M_COMMENT_CLOSE [] = "*/";
 
-constexpr char PARSE [] = "parse";
+constexpr char PARSE [] = "Parse";
 constexpr char CLASS [] = "class";
 constexpr char FLAG [] = "flag";
 
 constexpr char ID [] = "ID";
-constexpr char PREFIX [] = "PREFIX";
-constexpr char CUSTOM [] = "CUSTOM";
+constexpr char PREFIX [] = "Prefix";
+constexpr char CUSTOM [] = "Custom";
 
-constexpr char NAME [] = "NAME";
-constexpr char GETTER [] = "GETTER";
-constexpr char HEX [] = "HEX";
-constexpr char UNIT [] = "UNIT";
-constexpr char SCALE [] = "SCALE";
-constexpr char FLAGLIST [] = "FLAGLIST";
-constexpr char FLAGSET [] = "FLAGSET";
-constexpr char FLAGPREFIX [] = "FLAGPREFIX";
+constexpr char NAME [] = "Name";
+constexpr char GETTER [] = "Getter";
+constexpr char HEX [] = "Hex";
+constexpr char UNIT [] = "Unit";
+constexpr char SCALE [] = "Scale";
+constexpr char PRECISION [] = "Precision";
+constexpr char FLAGLIST [] = "Flaglist";
+constexpr char FLAGSET [] = "Flagset";
+constexpr char FLAGPREFIX [] = "Flagprefix";
 
 constexpr char ID_PREFIX [] = "ID_";
 

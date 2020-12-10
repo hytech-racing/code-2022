@@ -18,6 +18,7 @@ typedef struct FlagSetDef {
 	};
 	std::list<FlagDef> flags;
 
+	FlagSetDef() { prefix[0] = '\0'; }
 	void print() {
 		printf("FLAG PREFIX\t%s\n", prefix);
 		for (FlagDef& fdef : flags)

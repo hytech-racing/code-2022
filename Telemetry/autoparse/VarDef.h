@@ -8,8 +8,8 @@ typedef struct VarDef {
 		flags = nullptr;
 	}
 	~VarDef() {
-		// if (flags)
-		// 	delete flags;
+		if (flags)
+			delete flags;
 	}
 
 	char name [128];

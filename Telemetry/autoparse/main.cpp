@@ -12,7 +12,12 @@
 
 int main() {
 	Parser p("../../Libraries/HyTech_CAN/dummy.h");
-	p.run();
+	try {
+		p.run();
+	} catch (std::exception& e) {
+		e.what();
+		p.input.show();
+	}
 	return 0;
 }
 
