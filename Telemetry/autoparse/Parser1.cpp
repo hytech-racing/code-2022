@@ -2,14 +2,25 @@
 #include "Parser.h"
 #include "Utils.h"
 
-void Parser::parseClassNameline() {
-	if (!eatToken(input, CLASS) || !input.getToken(classname))
-		classname[0] = '\0';
+void Parser::parseClass() {
+	ClassDef* cdef = nullptr;
+	try {
+		parseClassDef(cdef);
+		loadNameline();
+		parseClassNameline();
+	} catch (std::exception const& e) {
+		if (cdef) delete cdef;
+		throw;
+	}
 }
 
-void Parser::parseClass() {
+void Parser::parseClassNameline() {
+	if (!eatToken(input, CLASS) || !input.getToken(classname))
+		throw InvalidDatatypeException("class");
+}
+
+void Parser::parseClassDef(ClassDef*& cdef) {
 	ClassDef defaultProps;
-	ClassDef* cdef;
 
 	while (input.find('@')) {
 		input.get();
@@ -19,6 +30,7 @@ void Parser::parseClass() {
 			if (strempty(cdef->name))
 				strcpy(cdef->name, "-");
 			addClassDef(cdef);
+			cdef = nullptr;
 		}
 		else if (eatToken(input, PREFIX)) {
 			cdef = new ClassDef;
@@ -29,6 +41,7 @@ void Parser::parseClass() {
 				attemptCopy(defaultProps.prefix, cdef->prefix, PREFIX);
 				delete cdef;
 			}
+			cdef = nullptr;
 		}
 		else if (eatToken(input, CUSTOM))
 			getOneParam(defaultProps.custom, CUSTOM);

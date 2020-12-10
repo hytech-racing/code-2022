@@ -22,19 +22,8 @@ void Parser::run() {
 			case ParseType::Variable: parseVar(); break;
 			case ParseType::Class: parseClass(); break;
 			case ParseType::Flag: parseFlag(); break;
-			case ParseType::None: 
-				input.setStopMode(StopMode::FILE);
-				continue;
 		}
 
-		loadNameline();
-
-		switch (type) {
-			case ParseType::Variable: parseVarNameline(); break;
-			case ParseType::Class: parseClassNameline(); break;
-			case ParseType::Flag: parseFlagNameline(); break;
-		}
-		
 		input.setStopMode(StopMode::FILE);
 		input.getline();
 	}
@@ -58,7 +47,7 @@ void Parser::run() {
 			}
 		}
 		if (!ok)
-			throw "UnmappedFlagException";
+			throw UnmappedFlagException(fsdef->set);
 		delete fsdef;
 	}
 

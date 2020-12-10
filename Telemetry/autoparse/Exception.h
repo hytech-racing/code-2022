@@ -49,3 +49,13 @@ struct SyntaxException : virtual public std::exception {
 		return "Syntax Exception";
 	}
 };
+
+struct UnmappedFlagException : virtual public std::exception {
+	const char* const SET;
+	UnmappedFlagException(const char* const SET) : SET(SET) {}
+	inline const char* what() const throw () {
+		puts("Unmapped Flag Exception");
+		printf("Could not find any matching FlagSet: %s\n", SET);
+		return "Unmapped Flag Exception";
+	}
+};

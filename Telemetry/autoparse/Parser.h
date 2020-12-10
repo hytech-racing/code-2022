@@ -21,24 +21,25 @@ private:
 	std::list<ClassDef*> classdefs;
 	std::list<VarDef*> vars;
 	std::list<FlagSetDef*> floaters;
-	FlagDef* currentFlag;
 	
 	bool validComment(char* const commentStart);
 	ParseType getType();
 	void loadNameline();
 
 	void parseClass();
+	void parseClassDef(ClassDef* &cdef);
 	void parseClassDefParams(char* target, char* optional, const char* const TOK1, const char* const TOK2);
 	void parseClassNameline();
 	void addClassDef(ClassDef* cdef);
 
 	void parseVar();
+	void parseVarDef(VarDef* vdef);
 	void parseVarFlagPrefix(VarDef* vdef);
 	void parseVarFlagList(VarDef* vdef);
-	void parseVarNameline();
+	void parseVarNameline(VarDef* vdef);
 
 	void parseFlag();
-	void parseFlagNameline();
+	void parseFlagNameline(FlagDef* fdef);
 
 	void getOneParam(char* target, const char* const TOKEN);
 	bool checkNoParam();

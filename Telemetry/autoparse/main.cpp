@@ -16,7 +16,7 @@ int main() {
 		p.run();
 	} catch (std::exception& e) {
 		e.what();
-		p.input.show();
+		p.input.showLine();
 	}
 	return 0;
 }
