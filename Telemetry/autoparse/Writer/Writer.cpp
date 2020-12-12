@@ -23,7 +23,7 @@ void Writer::run() {
 		printf("void parse_%s (const char* const timestamp, uint8_t* buf) {\n", cdef->id);
 		printf("\t%s data(buf);\n", classname);
 		if (!strempty(cdef->custom))
-			printf("\t%s(%s, timestamp, buf);\n", cdef->custom, cdef->id);
+			printf("\t%s(%s, timestamp, data);\n", cdef->custom, cdef->id);
 
 		char* prefix_iter = prefix + sprintf(prefix, "printf(stringify(%s) \",%s,", cdef->id, cdef->name);
 		addPrefix(prefix_iter, cdef->prefix);
