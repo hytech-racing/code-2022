@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass
 class MC_read_write_parameter_command {
 public:
     MC_read_write_parameter_command() = default;
@@ -25,10 +26,10 @@ public:
     inline void set_rw_command(bool rw_command)                     { this->rw_command = rw_command; }
     inline void set_data(uint32_t data)                             { this->data = data; }
 private:
-    uint16_t parameter_address;
-    bool rw_command;
+    uint16_t parameter_address; // @Parse @Hex
+    bool rw_command; // @Parse @Hex
     uint8_t reserved1;
-    uint32_t data;
+    uint32_t data; // @Parse @Hex
 };
 
 #pragma pack(pop)

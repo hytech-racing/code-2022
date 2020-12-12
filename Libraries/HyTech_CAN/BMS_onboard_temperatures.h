@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass
 class BMS_onboard_temperatures {
 public:
     BMS_onboard_temperatures() = default;
@@ -26,9 +27,9 @@ public:
     inline void set_high_temperature(int16_t high_temperature)          { this->high_temperature = high_temperature; }
 
 private:
-    int16_t average_temperature;
-    int16_t low_temperature;
-    int16_t high_temperature;
+    int16_t average_temperature; // @Parse @Scale(100) @Unit(C)
+    int16_t low_temperature; // @Parse @Scale(100) @Unit(C)
+    int16_t high_temperature; // @Parse @Scale(100) @Unit(C)
 };
 
 #pragma pack(pop)

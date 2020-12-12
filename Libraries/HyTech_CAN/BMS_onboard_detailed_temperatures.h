@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass @Prefix(IC_{get_ic_id()})
 class BMS_onboard_detailed_temperatures {
 public:
     BMS_onboard_detailed_temperatures() = default;
@@ -40,8 +41,8 @@ public:
 
 private:
     uint8_t ic_id;
-    int16_t temperature_0;
-    int16_t temperature_1;
+    int16_t temperature_0; // @Parse @Scale(100) @Unit(C)
+    int16_t temperature_1; // @Parse @Scale(100) @Unit(C)
 };
 
 #pragma pack(pop)

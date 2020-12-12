@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass
 class MC_internal_states {
 public:
     MC_internal_states() = default;
@@ -27,13 +28,13 @@ public:
     inline bool get_inverter_enable_lockout()               const { return inverter_enable & 0x80; }
     inline bool get_direction_command()                     const { return direction_command; }
 private:
-    uint16_t vsm_state;
-    uint8_t inverter_state;
-    uint8_t relay_state;
-    uint8_t inverter_run_mode_discharge_state;
-    uint8_t inverter_command_mode;
-    uint8_t inverter_enable;
-    uint8_t direction_command;
+    uint16_t vsm_state; // @Parse @Hex
+    uint8_t inverter_state; // @Parse @Hex
+    uint8_t relay_state; // @Parse @Hex
+    uint8_t inverter_run_mode_discharge_state; // @Parse @Flaglist(inverter_run_mode, inverter_active_discharge_state)
+    uint8_t inverter_command_mode; // @Parse
+    uint8_t inverter_enable; // @Parse @Flaglist(inverter_enable_state, inverter_enable_lockout)
+    uint8_t direction_command; // @Parse
 };
 
 #pragma pack(pop)

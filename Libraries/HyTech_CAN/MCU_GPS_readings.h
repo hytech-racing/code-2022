@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass
 class MCU_GPS_readings {
 public:
     MCU_GPS_readings() = default;
@@ -18,8 +19,8 @@ public:
     inline void set_latitude(int32_t latitude)      { this->latitude = latitude; }
     inline void set_longitude(int32_t longitude)    { this->longitude = longitude; }
 private:
-    int32_t latitude;
-    int32_t longitude;
+    int32_t latitude; // @Parse @Scale(10000)
+    int32_t longitude; // @Parse @Scale(10000)
 };
 
 #pragma pack(pop)

@@ -5,6 +5,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass
 class BMS_coulomb_counts {
 public:
     BMS_coulomb_counts() = default;
@@ -24,8 +25,8 @@ public:
     inline void set_total_discharge(uint32_t total_discharge)   { this->total_discharge = total_discharge; }
 
 private:
-    uint32_t total_charge;
-    uint32_t total_discharge;
+    uint32_t total_charge; // @Parse @Scale(10000) @Unit(C)
+    uint32_t total_discharge; // @Parse @Scale(10000) @Unit(C)
 };
 
 #pragma pack(pop)

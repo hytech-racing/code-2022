@@ -8,7 +8,7 @@ struct AutoParseException : virtual public std::exception {
 	AutoParseException(const char* const ERROR) : ERROR(ERROR) {}
 	const char* what() const throw () {
 		puts("Auto Parse Exception");
-		printf("Unable to generate parser configuration (%s\n)", ERROR);
+		printf("Unable to generate parser configuration (%s)\n", ERROR);
 		return "Auto Parse Exception";
 	}
 };
@@ -65,7 +65,7 @@ struct UnmappedFlagException : virtual public std::exception {
 	UnmappedFlagException(const char* const SET) : SET(SET) {}
 	inline const char* what() const throw () {
 		puts("Unmapped Flag Exception");
-		printf("Could not find any matching FlagSet: %s\n", SET);
+		printf("Could not find any matching Flagset: %s\n", SET);
 		return "Unmapped Flag Exception";
 	}
 };

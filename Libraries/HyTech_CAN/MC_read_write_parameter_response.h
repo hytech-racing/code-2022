@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass
 class MC_read_write_parameter_response {
 public:
     MC_read_write_parameter_response() = default;
@@ -16,10 +17,10 @@ public:
     inline bool get_write_success()         const { return write_success; }
     inline uint32_t get_data()              const { return data; }
 private:
-    uint16_t parameter_address;
-    bool write_success;
+    uint16_t parameter_address; // @Parse @Hex
+    bool write_success; // @Parse
     uint8_t reserved1;
-    uint32_t data;
+    uint32_t data; // @Parse @Hex
 };
 
 #pragma pack(pop)

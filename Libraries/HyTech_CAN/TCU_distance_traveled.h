@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass
 class TCU_distance_traveled {
 public:
     TCU_distance_traveled() = default;
@@ -16,7 +17,7 @@ public:
 
     inline void set_distance_traveled(uint16_t value) { this->distance_traveled = distance_traveled; }
 private:
-    int16_t distance_traveled;
+    int16_t distance_traveled; // @Parse @Scale(100) @Unit(m)
 };
 
 #pragma pack(pop)

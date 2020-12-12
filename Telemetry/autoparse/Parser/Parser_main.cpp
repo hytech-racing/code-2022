@@ -2,8 +2,7 @@
 
 #include "Canonicalize.h"
 
-Parser::Parser(const char* const filepath, int bufferlength) :
-	input(filepath, bufferlength) {}
+Parser::Parser(const char* const filepath, int bufferlength) : input(filepath, bufferlength) {}
 
 Parser::~Parser() {
 	for (ClassDef* cdef : classdefs)
@@ -30,20 +29,9 @@ void Parser::run() {
 		input.getline();
 	}
 
-	Canonicalize::classDefs(classdefs, classname);
+	Canonicalize::classDefs(classdefs, defaultClassProps);
 	Canonicalize::mapFlagDefs(floaters, vars);
-	Canonicalize::varDef(vars);
-
-	printf("Generated Parser Config for %s\n", classname);
-	puts("\nClass Definition(s)");
-	puts("-------------------");
-	for (ClassDef* cdef : classdefs)
-		cdef->print();
-
-	puts("\nVariable Definition(s)");
-	puts("------------------------");
-	for (VarDef* vdef : vars)
-		vdef->print();
+	Canonicalize::varDefs(vars);
 }
 
 bool Parser::validComment(char* const commentStart) {
@@ -86,4 +74,8 @@ void Parser::loadNameline() {
 		input.setStopMode(StopMode::FILE);
 		input.getline();
 	}
+}
+
+Writer Parser::getWriter() {
+	return Writer(defaultClassProps.name, classdefs, vars);
 }

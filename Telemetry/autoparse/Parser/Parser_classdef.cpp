@@ -16,13 +16,11 @@ void Parser::parseClass() {
 }
 
 void Parser::parseClassNameline() {
-	if (!eatToken(input, CLASS) || !input.getToken(classname))
+	if (!eatToken(input, CLASS) || !input.getToken(defaultClassProps.name))
 		throw InvalidDatatypeException("class");
 }
 
 void Parser::parseClassDef(ClassDef*& cdef) {
-	ClassDef defaultProps;
-
 	while (input.find('@')) {
 		input.get();
 		if (eatToken(input, ID)) {
@@ -39,16 +37,19 @@ void Parser::parseClassDef(ClassDef*& cdef) {
 			if (!strempty(cdef->id))
 				addClassDef(cdef);
 			else {
-				attemptCopy(defaultProps.prefix, cdef->prefix, PREFIX);
+				attemptCopy(defaultClassProps.prefix, cdef->prefix, PREFIX);
 				delete cdef;
 			}
 			cdef = nullptr;
 		}
-		else if (eatToken(input, CUSTOM))
-			getOneParam(defaultProps.custom, CUSTOM);
+		else if (eatToken(input, CUSTOM)) {
+			openParen();
+			if (!strempty(defaultClassProps.custom))
+				throw ReassignmentException(CUSTOM, defaultClassProps.custom);
+			input.getToken(defaultClassProps.custom);
+			closeParen();
+		}
 	}
-
-	Canonicalize::applyDefaultClassProps(classdefs, defaultProps);
 }
 
 void Parser::parseClassDefParams(char* target, char* optional, const char* const TOK1, const char* const TOK2) {

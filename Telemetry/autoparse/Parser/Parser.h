@@ -5,19 +5,21 @@
 #include "InputBuffer.h"
 #include "Token.h"
 #include "Exception.h"
+#include "Writer.h"
 
 class Parser {
 public:
 	Parser(const char* const filepath, int bufferlength = BUFFER_LENGTH);
 	~Parser();
 	void run();
+	Writer getWriter();
 
-	friend int main();
+	friend void run(char* filename);
 private:
 	InputBuffer input;
 	bool samelineComment;
 
-	char classname [128];
+	ClassDef defaultClassProps;
 	std::list<ClassDef*> classdefs;
 	std::list<VarDef*> vars;
 	std::list<FlagSetDef*> floaters;

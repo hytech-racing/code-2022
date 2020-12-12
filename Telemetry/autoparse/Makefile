@@ -1,7 +1,7 @@
-INC = -I. -IDataModels -IParser -IUtils
+INC = -I. -IDataModels -IParser -IUtils -IWriter
 SRC = *.cpp **/*.cpp
 
-.PHONY: parser
+# .PHONY: parser
 
 parser: $(SRC) *.h **/*.h
 	g++ $(INC) $(SRC)

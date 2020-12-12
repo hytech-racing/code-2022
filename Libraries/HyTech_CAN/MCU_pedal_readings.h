@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass
 class MCU_pedal_readings {
 public:
     MCU_pedal_readings() = default;
@@ -38,11 +39,11 @@ public:
     inline void set_brake_pedal_active(bool brake_pedal_active)                 { pedal_flags = (pedal_flags & 0xFB) | (brake_pedal_active << 2); }
     inline void set_torque_map_mode(uint8_t torque_map_mode)                    { this->torque_map_mode = torque_map_mode; }
 private:
-    uint16_t accelerator_pedal_raw_1;
-    uint16_t accelerator_pedal_raw_2;
-    uint16_t brake_pedal_raw;
-    uint8_t pedal_flags;
-    uint8_t torque_map_mode;
+    uint16_t accelerator_pedal_raw_1; // @Parse
+    uint16_t accelerator_pedal_raw_2; // @Parse
+    uint16_t brake_pedal_raw; // @Parse
+    uint8_t pedal_flags; // @Parse @Hex
+    uint8_t torque_map_mode; // @Parse
 };
 
 #pragma pack(pop)

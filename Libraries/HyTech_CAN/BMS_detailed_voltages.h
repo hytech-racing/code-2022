@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass @Prefix(IC_{get_ic_id()}_GROUP_{get_group_id()})
 class BMS_detailed_voltages {
 public:
     BMS_detailed_voltages() = default;
@@ -48,9 +49,9 @@ public:
 
 private:
 	uint8_t ic_id_group_id;
-    uint16_t voltage_0;
-    uint16_t voltage_1;
-    uint16_t voltage_2;
+    uint16_t voltage_0; // @Parse @Scale(10000) @Unit(V)
+    uint16_t voltage_1; // @Parse @Scale(10000) @Unit(V)
+    uint16_t voltage_2; // @Parse @Scale(10000) @Unit(V)
 };
 
 #pragma pack(pop)

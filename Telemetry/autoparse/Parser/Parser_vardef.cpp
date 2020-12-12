@@ -5,8 +5,10 @@ void Parser::parseVar() {
 	VarDef* vdef = new VarDef;
 	try {
 		parseVarDef(vdef);
-		loadNameline();
-		parseVarNameline(vdef);
+		if (strempty(vdef->name)) {
+			loadNameline();
+			parseVarNameline(vdef);
+		}
 		vars.push_back(vdef);
 	} catch (std::exception const& e) {
 		delete vdef;
@@ -15,6 +17,8 @@ void Parser::parseVar() {
 }
 
 void Parser::parseVarNameline(VarDef* vdef) {
+	if (eatToken(input, "bool") && input.getToken(vdef->name))
+		return;
 	input.eat('u');
 	if (eatToken(input, "int")) {
 		int size = input.getInt();

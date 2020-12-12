@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass
 class MC_temperatures_1 {
 public:
     MC_temperatures_1() = default;
@@ -17,10 +18,10 @@ public:
     inline int16_t get_module_c_temperature()           const { return module_c_temperature; }
     inline int16_t get_gate_driver_board_temperature()  const { return gate_driver_board_temperature; }
 private:
-    int16_t module_a_temperature;
-    int16_t module_b_temperature;
-    int16_t module_c_temperature;
-    int16_t gate_driver_board_temperature;
+    int16_t module_a_temperature; // @Parse @Scale(10) @Unit(C)
+    int16_t module_b_temperature; // @Parse @Scale(10) @Unit(C)
+    int16_t module_c_temperature; // @Parse @Scale(10) @Unit(C)
+    int16_t gate_driver_board_temperature; // @Parse @Scale(10) @Unit(C)
 };
 
 #pragma pack(pop)

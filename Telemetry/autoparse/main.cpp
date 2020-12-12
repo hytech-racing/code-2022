@@ -9,15 +9,35 @@
 #include "VarDef.h"
 #include "Parser.h"
 #include "StringUtils.h"
+#include "Writer.h"
 
-int main() {
-	Parser p("../../Libraries/HyTech_CAN/dummy.h");
+#include <dirent.h>
+#include <sys/types.h>
+
+#define CAN_LIBRARY "../../Libraries/HyTech_CAN/"
+
+void run(char* filename) {
+	char filepath [128]; sprintf(filepath, CAN_LIBRARY "%s", filename);
+	Parser p(filepath);
 	try {
 		p.run();
+		p.getWriter().run();
 	} catch (std::exception& e) {
 		e.what();
 		p.input.showLine();
 	}
+}
+
+int main() {
+	DIR *dir;
+	struct dirent *ent;
+	if ((dir = opendir (CAN_LIBRARY)) != NULL)
+		while ((ent = readdir (dir)) != NULL) {
+			if (ent->d_type == DT_REG && strstr(ent->d_name, ".h"))
+				run(ent->d_name);
+		}
+	closedir (dir);
+
 	return 0;
 }
 

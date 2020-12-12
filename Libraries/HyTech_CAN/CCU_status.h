@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass
 class CCU_status {
 public:
     CCU_status() = default;
@@ -15,7 +16,7 @@ public:
     inline bool get_charger_enabled() { return charger_enabled; }
     inline void set_charger_enabled(bool charger_enabled) { this->charger_enabled = charger_enabled; }
 private:
-    bool charger_enabled;
+    bool charger_enabled; // @Parse
 };
 
 #pragma pack(pop)

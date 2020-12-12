@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass
 class GLV_current_readings {
 public:
     GLV_current_readings() = default;
@@ -23,8 +24,8 @@ public:
     inline void set_cooling_current_value(uint16_t cooling_current_value) { this->cooling_current_value = cooling_current_value; }
 
 private:
-    uint16_t ecu_current_value;
-	uint16_t cooling_current_value;
+    uint16_t ecu_current_value; // @Parse @Scale(100) @Unit(A)
+	uint16_t cooling_current_value; // @Parse @Scale(100) @Unit(A)
 };
 
 

@@ -13,8 +13,8 @@ namespace Canonicalize {
 		}
 	}
 
-	void classDefs(std::list<ClassDef*>& list, char* classname) {
-		if (strempty(classname))
+	void classDefs(std::list<ClassDef*>& list, ClassDef& defaultProps) {
+		if (strempty(defaultProps.name))
 			throw AutoParseException("Symbol Parseclass not found");
 
 		if (list.empty()) {
@@ -22,36 +22,33 @@ namespace Canonicalize {
 			strcpy(cdef->id, ID_PREFIX);
 
 			char* target = cdef->id + ct_strlen(ID_PREFIX);
-			for (char* src = classname; *src; ++src)
+			for (char* src = defaultProps.name; *src; ++src)
 				*target++ = toupper(*src);
 			*target = '\0';
 
-			strcpy(cdef->name, classname);
+			strcpy(cdef->name, defaultProps.name);
 			list.push_back(cdef);
 		}
 
-		for (ClassDef* cdef : list)
+		for (ClassDef* cdef : list) {
 			if (streq(cdef->name, "-"))
-				strcpy(cdef->name, classname);
-	}
-
-	void applyDefaultClassProps(std::list<ClassDef*>& list, ClassDef& defaultProps) {
-		makeFunc(defaultProps.custom);
-		
-		for (ClassDef* def : list) {
-			if (strempty(def->prefix))
-				strcpy(def->prefix, defaultProps.prefix);
-			strcpy(def->custom, defaultProps.custom);
+				strcpy(cdef->name, defaultProps.name);
+			if (strempty(cdef->prefix))
+				strcpy(cdef->prefix, defaultProps.prefix);
+			strcpy(cdef->custom, defaultProps.custom);
 		}
 	}
 
-	void varDef(std::list<VarDef*>& vars) {
+	void varDefs(std::list<VarDef*>& vars) {
 		for (VarDef* vdef : vars) {
 			if (strempty(vdef->getter)) {
 				strcpy(vdef->getter, GET_PREFIX);
 				strcpy(vdef->getter + ct_strlen(GET_PREFIX), vdef->name);
 			}
 			makeFunc(vdef->getter);
+
+			if ((vdef->hex || vdef->flags) && (vdef->scale || !strempty(vdef->unit)))
+				throw AutoParseException("Hex/flag variables cannot have scale or unit");
 
 			if (vdef->flags) {
 				if (streq(vdef->flags->prefix, "-"))
@@ -75,6 +72,7 @@ namespace Canonicalize {
 
 	void mapFlagDefs(std::list<FlagSetDef*>& flagsets, std::list<VarDef*>& vars) {
 		for (FlagSetDef* fsdef : flagsets) {
+			bool ok = false;
 			for (VarDef* vdef : vars) {
 				if (vdef->flags && streq(vdef->name, fsdef->set)) {
 					while (fsdef->flags.size()) {
@@ -82,10 +80,12 @@ namespace Canonicalize {
 						fsdef->flags.pop_front();
 					}
 					delete fsdef;
-					return;
+					ok = true;
+					break;
 				}
 			}
-			throw UnmappedFlagException(fsdef->set);
+			if (!ok)
+				throw UnmappedFlagException(fsdef->set);
 		}
 	}
 
