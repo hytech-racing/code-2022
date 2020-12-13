@@ -13,7 +13,7 @@
 
 #pragma pack(push,1)
 
-// @Parseclass @Custom(parse_bms_status);
+// @Parseclass @Custom(parse_bms_balancing_status);
 class BMS_balancing_status {
     private:
         uint64_t message;

@@ -31,10 +31,10 @@ void Writer::run() {
 
 		fprintf(source, "\t%s data(buf);\n", classname);
 		if (!strempty(cdef->custom)) {
-			fprintf(source, "\t%s(%s, timestamp, data);\n", cdef->custom, cdef->id);
-			fprintf(userDefined, "void %s (int id, const char* const timestamp, %s& data);\n", cdef->custom, classname);
+			fprintf(source, "\t%s(timestamp, \",\" stringify(%s) \",%s,\", data);\n", cdef->custom, cdef->id, classname);
+			fprintf(userDefined, "void %s (const char* const timestamp, const char* const prefix, %s& data);\n", cdef->custom, classname);
 		}
-		char* prefix_iter = prefix + sprintf(prefix, "printf(stringify(%s) \",%s,", cdef->id, cdef->name);
+		char* prefix_iter = prefix + sprintf(prefix, "printf(\",\" stringify(%s) \",%s,", cdef->id, cdef->name);
 		addPrefix(prefix_iter, cdef->prefix);
 
 		for (VarDef* vdef : vars) {
