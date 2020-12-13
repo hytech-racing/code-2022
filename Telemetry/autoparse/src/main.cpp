@@ -29,6 +29,11 @@ void run(char* filename) {
 }
 
 int main() {
+	source = fopen("build/AutoParse.cpp", "a");
+	include = fopen("build/AutoParse.h", "a");
+	parseMessage = fopen("build/ParseMessage.cpp", "a");
+	userDefined = fopen("build/UserDefined.h", "a");
+
 	DIR *dir;
 	struct dirent *ent;
 	if ((dir = opendir (CAN_LIBRARY)) != NULL)
@@ -37,6 +42,9 @@ int main() {
 				run(ent->d_name);
 		}
 	closedir (dir);
+
+	fputs("\t}\n}", parseMessage);
+	fcloseall();
 
 	return 0;
 }

@@ -5,6 +5,11 @@
 #include "ClassDef.h"
 #include "VarDef.h"
 
+extern FILE* source;
+extern FILE* include;
+extern FILE* parseMessage;
+extern FILE* userDefined;
+
 class Writer {
 public:
 	Writer(char* classname, std::list<ClassDef*> classdefs, std::list<VarDef*> vars);
@@ -20,6 +25,6 @@ private:
 	void addPrefix(char*& prefix_iter, char* prefix);
 
 	inline void startLine() {
-		printf("\tprintf(timestamp); putchar(','); %s", prefix);
+		fprintf(source, "\tprintf(timestamp); putchar(','); %s", prefix);
 	}
 };

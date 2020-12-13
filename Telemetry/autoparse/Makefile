@@ -1,7 +1,11 @@
-INC = -I. -IDataModels -IParser -IUtils -IWriter
-SRC = *.cpp **/*.cpp
+INC = -Iinclude -Iinclude/DataModels
+SRC = src/*.cpp src/Parser/*.cpp
 
-# .PHONY: parser
+.PHONY: parser
 
-parser: $(SRC) *.h **/*.h
+parser: $(SRC) include/*.h include/DataModels/*.h
+	rm -rf build
+	mkdir build
+	cp -r templates/* build
 	g++ $(INC) $(SRC)
+	./a.out
