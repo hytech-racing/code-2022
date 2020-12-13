@@ -6,8 +6,8 @@
 
 /**
  * @Parseclass
- * @ID(TCU_WHEEL_RPM_FRONT, TCU_wheel_rpm_front) @Prefix(front, TCU_WHEEL_RPM_FRONT)
- * @ID(TCU_WHEEL_RPM_REAR, TCU_wheel_rpm_rear) @Prefix(rear, TCU_WHEEL_RPM_REAR)
+ * @ID(ID_TCU_WHEEL_RPM_FRONT, TCU_wheel_rpm_front) @Prefix(front, ID_TCU_WHEEL_RPM_FRONT)
+ * @ID(ID_TCU_WHEEL_RPM_REAR, TCU_wheel_rpm_rear) @Prefix(rear, ID_TCU_WHEEL_RPM_REAR)
  */
 class TCU_wheel_rpm {
 public:

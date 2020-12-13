@@ -4,7 +4,7 @@
 
 #pragma pack(push,1)
 
-// @Parseclass
+// @Parseclass @ID(ID_FCU_ACCELEROMETER)
 class FCU_accelerometer_values {
 public:
 	FCU_accelerometer_values() = default;

@@ -5,7 +5,7 @@
 
 #pragma pack(push,1)
 
-// @Parseclass @Prefix(MC)
+// @Parseclass @ID(ID_MC_ANALOG_INPUTS_VOLTAGES) @Prefix(MC)
 class MC_analog_input_voltages {
 public:
     MC_analog_input_voltages() = default;
