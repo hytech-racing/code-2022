@@ -25,6 +25,6 @@ private:
 	void addPrefix(char*& prefix_iter, char* prefix);
 
 	inline void startLine() {
-		fprintf(source, "\tprintf(timestamp); %s", prefix);
+		fprintf(source, "\tfprintf(outfile, \"%%s\", timestamp); %s", prefix);
 	}
 };

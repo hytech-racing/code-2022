@@ -34,7 +34,7 @@ void Writer::run() {
 			fprintf(source, "\t%s(timestamp, \",\" stringify(%s) \",%s,\", data);\n", cdef->custom, cdef->id, classname);
 			fprintf(userDefined, "void %s (const char* const timestamp, const char* const prefix, %s& data);\n", cdef->custom, classname);
 		}
-		char* prefix_iter = prefix + sprintf(prefix, "printf(\",\" stringify(%s) \",%s,", cdef->id, cdef->name);
+		char* prefix_iter = prefix + sprintf(prefix, "fprintf(outfile, \",\" stringify(%s) \",%s,", cdef->id, cdef->name);
 		addPrefix(prefix_iter, cdef->prefix);
 
 		for (VarDef* vdef : vars) {
@@ -108,7 +108,7 @@ void Writer::addPrefix(char*& prefix_iter, char* classprefix) {
         return;
     
     fprintf(source, "\tchar prefix [128];\n");
-    fprintf(source, "\tsprintf(prefix, %s\"", prefix + strlen("printf("));
+    fprintf(source, "\tsprintf(prefix, %s\"", prefix + ct_strlen("fprintf(outfile, "));
     
     for (char* c = classprefix; *c; ++c) {
         if (*c == '{') {
@@ -123,5 +123,5 @@ void Writer::addPrefix(char*& prefix_iter, char* classprefix) {
     
     fputs(");\n", source);
     
-    prefix_iter = prefix + sprintf(prefix, "printf(prefix); printf(\"");
+    prefix_iter = prefix + sprintf(prefix, "fprintf(outfile, \"%%s\", prefix); fprintf(outfile, \"");
 }
