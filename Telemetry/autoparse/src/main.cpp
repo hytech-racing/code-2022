@@ -24,7 +24,7 @@ void run(char* filename) {
 		p.getWriter().run();
 	} catch (std::exception& e) {
 		e.what();
-		p.input.showLine();
+		p.input.showLine(stderr);
 	}
 }
 

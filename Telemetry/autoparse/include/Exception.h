@@ -7,8 +7,8 @@ struct AutoParseException : virtual public std::exception {
 	const char* const ERROR;
 	AutoParseException(const char* const ERROR) : ERROR(ERROR) {}
 	const char* what() const throw () {
-		puts("Auto Parse Exception");
-		printf("Unable to generate parser configuration (%s)\n", ERROR);
+		fputs("Auto Parse Exception", stderr);
+		fprintf(stderr, "Unable to generate parser configuration (%s)\n", ERROR);
 		return "Auto Parse Exception";
 	}
 };
@@ -17,8 +17,8 @@ struct InvalidDatatypeException : virtual public std::exception {
 	const char* const EXPECTED;
 	InvalidDatatypeException(const char* const EXPECTED) : EXPECTED(EXPECTED) {}
 	const char* what() const throw () {
-		puts("Invalid Datatype Exception");
-		printf("Expected Datatype: %s\n", EXPECTED);
+		fputs("Invalid Datatype Exception", stderr);
+		fprintf(stderr, "Expected Datatype: %s\n", EXPECTED);
 		return "Invalid Datatype Exception";
 	}
 };
@@ -27,8 +27,8 @@ struct InvalidParameterException : virtual public std::exception {
 	const char* const TOKEN;
 	InvalidParameterException(const char* const TOKEN) : TOKEN(TOKEN) {}
 	const char* what() const throw () {
-		puts("Invalid Parameter Exception");
-		printf("Unable to parse parameter for: %s\n", TOKEN);
+		fputs("Invalid Parameter Exception", stderr);
+		fprintf(stderr, "Unable to parse parameter for: %s\n", TOKEN);
 		return "Invalid Parameter Exception";
 	}
 };
@@ -43,9 +43,9 @@ struct ReassignmentException : virtual public std::exception {
 			sprintf(CURRENT, "%d", current);
 		}
 	const char* what() const throw () {
-		puts("Reassignment Exception");
-		printf("Cannot assign two values to the same parameter: %s\n", TOKEN);
-		printf("Current value: %s\n", CURRENT);
+		fputs("Reassignment Exception", stderr);
+		fprintf(stderr, "Cannot assign two values to the same parameter: %s\n", TOKEN);
+		fprintf(stderr, "Current value: %s\n", CURRENT);
 		return "Reassignment Exception";
 	}
 };
@@ -54,8 +54,8 @@ struct SyntaxException : virtual public std::exception {
 	const char TOKEN;
 	SyntaxException(const char TOKEN) : TOKEN(TOKEN) {}
 	inline const char* what() const throw () {
-		puts("Syntax Exception");
-		printf("Expected Token: %c\n", TOKEN);
+		fputs("Syntax Exception", stderr);
+		fprintf(stderr, "Expected Token: %c\n", TOKEN);
 		return "Syntax Exception";
 	}
 };
@@ -64,8 +64,8 @@ struct UnmappedFlagException : virtual public std::exception {
 	const char* const SET;
 	UnmappedFlagException(const char* const SET) : SET(SET) {}
 	inline const char* what() const throw () {
-		puts("Unmapped Flag Exception");
-		printf("Could not find any matching Flagset: %s\n", SET);
+		fputs("Unmapped Flag Exception", stderr);
+		fprintf(stderr, "Could not find any matching Flagset: %s\n", SET);
 		return "Unmapped Flag Exception";
 	}
 };

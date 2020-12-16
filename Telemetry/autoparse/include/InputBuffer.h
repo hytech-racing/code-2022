@@ -33,7 +33,7 @@ public:
 	inline void load(char* stash) { strcpy(buffer, stash); current = buffer; stop = StopMode::LINE; }
 
 	inline void show() { puts(current); }
-	inline void showLine() { printf("%s:%d\n%s\n\n", FILEPATH, linenum, buffer); }
+	inline void showLine(FILE* f = stdin) { fprintf(f, "%s:%d\n%s\n\n", FILEPATH, linenum, buffer); }
 private:
 	inline bool atStopPoint() {
 		if (stop == StopMode::FILE)
