@@ -30,16 +30,15 @@ void Writer::run() {
 		fprintf(parseMessage, "\t\tcase %s: parse_%s(timestamp, buf); break;\n", cdef->id, cdef->id);
 
 		fprintf(source, "\t%s data(buf);\n", classname);
+		addPrefix(cdef);
 		if (!strempty(cdef->custom)) {
-			fprintf(source, "\t%s(timestamp, \",\" stringify(%s) \",%s,\", data);\n", cdef->custom, cdef->id, classname);
+			fprintf(source, "\t%s(timestamp, prefix, data);\n", cdef->custom);
 			fprintf(userDefined, "void %s (const char* const timestamp, const char* const prefix, %s& data);\n", cdef->custom, classname);
 		}
-		char* prefix_iter = prefix + sprintf(prefix, "fprintf(outfile, \",\" stringify(%s) \",%s,", cdef->id, cdef->name);
-		addPrefix(prefix_iter, cdef->prefix);
 
 		for (VarDef* vdef : vars) {
 			if (vdef->hex || vdef->flags)
-				writeFlagParser(vdef, prefix_iter);
+				writeFlagParser(vdef);
 			else
 				writeNumericalParser(vdef);
 		}
@@ -48,51 +47,60 @@ void Writer::run() {
 }
 
 void Writer::writeNumericalParser(VarDef* vdef) {
-	startLine();
-	fprintf(source, "%s,", vdef->name);
+	startLine(vdef->name);
 
 	if (vdef->scale) {
 		if (vdef->precision)
 			fprintf(source, "%%.%df", vdef->precision);
 		else
-		    fprintf(source, "%%f");
+		    fputs("%f", source);
 	}
 	else
-	    fprintf(source, "%%d");
+	    fputs("%d", source);
 
-	fprintf(source, ",%s\\n\", ", vdef->unit);
-	fprintf(source, "data.%s", vdef->getter);
+	fprintf(source, ",%s", vdef->unit);
 
 	if (vdef->scale)
-		fprintf(source, " / (double) %d", vdef->scale);
-	fputs(");\n", source);
+		sprintf(vdef->getter + strlen(vdef->getter), " / (double) %d", vdef->scale);
+	writeParams(vdef->getter);
 }
 
-void Writer::writeFlagParser(VarDef* vdef, char* prefix_iter) {
+void Writer::writeFlagParser(VarDef* vdef) {
 	if (vdef->hex) {
-		startLine();
-		fprintf(source, "%s,0x%%X\\n\", data.%s);\n", vdef->name, vdef->getter);
+		startLine(vdef->name);
+		fputs("%#X", source);
+		writeParams(vdef->getter);
 	}
 	if (!vdef->flags)
 		return;
 	
-	if (!strempty(vdef->flags->prefix))
-		sprintf(prefix_iter, "%s_", vdef->flags->prefix);
-	for (FlagDef* fdef : vdef->flags->flags) {
-		startLine();
-		fprintf(source, "%s,0x%%X\\n\", data.%s);\n", fdef->name, fdef->getter);
+	if (!strempty(vdef->flags->prefix)) {
+		char fullname [256];
+		char* start = fullname + sprintf(fullname, "%s_", vdef->flags->prefix);
+		for (FlagDef* fdef : vdef->flags->flags) {
+			strcpy(start, fullname);
+			fputs("%d", source);
+			writeParams(fdef->getter);
+		}
 	}
-	*prefix_iter = '\0';
+
+	else {
+		for (FlagDef* fdef : vdef->flags->flags) {
+			startLine(fdef->name);
+			fputs("%d", source);
+			writeParams(fdef->getter);
+		}
+	}
 }
 
-void Writer::addPrefix(char*& prefix_iter, char* classprefix) {
-	if (strempty(classprefix))
-		return;
-	
+void Writer::addPrefix(ClassDef* cdef) {
     bool hasParam = false;
     bool bracketed = false;
 
-    for (char* c = classprefix; *c; ++c) {
+	char prefix [1024];
+	char* prefix_iter = prefix + sprintf(prefix, "stringify(%s) \",%s", cdef->id, cdef->name);
+
+    for (char* c = cdef->prefix; *c; ++c) {
         if (*c == '{') {
             hasParam = bracketed = true;
             prefix_iter += sprintf(prefix_iter, "%%d");
@@ -102,15 +110,19 @@ void Writer::addPrefix(char*& prefix_iter, char* classprefix) {
         else if (!bracketed)
             *prefix_iter++ = *c;
     }
-    prefix_iter += sprintf(prefix_iter, "_");
     
-    if (!hasParam)
+	if (!strempty(cdef->prefix))
+		prefix_iter += sprintf(prefix_iter, "_");
+    
+    if (!hasParam) {
+		fprintf(source, "\tstatic constexpr const char* const prefix = %s\";\n", prefix);
         return;
+	}
     
     fprintf(source, "\tchar prefix [128];\n");
-    fprintf(source, "\tsprintf(prefix, %s\"", prefix + ct_strlen("fprintf(outfile, "));
+    fprintf(source, "\tsprintf(prefix, %s\"", prefix);
     
-    for (char* c = classprefix; *c; ++c) {
+    for (char* c = cdef->prefix; *c; ++c) {
         if (*c == '{') {
             bracketed = true;
             fprintf(source, ", data.");

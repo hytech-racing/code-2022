@@ -38,7 +38,7 @@ private:
 	void parseVarDef(VarDef* vdef);
 	void parseVarFlagPrefix(VarDef* vdef);
 	void parseVarFlagList(VarDef* vdef);
-	void parseVarNameline(VarDef* vdef);
+	void parseVarNameline(char* target);
 
 	void parseFlag();
 	void parseFlagNameline(FlagDef* fdef);

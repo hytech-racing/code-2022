@@ -19,7 +19,7 @@ public:
 private:
     int16_t commanded_torque; // @Parse @Scale(10) @Unit(C)
     int16_t torque_feedback; // @Parse @Scale(10) @Unit(C)
-    uint32_t power_on_timer; // @Parse @Name(rms_uptime) @Getter(get_power_on_timer) @Unit(s)
+    uint32_t power_on_timer; // @Parse @Name(rms_uptime) @Unit(s)
 };
 
 #pragma pack(pop)

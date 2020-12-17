@@ -15,16 +15,22 @@ public:
 	Writer(char* classname, std::list<ClassDef*> classdefs, std::list<VarDef*> vars);
 	void run();
 private:
-	char prefix [1024];
 	char classname [128];
 	std::list<ClassDef*> classdefs;
 	std::list<VarDef*> vars;
 
 	void writeNumericalParser(VarDef* vdef);
-	void writeFlagParser(VarDef* vdef, char* prefix_iter);
-	void addPrefix(char*& prefix_iter, char* prefix);
+	void writeFlagParser(VarDef* vdef);
+	void addPrefix(ClassDef* cdef);
 
-	inline void startLine() {
-		fprintf(source, "\tfprintf(outfile, \"%%s\", timestamp); %s", prefix);
+	inline void startLine(char* varname) {
+		fputs("\tfprintf(outfile, \"%s,%s,\" \"", source);
+		int len;
+		fprintf(source, "%s%n\"", varname, &len);
+		fprintf(source, "%*s", 50 - len, "\",");
+	}
+
+	inline void writeParams(char* getter) {
+		fprintf(source, "\\n\",\ttimestamp, prefix, data.%s);\n", getter);
 	}
 };

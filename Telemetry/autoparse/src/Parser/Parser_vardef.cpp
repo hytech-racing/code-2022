@@ -7,7 +7,12 @@ void Parser::parseVar() {
 		parseVarDef(vdef);
 		if (strempty(vdef->name)) {
 			loadNameline();
-			parseVarNameline(vdef);
+			parseVarNameline(vdef->name);
+		}
+		else if (strempty(vdef->getter)) {
+			loadNameline();
+			strcpy(vdef->getter, GET_PREFIX);
+			parseVarNameline(vdef->getter + ct_strlen(GET_PREFIX));
 		}
 		vars.push_back(vdef);
 	} catch (std::exception const& e) {
@@ -16,13 +21,13 @@ void Parser::parseVar() {
 	}
 }
 
-void Parser::parseVarNameline(VarDef* vdef) {
-	if (eatToken(input, "bool") && input.getToken(vdef->name))
+void Parser::parseVarNameline(char* const target) {
+	if (eatToken(input, "bool") && input.getToken(target))
 		return;
 	input.eat('u');
 	if (eatToken(input, "int")) {
 		int size = input.getInt();
-		if (isPow2(size) && isValidDataLength(size) && eatToken(input, "_t") && input.getToken(vdef->name))
+		if (isPow2(size) && isValidDataLength(size) && eatToken(input, "_t") && input.getToken(target))
 			return;
 	}
 	throw InvalidDatatypeException("int_t or uint_t (8, 16, 32, or 64)");

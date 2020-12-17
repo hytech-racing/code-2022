@@ -2,30 +2,29 @@
 
 enum class ParseType { None, Variable, Class, Flag };
 
-constexpr char S_COMMENT [] = "//";
-constexpr char M_COMMENT_START [] = "/*";
-constexpr char M_COMMENT_CLOSE [] = "*/";
+constexpr const char* const S_COMMENT = "//";
+constexpr const char* const M_COMMENT_START = "/*";
+constexpr const char* const M_COMMENT_CLOSE = "*/";
 
-constexpr char PARSE [] = "Parse";
-constexpr char CLASS [] = "class";
-constexpr char FLAG [] = "flag";
+constexpr const char* const PARSE = "Parse";
+constexpr const char* const CLASS = "class";
+constexpr const char* const FLAG = "flag";
 
-constexpr char ID [] = "ID";
-constexpr char PREFIX [] = "Prefix";
-constexpr char CUSTOM [] = "Custom";
+constexpr const char* const ID = "ID";
+constexpr const char* const PREFIX = "Prefix";
+constexpr const char* const CUSTOM = "Custom";
+constexpr const char* const NAME = "Name";
+constexpr const char* const GETTER = "Getter";
+constexpr const char* const HEX = "Hex";
+constexpr const char* const UNIT = "Unit";
+constexpr const char* const SCALE = "Scale";
+constexpr const char* const PRECISION = "Precision";
+constexpr const char* const FLAGLIST = "Flaglist";
+constexpr const char* const FLAGSET = "Flagset";
+constexpr const char* const FLAGPREFIX = "Flagprefix";
 
-constexpr char NAME [] = "Name";
-constexpr char GETTER [] = "Getter";
-constexpr char HEX [] = "Hex";
-constexpr char UNIT [] = "Unit";
-constexpr char SCALE [] = "Scale";
-constexpr char PRECISION [] = "Precision";
-constexpr char FLAGLIST [] = "Flaglist";
-constexpr char FLAGSET [] = "Flagset";
-constexpr char FLAGPREFIX [] = "Flagprefix";
-
-constexpr char ID_PREFIX [] = "ID_";
-constexpr char GET_PREFIX [] = "get_";
+constexpr const char* const ID_PREFIX = "ID_";
+constexpr const char* const GET_PREFIX = "get_";
 
 inline size_t constexpr ct_strlen(const char* str) {
 	size_t len = 0;
