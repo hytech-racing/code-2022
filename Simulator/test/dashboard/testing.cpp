@@ -17,7 +17,6 @@ protected:
 		extern Dashboard_status dashboard_status;
 		extern MCU_status mcu_status;
 
-		CAN_simulator::purge();
 		is_mc_err = false;
 		variable_led_start = VariableLED(LED_START);
 		timer_can_update = Metro(100);
