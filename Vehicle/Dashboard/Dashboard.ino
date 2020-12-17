@@ -110,11 +110,11 @@ inline void led_update(){
 
 inline void btn_update(){
     // this sets the button to be high: it is set low in send can
-    if (debounced_btn_mark.check())     { dashboard_status.toggle_mark_btn();     }
-    if (debounced_btn_mode.check())     { dashboard_status.toggle_mode_btn();     }
-    if (debounced_btn_mc_cycle.check()) { dashboard_status.toggle_mc_cycle_btn(); }
-    if (debounced_btn_start.check())    { dashboard_status.toggle_start_btn();    }
-    if (debounced_btn_extra.check())    { dashboard_status.toggle_extra_btn();    }
+    dashboard_status.set_mark_btn(debounced_btn_mark.check());
+    dashboard_status.set_mode_btn(debounced_btn_mode.check());
+    dashboard_status.set_mc_cycle_btn(debounced_btn_mc_cycle.check());
+    dashboard_status.set_start_btn(debounced_btn_start.check());
+    dashboard_status.set_extra_btn(debounced_btn_extra.check());
 }
 
 inline void read_can(){

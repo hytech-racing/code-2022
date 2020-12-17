@@ -2,7 +2,6 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(BUILD_SHARED_LIBS ON)
 
 
-add_subdirectory(CAN_simulator)
 add_subdirectory(core)
 add_subdirectory(gtest)
 add_subdirectory(HyTech_CAN)

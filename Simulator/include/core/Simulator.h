@@ -4,18 +4,17 @@
 
 #include "MockPin.h"
 
-
 class Simulator {
 public:
-    Simulator(unsigned long long period = 0);
-    ~Simulator();
-    void next();
+    static void begin(unsigned long long period = 0);
+    static void teardown();
+    static void next();
 
-    inline bool digitalRead(int pin)                { return io[pin].fOutputValue; };
-    inline unsigned analogRead(int pin)             { return io[pin].fOutputValue; }
-    inline void digitalWrite(int pin, bool value)   { io[pin].fInputValue = value; }
-    inline void analogWrite(int pin, unsigned value){ io[pin].fInputValue = value; }
-    inline int getPinMode(int pin)                  { return io[pin].fMode; }
+    static inline bool digitalRead(int pin)                { return io[pin].fOutputValue; };
+    static inline unsigned analogRead(int pin)             { return io[pin].fOutputValue; }
+    static inline void digitalWrite(int pin, bool value)   { io[pin].fInputValue = value; }
+    static inline void analogWrite(int pin, unsigned value){ io[pin].fInputValue = value; }
+    static inline int getPinMode(int pin)                  { return io[pin].fMode; }
     
     // used to manage pin i/o
     friend bool digitalRead(int pin);
@@ -28,7 +27,8 @@ public:
     friend unsigned long long millis();
     friend void delay (unsigned long long time);
 private:
+    Simulator();
     static unsigned long long sys_time;
-    unsigned long long LOOP_PERIOD;
+    static unsigned long long LOOP_PERIOD;
     static MockPin* io;
 };
