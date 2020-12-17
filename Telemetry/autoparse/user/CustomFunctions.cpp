@@ -10,6 +10,12 @@ void parse_bms_balancing_status (const char* const timestamp, const char* const 
 	}
 }
 
+void parse_detailed_voltages (const char* const timestamp, const char* const prefix, BMS_detailed_voltages& data) {
+	int group = data.get_group_id() * 3;
+	for (int i = 0; i < 3; ++i)
+		fprintf(outfile, "%s,%s" "CELL_%d,%f,V\n", timestamp, prefix, group + i, data.get_voltage(i) / (double) 10000);
+}
+
 void print_shutdown_status (const char* const timestamp, const char* const prefix, MCU_status& data) {
 	char shutdown [8];
 	int idx = 0;
