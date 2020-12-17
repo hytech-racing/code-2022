@@ -24,7 +24,7 @@ private:
 	void addPrefix(ClassDef* cdef);
 
 	inline void startLine(char* varname) {
-		fputs("\tfprintf(outfile, \"%s,%s,\" \"", source);
+		fputs("\tfprintf(outfile, \"%s,%s\" \"", source);
 		int len;
 		fprintf(source, "%s%n\"", varname, &len);
 		fprintf(source, "%*s", 50 - len, "\",");

@@ -6,7 +6,7 @@
 void parse_bms_balancing_status (const char* const timestamp, const char* const prefix, BMS_balancing_status& data) {
 	int group = data.get_group_id() << 2;
 	for (int ic = 1; ic <= 4; ++ic) {
-		fprintf(outfile, "%s,%s,IC_%d,0x%X,\n", timestamp, prefix, group + ic, data.get_ic_balancing(ic));
+		fprintf(outfile, "%s,%s" "IC_%d,%#X,\n", timestamp, prefix, group + ic, data.get_ic_balancing(ic));
 	}
 }
 
@@ -24,5 +24,5 @@ void print_shutdown_status (const char* const timestamp, const char* const prefi
 	if (data.get_shutdown_f_above_threshold())
 		shutdown[idx++] = 'F';
 	shutdown[idx++] = '\0';
-	fprintf(outfile, "%s,%s,shutdown_status,%s\n", timestamp, prefix, shutdown);
+	fprintf(outfile, "%s,%s" "shutdown_status,%s\n", timestamp, prefix, shutdown);
 }

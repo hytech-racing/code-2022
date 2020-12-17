@@ -98,7 +98,7 @@ void Writer::addPrefix(ClassDef* cdef) {
     bool bracketed = false;
 
 	char prefix [1024];
-	char* prefix_iter = prefix + sprintf(prefix, "stringify(%s) \",%s", cdef->id, cdef->name);
+	char* prefix_iter = prefix + sprintf(prefix, "stringify(%s) \",%s,", cdef->id, cdef->name);
 
     for (char* c = cdef->prefix; *c; ++c) {
         if (*c == '{') {
