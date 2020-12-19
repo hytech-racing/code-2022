@@ -7,10 +7,10 @@
 #include "Exception.h"
 #include "Writer.h"
 
-class Parser {
+class AnnotationParser {
 public:
-	Parser(const char* const filepath, int bufferlength = BUFFER_LENGTH);
-	~Parser();
+	AnnotationParser(const char* const filepath, int bufferlength = BUFFER_LENGTH);
+	~AnnotationParser();
 	void run();
 	Writer getWriter();
 

@@ -7,7 +7,7 @@
 #include "InputBuffer.h"
 #include "ClassDef.h"
 #include "VarDef.h"
-#include "Parser.h"
+#include "AnnotationParser.h"
 #include "StringUtils.h"
 #include "Writer.h"
 
@@ -17,8 +17,10 @@
 #define CAN_LIBRARY "../../Libraries/HyTech_CAN/"
 
 void run(char* filename) {
+	if (streq(filename, "CAN_ID.h") || streq(filename, "HyTech_CAN.h"))
+		return;
 	char filepath [128]; sprintf(filepath, CAN_LIBRARY "%s", filename);
-	Parser p(filepath);
+	AnnotationParser p(filepath);
 	try {
 		p.run();
 		p.getWriter().run();
@@ -29,10 +31,10 @@ void run(char* filename) {
 }
 
 int main() {
-	source = fopen("build/AutoParse.cpp", "a");
-	include = fopen("build/AutoParse.h", "a");
-	parseMessage = fopen("build/ParseMessage.cpp", "a");
-	userDefined = fopen("build/UserDefined.h", "a");
+	source = fopen("build/auto/AutoParse.cpp", "a");
+	include = fopen("build/auto/AutoParse.h", "a");
+	parseMessage = fopen("build/auto/ParseMessage.cpp", "a");
+	userDefined = fopen("build/auto/UserDefined.h", "a");
 
 	DIR *dir;
 	struct dirent *ent;

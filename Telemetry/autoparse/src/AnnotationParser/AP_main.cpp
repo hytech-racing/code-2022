@@ -1,17 +1,17 @@
-#include "Parser.h"
+#include "AnnotationParser.h"
 
 #include "Canonicalize.h"
 
-Parser::Parser(const char* const filepath, int bufferlength) : input(filepath, bufferlength) {}
+AnnotationParser::AnnotationParser(const char* const filepath, int bufferlength) : input(filepath, bufferlength) {}
 
-Parser::~Parser() {
+AnnotationParser::~AnnotationParser() {
 	for (ClassDef* cdef : classdefs)
 		delete cdef;
 	for (VarDef* vdef : vars)
 		delete vdef;
 }
 
-void Parser::run() {
+void AnnotationParser::run() {
 	char* commentStart;
 
 	while (commentStart = input.find('/')) {
@@ -34,7 +34,7 @@ void Parser::run() {
 	Canonicalize::varDefs(vars);
 }
 
-bool Parser::validComment(char* const commentStart) {
+bool AnnotationParser::validComment(char* const commentStart) {
 	samelineComment = commentStart != input.lineStart();
 
 	char c = input.get();
@@ -50,7 +50,7 @@ bool Parser::validComment(char* const commentStart) {
 	return true;
 }
 
-ParseType Parser::getType () {
+ParseType AnnotationParser::getType () {
 	while (input.find('@')) {
 		input.get();
 		if (eatToken(input, PARSE)) {
@@ -65,7 +65,7 @@ ParseType Parser::getType () {
 	return ParseType::None;
 }
 
-void Parser::loadNameline() {
+void AnnotationParser::loadNameline() {
 	if (samelineComment) {
 		input.setStopMode(StopMode::LINE);
 		input.restartLine();
@@ -76,6 +76,6 @@ void Parser::loadNameline() {
 	}
 }
 
-Writer Parser::getWriter() {
+Writer AnnotationParser::getWriter() {
 	return Writer(defaultClassProps.name, classdefs, vars);
 }

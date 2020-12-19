@@ -1,9 +1,9 @@
 
-#include "Parser.h"
+#include "AnnotationParser.h"
 #include "Canonicalize.h"
 #include "StringUtils.h"
 
-void Parser::parseClass() {
+void AnnotationParser::parseClass() {
 	ClassDef* cdef = nullptr;
 	try {
 		parseClassDef(cdef);
@@ -15,12 +15,12 @@ void Parser::parseClass() {
 	}
 }
 
-void Parser::parseClassNameline() {
+void AnnotationParser::parseClassNameline() {
 	if (!eatToken(input, CLASS) || !input.getToken(defaultClassProps.name))
 		throw InvalidDatatypeException("class");
 }
 
-void Parser::parseClassDef(ClassDef*& cdef) {
+void AnnotationParser::parseClassDef(ClassDef*& cdef) {
 	while (input.find('@')) {
 		input.get();
 		if (eatToken(input, ID)) {
@@ -52,7 +52,7 @@ void Parser::parseClassDef(ClassDef*& cdef) {
 	}
 }
 
-void Parser::parseClassDefParams(char* target, char* optional, const char* const TOK1, const char* const TOK2) {
+void AnnotationParser::parseClassDefParams(char* target, char* optional, const char* const TOK1, const char* const TOK2) {
 	openParen();
 	input.getParam(target, TOK1);
 	if (input.eat(','))
@@ -60,7 +60,7 @@ void Parser::parseClassDefParams(char* target, char* optional, const char* const
 	closeParen();
 }
 
-void Parser::addClassDef(ClassDef* cdef) {
+void AnnotationParser::addClassDef(ClassDef* cdef) {
 	for (ClassDef* other : classdefs) {
 		if (!streq(cdef->id, other->id))
 			continue;

@@ -1,7 +1,7 @@
-#include "Parser.h"
+#include "AnnotationParser.h"
 #include "VarDef.h"
 
-void Parser::parseVar() {
+void AnnotationParser::parseVar() {
 	VarDef* vdef = new VarDef;
 	try {
 		parseVarDef(vdef);
@@ -21,7 +21,7 @@ void Parser::parseVar() {
 	}
 }
 
-void Parser::parseVarNameline(char* const target) {
+void AnnotationParser::parseVarNameline(char* const target) {
 	if (eatToken(input, "bool") && input.getToken(target))
 		return;
 	input.eat('u');
@@ -33,7 +33,7 @@ void Parser::parseVarNameline(char* const target) {
 	throw InvalidDatatypeException("int_t or uint_t (8, 16, 32, or 64)");
 }
 
-void Parser::parseVarDef(VarDef* vdef) {
+void AnnotationParser::parseVarDef(VarDef* vdef) {
 	while (input.find('@')) {
 		input.get();
 		if (eatToken(input, NAME))			getOneParam(vdef->name, NAME);
@@ -57,7 +57,7 @@ void Parser::parseVarDef(VarDef* vdef) {
 	}
 }
 
-void Parser::parseVarFlagPrefix(VarDef* vdef) {
+void AnnotationParser::parseVarFlagPrefix(VarDef* vdef) {
 	if (vdef->flags == nullptr)
 		vdef->flags = new FlagSetDef;
 
@@ -76,7 +76,7 @@ void Parser::parseVarFlagPrefix(VarDef* vdef) {
 		throw InvalidParameterException(FLAGPREFIX);
 }
 
-void Parser::parseVarFlagList(VarDef* vdef) {
+void AnnotationParser::parseVarFlagList(VarDef* vdef) {
 	openParen();
 
 	if (vdef->flags == nullptr)

@@ -1,13 +1,13 @@
-#include "Parser.h"
+#include "AnnotationParser.h"
 #include "Exception.h"
 
-void Parser::getOneParam(char* target, const char* const TOKEN) {
+void AnnotationParser::getOneParam(char* target, const char* const TOKEN) {
 	openParen();
 	input.getParam(target, TOKEN);
 	closeParen();
 }
 
-bool Parser::checkNoParam() {
+bool AnnotationParser::checkNoParam() {
 	bool space = input.eatspace();
 	if (input.eat('('))
 		closeParen();

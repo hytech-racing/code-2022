@@ -13,7 +13,7 @@ Writer::Writer(char* classname, std::list<ClassDef*> classdefs, std::list<VarDef
 
 void Writer::run() {
 
-	// printf("\nGenerated Parser Config for %s\n", classname);
+	// printf("\nGenerated AnnotationParser Config for %s\n", classname);
 	// puts("\nClass Definition(s)");
 	// puts("-------------------");
 	// for (ClassDef* cdef : classdefs)
@@ -58,7 +58,8 @@ void Writer::writeNumericalParser(VarDef* vdef) {
 	else
 	    fputs("%d", source);
 
-	fprintf(source, ",%s", vdef->unit);
+	if (!strempty(vdef->unit))
+		fprintf(source, ",%s", vdef->unit);
 
 	if (vdef->scale)
 		sprintf(vdef->getter + strlen(vdef->getter), " / (double) %d", vdef->scale);

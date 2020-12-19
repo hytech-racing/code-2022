@@ -1,7 +1,7 @@
-#include "Parser.h"
+#include "AnnotationParser.h"
 #include "VarDef.h"
 
-void Parser::parseFlag() {
+void AnnotationParser::parseFlag() {
 	FlagSetDef* fsdef = new FlagSetDef;
 	FlagDef* fdef = new FlagDef;
 
@@ -29,7 +29,7 @@ void Parser::parseFlag() {
 	floaters.push_back(fsdef);
 }
 
-void Parser::parseFlagNameline(FlagDef* fdef) {
+void AnnotationParser::parseFlagNameline(FlagDef* fdef) {
 	eatToken(input, "inline");
 	input.eatspace();
 	if (!eatToken(input, "bool"))
