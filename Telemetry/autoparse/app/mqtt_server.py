@@ -1,5 +1,6 @@
 import binascii
 from cobs import cobs
+import os
 import threading
 import time
 import paho.mqtt.client as mqtt
@@ -30,6 +31,7 @@ def fletcher16(data):
 	return (c1 << 8) | c0
 
 hexstring = lambda x: binascii.hexlify(x).decode()
+
 def mqtt_message(client, userdata, msg):
 	comma_index = msg.payload.find(b',')
 	data = unpack(msg.payload[comma_index + 1:-1])
@@ -46,12 +48,12 @@ def tz_message(client, userdata, msg):
 
 def create_client(topic, handler):
 	client = mqtt.Client()
-	client.connect(MQTT_SERVER, MQTT_PORT, 60)
-	client.on_connect = lambda: client.subscribe(topic)
+	client.connect_async(MQTT_SERVER, MQTT_PORT, 60)
+	client.on_connect = lambda *_: client.subscribe(topic)
 	client.on_message = handler
 	client.loop_start()
 	return client
 
-tz_client = create_client('hytech_car/timezone_registration', tz_message)
-mqtt_client = create_client(MQTT_TOPIC, mqtt_message)
+create_client('hytech_car/timezone_registration', tz_message)
+create_client(MQTT_TOPIC, mqtt_message)
 threading.Event().wait()
