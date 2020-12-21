@@ -5,7 +5,7 @@
 
 #pragma pack(push,1)
 
-// @Parseclass
+// @Parseclass @Prefix(BMS)
 class BMS_coulomb_counts {
 public:
     BMS_coulomb_counts() = default;

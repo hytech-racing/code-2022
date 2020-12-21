@@ -4,7 +4,7 @@
 
 #pragma pack(push,1)
 
-// @Parseclass
+// @Parseclass @Prefix(BMS)
 class BMS_status {
 public:
     BMS_status() = default;

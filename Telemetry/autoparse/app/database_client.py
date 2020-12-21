@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import csv
 from influxdb import InfluxDBClient
 import requests

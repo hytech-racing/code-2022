@@ -24,8 +24,8 @@ public:
     inline void set_cooling_current_value(uint16_t cooling_current_value) { this->cooling_current_value = cooling_current_value; }
 
 private:
-    uint16_t ecu_current_value; // @Parse @Scale(100) @Unit(A)
-	uint16_t cooling_current_value; // @Parse @Scale(100) @Unit(A)
+    uint16_t ecu_current_value; // @Parse @Name(ecu_current) @Scale(100) @Unit(A)
+	uint16_t cooling_current_value; // @Parse @Name(cooling_current) @Scale(100) @Unit(A)
 };
 
 

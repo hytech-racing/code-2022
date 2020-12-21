@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import curses
 import csv
 import sys
@@ -6,7 +8,7 @@ from console_config import CONSOLE_CONFIG
 
 class Console:
     def process(self):
-        reader = csv.reader(sys.stdin)
+        reader = csv.reader(iter(sys.stdin.readline, '\n'))
         HEADER = next(reader)
 
         ID_COL = HEADER.index('id')
@@ -15,8 +17,12 @@ class Console:
         UNIT_COL = HEADER.index('unit')
 
         self.screen.addstr(0,59,' - RECEIVED')
+        self.screen.refresh()
 
         for record in reader:
+            if not len(record):
+                continue
+
             key = record[LABEL_COL].replace('_', ' ').upper()
             line = record[VALUE_COL] + ((" " + record[UNIT_COL]) if len(record) > UNIT_COL else "")
             can_id = int(record[ID_COL], 16)
@@ -35,10 +41,13 @@ class Console:
 
                 [ row, col ] = position
                 if can_id == 0xD8 or can_id == 0xDA: # ID_BMS_DETAILED_VOLTAGES, ID_BMS_DETAILED_TEMPERATURES
+                    col += 13 + (can_id == 0xDA)
                     self.clearLineShort(row, col)
                 else:
+                    col += 33
                     self.clearLine(row, col)
                 self.screen.addstr(row, col, line)
+                self.screen.refresh()
 
     def setupScreen(self, initScreen):
         self.screen = initScreen
@@ -58,9 +67,9 @@ class Console:
             self.screen.addstr(pos[0], pos[1], key + ":")
 
         self.screen.addstr(20,155,'BATTERY MANAGEMENT SYSTEM BALANCING STATUS')
-        for i in range(8):
+        for i in range(9):
             self.screen.addstr(21, 160 + 5 * i, 'C' + str(i))
-        for i in range(7):
+        for i in range(8):
             self.screen.addstr(22 + i, 155, 'IC' + str(i))
 
         self.screen.nodelay(True)
@@ -73,11 +82,11 @@ class Console:
             sys.exit(0)
 
     def clearLine(self, y, x):
-        blanks = '                                                  '
+        blanks = '                 '
         self.screen.addstr(y,x,blanks)
 
     def clearLineShort(self, y, x):
-        blanks = '                      '
+        blanks = '        '
         self.screen.addstr(y,x,blanks)
 
     def clearLineBal(self, y, x):

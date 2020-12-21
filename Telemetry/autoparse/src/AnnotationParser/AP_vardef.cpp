@@ -1,6 +1,8 @@
 #include "AnnotationParser.h"
 #include "VarDef.h"
 
+#include <cmath>
+
 void AnnotationParser::parseVar() {
 	VarDef* vdef = new VarDef;
 	try {
@@ -45,6 +47,8 @@ void AnnotationParser::parseVarDef(VarDef* vdef) {
 			getIntParam(vdef->scale, SCALE);
 			if (input.eat(','))
 				getIntParam(vdef->precision, PRECISION);
+			else
+				vdef->precision = log10(vdef->scale);
 			closeParen();
 		}
 		else if (eatToken(input, FLAGPREFIX))	parseVarFlagPrefix(vdef);

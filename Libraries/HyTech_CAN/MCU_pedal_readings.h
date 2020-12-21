@@ -4,7 +4,7 @@
 
 #pragma pack(push,1)
 
-// @Parseclass
+// @Parseclass @Prefix(MCU)
 class MCU_pedal_readings {
 public:
     MCU_pedal_readings() = default;
@@ -25,9 +25,9 @@ public:
     inline uint16_t get_brake_pedal_raw()           const { return brake_pedal_raw; }
     inline uint8_t  get_pedal_flags()               const { return pedal_flags; }
 
-    inline bool get_accelerator_implausibility()    const { return pedal_flags & 0x01; }
-    inline bool get_brake_implausibility()          const { return pedal_flags & 0x02; }
-    inline bool get_brake_pedal_active()            const { return pedal_flags & 0x04; }
+    inline bool get_accelerator_implausibility()    const { return pedal_flags & 0x01; } // @Parseflag(pedal_flags, implaus_accel)
+    inline bool get_brake_implausibility()          const { return pedal_flags & 0x02; } // @Parseflag(pedal_flags, implaus_brake)
+    inline bool get_brake_pedal_active()            const { return pedal_flags & 0x04; } // @Parseflag(pedal_flags, brake_active)
     inline uint8_t get_torque_map_mode()            const { return torque_map_mode; }
 
     inline void set_accelerator_pedal_raw_1(uint16_t accelerator_pedal_raw_1)   { this->accelerator_pedal_raw_1 = accelerator_pedal_raw_1; }
@@ -39,10 +39,10 @@ public:
     inline void set_brake_pedal_active(bool brake_pedal_active)                 { pedal_flags = (pedal_flags & 0xFB) | (brake_pedal_active << 2); }
     inline void set_torque_map_mode(uint8_t torque_map_mode)                    { this->torque_map_mode = torque_map_mode; }
 private:
-    uint16_t accelerator_pedal_raw_1; // @Parse
-    uint16_t accelerator_pedal_raw_2; // @Parse
-    uint16_t brake_pedal_raw; // @Parse
-    uint8_t pedal_flags; // @Parse @Hex
+    uint16_t accelerator_pedal_raw_1; // @Parse @Name(pedal_accel_1)
+    uint16_t accelerator_pedal_raw_2; // @Parse @Name(pedal_accel_2)
+    uint16_t brake_pedal_raw; // @Parse @Name(pedal_brake)
+    uint8_t pedal_flags; // @Parse @Hex @Flagset
     uint8_t torque_map_mode; // @Parse
 };
 

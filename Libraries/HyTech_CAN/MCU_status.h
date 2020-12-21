@@ -4,7 +4,7 @@
 
 #pragma pack(push,1)
 
-// @Parseclass @Custom(print_shutdown_status)
+// @Parseclass @Custom(print_shutdown_status) @Prefix(MCU)
 class MCU_status {
 public:
     MCU_status() = default;
@@ -48,7 +48,7 @@ private:
     uint8_t state; // @Parse
     uint8_t flags;
     int16_t temperature; // @Parse @Scale(100) @Unit(C)
-    uint16_t glv_battery_voltage; // @Parse @Scale(100) @Unit(V)
+    uint16_t glv_battery_voltage; // @Parse @Name(glv_voltage) @Scale(100) @Unit(V)
 };
 
 #pragma pack(pop)

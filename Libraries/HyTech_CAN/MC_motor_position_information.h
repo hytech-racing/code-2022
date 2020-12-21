@@ -20,7 +20,7 @@ public:
 private:
     int16_t motor_angle; // @Parse @Scale(10)
     int16_t motor_speed; // @Parse @Unit(RPM)
-    int16_t electrical_output_frequency; // @Parse @Scale(10)
+    int16_t electrical_output_frequency; // @Parse @Scale(10) @Name(elec_output_freq)
     int16_t delta_resolver_filtered; // @Parse
 };
 

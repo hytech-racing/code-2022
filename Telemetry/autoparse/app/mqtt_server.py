@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import binascii
 from cobs import cobs
 import os
@@ -48,12 +50,15 @@ def tz_message(client, userdata, msg):
 
 def create_client(topic, handler):
 	client = mqtt.Client()
-	client.connect_async(MQTT_SERVER, MQTT_PORT, 60)
 	client.on_connect = lambda *_: client.subscribe(topic)
 	client.on_message = handler
+	client.connect(MQTT_SERVER, MQTT_PORT, 60)
 	client.loop_start()
 	return client
 
-create_client('hytech_car/timezone_registration', tz_message)
-create_client(MQTT_TOPIC, mqtt_message)
-threading.Event().wait()
+try:
+	create_client('hytech_car/timezone_registration', tz_message)
+	create_client(MQTT_TOPIC, mqtt_message)
+	threading.Event().wait()
+except KeyboardInterrupt:
+	"shutdown"

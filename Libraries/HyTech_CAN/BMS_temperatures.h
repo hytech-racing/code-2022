@@ -4,7 +4,7 @@
 
 #pragma pack(push,1)
 
-// @Parseclass
+// @Parseclass @Prefix(BMS)
 class BMS_temperatures {
 public:
     BMS_temperatures() = default;

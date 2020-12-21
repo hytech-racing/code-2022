@@ -1,0 +1,11 @@
+#!/bin/bash
+
+mkdir -p ../log
+outfile=../log/$(date +%Y-%M-%d-%H-%m-%S).txt
+# ../app/mqtt_server.py | ../build/CANParser --pipelined | tee $outfile | ../app/console.py
+
+if [ "$1" = "--test" ]; then
+	cat ../test/input.csv | ../build/CANParser --pipelined | tee $outfile | ../app/console.py
+else
+	../app/mqtt_server | ../build/CANParser --pipelined | tee $outfile | ../app/console.py
+fi

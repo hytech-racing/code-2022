@@ -1,0 +1,3 @@
+#!/bin/bash
+
+../app/mqtt_server.py | ../build/CANParser --pipelined | ../app/database_client.py

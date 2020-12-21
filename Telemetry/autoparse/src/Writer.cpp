@@ -49,12 +49,8 @@ void Writer::run() {
 void Writer::writeNumericalParser(VarDef* vdef) {
 	startLine(vdef->name);
 
-	if (vdef->scale) {
-		if (vdef->precision)
-			fprintf(source, "%%.%df", vdef->precision);
-		else
-		    fputs("%f", source);
-	}
+	if (vdef->scale)
+		fprintf(source, "%%.%df", vdef->precision);
 	else
 	    fputs("%d", source);
 

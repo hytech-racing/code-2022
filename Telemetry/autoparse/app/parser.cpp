@@ -42,14 +42,18 @@ int main(int argc, char** argv) {
     }
 
 	if (help_flag) {
-		if (pipelined && strempty(outfilepath))
-			throw "Cannot show help menu if output is being redirected";
+		if (pipelined && strempty(outfilepath)) {
+			perror("Cannot show help menu if output is being redirected\n");
+			return 0;
+		}
 		showMenu(argv[0]);
 		return 0;
 	}
 
-	if (strempty(infilepath) && !pipelined)
-		throw "Must specify either input path or --pipelined flag";
+	if (strempty(infilepath) && !pipelined) {
+		perror("Must specify either input path or --pipelined flag\n");
+		return 0;
+	}
 
 	if (pipelined && strempty(outfilepath))
 		outfile = stdout;
@@ -73,7 +77,7 @@ void run (FILE* infile) {
 	if (infile != stdin) // pop off header if csv
 		fgets(timeString, 1024, infile);
 
-	fputs("time,id,message,label,value,unit", outfile);
+	fputs("time,id,message,label,value,unit\n", outfile);
 
 	uint64_t timeRaw;
 

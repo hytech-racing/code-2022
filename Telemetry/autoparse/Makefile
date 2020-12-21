@@ -46,7 +46,7 @@ $(AP_OUT_DIR): $(AP_BIN) $(HYTECH_CAN_LIB)/*.h
 
 Compile: $(AP_OUT_DIR)
 
-$(CAN_BIN): $(AP_OUT_DIR) $(USR_DIR)
+$(CAN_BIN): $(AP_OUT_DIR) $(USR_DIR) $(CAN_SRC) $(INC_DIR)
 	$(CC) $(CAN_INC) $(CAN_SRC) -o $(CAN_BIN)
 
 CANParser: $(CAN_BIN)
