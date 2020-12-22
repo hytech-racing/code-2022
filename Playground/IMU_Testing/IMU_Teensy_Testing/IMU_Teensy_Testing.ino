@@ -1,15 +1,10 @@
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BNO055.h>
 #include <Wire.h>
+#include <stdlib.h>
 
 /*
  * This is a basic test of the BNO055 with
  * a Teensy.
  */
-
-// uses the default i2c address (x28) and sensorID (-1)
-// device must be called bno
-Adafruit_BNO055 bno = Adafruit_BNO055();
 
 #define I2C_ADDRESS         0x28
 
@@ -133,68 +128,161 @@ Adafruit_BNO055 bno = Adafruit_BNO055();
 #define GYR_AM_SET          0x1F
 
 typedef enum {
-    GYRO, GRAVITY, ACCEL
+    GYRO, GRAVITY, ACCEL, EUL
 } DataMode;
 
-// TODO: Would a union be more intuitive here?
-typedef struct axes {
-    int16_t accelAxes[3];   // 16 bit signed accelerometer sensor output
-    int16_t gyroAxes[3];    // 16 bit signed gyro sensor output
-    int16_t gravAxes[3];    // 16 bit signed gravity vector output
+typedef union axes {
+    int16_t accelAxes[3];   // accelerometer sensor output
+    int16_t gyroAxes[3];    // gyro sensor output
+    int16_t gravAxes[3];    // gravity vector output
+    int16_t eulerAngles[3]; // euler angles
 } AxisData;
 
-/* Method definitions */
-void read_data(AxisData data, DataMode mode);
+/* Function definitions */
+
+// read and send data
+void read_data(AxisData *data, DataMode mode);
+void send_data(AxisData *data, DataMode mode);
+
+// initialize the IMU
+void imu_init();
+
+// I2C write/read functions
+void i2c_write(uint8_t address, uint8_t sub_address, uint8_t data);
+void i2c_read(uint8_t address, uint8_t sub_address, size_t bytes, uint8_t *dest);
+
+// FlexCAN CAN(500000);
 
 void setup()
-{
-  // put your setup code here, to run once:
-  Serial.begin(9600);
+{   
+    Wire.begin();
 
-  /*
-   * Initialize the sensor
-   */
-  if (!bno.begin())
-  {
-    Serial.println("No BNO055 device detected.");
-    while (true); // infinite loop to prevent something from breaking
-  }
-  Wire.begin();
-  delay(1000);
-  bno.setExtCrystalUse(true);
+    delay(4000);
+
+    Serial.begin(9600);
+    // CAN.begin();
+
+    imu_init();
 }
 
 void loop()
 {
-  // put your main code here, to run repeatedly:
-  sensors_event_t event;
-  bno.getEvent(&event);
+    AxisData *data;
+    if (!(data = malloc(sizeof(AxisData)))) {
+        return;
+    }
 
-  // TEST PASSED
-  
-  /* Display the floating point data */
-  Serial.print("X: ");
-  Serial.print(event.orientation.x, 4);
-  Serial.print("\tY: ");
-  Serial.print(event.orientation.y, 4);
-  Serial.print("\tZ: ");
-  Serial.print(event.orientation.z, 4);
-  Serial.println();
+    read_data(data, ACCEL);
 
-  imu::Vector<3> accel = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+    Serial.println("Accel data");
+    Serial.print("x:\t");
+    Serial.println((double) data->accelAxes[0]);
+    Serial.print("y:\t");
+    Serial.println((double) data->accelAxes[1]);
+    Serial.print("z:\t");
+    Serial.println((double) data->accelAxes[2]);
+    Serial.println("---------------------");
 
-  // TEST PASSED
-  
-  /* Display the floating point data */
-  Serial.print("X: ");
-  Serial.print(accel.x());
-  Serial.print("\tY: ");
-  Serial.print(accel.y());
-  Serial.print("\tZ: ");
-  Serial.print(accel.z());
-  Serial.println();
-  
-  Serial.println();
-  
-  delay(500);
+    read_data(data, GYRO);
+
+    Serial.println("Gyro data");
+    Serial.print("x:\t");
+    Serial.println((double) data->gyroAxes[0] / 16);
+    Serial.print("y:\t");
+    Serial.println((double) data->gyroAxes[1] / 16);
+    Serial.print("z:\t");
+    Serial.println((double) data->gyroAxes[2] / 16);
+    Serial.println("---------------------");
+
+    read_data(data, GRAVITY);
+
+    Serial.println("Gravity data");
+    Serial.print("x:\t");
+    Serial.println((double) data->gravAxes[0]);
+    Serial.print("y:\t");
+    Serial.println((double) data->gravAxes[1]);
+    Serial.print("z:\t");
+    Serial.println((double) data->gravAxes[2]);
+    Serial.println("---------------------");
+
+    read_data(data, EUL);
+
+    Serial.println("Euler data");
+    Serial.print("yaw:\t");
+    Serial.println((double) data->eulerAngles[0] / 16);
+    Serial.print("pitch:\t");
+    Serial.println((double) data->eulerAngles[1] / 16);
+    Serial.print("roll:\t");
+    Serial.println((double) data->eulerAngles[2] / 16);
+    Serial.println();
+    
+
+    free(data);
+    Serial.flush();
+    delay(500);
+}
+
+void read_data(AxisData *data, DataMode mode)
+{
+    uint8_t raw_data[6];
+    switch (mode) {
+        case GYRO:
+            i2c_read(I2C_ADDRESS, GYR_DATA_X_LSB, 6, raw_data);
+            data->gyroAxes[0] = ((int16_t)raw_data[1] << 8) | raw_data[0];
+            data->gyroAxes[1] = ((int16_t)raw_data[3] << 8) | raw_data[2];
+            data->gyroAxes[2] = ((int16_t)raw_data[5] << 8) | raw_data[4];
+            break;
+        case ACCEL:
+            i2c_read(I2C_ADDRESS, ACC_DATA_X_LSB, 6, raw_data);
+            data->accelAxes[0] = ((int16_t)raw_data[1] << 8) | raw_data[0];
+            data->accelAxes[1] = ((int16_t)raw_data[3] << 8) | raw_data[2];
+            data->accelAxes[2] = ((int16_t)raw_data[5] << 8) | raw_data[4];
+            break;
+        case GRAVITY:
+            i2c_read(I2C_ADDRESS, GRV_DATA_X_LSB, 6, raw_data);
+            data->gravAxes[0] = ((int16_t)raw_data[1] << 8) | raw_data[0];
+            data->gravAxes[1] = ((int16_t)raw_data[3] << 8) | raw_data[2];
+            data->gravAxes[2] = ((int16_t)raw_data[5] << 8) | raw_data[4];
+            break;
+        case EUL:
+            i2c_read(I2C_ADDRESS, EUL_HEADING_LSB, 6, raw_data);
+            data->eulerAngles[0] = ((int16_t)raw_data[1] << 8) | raw_data[0];
+            data->eulerAngles[1] = ((int16_t)raw_data[3] << 8) | raw_data[2];
+            data->eulerAngles[2] = ((int16_t)raw_data[5] << 8) | raw_data[4];
+    }
+}
+
+// TODO: if needed, customize the init data bytes
+void imu_init()
+{
+    i2c_write(I2C_ADDRESS, OPR_MODE, 0x00);
+    delay(25);
+    
+    i2c_write(I2C_ADDRESS, PAGE_ID, 0x01);
+    i2c_write(I2C_ADDRESS, GYRO_CONFIG_0, 0x00);
+    i2c_write(I2C_ADDRESS, GYRO_CONFIG_1, 0x00);
+    i2c_write(I2C_ADDRESS, ACC_CONFIG, 0x00);
+    
+    i2c_write(I2C_ADDRESS, PAGE_ID, 0x00);
+    i2c_write(I2C_ADDRESS, OPR_MODE, 0x0C);
+}
+
+void i2c_write(uint8_t address, uint8_t sub_address, uint8_t data)
+{
+    Wire.beginTransmission(address);
+    Wire.write(sub_address);
+    Wire.write(data);
+    Wire.endTransmission();
+}
+
+void i2c_read(uint8_t address, uint8_t sub_address, size_t bytes, uint8_t *dest)
+{
+    Wire.beginTransmission(address);
+    Wire.write(sub_address);
+    Wire.endTransmission(false);
+
+    size_t i = 0;
+    Wire.requestFrom(address, bytes);
+    while (Wire.available())
+        dest[i++] = Wire.read();
 }
