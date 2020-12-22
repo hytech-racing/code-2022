@@ -6,6 +6,13 @@
  * a Teensy.
  */
 
+<<<<<<< HEAD
+=======
+// uses the default i2c address (x28) and sensorID (-1)
+// device must be called bno
+Adafruit_BNO055 bno = Adafruit_BNO055();
+
+>>>>>>> 2cda0fd8c6a291f88b331d572da7b9ade19d5775
 #define I2C_ADDRESS         0x28
 
 // REGISTERS
@@ -128,6 +135,7 @@
 #define GYR_AM_SET          0x1F
 
 typedef enum {
+<<<<<<< HEAD
     GYRO, GRAVITY, ACCEL, EUL
 } DataMode;
 
@@ -152,6 +160,20 @@ void i2c_write(uint8_t address, uint8_t sub_address, uint8_t data);
 void i2c_read(uint8_t address, uint8_t sub_address, size_t bytes, uint8_t *dest);
 
 // FlexCAN CAN(500000);
+=======
+    GYRO, GRAVITY, ACCEL
+} DataMode;
+
+// TODO: Would a union be more intuitive here?
+typedef struct axes {
+    int16_t accelAxes[3];   // 16 bit signed accelerometer sensor output
+    int16_t gyroAxes[3];    // 16 bit signed gyro sensor output
+    int16_t gravAxes[3];    // 16 bit signed gravity vector output
+} AxisData;
+
+/* Method definitions */
+void read_data(AxisData data, DataMode mode);
+>>>>>>> 2cda0fd8c6a291f88b331d572da7b9ade19d5775
 
 void setup()
 {   
