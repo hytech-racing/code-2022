@@ -21,7 +21,7 @@ HYTECH_CAN_LIB = ../../Libraries/HyTech_CAN
 
 CAN_BIN = $(BUILD_DIR)/CANParser
 CAN_INC = -I$(INC_DIR) -I$(AP_OUT_DIR) -I$(USR_DIR) -I$(HYTECH_CAN_LIB)
-CAN_SRC = $(AP_OUT_DIR)/*.cpp $(USR_DIR)/*.cpp app/parser.cpp
+CAN_SRC = $(AP_OUT_DIR)/AutoParse.cpp $(AP_OUT_DIR)/ParseMessage.cpp $(USR_DIR)/*.cpp app/parser.cpp
 
 install:
 	mkdir -p $(BUILD_DIR)
