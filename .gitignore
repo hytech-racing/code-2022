@@ -234,3 +234,7 @@ $RECYCLE.BIN/
 
 # CMake
 **/build/**
+
+# Parser output files
+Telemetry/autoparse/log
+Telemetry/autoparse/webserver/uploads

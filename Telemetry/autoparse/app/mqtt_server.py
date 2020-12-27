@@ -7,8 +7,8 @@ import threading
 import time
 import paho.mqtt.client as mqtt
 
-# MQTT_SERVER = 'localhost'
-MQTT_SERVER = 'ec2-3-134-2-166.us-east-2.compute.amazonaws.com'
+MQTT_SERVER = 'localhost'
+# MQTT_SERVER = 'ec2-3-134-2-166.us-east-2.compute.amazonaws.com'
 
 MQTT_PORT   = 1883                    # MQTT broker port (non-SSL)
 MQTT_TOPIC  = 'hytech_car/telemetry'
@@ -26,11 +26,25 @@ def unpack(frame):
 		return -1
 
 def fletcher16(data):
-	c0 = c1 = 0
+	c0 = 0
+	c1 = 0
+	index = 0
+	length = len(data)
+	while length >= 5802:
+		for _ in range(5802):
+			c0 += data[index]
+			c1 += c0
+			index += 1
+		c0 %= 255
+		c1 %= 255
+		length -= 5802
+
 	for i in data:
-		c0 = (c0 + i) & 0xFF
-		c1 = (c1 + c0) & 0xFF
-	return (c1 << 8) | c0
+		c0 += i
+		c1 += c0
+	c0 %= 255
+	c1 %= 255
+	return (c1 << 8 | c0)
 
 hexstring = lambda x: binascii.hexlify(x).decode()
 
@@ -40,7 +54,7 @@ def mqtt_message(client, userdata, msg):
 
 	if data != -1:
 		timestamp = int(msg.payload[0:comma_index].decode()) + EPOCH_OFFSET_MS + TIMEZONE_OFFSET_MS
-		print('{0},{1},{2}'.format(timestamp, hexstring(data[4:5]), hexstring(data[5:13])))
+		print('{}.{},{},{},{}'.format(timestamp // 1000, timestamp % 1000, hexstring(data[0:1]), 8, hexstring(data[5:13])))
 
 def tz_message(client, userdata, msg):
 	global TIMEZONE_OFFSET_MS
@@ -59,6 +73,7 @@ def create_client(topic, handler):
 try:
 	create_client('hytech_car/timezone_registration', tz_message)
 	create_client(MQTT_TOPIC, mqtt_message)
+	print("time,msg.id,msg.len,data")
 	threading.Event().wait()
 except KeyboardInterrupt:
 	"shutdown"

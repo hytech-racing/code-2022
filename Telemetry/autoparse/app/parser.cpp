@@ -70,22 +70,22 @@ int main(int argc, char** argv) {
 }
 
 void run (FILE* infile) {
-    uint32_t id;
+    uint32_t id, len;
 	char timeString [1024]; // it's overly long so I can skip the first line
 	uint8_t data [8];
 
-	if (infile != stdin) // pop off header if csv
-		fgets(timeString, 1024, infile);
+	fgets(timeString, 1024, infile); // pop off header
 
 	fputs("time,id,message,label,value,unit\n", outfile);
 
-	uint64_t timeRaw;
+	uint64_t timeRaw; uint32_t ms;
 
-	while (fscanf(infile, "%lu,%x,%lx", &timeRaw, &id, (uint64_t*) data) != EOF) {
-		int ms = timeRaw % 1000;
-		timeRaw /= 1000;
-		size_t len = strftime(timeString, 32, "%Y-%m-%dT%H:%M:%S", gmtime((time_t*) &timeRaw));
-		sprintf(timeString + len, ".%03dZ", ms);
+	while (!feof(infile)) {
+		if (fscanf(infile, "%lu.%u,%x,%u,%lx", &timeRaw, &ms, &id, &len, (uint64_t*) data) == EOF)
+			continue;
+
+		strftime(timeString, 32, "%Y-%m-%dT%H:%M:%S", gmtime((time_t*) &timeRaw));
+		sprintf(timeString + ct_strlen("YYYY-MM-DDTHH:MM:SS"), ".%03dZ", ms);
 
 		if (__BYTE_ORDER__ != __ORDER_BIG_ENDIAN__ && infile != stdin) // Raw SD data is big endian
 			for (int i = 0; i < 4; ++i)

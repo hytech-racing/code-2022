@@ -3,8 +3,8 @@ import time
 import sys
 import paho.mqtt.client as mqtt
 
-# MQTT_SERVER = 'localhost'
-MQTT_SERVER = 'ec2-3-134-2-166.us-east-2.compute.amazonaws.com'
+MQTT_SERVER = 'localhost'
+# MQTT_SERVER = 'ec2-3-134-2-166.us-east-2.compute.amazonaws.com'
 # MQTT_SERVER = 'hytech-telemetry.ryangallaway.me'     # MQTT broker hostname
 
 MESSAGE_LENGTH = 15
@@ -44,8 +44,8 @@ def read_uart():
                     #print('First byte:', incomingFrame[0])
                     #print('End index:', end_index)
                     frame = incomingFrame[0:end_index + 1]
-                    timestamp = str.encode(str(time.time()))        # epoch time
-                    #print('sending message...', type(frame))
+                    timestamp = str.encode(str(int(time.time() * 1000 - 946684800000)))        # epoch time
+                    # print('sending message...', type(frame))
                     #print(timestamp, binascii.hexlify(frame))
                     send_mqtt(timestamp, frame)
                 incomingFrame = incomingFrame[end_index + 1:]
