@@ -10,7 +10,9 @@ const UPLOAD_PATH	= './uploads';
 
 app.use(bodyparser.urlencoded({ extended: true }));
 app.use(busboy({ highWaterMark: 2 * 1024 * 1024 }));
-fs.mkdirSync(UPLOAD_PATH)
+
+if (!fs.existsSync(UPLOAD_PATH))
+	fs.mkdirSync(UPLOAD_PATH)
 
 app.get('/', (req, res) => res.sendFile(path.resolve(__dirname, 'views/index.html')));
 app.get('/upload', (req, res) => res.sendFile(path.resolve(__dirname, 'views/upload.html')));
