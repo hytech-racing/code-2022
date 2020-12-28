@@ -4,7 +4,6 @@ const busboy        = require('connect-busboy');
 const child_process = require('child_process');
 const fs			= require('fs');
 const path          = require('path');
-const rimraf        = require('rimraf');
 
 const PORT          = 5000;
 const UPLOAD_PATH	= './uploads';
