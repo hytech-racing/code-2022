@@ -34,7 +34,7 @@
 				document.getElementById('parser_ids').innerHTML = config.parserIDs.sort().map(x => `<li>${x}</li>`).join('');
 
 				// doing this takes a few extra steps to avoid screwing up the form
-				const branches = config.branches.sort().map(x => `<option value=${x} ${x == config.current ? 'selected' : ''}>${x}</option>`).join('');
+				const branches = config.branches.map(x => `<option value=${x} ${x == config.current ? 'selected' : ''}>${x}</option>`).join('');
 				const branchEl = document.getElementById('branches');
 				if (branchEl.innerHTML != branches)
 					document.getElementById('branches').innerHTML = branches;
