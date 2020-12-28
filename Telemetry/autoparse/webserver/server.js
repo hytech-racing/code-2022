@@ -47,4 +47,4 @@ const restart = branch => getBranches().includes(branch) && runScript('restart.s
 app.get('/config', (req, res) => { let [ status, current ] = getScriptOutput('status.sh'); res.json({ status, current, parserIDs: getScriptOutput('list_canIDs.sh'), branches: getBranches() }); })
 app.post('/refresh', (req, res) => { restart(req.body.new_branch); res.redirect('/status'); })
 
-app.listen(PORT, () => console.log("Grafana upload server running on port " + PORT));
+app.listen(PORT, () => console.log("Server running on port " + PORT));
