@@ -1,10 +1,12 @@
 #!/bin/bash
 
-chmod +x ./console
-chmod +x ./influx_server
-chmod +x ./parse_folder
-chmod +x ./upload
+if [[ "$1" == "--undo" ]]; then op=-x; else op=+x; fi
 
-chmod +x ../app/console.py
-chmod +x ../app/database_client.py
-chmod +x ../app/mqtt_server.py
+chmod $op ./console
+chmod $op ./influx_server
+chmod $op ./parse_folder
+chmod $op ./upload
+
+chmod $op ../app/console.py
+chmod $op ../app/database_client.py
+chmod $op ../app/mqtt_server.py
