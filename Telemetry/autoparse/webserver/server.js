@@ -44,9 +44,18 @@ app.post('/upload', (req, res) => {
 const runScript = script => child_process.execSync('sh ~/update_scripts/' + script).toString()
 const getScriptOutput = script => runScript(script).split('\n').map(x => x.trim()).filter(x => x.length);
 const getBranches = () => getScriptOutput('branches.sh')
-const restart = branch => getBranches().includes(branch) && runScript('restart.sh ' + branch).toString();
 
-app.get('/config', (req, res) => { let [ status, current ] = getScriptOutput('status.sh'); res.json({ status, current, parserIDs: getScriptOutput('list_canIDs.sh'), branches: getBranches() }); })
-app.post('/refresh', (req, res) => { restart(req.body.new_branch); res.redirect('/status'); })
+app.get('/config', (req, res) => { 
+	let [ status, current ] = getScriptOutput('status.sh');
+	let [ buildDate, ...parserIDs ] = getScriptOutput('list_canIDs.sh'); 
+	res.json({ status, current, buildDate, parserIDs, branches: getBranches() }); 
+})
+
+app.post('/refresh', (req, res) => {
+	const branch = req.body.new_branch;
+	if (getBranches().includes(branch))
+		runScript('restart.sh ' + branch).toString();
+	res.redirect('/status');
+})
 
 app.listen(PORT, () => console.log("Server running on port " + PORT));

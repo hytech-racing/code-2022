@@ -24,14 +24,16 @@
 		<input type="submit" value="Refresh Config" id="submit"/>
 	</form>
 	<br/>
+	<h3 id="build-date"></h3>
 	<h3>CANParser has generated parsing config for:</h3>
-	<ul id="parser_ids"></ul>
+	<ul id="parser-ids"></ul>
   	<script>
 		function refresh() {
 			fetch('/config').then(res => res.json()).then(config => {
 				document.getElementById('status').innerText = config.status;
 				document.getElementById('branch').innerText = "Current Branch: " + config.current;
-				document.getElementById('parser_ids').innerHTML = config.parserIDs.sort().map(x => `<li>${x}</li>`).join('');
+				document.getElementById('build-date').innerText = "CANParser last built: " + config.buildDate;
+				document.getElementById('parser-ids').innerHTML = config.parserIDs.sort().map(x => `<li>${x}</li>`).join('');
 
 				// doing this takes a few extra steps to avoid screwing up the form
 				const branches = config.branches.map(x => `<option value=${x} ${x == config.current ? 'selected' : ''}>${x}</option>`).join('');
