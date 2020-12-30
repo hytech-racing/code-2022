@@ -65,7 +65,7 @@ void Writer::writeNumericalParser(VarDef* vdef) {
 void Writer::writeFlagParser(VarDef* vdef) {
 	if (vdef->hex) {
 		startLine(vdef->name);
-		fputs("%#X", source);
+		fputs("0x%X", source);
 		writeParams(vdef->getter);
 	}
 	if (!vdef->flags)

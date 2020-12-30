@@ -54,7 +54,7 @@ def mqtt_message(client, userdata, msg):
 
 	if data != -1:
 		timestamp = int(msg.payload[0:comma_index].decode()) + EPOCH_OFFSET_MS + TIMEZONE_OFFSET_MS
-		print('{}.{},{},{},{}'.format(timestamp // 1000, timestamp % 1000, hexstring(data[0:1]), 8, hexstring(data[5:13])))
+		print('{}.{},{},{},{}'.format(timestamp // 1000, timestamp % 1000, hexstring(data[0:1]), 8, hexstring(data[5:13])), flush=True)
 
 def tz_message(client, userdata, msg):
 	global TIMEZONE_OFFSET_MS
@@ -73,7 +73,7 @@ def create_client(topic, handler):
 try:
 	create_client('hytech_car/timezone_registration', tz_message)
 	create_client(MQTT_TOPIC, mqtt_message)
-	print("time,msg.id,msg.len,data")
+	print("time,msg.id,msg.len,data", flush=True)
 	threading.Event().wait()
 except KeyboardInterrupt:
 	"shutdown"

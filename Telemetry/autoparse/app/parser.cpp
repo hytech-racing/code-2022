@@ -59,8 +59,8 @@ int main(int argc, char** argv) {
 		outfile = stdout;
 	else {
 		if (strempty(outfilepath)) {
-			sscanf(infilepath, "%s.", outfilepath);
-			strcat(outfilepath, "_parsed.csv");
+			strcpy(outfilepath, infilepath);
+			strcpy(outfilepath + strlen(infilepath) - ct_strlen(".csv"), "_parsed.csv");
 		}
 		outfile = fopen(outfilepath, "w");
 	}
@@ -78,6 +78,9 @@ void run (FILE* infile) {
 
 	fputs("time,id,message,label,value,unit\n", outfile);
 
+	if (outfile == stdout)
+		fflush(outfile);
+
 	uint64_t timeRaw; uint32_t ms;
 
 	while (!feof(infile)) {
@@ -87,11 +90,14 @@ void run (FILE* infile) {
 		strftime(timeString, 32, "%Y-%m-%dT%H:%M:%S", gmtime((time_t*) &timeRaw));
 		sprintf(timeString + ct_strlen("YYYY-MM-DDTHH:MM:SS"), ".%03dZ", ms);
 
-		if (__BYTE_ORDER__ != __ORDER_BIG_ENDIAN__ && infile != stdin) // Raw SD data is big endian
-			for (int i = 0; i < 4; ++i)
-				std::swap(data[i], data[7 - i]);
+		#if (__BYTE_ORDER__ != __ORDER_BIG_ENDIAN__) // handle endianness change
+			for (uint8_t *l = data, *r = data + len - 1; l < r; std::swap(*l++, *r--));
+		#endif
 
 		parseMessage(id, timeString, data);
+
+		if (outfile == stdout)
+			fflush(outfile);
 	}
 
 	fcloseall();
