@@ -2,4 +2,4 @@
 
 #usage: upload [database name] [csv input]
 
-../build/CANParser -i $2 --pipelined | ../build/database_client $1
+../build/CANParser -i $2 --pipelined | ../app/database_client.py $1

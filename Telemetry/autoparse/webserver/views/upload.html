@@ -14,7 +14,7 @@
 </head>
 <body>
   	<h1>HyTech Telemetry CSV Uploader</h1>
-  	<form method="POST" enctype="application/x-www-form-urlencoded" action="/upload" onsubmit="let el = document.getElementById('submit'); el.parentNode.removeChild(el); document.getElementById('txt').innerText = 'Uploading. Keep your pants on, this takes a while because your file is thicc.'">
+	<form method="POST" enctype="multipart/form-data" action="/upload" onsubmit="let el = document.getElementById('submit'); el.parentNode.removeChild(el); document.getElementById('txt').innerText = 'Uploading. Keep your pants on, this takes a while because your file is thicc.'">
    		<div>
 			<label>Upload CSV</label>
 			<input required type="file" name="csv" accept=".csv" />

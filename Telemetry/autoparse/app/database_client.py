@@ -38,6 +38,8 @@ class DatabaseClient:
 	def write(self, data):
 		# print("Writing document: ")
 		# print(data)
+		
+		self.json_body.append(data)
 		if not self.writing:
 			try:
 				threading.Thread(target=self.buffered_write).start()
@@ -45,10 +47,13 @@ class DatabaseClient:
 				print(e)
 
 	def buffered_write(self):
+		# print("Writing set: ")
+		# print(json)
+		
 		json = self.json_body
 		self.json_body = []
 		self.writing = True
-		
+
 		try:
 			self.influx_client.write_points(points=json)
 			self.writing = False
@@ -56,6 +61,11 @@ class DatabaseClient:
 			print("Operation failed. Printing error:")
 			print(e)
 
+def get_value(val):
+	try:
+		return float(val)
+	except Exception:
+		return val
 
 if len(sys.argv) < 2:
 	print("Usage: {} [DATABASE NAME]".format(sys.argv[0]))
@@ -84,8 +94,4 @@ for record in reader:
 		}
 	})
 
-def get_value(val):
-	try:
-		return float(val)
-	except Exception:
-		return val
+telem_client.buffered_write()

@@ -9,7 +9,6 @@ const PORT          = 5000;
 const UPLOAD_PATH	= './uploads';
 
 app.use(bodyparser.urlencoded({ extended: true }));
-app.use(busboy({ highWaterMark: 2 * 1024 * 1024 }));
 
 if (!fs.existsSync(UPLOAD_PATH))
 	fs.mkdirSync(UPLOAD_PATH)
@@ -18,25 +17,39 @@ app.get('/', (req, res) => res.sendFile(path.resolve(__dirname, 'views/index.htm
 app.get('/upload', (req, res) => res.sendFile(path.resolve(__dirname, 'views/upload.html')));
 app.get('/status', (req, res) => res.sendFile(path.resolve(__dirname, 'views/status.html')))
 
-app.post('/upload', (req, res) => {
-	const db_name = req.body.db_name.trim().replace(/ /g,"_");
-	if (!db_name) return res.redirect('/upload?err=true');
+app.post('/upload', bodyparser.json(), busboy({ highWaterMark: 2 * 1024 * 1024 }), (req, res) => {
+	var db_name, fstream, filename, filepath;
 
-	req.pipe(req.busboy); 
-    req.busboy.on('file', (fieldname, file, filename) => {
-		console.log(`Upload of '${filename}' started`);
-		
-		const filepath = path.join(UPLOAD_PATH, filename);
-        const fstream = fs.createWriteStream(filepath);
-        file.pipe(fstream);
- 
-        fstream.on('close', () => {
+	req.busboy.on('field', (key, val) => {
+		if (key == 'db_name')
+			db_name = val.trim().replace(/ /g,"_");
+	});
+
+	req.busboy.on('file', (key, file, filename_) => {
+		if (key == 'csv') {
+			filename = filename_;
+			filepath = path.join(UPLOAD_PATH, filename);
+			fstream = fs.createWriteStream(filepath);
+			console.log(`Upload of '${filename}' started`);
+			file.pipe(fstream);
+		}
+	});
+
+	req.busboy.on('finish', () => {
+        if (!db_name || !fstream) {
+			res.redirect('/upload?err=true');
+			fs.unlinkSync(filepath);
+			return;
+		}
+		fstream.on('close', () => {
             console.log(`Upload of '${filename}' finished`);
-			res.send(`Your CSV is being written to database ${db_name}. Go to <a href=http://ec2-3-134-2-166.us-east-2.compute.amazonaws.com:3000/>Grafana</a> to view`);
+			res.send(`Your CSV is being written to database ${db_name}. Go to <a href="http://ec2-3-134-2-166.us-east-2.compute.amazonaws.com:3000"/>Grafana</a> to view`);
 
-			child_process.exec('../exe/upload ' + db_name + ' ' + filepath, () => fs.rm(filename))
+			child_process.exec('../exe/upload ' + db_name + ' ' + filepath, () => fs.unlinkSync(filepath))
         });
     });
+
+	req.pipe(req.busboy);
 });
 
 // --- Everything past this point is related to configuration management --- //
