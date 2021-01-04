@@ -69,7 +69,7 @@ app.post('/refresh', (req, res) => {
 	const branch = req.body.new_branch;
 	if (getBranches().includes(branch))
 		runScript('restart.sh ' + branch).toString();
-	res.redirect('/status');
+	res.redirect('/status.html');
 })
 
 app.listen(PORT, () => console.log("Server running on port " + PORT));
