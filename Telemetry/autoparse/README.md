@@ -172,10 +172,12 @@ Another point to note: annotations that do not accept a parameter may be followe
 - `name`: CAN message name associated with ID (defaults to class name)
 - If no @ID label present, assumes CAN ID = `ID_{classname.toUpperCase()}`
 
-`@Prefix(str, id?)` - Prefixes all variable names with `str`
+`@Prefix(str, id?)` - Prefixes all variable names with `str` followed by an underscore `_`
 - id: Binds prefix to specific CAN ID. 
 - If omitted, sets default prefix for all CAN IDs associated with class
 - ID-specific prefix will override default
+- `str` may contain parameters (e.g. `IC_{get_ic_id()}`)
+	- parameters must be member functions of the class
 
 `@Custom(fname)` - Custom parser function for all CAN IDs associated with class
 - DO NOT include parentheses in `fname`
@@ -213,3 +215,5 @@ Another point to note: annotations that do not accept a parameter may be followe
 ### Function-Level Annotations
 
 `@Parseflag(set, name?)` indicates that the function returns a boolean associated with a flag variable (marked using `@Flagprefix`, `@Flaglist`, and/or `@Flagset`). `set` must match the name of the container variable. `name` indicates the name of the packed value, and may be omitted if the method name follows the format `get_{flagname}`, in which case `name` will default to `flagname`.
+
+## Parser Annotation Example
