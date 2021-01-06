@@ -71,19 +71,22 @@ void Writer::writeFlagParser(VarDef* vdef) {
 	if (!vdef->flags)
 		return;
 	
-	if (!strempty(vdef->flags->prefix)) {
-		char fullname [256];
-		char* start = fullname + sprintf(fullname, "%s_", vdef->flags->prefix);
-		for (FlagDef* fdef : vdef->flags->flags) {
-			strcpy(start, fullname);
-			fputs("%d", source);
-			writeParams(fdef->getter);
-		}
-	}
+	bool hasPrefix = !strempty(vdef->flags->prefix);
+	bool sparse = vdef->flags->sparse;
 
-	else {
-		for (FlagDef* fdef : vdef->flags->flags) {
-			startLine(fdef->name);
+	char fullname [256], *start;
+	if (hasPrefix)
+		start = fullname + sprintf(fullname, "%s_", vdef->flags->prefix);
+
+	for (FlagDef* fdef : vdef->flags->flags) {
+		if (sparse)
+			fprintf(source, "\tif(data.%s)\n\t", fdef->getter);
+
+		startLine(hasPrefix ? strcpy(start, fdef->name) : fdef->name, sparse);
+
+		if (sparse)
+			fprintf(source, "1\\n\",\ttimestamp, prefix);\n");
+		else {
 			fputs("%d", source);
 			writeParams(fdef->getter);
 		}

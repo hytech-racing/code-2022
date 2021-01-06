@@ -17,6 +17,7 @@ typedef struct FlagSetDef {
 		char set [128];
 	};
 	std::list<FlagDef*> flags;
+	bool sparse = false;
 
 	FlagSetDef() { prefix[0] = '\0'; }
 	~FlagSetDef() {
@@ -24,7 +25,8 @@ typedef struct FlagSetDef {
 			delete fdef;
 	}
 	void print() {
-		printf("FLAG PREFIX\t%s\n", prefix);
+		printf("FLAG PREFIX:\t%s\n", prefix);
+		printf("FLAG SPARSE:\t%d\n", sparse);
 		for (FlagDef* fdef : flags)
 			fdef->print();
 	}

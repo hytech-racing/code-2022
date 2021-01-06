@@ -87,10 +87,10 @@ public:
     inline bool get_run_hi_inverter_discharge_active()                  const { return run_fault_hi & 0x8000; } // @Parseflag(run_fault_hi)
 
 private:
-    uint16_t post_fault_lo; // @Parse @Flagset @Hex
-    uint16_t post_fault_hi; // @Parse @Flagset @Hex
-    uint16_t run_fault_lo; // @Parse @Flagset @Hex
-    uint16_t run_fault_hi; // @Parse @Flagset @Hex
+    uint16_t post_fault_lo; // @Parse @Flagset @Hex @Sparse
+    uint16_t post_fault_hi; // @Parse @Flagset @Hex @Sparse
+    uint16_t run_fault_lo; // @Parse @Flagset @Hex @Sparse
+    uint16_t run_fault_hi; // @Parse @Flagset @Hex @Sparse
 };
 
 #pragma pack(pop)
