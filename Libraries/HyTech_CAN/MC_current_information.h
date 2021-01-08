@@ -17,6 +17,18 @@ public:
     inline int16_t get_phase_b_current()    const { return phase_b_current; }
     inline int16_t get_phase_c_current()    const { return phase_c_current; }
     inline int16_t get_dc_bus_current()     const { return dc_bus_current; }
+
+#ifdef HT_DEBUG_EN
+    void print() {
+        Serial.println("\n\nMC Current Information");
+        Serial.println("----------------------");
+        Serial.print("PHASE A CURRENT: "); Serial.println(phase_a_current / 10.0, 1);
+		Serial.print("PHASE B CURRENT: "); Serial.println(phase_b_current / 10.0, 1);
+		Serial.print("PHASE C CURRENT: "); Serial.println(phase_c_current / 10.0, 1);
+		Serial.print("DC BUS CURRENT: "); Serial.println(dc_bus_current / 10.0, 1);
+    }
+#endif
+
 private:
     int16_t phase_a_current; // @Parse @Scale(10) @Unit(A)
     int16_t phase_b_current; // @Parse @Scale(10) @Unit(A)

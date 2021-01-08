@@ -26,6 +26,16 @@ public:
     inline void set_low_temperature(int16_t low_temperature)            { this->low_temperature     = low_temperature; }
     inline void set_high_temperature(int16_t high_temperature)          { this->high_temperature    = high_temperature; }
 
+#ifdef HT_DEBUG_EN
+    void print() {
+        Serial.println("\n\nBMS Temperatures");
+        Serial.println("----------------");
+		Serial.print("BMS AVERAGE TEMPERATURE: "); Serial.println(average_temperature / 100.0, 2);
+		Serial.print("BMS LOW TEMPERATURE: "); Serial.println(low_temperature / 100.0, 2);
+		Serial.print("BMS HIGH TEMPERATURE: "); Serial.println(high_temperature / 100.0, 2);
+    }
+#endif
+
 private:
     int16_t average_temperature; // @Parse @Scale(100) @Unit(C)
     int16_t low_temperature; // @Parse @Scale(100) @Unit(C)

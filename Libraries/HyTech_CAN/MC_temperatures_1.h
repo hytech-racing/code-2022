@@ -17,6 +17,18 @@ public:
     inline int16_t get_module_b_temperature()           const { return module_b_temperature; }
     inline int16_t get_module_c_temperature()           const { return module_c_temperature; }
     inline int16_t get_gate_driver_board_temperature()  const { return gate_driver_board_temperature; }
+
+#ifdef HT_DEBUG_EN
+    void print() {
+        Serial.println("\n\nMC Temperatures 1");
+        Serial.println("-----------------");
+        Serial.print("MODULE A TEMP: "); Serial.println(module_a_temperature / 10.0, 1);
+        Serial.print("MODULE B TEMP: "); Serial.println(module_b_temperature / 10.0, 1);
+        Serial.print("MODULE C TEMP: "); Serial.println(module_c_temperature / 10.0, 1);
+        Serial.print("GATE DRIVER BOARD TEMP: "); Serial.println(gate_driver_board_temperature / 10.0, 1);
+    }
+#endif
+
 private:
     int16_t module_a_temperature; // @Parse @Scale(10) @Unit(C)
     int16_t module_b_temperature; // @Parse @Scale(10) @Unit(C)

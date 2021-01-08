@@ -16,6 +16,17 @@ public:
     inline int16_t get_commanded_torque()   const { return commanded_torque; }
     inline int16_t get_torque_feedback()    const { return torque_feedback; }
     inline uint32_t get_power_on_timer()    const { return power_on_timer; }
+
+#ifdef HT_DEBUG_EN
+    void print() {
+        Serial.println("\n\nMC Torque Timer Information");
+        Serial.println("---------------------------");
+        Serial.print("COMMANDED TORQUE: "); Serial.println(commanded_torque / 10.0, 1);
+		Serial.print("TORQUE FEEDBACK: "); Serial.println(torque_feedback);
+		Serial.print("RMS UPTIME: "); Serial.println(power_on_timer * .003, 0);
+    }
+#endif
+
 private:
     int16_t commanded_torque; // @Parse @Scale(10) @Unit(C)
     int16_t torque_feedback; // @Parse @Scale(10) @Unit(C)

@@ -35,6 +35,19 @@ public:
     inline void set_discharge_enable(bool discharge_enable)                { inverter_enable_discharge_enable = (inverter_enable_discharge_enable & 0xFD) | (discharge_enable << 1); }
     inline void set_commanded_torque_limit(int16_t commanded_torque_limit) { this->commanded_torque_limit = commanded_torque_limit; }
 
+#ifdef HT_DEBUG_EN
+    void print() {
+        Serial.println("\n\nMC Command Message");
+        Serial.println("------------------");
+		Serial.print("CMD_MSG TORQUE COMMAND: "); Serial.println(torque_command / 10.0, 1);
+		Serial.print("CMD_MSG ANGULAR VELOCITY: "); Serial.println(angular_velocity);
+		Serial.print("CMD_MSG DIRECTION: "); Serial.println(direction);
+		Serial.print("CMD_MSG INVERTER ENABLE: "); Serial.println(get_inverter_enable());
+		Serial.print("CMD_MSG DISCHARGE ENABLE: "); Serial.println(get_discharge_enable());
+		Serial.print("CMD_MSG COMMANDED TORQUE LIMIT: "); Serial.println(commanded_torque_limit / 10.0, 1);
+    }
+#endif
+
 private:
     int16_t torque_command; // @Parse @Scale(10) @Name(requested_torque)
     int16_t angular_velocity; // @Parse

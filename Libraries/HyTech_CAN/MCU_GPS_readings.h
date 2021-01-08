@@ -18,6 +18,16 @@ public:
 
     inline void set_latitude(int32_t latitude)      { this->latitude = latitude; }
     inline void set_longitude(int32_t longitude)    { this->longitude = longitude; }
+
+#ifdef HT_DEBUG_EN
+    void print() {
+        Serial.println("\n\nGPS Readings");
+        Serial.println("-----------");
+    	Serial.print("Latitude (x10000): "); Serial.println(get_latitude());
+        Serial.print("Longitude (x10000): "); Serial.println(get_longitude());
+    }
+#endif
+
 private:
     int32_t latitude; // @Parse @Scale(10000)
     int32_t longitude; // @Parse @Scale(10000)

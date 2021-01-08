@@ -29,6 +29,17 @@ public:
     inline void set_high(uint16_t high_voltage)       { this->high_voltage    = high_voltage; }
     inline void set_total(uint16_t total_voltage)     { this->total_voltage   = total_voltage; }
 
+#ifdef HT_DEBUG_EN
+    void print() {
+        Serial.println("\n\nBMS Voltages");
+        Serial.println("------------");
+		Serial.print("BMS VOLTAGE AVERAGE: "); Serial.println(average_voltage / 10000.0, 4);
+		Serial.print("BMS VOLTAGE LOW: "); Serial.println(low_voltage / 10000.0, 4);
+		Serial.print("BMS VOLTAGE HIGH: "); Serial.println(high_voltage / 10000.0, 4);
+		Serial.print("BMS VOLTAGE TOTAL: "); Serial.println(total_voltage / 100.0, 2);
+    }
+#endif
+
 private:
     uint16_t average_voltage; // @Parse @Name(average) @Getter(get_average) @Scale(10000) @Unit(V)
     uint16_t low_voltage; // @Parse @Name(low) @Getter(get_low) @Scale(10000) @Unit(V)

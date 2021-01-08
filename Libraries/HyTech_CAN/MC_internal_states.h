@@ -27,6 +27,22 @@ public:
     inline bool get_inverter_enable_state()                 const { return inverter_enable & 1; }
     inline bool get_inverter_enable_lockout()               const { return inverter_enable & 0x80; }
     inline bool get_direction_command()                     const { return direction_command; }
+
+#ifdef HT_DEBUG_EN
+    void print() {
+        Serial.println("\n\nMC Internal States");
+        Serial.println("------------------");
+		Serial.print("VSM STATE: "); Serial.println(vsm_state);
+		Serial.print("INVERTER STATE: "); Serial.println(inverter_state);
+		Serial.print("INVERTER RUN MODE: "); Serial.println(get_inverter_run_mode());
+		Serial.print("INVERTER ACTIVE DISCHARGE STATE: "); Serial.println(get_inverter_active_discharge_state());
+		Serial.print("INVERTER COMMAND MODE: "); Serial.println(inverter_command_mode);
+		Serial.print("INVERTER ENABLE: "); Serial.println(get_inverter_enable_state());
+		Serial.print("INVERTER LOCKOUT: "); Serial.println(get_inverter_enable_lockout());
+		Serial.print("DIRECTION COMMAND: "); Serial.println(direction_command);
+    }
+#endif
+
 private:
     uint16_t vsm_state; // @Parse @Hex
     uint8_t inverter_state; // @Parse @Hex

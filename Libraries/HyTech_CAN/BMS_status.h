@@ -45,6 +45,16 @@ public:
     inline void set_shutdown_g_above_threshold(bool shutdown_g_above_threshold) { flags = (flags & 0xFFFE) | shutdown_g_above_threshold; }
     inline void set_shutdown_h_above_threshold(bool shutdown_h_above_threshold) { flags = (flags & 0xFFFD) | (shutdown_h_above_threshold << 1); }
 
+#ifdef HT_DEBUG_EN
+    void print() {
+        Serial.println("\n\nBMS Status");
+        Serial.println("----------");
+		Serial.print("BMS STATE: "); Serial.println(state);
+		Serial.print("BMS ERROR FLAGS: 0x"); Serial.println(error_flags, HEX);
+		Serial.print("BMS CURRENT: "); Serial.println(current / 100.0, 2);
+    }
+#endif
+
 private:
 	uint8_t state; // @Parse @Hex
     uint16_t error_flags; // @Parse @Flagset @Hex
