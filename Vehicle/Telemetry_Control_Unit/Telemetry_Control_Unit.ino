@@ -258,7 +258,7 @@ void parse_can_message() {
 
 void write_to_SD(CAN_message_t *msg) { // Note: This function does not flush data to disk! It will happen when the buffer fills or when the above flush timer fires
     logger.print(Teensy3Clock.get());
-    logger.print(".000,");
+    logger.print("000,");
     logger.print(msg->id, HEX);
     logger.print(",");
     logger.print(msg->len);
