@@ -46,7 +46,11 @@ int main() {
 	closedir (dir);
 
 	fputs("\t}\n}", parseMessage);
-	fcloseall();
+
+	fclose(source);
+	fclose(include);
+	fclose(parseMessage);
+	fclose(userDefined);
 
 	return 0;
 }
