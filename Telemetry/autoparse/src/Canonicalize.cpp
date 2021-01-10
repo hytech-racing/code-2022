@@ -18,7 +18,7 @@ namespace Canonicalize {
 			throw AutoParseException("Symbol Parseclass not found");
 
 		if (list.empty()) {
-			ClassDef* cdef = new ClassDef;
+			ClassDef* cdef = new ClassDef();
 			strcpy(cdef->id, ID_PREFIX);
 
 			char* target = cdef->id + ct_strlen(ID_PREFIX);

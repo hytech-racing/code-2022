@@ -9,6 +9,8 @@ AnnotationParser::~AnnotationParser() {
 		delete cdef;
 	for (VarDef* vdef : vars)
 		delete vdef;
+	for (DimDef* ddef : dimensionList)
+		delete ddef;
 }
 
 void AnnotationParser::run() {
@@ -77,5 +79,5 @@ void AnnotationParser::loadNameline() {
 }
 
 Writer AnnotationParser::getWriter() {
-	return Writer(defaultClassProps.name, classdefs, vars);
+	return Writer(defaultClassProps.name, classdefs, vars, dimensionList);
 }

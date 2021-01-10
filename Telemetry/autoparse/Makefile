@@ -38,7 +38,7 @@ $(AP_BIN): $(AP_OBJ) $(AP_HDR)
 
 AnnotationParser: $(AP_BIN)
 
-$(AP_OUT_DIR): $(AP_BIN) $(HYTECH_CAN_LIB)/*.h
+$(AP_OUT_DIR): $(AP_BIN) $(HYTECH_CAN_LIB)/*.h $(TEMPLATES)
 	rm -rf $(AP_OUT_DIR)
 	mkdir $(AP_OUT_DIR)
 	cp -r $(TEMPLATES) $(AP_OUT_DIR)

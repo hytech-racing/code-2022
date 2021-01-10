@@ -24,7 +24,7 @@ void AnnotationParser::parseClassDef(ClassDef*& cdef) {
 	while (input.find('@')) {
 		input.get();
 		if (eatToken(input, ID)) {
-			cdef = new ClassDef;
+			cdef = new ClassDef();
 			parseClassDefParams(cdef->id, cdef->name, ID, NAME);
 			if (strempty(cdef->name))
 				strcpy(cdef->name, "-");
@@ -32,7 +32,7 @@ void AnnotationParser::parseClassDef(ClassDef*& cdef) {
 			cdef = nullptr;
 		}
 		else if (eatToken(input, PREFIX)) {
-			cdef = new ClassDef;
+			cdef = new ClassDef();
 			parseClassDefParams(cdef->prefix, cdef->id, PREFIX, ID);
 			if (!strempty(cdef->id))
 				addClassDef(cdef);
@@ -47,6 +47,22 @@ void AnnotationParser::parseClassDef(ClassDef*& cdef) {
 			if (!strempty(defaultClassProps.custom))
 				throw ReassignmentException(CUSTOM, defaultClassProps.custom);
 			input.getToken(defaultClassProps.custom);
+			closeParen();
+		}
+		else if (eatToken(input, INDEXABLE)) {
+			if (dimensionList.size())
+				throw ReassignmentException(INDEXABLE, dimensionList.size());
+			openParen();
+			do {
+				DimDef* ddef = new DimDef();
+				dimensionList.push_back(ddef);
+				if (!input.getToken(ddef->getter))
+					throw InvalidParameterException(INDEXABLE);
+				strcat(ddef->getter, "()");
+				openParen();
+				getIntParam(ddef->maxSize, SIZE);
+				closeParen();
+			} while (input.eat(','));
 			closeParen();
 		}
 	}

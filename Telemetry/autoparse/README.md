@@ -110,7 +110,7 @@ There are three types of annotation - class-level, variable-level, and function-
 | `@ID(id,name?)`		| `@Name(str)`		|							|
 | `@Prefix(str, id?)`	| `@Getter(fname)`	|							|
 | `@Custom(fname)`		| `@Hex`			|							|
-| 						| `@Unit(str)`		|							|
+| `@Indexable(getter(max), ...)` | `@Unit(str)`|						|
 | 						| `@Scale(factor, precision?)`	|				|
 | 						| `@Flagprefix(str?)`	|						|
 | 						| `@Flaglist(name[(fname)]?, ...)`	|			|
@@ -182,8 +182,15 @@ Another point to note: annotations that do not accept a parameter may be followe
 `@Custom(fname)` - Custom parser function for all CAN IDs associated with class
 - DO NOT include parentheses in `fname`
 - Implement custom function in any .cpp file in [user](./user) directory. That file should `#include "UserDefined.h"`.
-- Function prototype: `CUSTOMFUNC(<fname>, <Classname> & data)`
+- Function prototype: `CUSTOMFUNC(<fname>, <Classname> & data, <Classname> & prev)`
 - Custom function should output using `show(formatstring, ...params)`, a macro that overwrites `fprintf`
+
+`@Indexable(getter(max), ...)` - Indicates that the same ID is associated with an array (commonly used for ICs)
+- `getter` indicates index of a struct within the array, must be a member function of the class
+- `max` represents the greatest possible value for that index
+- Adding more than one getter indicates multi-dimensional arrays (order matters)
+- Example: for `BMS_detailed_voltages` we build an 8x3 array using IC and group IDs
+	- This is implemented as `@Indexable(get_ic_id(8), get_group_id(3))
 
 ### Variable-Level Annotations
 
@@ -215,5 +222,3 @@ Another point to note: annotations that do not accept a parameter may be followe
 ### Function-Level Annotations
 
 `@Parseflag(set, name?)` indicates that the function returns a boolean associated with a flag variable (marked using `@Flagprefix`, `@Flaglist`, and/or `@Flagset`). `set` must match the name of the container variable. `name` indicates the name of the packed value, and may be omitted if the method name follows the format `get_{flagname}`, in which case `name` will default to `flagname`.
-
-## Parser Annotation Example

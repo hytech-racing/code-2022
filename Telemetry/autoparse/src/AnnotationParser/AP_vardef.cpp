@@ -4,7 +4,7 @@
 #include <cmath>
 
 void AnnotationParser::parseVar() {
-	VarDef* vdef = new VarDef;
+	VarDef* vdef = new VarDef();
 	try {
 		parseVarDef(vdef);
 		if (strempty(vdef->name)) {
@@ -56,14 +56,14 @@ void AnnotationParser::parseVarDef(VarDef* vdef) {
 		else if (eatToken(input, FLAGSET)) {
 			checkNoParam();
 			if (vdef->flags == nullptr)
-				vdef->flags = new FlagSetDef;
+				vdef->flags = new FlagSetDef();
 		}
 	}
 }
 
 void AnnotationParser::parseVarFlagPrefix(VarDef* vdef) {
 	if (vdef->flags == nullptr)
-		vdef->flags = new FlagSetDef;
+		vdef->flags = new FlagSetDef();
 
 	bool space = input.eatspace();
 	if (input.eat('(')) {
@@ -84,10 +84,10 @@ void AnnotationParser::parseVarFlagList(VarDef* vdef) {
 	openParen();
 
 	if (vdef->flags == nullptr)
-		vdef->flags = new FlagSetDef;
+		vdef->flags = new FlagSetDef();
 
 	do {
-		FlagDef* fdef = new FlagDef;
+		FlagDef* fdef = new FlagDef();
 		vdef->flags->flags.push_back(fdef);
 		if (!input.getToken(fdef->name))
 			throw InvalidParameterException(FLAGLIST);

@@ -4,7 +4,7 @@
 
 #pragma pack(push,1)
 
-// @Parseclass @Prefix(IC_{get_ic_id()})
+// @Parseclass @Prefix(IC_{get_ic_id()}) @Indexable(get_ic_id(8))
 class BMS_onboard_detailed_temperatures {
 public:
     BMS_onboard_detailed_temperatures() = default;
