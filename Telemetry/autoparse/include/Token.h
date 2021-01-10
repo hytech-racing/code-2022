@@ -22,7 +22,6 @@ constexpr const char* const PRECISION = "Precision";
 constexpr const char* const FLAGLIST = "Flaglist";
 constexpr const char* const FLAGSET = "Flagset";
 constexpr const char* const FLAGPREFIX = "Flagprefix";
-constexpr const char* const SPARSE = "Sparse";
 
 constexpr const char* const ID_PREFIX = "ID_";
 constexpr const char* const GET_PREFIX = "get_";

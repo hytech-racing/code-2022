@@ -29,6 +29,7 @@ void Writer::run() {
 		fprintf(source, "void parse_%s (const char* const timestamp, uint8_t* buf) {\n", cdef->id);
 		fprintf(parseMessage, "\t\tcase %s: parse_%s(timestamp, buf); break;\n", cdef->id, cdef->id);
 
+		fprintf(source, "\tstatic %s prev(getNeg(buf));\n", classname);
 		fprintf(source, "\t%s data(buf);\n", classname);
 		addPrefix(cdef);
 		if (!strempty(cdef->custom)) {
@@ -42,12 +43,13 @@ void Writer::run() {
 			else
 				writeNumericalParser(vdef);
 		}
+		fputs("\tprev.load(buf);", source);
 		fputs("}\n\n", source);
 	}
 }
 
 void Writer::writeNumericalParser(VarDef* vdef) {
-	startLine(vdef->name);
+	startLine(vdef->name, vdef->getter);
 
 	if (vdef->scale)
 		fprintf(source, "%%.%df", vdef->precision);
@@ -64,7 +66,7 @@ void Writer::writeNumericalParser(VarDef* vdef) {
 
 void Writer::writeFlagParser(VarDef* vdef) {
 	if (vdef->hex) {
-		startLine(vdef->name);
+		startLine(vdef->name, vdef->getter);
 		fputs("0x%X", source);
 		writeParams(vdef->getter);
 	}
@@ -72,24 +74,15 @@ void Writer::writeFlagParser(VarDef* vdef) {
 		return;
 	
 	bool hasPrefix = !strempty(vdef->flags->prefix);
-	bool sparse = vdef->flags->sparse;
 
 	char fullname [256], *start;
 	if (hasPrefix)
 		start = fullname + sprintf(fullname, "%s_", vdef->flags->prefix);
 
 	for (FlagDef* fdef : vdef->flags->flags) {
-		if (sparse)
-			fprintf(source, "\tif(data.%s)\n\t", fdef->getter);
-
-		startLine(hasPrefix ? strcpy(start, fdef->name) : fdef->name, sparse);
-
-		if (sparse)
-			fprintf(source, "1\\n\",\ttimestamp, prefix);\n");
-		else {
-			fputs("%d", source);
-			writeParams(fdef->getter);
-		}
+		startLine(hasPrefix ? strcpy(start, fdef->name) : fdef->name, fdef->getter);
+		fputs("%d", source);
+		writeParams(fdef->getter);
 	}
 }
 

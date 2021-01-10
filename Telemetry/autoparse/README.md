@@ -115,7 +115,6 @@ There are three types of annotation - class-level, variable-level, and function-
 | 						| `@Flagprefix(str?)`	|						|
 | 						| `@Flaglist(name[(fname)]?, ...)`	|			|
 | 						| `@Flagset`		|							|
-| 						| `@Sparse`			|							|
 
 ### General formatting rules
 
@@ -212,8 +211,6 @@ Another point to note: annotations that do not accept a parameter may be followe
 - DO NOT include parentheses in fname
 
 `@Flagset` - Simply marks a variable as containing packed booleans (utility for `@Parseflag` annotation)
-
-`@Sparse` - Only print individual flags within a flagset when value is true
 
 ### Function-Level Annotations
 

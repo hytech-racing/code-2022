@@ -23,11 +23,12 @@ private:
 	void writeFlagParser(VarDef* vdef);
 	void addPrefix(ClassDef* cdef);
 
-	inline void startLine(char* varname, int indentation = 0) {
+	inline void startLine(char* varname, char* getter) {
+		fprintf(source, "\tif (data.%s != prev.%s)\n\t", getter, getter);
 		fputs("\tfprintf(outfile, \"%s,%s\" \"", source);
 		int len;
 		fprintf(source, "%s%n\"", varname, &len);
-		fprintf(source, "%*s", 50 - (indentation << 2) - len, "\",");
+		fprintf(source, "%*s", 50 - len, "\",");
 	}
 
 	inline void writeParams(char* getter) {

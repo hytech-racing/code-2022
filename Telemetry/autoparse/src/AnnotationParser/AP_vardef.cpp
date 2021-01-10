@@ -58,12 +58,6 @@ void AnnotationParser::parseVarDef(VarDef* vdef) {
 			if (vdef->flags == nullptr)
 				vdef->flags = new FlagSetDef;
 		}
-		else if (eatToken(input, SPARSE)) {
-			checkNoParam();
-			if (vdef->flags == nullptr)
-				vdef->flags = new FlagSetDef;
-			vdef->flags->sparse = true;
-		}
 	}
 }
 
