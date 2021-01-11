@@ -8,7 +8,7 @@ if [[ -d $1 ]]; then
 	indir=$1
 	outdir=../log/$(basename $1)
 	mkdir -p $outdir
-	for infile in $(ls $indir/*.csv); do
+	for infile in $(ls $indir/*.csv $indir/*.CSV); do
 		../build/CANParser -i $infile -o $outdir/$(basename $infile)
 	done
 
