@@ -226,7 +226,7 @@ void loop() {
         // Send Main Control Unit status message
         mcu_status.write(tx_msg.buf);
         tx_msg.id = ID_MCU_STATUS;
-        tx_msg.len = sizeof(CAN_message_mcu_status_t);
+        tx_msg.len = sizeof(MCU_status);
         CAN.write(tx_msg);
 
         // Update the pedal readings to send over CAN
@@ -237,7 +237,7 @@ void loop() {
         // Send Main Control Unit pedal reading message
         mcu_pedal_readings.write(tx_msg.buf);
         tx_msg.id = ID_MCU_PEDAL_READINGS;
-        tx_msg.len = sizeof(CAN_message_mcu_pedal_readings_t);
+        tx_msg.len = sizeof(MCU_pedal_readings);
         CAN.write(tx_msg);
 
         // Send couloumb counting information
