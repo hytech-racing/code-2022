@@ -16,11 +16,11 @@ MockSerial::~MockSerial() {
 
 void MockSerial::setOutputPath(std::string filepath) { fFilepath = filepath; }
 
-void MockSerial::begin(unsigned int baudRate) {
+void MockSerial::begin(unsigned int baudRate, uint8_t mode) {
     if (fos)
         throw DoublePinModeException(fId, OUTPUT, OUTPUT);
     if (fFilepath.size()) {
-        std::ofstream* tmpFos = new std::ofstream(fFilepath, std::ios::ios_base::out);
+        std::ofstream* tmpFos = new std::ofstream(fFilepath, (std::ios_base::openmode) mode);
         if (tmpFos->fail())
             throw FileNotOpenException(fId, fFilepath);
         fos = tmpFos;
@@ -30,11 +30,15 @@ void MockSerial::begin(unsigned int baudRate) {
 
 void MockSerial::end() { this->~MockSerial(); }
 
-void MockSerial::write(uint8_t* buf, int size) {
+size_t MockSerial::write(uint8_t* buf, int size) {
     validate();
     for (int i = 0; i < size; ++i)
         *fos << std::hex << buf[i];
+    return size;
 }
 
 MockSerial Serial(-1);
+
+#ifndef HYTECH_ARDUINO_UNO
 MockSerial Serial2(-2);
+#endif

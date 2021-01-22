@@ -1,4 +1,4 @@
-#include "CAN_simulator.h"
+#include "MockCAN.h"
 #include "Dashboard.h"
 #include "DebouncedButton.h"
 #include "gtest/gtest.h"
@@ -28,6 +28,7 @@ protected:
 
 	void TearDown() {
 		Simulator::teardown();
+		MockCAN::purge();
 	}
 };
 
@@ -36,7 +37,7 @@ TEST_F(DashboardTesting, Startup){
 	CAN_message_t msg;
 	delay(100);
 	Simulator::next();
-	ASSERT_TRUE(CAN_simulator::read(msg));
+	ASSERT_TRUE(MockCAN::read(msg));
 	ASSERT_EQ(msg.id,ID_DASHBOARD_STATUS);
 	Dashboard_status status;
 	status.load(msg.buf);
@@ -58,7 +59,7 @@ TEST_F(DashboardTesting, MarkButton){
 	delay(51);
 	Simulator::next();
 
-	CAN_simulator::read(msg);
+	MockCAN::read(msg);
 	status.load(msg.buf);
 	EXPECT_EQ(status.get_button_flags(),1);
 	EXPECT_EQ(status.get_led_flags(),3);
@@ -70,7 +71,7 @@ TEST_F(DashboardTesting, MarkButton){
 	delay(50);
 	Simulator::next();
 
-	CAN_simulator::read(msg);
+	MockCAN::read(msg);
 	status.load(msg.buf);
 	EXPECT_EQ(status.get_button_flags(),0);
 	EXPECT_EQ(status.get_led_flags(),3);
@@ -86,7 +87,7 @@ TEST_F(DashboardTesting, LEDTest){
 
 
 	//Nothing should happen to LEDs on Startup
-	CAN_simulator::read(msg);
+	MockCAN::read(msg);
 	status.load(msg.buf);
 	EXPECT_EQ(status.get_led_flags(),3);
 
@@ -96,7 +97,7 @@ TEST_F(DashboardTesting, LEDTest){
 	msg.id = ID_MCU_STATUS;
 	msg.len = sizeof(mcu_stat);
 
-	//CAN_simulator::push(msg);
+	//MockCAN::push(msg);
 	//how do you send this message?
 
 	Simulator::next();
@@ -105,7 +106,7 @@ TEST_F(DashboardTesting, LEDTest){
 	delay(50);
 	Simulator::next();
 
-	CAN_simulator::read(msg);
+	MockCAN::read(msg);
 	status.load(msg.buf);
 	EXPECT_EQ(status.get_button_flags(),0);
 	EXPECT_EQ(status.get_led_flags(),2);
@@ -120,7 +121,7 @@ TEST_F(DashboardTesting, Third){
 	Simulator::next();
 	delay(100);
 	Simulator::next();
-	ASSERT_TRUE(CAN_simulator::read(msg));
+	ASSERT_TRUE(MockCAN::read(msg));
 	ASSERT_EQ(msg.id,ID_DASHBOARD_STATUS);
 	Dashboard_status status;
 	status.load(msg.buf);

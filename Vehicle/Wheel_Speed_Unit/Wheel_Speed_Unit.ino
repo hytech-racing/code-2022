@@ -49,6 +49,18 @@ void set_states() {
   cur_state_right = digitalRead(10);
 }
 
+void print_rpms() {
+    Serial.print("RPM Left: ");
+    Serial.print(rpm_left);
+    Serial.print("    RPM Right: ");
+    Serial.print(rpm_right);
+    if(is_front) {
+      Serial.print("    Total Revs: ");
+      Serial.print(total_revs);
+    }
+    Serial.println();
+}
+
 void set_rpm_left() {
   cur_time_left = micros();
   int micros_elapsed = cur_time_left - prev_time_left;
@@ -71,6 +83,10 @@ void set_rpm_right() {
     total_ticks_right += 1;
     print_rpms();
   }
+}
+
+void update_distance_traveled() {
+  total_revs = ((total_ticks_left + total_ticks_right) / (1.0 * num_teeth)); //Should be devided by 2 * num_teeth, but currently only one wheel is sensed
 }
 
 void update_wheel_speeds() {
@@ -102,22 +118,6 @@ void update_wheel_speeds() {
 
   prev_state_left = cur_state_left;
   prev_state_right = cur_state_right;
-}
-
-void update_distance_traveled() {
-  total_revs = ((total_ticks_left + total_ticks_right) / (1.0 * num_teeth)); //Should be devided by 2 * num_teeth, but currently only one wheel is sensed
-}
-
-void print_rpms() {
-    Serial.print("RPM Left: ");
-    Serial.print(rpm_left);
-    Serial.print("    RPM Right: ");
-    Serial.print(rpm_right);
-    if(is_front) {
-      Serial.print("    Total Revs: ");
-      Serial.print(total_revs);
-    }
-    Serial.println();
 }
 
 void loop()

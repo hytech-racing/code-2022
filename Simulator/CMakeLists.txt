@@ -14,11 +14,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 string(TOUPPER "${arduino}" arduino)
 add_compile_options(-DHYTECH_ARDUINO_${arduino})
+add_compile_options(-DARDUINO=101)
 
 set(SIMULATION_INC_DIR ${PROJECT_SOURCE_DIR}/include)
 set(SIMULATION_SRC_DIR ${PROJECT_SOURCE_DIR}/src)
 set(VEHICLE_DIR ${PROJECT_SOURCE_DIR}/../Vehicle)
-
+set(LIB_DIR ${PROJECT_SOURCE_DIR}/../Libraries)
 
 ### ADD NEW TEST FOLDERS HERE ###
 

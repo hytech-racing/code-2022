@@ -25,10 +25,13 @@ public:
 
     // used for time management
     friend unsigned long long millis();
+    friend unsigned long long micros();
     friend void delay (unsigned long long time);
+    friend void delayMicroseconds (unsigned long long time);
 private:
     Simulator();
     static unsigned long long sys_time;
+    static unsigned long long sys_us;
     static unsigned long long LOOP_PERIOD;
     static MockPin* io;
 };

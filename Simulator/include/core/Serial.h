@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 
+#include "BoardDef.h"
 #include "HTException.h"
 #include "MockPin.h"
 
@@ -13,7 +14,7 @@ class MockSerial {
 public:
     MockSerial(int id);
     ~MockSerial();
-    void begin(unsigned int baudRate);
+    void begin(unsigned int baudRate, uint8_t mode = std::ios::ios_base::out);
     void end();
     void setOutputPath(std::string filepath);
     template <typename T> inline void print(T value) { validate(); *fos << value; }
@@ -21,7 +22,9 @@ public:
     void println() { validate(); *fos << '\n'; }
     template <typename T> inline void println(T value) { validate(); *fos << value << '\n'; }
     template <typename T> inline void println(T value, int base) { validate(); *fos << format(value, base).rdbuf() << '\n'; }
-    void write(uint8_t* buf, int size);
+    size_t write(uint8_t* buf, int size);
+    inline void flush() { validate(); fos->flush(); }
+	inline operator bool() { return fos; }
 private:
     int fId;
     std::string fFilepath;
@@ -38,4 +41,9 @@ private:
     }
 };
 
-extern MockSerial Serial, Serial2;
+extern MockSerial Serial;
+
+#ifndef HYTECH_ARDUINO_UNO
+#define Serial1 Serial
+extern MockSerial Serial2;
+#endif

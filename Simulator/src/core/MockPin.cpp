@@ -29,7 +29,7 @@ void MockPin::vehicle_write(unsigned value) {
 }
 
 void MockPin::vehicle_pinMode(int mode) {
-    if (fMode != UNUSED)
+    if ((isInput(mode) && fMode == OUTPUT) || (isInput(fMode) && mode == OUTPUT))
         throw DoublePinModeException(fPin, fMode, mode);
     fMode = mode;
 }
