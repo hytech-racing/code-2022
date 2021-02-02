@@ -20,6 +20,14 @@
 #define SHUTDOWN_C 9
 #define SHUTDOWN_D 10
 #define SOFTWARE_SHUTDOWN 12
+#define WATCHDOG_OUT 13
+#define WATCHDOG_RESET 14
+#define VOLTAGE_READ 16
+#define IMON_B 20
+
+#define CURRENT_MAX 2.925
+#define VOLTAGE_MAX 14.66
+#define VOLTAGE_MIN 9.99
 
 #define LED A8
 
@@ -37,6 +45,8 @@ BMS_onboard_temperatures bms_onboard_temperatures;
 BMS_balancing_status bms_balancing_status[(TOTAL_IC + 3) / 4]; // Round up TOTAL_IC / 4 since data from 4 ICs can fit in a single message
 
 int charge_state = 0;
+int watchdog_state = 0;
+unsigned long prev_time = 0;
 
 static CAN_message_t rx_msg;
 static CAN_message_t tx_msg;
@@ -52,14 +62,19 @@ void setup() {
     pinMode(SHUTDOWN_B, INPUT);
     pinMode(SHUTDOWN_C, INPUT);
     pinMode(SHUTDOWN_D, INPUT);
-
-    //for testing only
+    
     pinMode(CHARGE_ENABLE, OUTPUT);
-    charge_state = 0;
+    charge_state = 1;
     digitalWrite(CHARGE_ENABLE, charge_state);
 
     pinMode(SOFTWARE_SHUTDOWN, OUTPUT);
     digitalWrite(SOFTWARE_SHUTDOWN, HIGH);
+
+    pinMode(WATCHDOG_OUT, OUTPUT);
+    pinMode(WATCHDOG_RESET, OUTPUT);
+    digitalWrite(WATCHDOG_RESET, HIGH);
+
+    prev_time = millis();
 
     Serial.begin(115200);
     CAN.begin();
@@ -79,25 +94,36 @@ void setup() {
 }
 
 void loop() {
-    if (timer_update_CAN.check()) {
-        ccu_status.write(tx_msg.buf);
-        tx_msg.id = ID_CCU_STATUS;
-        tx_msg.len = sizeof(CAN_message_ccu_status_t);
-        CAN.write(tx_msg);
+    //every 10 ms
+    if(millis() - prev_time >= 10) {
+      if (timer_update_CAN.check()) {
+          ccu_status.write(tx_msg.buf);
+          tx_msg.id = ID_CCU_STATUS;
+          tx_msg.len = sizeof(CAN_message_ccu_status_t);
+          CAN.write(tx_msg);
+      }
+      
+      if (timer_update_serial.check()) {
+          print_cells();
+          print_temps();
+          Serial.print("Charge enable: ");
+          Serial.println(ccu_status.get_charger_enabled());
+          Serial.print("BMS state: ");
+          Serial.println(bms_status.get_state());
+      }
+      
+      check_shutdown_signals();
+  
+      check_over_voltage_current();
+
+      prev_time = millis();
     }
     
-    if (timer_update_serial.check()) {
-        print_cells();
-        print_temps();
-        Serial.print("Charge enable: ");
-        Serial.println(ccu_status.get_charger_enabled());
-        Serial.print("BMS state: ");
-        Serial.println(bms_status.get_state());
-    }
+    //watchdog
+    watchdog_state = !watchdog_state;
+    digitalWrite(WATCHDOG_OUT, watchdog_state);
     
-    check_shutdown_signals();
-    
-    delay(10);
+    delay(1);
 }
 
 void print_cells() {
@@ -236,5 +262,19 @@ void check_shutdown_signals() {
     digitalWrite(SOFTWARE_SHUTDOWN, LOW);
     charge_state = 0;
     digitalWrite(CHARGE_ENABLE, charge_state);
+  }
+}
+
+void check_over_voltage_current() {
+  int imon_b = analogRead(IMON_B);
+  int voltage_read = analogRead(VOLTAGE_READ);
+
+  //assuming 13 bit resolution, 0 - 8191
+  if(imon_b > 7260) {
+    digitalWrite(SOFTWARE_SHUTDOWN, LOW);
+  }
+
+  if(voltage_read < 5410 || voltage_read > 7940) {
+    digitalWrite(SOFTWARE_SHUTDOWN, LOW);
   }
 }
