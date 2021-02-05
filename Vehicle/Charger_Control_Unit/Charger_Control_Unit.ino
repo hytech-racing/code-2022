@@ -25,10 +25,6 @@
 #define VOLTAGE_READ 16
 #define IMON_B 20
 
-#define CURRENT_MAX 2.925
-#define VOLTAGE_MAX 14.66
-#define VOLTAGE_MIN 9.99
-
 #define LED A8
 
 
@@ -265,16 +261,20 @@ void check_shutdown_signals() {
   }
 }
 
+
+//CURRENT_MAX 2.925
+//VOLTAGE_MAX 14.66
+//VOLTAGE_MIN 9.99
 void check_over_voltage_current() {
   int imon_b = analogRead(IMON_B);
   int voltage_read = analogRead(VOLTAGE_READ);
 
-  //assuming 13 bit resolution, 0 - 8191
-  if(imon_b > 7260) {
+  //assuming 10 bit resolution, 0 - 1023
+  if(imon_b > 907) {
     digitalWrite(SOFTWARE_SHUTDOWN, LOW);
   }
 
-  if(voltage_read < 5410 || voltage_read > 7940) {
+  if(voltage_read < 675 || voltage_read > 992) {
     digitalWrite(SOFTWARE_SHUTDOWN, LOW);
   }
 }
