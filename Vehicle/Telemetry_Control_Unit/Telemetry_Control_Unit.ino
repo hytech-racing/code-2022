@@ -20,15 +20,13 @@
 #include "SDUtils.h"
 #include "XBUtils.h"
 
-#define PIN_CURRENT_COOLING A12 // Current sensor (cooling circuit)
-#define PIN_CURRENT_ECU A13 // Current sensor (non-cooling circuit)
+
 #define SCALE_CURRENT_READING(reading) ((reading - 96) * 0.029412) //self derived
 
 FlexCAN CAN(500000);
 static CAN_message_t xb_msg;
 File logfile;
 
-Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
 Adafruit_GPS GPS(&Serial1);
 
 MCU_status mcu_status;
@@ -74,21 +72,11 @@ void setup() {
 	setSyncProvider(getTeensy3Clock); // registers Teensy RTC as system time
 	Serial.println(timeStatus() == timeSet ? "System time set to RTC" : "RTC not set up - uncomment Teensy3Clock.set() to set time");
 
-	// GLV current pins
-	pinMode(PIN_CURRENT_COOLING, INPUT);
-	pinMode(PIN_CURRENT_ECU, INPUT);
-
 	// Serial / XBee / CAN 
 	Serial.begin(115200);
 	XB.begin(115200);
 	FLEXCAN0_MCR &= 0xFFFDFFFF; // Enables CAN message self-reception
 	CAN.begin();
-
-	// Accelerometer
-	if(accel.begin())
-		accel.setRange(ADXL345_RANGE_4_G);
-	else
-		Serial.println("Failed to detect ADXL345 - check your connections");
 
 	// GPS
 	GPS.begin(9600);
@@ -112,16 +100,6 @@ void loop() {
     static Metro timer_flush = Metro(1000);
 	if (timer_flush.check()) // Occasionally flush SD buffer (max one second data loss after power-off)
 		logfile.flush();
-
-    // Accelerometer
-    static Metro timer_accelerometer = Metro(100);
-	if (timer_accelerometer.check()) {
-        sensors_event_t event;
-        accel.getEvent(&event);
-        fcu_accelerometer_values.set_values(event.acceleration.x * 100, event.acceleration.y * 100, event.acceleration.z * 100);
-        send_xbee(ID_FCU_ACCELEROMETER, fcu_accelerometer_values, xb_msg);
-        CAN.write(xb_msg);
-    }
 
     // GLV Current
     static Metro timer_current = Metro(500);
