@@ -12,9 +12,11 @@ public:
 
     static inline bool digitalRead(int pin)                { return io[pin].fOutputValue; };
     static inline unsigned analogRead(int pin)             { return io[pin].fOutputValue; }
-    static inline void digitalWrite(int pin, bool value)   { io[pin].fInputValue = value; }
-    static inline void analogWrite(int pin, unsigned value){ io[pin].fInputValue = value; }
+    static inline void digitalWrite(int pin, bool value)   { io[pin].sim_setValue(value ? 1023 : 0); }
+    static inline void analogWrite(int pin, unsigned value){ io[pin].sim_setValue(value * 1023 / 255); }
     static inline int getPinMode(int pin)                  { return io[pin].fMode; }
+
+    static inline void attachListener(int pin, Listener* l){ io[pin].listeners.push_back(l); }
     
     // used to manage pin i/o
     friend bool digitalRead(int pin);
@@ -33,5 +35,6 @@ private:
     static unsigned long long sys_time;
     static unsigned long long sys_us;
     static unsigned long long LOOP_PERIOD;
-    static MockPin* io;
+    static MockPin io [NUM_PINS + 1];
+    static bool running;
 };

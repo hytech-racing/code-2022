@@ -1,9 +1,9 @@
 ######################## Fill in the following values ########################
 
-set(BINARY        mcu_test   )  # Name of testing output executable
-set(VEHICLE_CODE  Main_Control_Unit  )  # Path to folder contianing .ino file (relative to '/Vehicle')
-set(TEST_SOURCES  "")  # Space-separated list of test source files
-set(CODE_DEPS     ADC_SPI EXPANDER FLEXCAN HYTECH_CAN METRO VEHICLE_UTILITIES WIRE)  # Space-separated list of library dependencies
+set(BINARY        scratch_test )  # Name of testing output executable
+set(VEHICLE_CODE  Scratch )  # Path to folder contianing .ino file (relative to '/Vehicle')
+set(TEST_SOURCES  test.cpp)  # Space-separated list of test source files
+set(CODE_DEPS     ADC_SPI EXPANDER ADXL GPS)  # Space-separated list of library dependencies
                               # Always included: GTEST, CORE
 
 ################### Do not change anything past this point ###################

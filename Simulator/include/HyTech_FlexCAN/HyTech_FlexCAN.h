@@ -1,1 +1,2 @@
-#include LIBRARY_INCLUDE // this needs to be done or the wrong kinetic_flexcan is included
+// this needs to be done or the wrong kinetis_flexcan is included
+#include LIBRARY_INCLUDE 

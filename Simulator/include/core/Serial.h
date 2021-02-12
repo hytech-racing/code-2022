@@ -3,6 +3,7 @@
 #include <bitset>
 #include <fstream>
 #include <sstream>
+#include <iomanip>
 
 #include "BoardDef.h"
 #include "HTException.h"
@@ -12,24 +13,43 @@
 
 class MockSerial {
 public:
-    MockSerial(int id);
+    MockSerial(int id) : fId(id), internal_comm_en(false), fout(nullptr) {}
     ~MockSerial();
     void begin(unsigned int baudRate, uint8_t mode = std::ios::ios_base::out);
     void end();
     void setOutputPath(std::string filepath);
-    template <typename T> inline void print(T value) { validate(); *fos << value; }
-    template <typename T> inline void print(T value, int base) { validate(); *fos << format(value, base).rdbuf(); }
-    void println() { validate(); *fos << '\n'; }
-    template <typename T> inline void println(T value) { validate(); *fos << value << '\n'; }
-    template <typename T> inline void println(T value, int base) { validate(); *fos << format(value, base).rdbuf() << '\n'; }
+    inline void print(double value, int precision) { vout() << std::setprecision(precision) << value; }
+    template <typename T> inline void print(T value) { vout() << value; }
+    template <typename T> inline void print(T value, int base) { vout() << format(value, base).rdbuf(); }
+    void println() { vout() << '\n'; }
+    void println(double value) { print(value); println(); }
+    template <typename T> inline void println(T value) { print(value); println(); }
+    template <typename T> inline void println(T value, int base) { print(value, base); println(); }
     size_t write(uint8_t* buf, int size);
-    inline void flush() { validate(); fos->flush(); }
-	inline operator bool() { return fos; }
+    inline void flush() { vout().flush(); }
+	inline operator bool() { return internal_comm_en ? vehicle_out : fout; }
+
+    inline void enableInternalCommunication() { internal_comm_en = true; }
 private:
     int fId;
-    std::string fFilepath;
-    std::ostream *fos = nullptr;
-    inline void validate() { if (!fos) throw InvalidPinConfigurationException(-1, OUTPUT, UNUSED); }
+    bool internal_comm_en;
+    
+    union {
+    struct {
+        std::ostream* fout;
+        std::string filepath;
+    };
+    struct {
+        std::stringstream* vehicle_out;
+        std::stringstream* vehicle_in;
+    };
+    };
+
+    inline std::ostream& vout() {
+        std::ostream* out = internal_comm_en ? vehicle_out : fout;
+        if (!out) throw SerialException("Serial %d not enabled", fId);
+        return *out;
+    }
 
     template <typename T> inline std::stringstream format(T value, int base) {
         std::stringstream ss;

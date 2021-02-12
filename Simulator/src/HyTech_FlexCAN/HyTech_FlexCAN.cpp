@@ -17,7 +17,7 @@ FlexCAN::FlexCAN(uint32_t baud, uint8_t id, uint8_t txAlt, uint8_t rxAlt) {
 	defaultMask = { 0, 0, 0 };
 
 	if (baud != 500000)
-		throw CustomException("CAN bus baud rate must be 500000");
+		throw CANException("CAN bus baud rate must be 500000");
 
 	#ifdef HYTECH_ARDUINO_TEENSY_32
 		int txPin = 3, rxPin = 4;
@@ -38,7 +38,7 @@ void FlexCAN::begin(const CAN_filter_t &mask) {
 
 	#ifdef HYTECH_ARDUINO_TEENSY_32
 		if (interruptsEnabled && FLEXCAN0_IMASK1 != FLEXCAN_IMASK1_BUF5M && interruptsEnabled)
-			throw CustomException("If interrupts enabled, Teensy 3.2 requires FLEXCAN0_IMASK1 = FLEXCAN_IMASK1_BUF5M");
+			throw CANException("If interrupts enabled, Teensy 3.2 requires FLEXCAN0_IMASK1 = FLEXCAN_IMASK1_BUF5M");
 	#endif
 }
 
@@ -73,7 +73,7 @@ int FlexCAN::available(void) { return true; }
 
 int FlexCAN::write(const CAN_message_t &msg) { 
 	if (defaultMask.id == ~0u) 
-		throw CustomException("CAN configuration not valid");
+		throw CANException("CAN configuration not valid");
 	MockCAN::vehicle_write(msg);
 
 	#ifdef HYTECH_ARDUINO_TEENSY_35
@@ -86,7 +86,7 @@ int FlexCAN::write(const CAN_message_t &msg) {
 
 int FlexCAN::read(CAN_message_t &msg) {
 	if (defaultMask.id == ~0u) 
-		throw CustomException("CAN configuration not valid");
+		throw CANException("CAN configuration not valid");
 	do {
 		if (!MockCAN::vehicle_read(msg))
 			return false; 

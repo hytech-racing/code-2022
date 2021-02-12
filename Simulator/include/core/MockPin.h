@@ -1,7 +1,10 @@
 #pragma once
 
 #include <fstream>
+#include <list>
 #include <string>
+
+#include "Listener.h"
 
 #define UNUSED -1
 #define INPUT 0
@@ -14,6 +17,10 @@ public:
     MockPin();
     MockPin(int pin);
 
+    inline void teardown() {
+        fInputValue = fOutputValue = fMode = UNUSED;
+        listeners.clear();
+    }
     unsigned vehicle_read();
     void vehicle_write(unsigned value);
     void vehicle_pinMode(int mode);
@@ -21,9 +28,16 @@ public:
     friend class Simulator;
 private:
     int fPin;
-    int fInputValue = -1;
-    int fOutputValue = -1;
+    int fInputValue = UNUSED;
+    int fOutputValue = UNUSED;
     int fMode = UNUSED;
+    std::list<Listener*> listeners;
+
+    inline void sim_setValue(unsigned val) {
+        fInputValue = val;
+        for (Listener* listener : listeners)
+            listener->process(fPin, fInputValue);
+    }
 };
 
 std::string decodePinMode(int mode);

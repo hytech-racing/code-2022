@@ -18,7 +18,6 @@ unsigned MockPin::vehicle_read() {
         if (fMode == INPUT_PULLUP) return 1;
         else throw InvalidPinConfigurationException(fPin, INPUT_PULLUP, fMode);
     }
-    
     return fInputValue;
 }
 
@@ -26,6 +25,8 @@ void MockPin::vehicle_write(unsigned value) {
     if (fMode != OUTPUT)
         throw InvalidPinConfigurationException(fPin, OUTPUT, fMode);
     fOutputValue = value;
+    for (Listener* listener : listeners)
+        listener->process(fPin, value);
 }
 
 void MockPin::vehicle_pinMode(int mode) {

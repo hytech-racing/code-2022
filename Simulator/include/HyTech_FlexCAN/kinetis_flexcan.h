@@ -1,4 +1,5 @@
 #pragma once
+#include "BoardDef.h"
 
 #ifdef HYTECH_ARDUINO_TEENSY_32
 	#define IRQ_CAN_MESSAGE 29

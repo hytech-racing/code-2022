@@ -1,16 +1,41 @@
-#pragma once
+#include <LTC68042.h>
 
-#include <stdint.h>
-#include <queue>
+#include "SPIListener.h"
 
-typedef struct ADC_SETTINGS { uint8_t MD, DCP, CH, CHG; } ADC_SETTINGS;
+#define PROCESSING_TIME 202
 
-namespace MockLTC {
-	extern std::queue<uint8_t(*)[6]> cfg_list;
-	extern ADC_SETTINGS adc;
+class MockLTC : public SPIListener {
+	typedef enum { COMMAND, TRANSMITTING, RECEIVING } State;
 
-	void init (int ic);
-	void setCellVoltages(uint16_t(*voltages)[12]);
-	void setAuxVoltages(uint16_t(*voltages)[6]);
-	void teardown();
+public:
+	MockLTC(int cs, int ic) : SPIListener(cs), TOTAL_IC(ic) {
+		cellVoltages = new uint16_t [ic][12];
+		auxVoltages = new uint16_t [ic][6];
+		cfg = new uint8_t[ic][6];
+		state = COMMAND;
+		current = cmd, end = cmd + 2;
+	}
+
+	inline void teardown() {
+		delete [] cellVoltages;
+		delete [] auxVoltages;
+		delete [] cfg;
+	}
+
+	void processByte(byte received);
+	void processCommand();
+
+	inline void setCellVoltage(int ic, int cell, uint16_t value)	{ cellVoltages[ic][cell] = value; }
+	inline void setAuxVoltage(int ic, int cell, uint16_t value) 	{ auxVoltages[ic][cell] = value; }
+	inline void setConfig(uint8_t* newConfig)	{ memcpy(cfg, newConfig, 6); }
+	inline void getConfig(uint8_t* dest)		{ memcpy(dest, cfg, 6); }
+
+private:
+	State state;
+	uint8_t *current, *end;
+	uint16_t (*cellVoltages)[12], (*auxVoltages)[6];
+	uint8_t (*cfg) [6];
+	uint8_t cmd [2], checksum [2];
+	const int TOTAL_IC;
+	unsigned long long adcvReady, adaxReady;
 };

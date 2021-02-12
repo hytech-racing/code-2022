@@ -1,3 +1,0 @@
-add_library(LTC68042 SHARED LTC68042.cpp)
-target_include_directories(LTC68042 PUBLIC ${LIB_DIR}/LTC68042 ${SIMULATION_INC_DIR}/MockLTC)
-target_link_libraries(LTC68042 PUBLIC LT_SPI METRO)

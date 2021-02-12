@@ -1,6 +1,5 @@
 set(CORE_INC_DIR ${SIMULATION_INC_DIR}/core)
-set(CORE_SRC HTException.cpp
-             Interrupts.cpp
+set(CORE_SRC Interrupts.cpp
              MockPin.cpp
              Simulator.cpp
              Serial.cpp)

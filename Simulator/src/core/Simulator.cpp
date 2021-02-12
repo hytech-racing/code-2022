@@ -14,31 +14,36 @@ extern void setup(), loop();
 unsigned long long Simulator::sys_time = 0;
 unsigned long long Simulator::sys_us = 0;
 unsigned long long Simulator::LOOP_PERIOD = 0;
-MockPin* Simulator::io = nullptr;
+MockPin Simulator::io [NUM_PINS + 1];
+bool Simulator::running = false;
 
 void Simulator::begin(unsigned long long period) {
-    if (io)
-        throw CustomException("Failed to properly tear down previous simulator");
+    if (running)
+        throw SetupException("Failed to properly tear down previous simulator");
 
     LOOP_PERIOD = period;
 
+    running = true;
     Simulator::sys_time = 0;
     Simulator::sys_us = 0;
-    io = new MockPin [NUM_PINS + 1];
-    for (int i = 0; i <= NUM_PINS; ++i)
-        io[i] = MockPin(i);
+    for (int i = 1; i <= NUM_PINS; ++i)
+        io[i].fPin = i;
 
     setup();
 }
 
 void Simulator::teardown() {
-    delete [] io;
+    if (!running)
+        throw HTException("Invalid Simulator Configuration", "Attempted to tear down inactive simulator");
+    running = false;
+    for (int i = 1; i <= NUM_PINS; ++i)
+        io[i] = MockPin(i);
 
     Simulator::sys_time = 0;
     Simulator::sys_us = 0;
-    Simulator::io = nullptr;
     Serial.end();
     Serial2.end();
+    running = false;
 }
 
 void Simulator::next() {
