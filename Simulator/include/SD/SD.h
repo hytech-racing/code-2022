@@ -7,9 +7,9 @@
 #define O_WRITE std::ios_base::out
 #define O_CREAT std::ios_base::trunc
 
-class File : public MockSerial {
+class File : public HardwareSerial {
 public:
-	File() : MockSerial(BUILTIN_SDCARD) {}
+	File() : HardwareSerial(BUILTIN_SDCARD) {}
 };
 
 class SD_t {

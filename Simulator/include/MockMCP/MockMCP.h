@@ -24,7 +24,7 @@ public:
 
 	inline void teardown() {}
 
-	void processByte();
+	void processByte(byte);
 
 	inline void setGPIOValue(uint8_t channel, bool value) {
 		if (channel >= 16) throw MCPException("GPIO", channel);

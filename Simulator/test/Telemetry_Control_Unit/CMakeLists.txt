@@ -3,7 +3,7 @@
 set(BINARY        tcu_test   )  # Name of testing output executable
 set(VEHICLE_CODE  Telemetry_Control_Unit   )  # Path to folder contianing .ino file (relative to '/Vehicle')
 set(TEST_SOURCES  "")  # Space-separated list of test source files
-set(CODE_DEPS     ADAFRUIT_SENSOR ADXL FLEXCAN GPS HYTECH_CAN METRO SD TIME XBTOOLS)  # Space-separated list of library dependencies
+set(CODE_DEPS     ADAFRUIT_SENSOR ACCEL FLEXCAN GPS HYTECH_CAN METRO SD TIME XBTOOLS)  # Space-separated list of library dependencies
                               # Always included: GTEST, CORE
 
 ################### Do not change anything past this point ###################

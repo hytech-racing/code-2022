@@ -49,7 +49,7 @@ void Simulator::teardown() {
 void Simulator::next() {
     sys_time += LOOP_PERIOD;
     #ifdef HYTECH_ARDUINO_TEENSY_32
-        Interrupt::runAll();
+        Interrupts::runAll();
     #endif
 
     loop();

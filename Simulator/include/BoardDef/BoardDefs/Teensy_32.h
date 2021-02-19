@@ -5,6 +5,9 @@
 #define MISO 	12
 #define SCK 	13
 
+#define SDA 	18
+#define SCL		19
+
 #define A0 		14
 #define A1 		15
 #define A2 		16

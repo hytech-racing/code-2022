@@ -39,5 +39,3 @@ private:
             listener->process(fPin, fInputValue);
     }
 };
-
-std::string decodePinMode(int mode);

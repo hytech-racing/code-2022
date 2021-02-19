@@ -14,7 +14,7 @@ public:
 	SPIListener(int cs, int mode = MSBFIRST) : cs(cs), mode(mode) {}
 
 	void begin() { 
-		Simulator::attachListener(CS, this); 
+		Simulator::attachListener(cs, this); 
 		Simulator::attachListener(MOSI, this); 
 		if (!listeners.insert(std::pair<uint8_t, SPIListener*>(cs, this)).second)
 			throw SPIException("This may occur if you try to register two listeners at the same CS (CS = %d)", cs);
@@ -41,5 +41,5 @@ private:
 	byte response = 0;
 	static std::unordered_map<uint8_t,SPIListener*> listeners;
 	static SPIListener* selected;
-	friend struct SPIUtils::VolatileRegister;
+	friend struct SPIUtils::SwapRegister;
 };

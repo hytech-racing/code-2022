@@ -4,18 +4,18 @@
 
 class MockGPS : public SerialListener {
 public:
-	void processSerial(char* str);
-	void begin();
+	MockGPS(HardwareSerial* serial) : SerialListener(serial) {}
+	void processString(const char* str);
 	void transmit();
 
 	inline void setQuality(int q)			{ quality = q; }
 	inline void setSatCount(int s)			{ satellites = s; }
 	inline void setHDOP(int h)				{ hdop = h; }
-	inline void setAltitude(float a)		{ alt = a; }
-	inline void setGeoidHeight(float g)		{ geoid = g; }
+	inline void setAltitude(float a)		{ altitude = a; }
+	inline void setGeoidHeight(float g)		{ geoidHeight= g; }
 	inline void setSpeed(float s)			{ speed = s; }
 	inline void setCourse(float c)			{ course = c; }
-	inline void setStatus(char c)			{ course = c; }
+	inline void setStatus(bool ok)			{ status_ok = ok; }
 	inline void setLat(float deg) {
 		latdir = deg < 0 ? 'S' : 'N';
 		deg = abs(deg);
@@ -29,19 +29,22 @@ public:
 		lonmin = deg - londeg;
 	}
 
+	inline void setCoordinates(float lat, float lon) { setLat(lat); setLon(lon); }
+	inline void transmit(float lat, float lon) { setCoordinates(lat, lon); transmit(); }
+
 private:
 	char* addTime(char*);
 	char* addLat(char*);
 	char* addLon(char*);
-	int* checksum(char*);
+	int checksum(char*);
 
 	int send;
 	int quality, satellites;
-	float hdop, alt, geoid, speed, course;
-	char status;
+	float hdop, altitude, geoidHeight, speed, course;
+	bool status_ok;
 
 	int latdeg, londeg;
 	float latmin, lonmin;
 	char latdir, londir;
-}
+};
 

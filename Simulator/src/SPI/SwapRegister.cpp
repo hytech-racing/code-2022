@@ -1,10 +1,10 @@
 #include "SPI.h"
 #include "SPIListener.h"
 
-SPIUtils::VolatileRegister SPDR;
+SPIUtils::SwapRegister SPDR;
 
 namespace SPIUtils {
-	VolatileRegister& VolatileRegister::operator=(uint8_t& other) {
+	SwapRegister& SwapRegister::operator=(uint8_t& other) {
 		if (SPIListener::selected) {
 			SPIListener::selected->processByte(other);
 			value = SPIListener::selected->response;
@@ -23,7 +23,7 @@ namespace SPIUtils {
 	}
 
 
-	void VolatileRegister::process(uint8_t pinNo, unsigned) {
+	void SwapRegister::process(uint8_t pinNo, unsigned) {
 		static int spiCount = 0;
 		
 		if (pinNo != MISO) return;

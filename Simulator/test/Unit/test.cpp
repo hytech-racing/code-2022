@@ -5,23 +5,28 @@
 #include "MockGPS.h"
 
 MockADXL mockADXL;
+MockGPS mockGPS(&Serial1);
 
 class Testing : public ::testing::Test {
 protected:
 	void SetUp() {
 		// mockMCP.begin();
 		mockADXL.begin();
+		mockGPS.begin();
 		Simulator::begin();
 	}
 
 	void TearDown() {
 		Simulator::teardown();
 		mockADXL.teardown();
+		mockGPS.teardown();
 	}
 };
 
 TEST_F(Testing, Test){
 	mockADXL.setValues(420, 69, 101);
+
+	mockGPS.transmit(15, 25);
 	Simulator::next();
 
 	// for (int i = 0; i < 16; ++i) {

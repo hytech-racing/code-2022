@@ -26,12 +26,12 @@ private:
 
 extern teensy3_clock_class Teensy3Clock;
 
-uint16_t year() { return localtime(&Teensy3Clock.rtcTime)->tm_year; }
-uint16_t month() { return localtime(&Teensy3Clock.rtcTime)->tm_mon; }
-uint16_t day() { return localtime(&Teensy3Clock.rtcTime)->tm_mday; }
-uint16_t hour() { return localtime(&Teensy3Clock.rtcTime)->tm_hour; }
-uint16_t minute() { return localtime(&Teensy3Clock.rtcTime)->tm_min; }
-uint16_t second() { return localtime(&Teensy3Clock.rtcTime)->tm_sec; }
+uint16_t year()		{ return localtime(&Teensy3Clock.rtcTime)->tm_year;	}
+uint16_t month()	{ return localtime(&Teensy3Clock.rtcTime)->tm_mon;	}
+uint16_t day()		{ return localtime(&Teensy3Clock.rtcTime)->tm_mday;	}
+uint16_t hour()		{ return localtime(&Teensy3Clock.rtcTime)->tm_hour;	}
+uint16_t minute()	{ return localtime(&Teensy3Clock.rtcTime)->tm_min;	}
+uint16_t second()	{ return localtime(&Teensy3Clock.rtcTime)->tm_sec;	}
 
 inline void setSyncProvider(getExternalTime sync) {
 	Teensy3Clock.valid = (sync == teensy3_clock_class::get);

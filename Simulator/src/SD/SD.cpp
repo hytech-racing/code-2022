@@ -1,8 +1,8 @@
 #include "SD.h"
-#include "SPI.h"
+
+#include "Arduino.h"
 
 bool SD_t::begin(uint8_t cspin) {
-	SPI.begin();
 	if (cspin != BUILTIN_SDCARD) {
 		pinMode(cspin, OUTPUT);
 		digitalWrite(cspin, HIGH);

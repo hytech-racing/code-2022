@@ -37,21 +37,21 @@ class SPIClass;
 
 namespace SPIUtils {
 
-typedef struct VolatileRegister : public Listener {
+typedef struct SwapRegister : public Listener {
 	inline void begin() { Simulator::attachListener(MISO, this); }
 	inline void teardown() {}
 	inline operator uint8_t() { return value; }
-	inline VolatileRegister& operator=(int8_t& other) { *this = (uint8_t&) other; }
+	inline SwapRegister& operator=(int8_t& other) { *this = (uint8_t&) other; }
 
-	VolatileRegister& operator=(uint8_t& other);
+	SwapRegister& operator=(uint8_t& other);
 	void process(uint8_t pinNo, unsigned value);
 private:
 	uint8_t value = 0;
-} VolatileRegister;
+} SwapRegister;
 
 }
 
-extern SPIUtils::VolatileRegister SPDR;
+extern SPIUtils::SwapRegister SPDR;
 
 class SPISettings {
 public:
@@ -87,7 +87,7 @@ private:
 	static uint8_t inTransactionFlag;
 	static uint8_t bitOrder;
 
-	friend class SPIUtils::VolatileRegister;
+	friend class SPIUtils::SwapRegister;
 
 	inline static void validate() { if (!initialized) throw SPIException("SPI not initialized"); }
 };

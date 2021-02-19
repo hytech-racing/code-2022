@@ -11,8 +11,6 @@ inline void getBase(uint32_t packed, int& tx, int& rx) {
 	rx = packed & 0xFFFF;
 }
 
-extern bool interruptsEnabled;
-
 FlexCAN::FlexCAN(uint32_t baud, uint8_t id, uint8_t txAlt, uint8_t rxAlt) {
 	defaultMask = { 0, 0, 0 };
 
@@ -37,7 +35,7 @@ void FlexCAN::begin(const CAN_filter_t &mask) {
 	pinMode(rxPin, RESERVED);
 
 	#ifdef HYTECH_ARDUINO_TEENSY_32
-		if (interruptsEnabled && FLEXCAN0_IMASK1 != FLEXCAN_IMASK1_BUF5M && interruptsEnabled)
+		if (Interrupts::enabled() && FLEXCAN0_IMASK1 != FLEXCAN_IMASK1_BUF5M)
 			throw CANException("If interrupts enabled, Teensy 3.2 requires FLEXCAN0_IMASK1 = FLEXCAN_IMASK1_BUF5M");
 	#endif
 }
