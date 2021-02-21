@@ -23,14 +23,14 @@ public:
     void print() {
         Serial.println("\n\nGPS Readings");
         Serial.println("-----------");
-    	Serial.print("Latitude (x10000): "); Serial.println(get_latitude());
-        Serial.print("Longitude (x10000): "); Serial.println(get_longitude());
+    	Serial.print("Latitude (x100000): "); Serial.println(get_latitude());
+        Serial.print("Longitude (x100000): "); Serial.println(get_longitude());
     }
 #endif
 
 private:
-    int32_t latitude; // @Parse @Scale(10000)
-    int32_t longitude; // @Parse @Scale(10000)
+    int32_t latitude; // @Parse @Scale(100000)
+    int32_t longitude; // @Parse @Scale(100000)
 };
 
 #pragma pack(pop)
