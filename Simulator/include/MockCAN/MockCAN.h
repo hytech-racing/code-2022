@@ -1,7 +1,13 @@
 #pragma once
 #include <queue>
 
-#include "HyTech_FlexCAN.h"
+#include "BoardDef.h"
+
+#ifdef HYTECH_ARDUINO_TEENSY_40
+#include "FlexCAN_T4"
+#else
+#include "HyTech_FlexCAN"
+#endif
 
 class MockCAN {
 public:
