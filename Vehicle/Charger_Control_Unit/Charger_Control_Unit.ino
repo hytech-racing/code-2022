@@ -40,16 +40,20 @@ BMS_onboard_detailed_temperatures bms_onboard_detailed_temperatures[TOTAL_IC];
 BMS_onboard_temperatures bms_onboard_temperatures;
 BMS_balancing_status bms_balancing_status[(TOTAL_IC + 3) / 4]; // Round up TOTAL_IC / 4 since data from 4 ICs can fit in a single message
 
-int charge_state = 0;
 int watchdog_state = 0;
-unsigned long prev_time = 0;
 
 static CAN_message_t rx_msg;
 static CAN_message_t tx_msg;
 FlexCAN CAN(500000);
 
 Metro timer_update_CAN = Metro(100);
-Metro timer_update_serial = Metro(1000);
+Metro timer_1s = Metro(1000);
+
+void print_cells();
+void print_temps();
+void parse_can_message();
+void check_shutdown_signals();
+void check_over_voltage_current();
 
 void setup() {
     pinMode(LED, OUTPUT);
@@ -60,8 +64,7 @@ void setup() {
     pinMode(SHUTDOWN_D, INPUT);
     
     pinMode(CHARGE_ENABLE, OUTPUT);
-    charge_state = 1;
-    digitalWrite(CHARGE_ENABLE, charge_state);
+    digitalWrite(CHARGE_ENABLE, HIGH);
 
     pinMode(SOFTWARE_SHUTDOWN, OUTPUT);
     digitalWrite(SOFTWARE_SHUTDOWN, HIGH);
@@ -90,36 +93,29 @@ void setup() {
 }
 
 void loop() {
-    //every 10 ms
-    if(millis() - prev_time >= 10) {
-      if (timer_update_CAN.check()) {
+    if (timer_update_CAN.check()) {
           ccu_status.write(tx_msg.buf);
           tx_msg.id = ID_CCU_STATUS;
           tx_msg.len = sizeof(CAN_message_ccu_status_t);
           CAN.write(tx_msg);
-      }
-      
-      if (timer_update_serial.check()) {
-          print_cells();
-          print_temps();
-          Serial.print("Charge enable: ");
-          Serial.println(ccu_status.get_charger_enabled());
-          Serial.print("BMS state: ");
-          Serial.println(bms_status.get_state());
-      }
-      
-      check_shutdown_signals();
-  
-      check_over_voltage_current();
+    } 
 
-      prev_time = millis();
+    if (timer_1s.check()) {
+        //update serial
+        print_cells();
+        print_temps();
+        Serial.print("Charge enable: ");
+        Serial.println(ccu_status.get_charger_enabled());
+        Serial.print("BMS state: ");
+        Serial.println(bms_status.get_state());
+
+        //update watchdog
+        watchdog_state = !watchdog_state;
+        digitalWrite(WATCHDOG_OUT, watchdog_state);
     }
-    
-    //watchdog
-    watchdog_state = !watchdog_state;
-    digitalWrite(WATCHDOG_OUT, watchdog_state);
-    
-    delay(1);
+
+    check_shutdown_signals();
+    check_over_voltage_current();
 }
 
 void print_cells() {
@@ -238,8 +234,7 @@ void parse_can_message() {
         if (rx_msg.id == ID_BMS_STATUS) {
             bms_status = BMS_status(rx_msg.buf);
             ccu_status.set_charger_enabled(bms_status.get_state() == BMS_STATE_CHARGING);
-            charge_state = ccu_status.get_charger_enabled();
-            digitalWrite(CHARGE_ENABLE, charge_state);
+            digitalWrite(CHARGE_ENABLE, ccu_status.get_charger_enabled());
         }
 
         if (rx_msg.id == ID_BMS_BALANCING_STATUS) {
@@ -256,8 +251,7 @@ void check_shutdown_signals() {
 
   if(shutdown_b == 0 || shutdown_c == 0) {
     digitalWrite(SOFTWARE_SHUTDOWN, LOW);
-    charge_state = 0;
-    digitalWrite(CHARGE_ENABLE, charge_state);
+    digitalWrite(CHARGE_ENABLE, LOW);
   }
 }
 
