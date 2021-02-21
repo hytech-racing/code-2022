@@ -19,8 +19,8 @@ public:
     inline void set_latitude(int32_t latitude)      { this->latitude = latitude; }
     inline void set_longitude(int32_t longitude)    { this->longitude = longitude; }
 private:
-    int32_t latitude; // @Parse @Scale(10000)
-    int32_t longitude; // @Parse @Scale(10000)
+    int32_t latitude; // @Parse @Scale(100000)
+    int32_t longitude; // @Parse @Scale(100000)
 };
 
 #pragma pack(pop)

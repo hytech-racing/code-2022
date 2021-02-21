@@ -337,11 +337,11 @@ void process_current() {
 }
 
 void process_gps() {
-    mcu_gps_readings.set_latitude(GPS.latitude * 10000);
-    mcu_gps_readings.set_longitude(GPS.longitude * 10000);
-    //Serial.print("Latitude (x10000): ");
+    mcu_gps_readings.set_latitude(GPS.latitude_fixed);
+    mcu_gps_readings.set_longitude(GPS.longitude_fixed);
+    //Serial.print("Latitude (x100000): ");
     //Serial.println(mcu_gps_readings_alpha.get_latitude());
-    //Serial.print("Longitude (x10000): ");
+    //Serial.print("Longitude (x100000): ");
     //Serial.println(mcu_gps_readings_alpha.get_longitude());
     msg_tx.id = ID_MCU_GPS_READINGS;
     msg_tx.len = sizeof(MCU_GPS_readings);
