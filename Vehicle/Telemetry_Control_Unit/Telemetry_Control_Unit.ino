@@ -101,15 +101,6 @@ void loop() {
 	if (timer_flush.check()) // Occasionally flush SD buffer (max one second data loss after power-off)
 		logfile.flush();
 
-    // GLV Current
-    static Metro timer_current = Metro(500);
-	if (timer_current.check()) {
-        current_readings.set_ecu_current_value(SCALE_CURRENT_READING(analogRead(PIN_CURRENT_ECU)) * 100);
-        current_readings.set_cooling_current_value(SCALE_CURRENT_READING(analogRead(PIN_CURRENT_COOLING)) * 100);
-        send_xbee(ID_GLV_CURRENT_READINGS, current_readings, xb_msg);
-        CAN.write(xb_msg);
-    }
-
 	// GPS
     static Metro timer_gps = Metro(100);
 	static bool pending_gps_data;
@@ -120,8 +111,8 @@ void loop() {
 	}
 	if (timer_gps.check() && pending_gps_data) {
 		pending_gps_data = false;
-        mcu_gps_readings.set_latitude(GPS.latitude * 10000);
-        mcu_gps_readings.set_longitude(GPS.longitude * 10000);
+        mcu_gps_readings.set_latitude(GPS.latitude_fixed);
+        mcu_gps_readings.set_longitude(GPS.longitude_fixed);
         send_xbee(ID_MCU_GPS_READINGS, mcu_gps_readings, xb_msg);
         CAN.write(xb_msg);
 	}
