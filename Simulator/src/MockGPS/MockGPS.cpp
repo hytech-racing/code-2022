@@ -17,7 +17,6 @@ void MockGPS::processString(const char* str) {
 void MockGPS::transmit() {
 
 	char buf [128];
-	puts("SENDING");
 
 	if (bitRead(send, GPGGA)) {
 		char* p = buf;
@@ -31,7 +30,6 @@ void MockGPS::transmit() {
 		p += sprintf(p, ",%.1f,M", altitude);
 		p += sprintf(p, ",%.1f,M", geoidHeight);
 		p += sprintf(p, "*%02x", checksum(buf));
-		puts(buf);
 		serial->sim_println(buf);
 	}
 	if (bitRead(send, GPRMC)) {
@@ -46,7 +44,6 @@ void MockGPS::transmit() {
 		p += sprintf(p, ",%d", satellites);
 		p += sprintf(p, ",%02d%02d%02d", day(), month(), year() % 100);
 		p += sprintf(p, "*%02x", checksum(buf));
-		puts(buf);
 		serial->sim_println(buf);
 	}
 }
@@ -61,6 +58,8 @@ char* MockGPS::addTime(char* p) {
 
 char* MockGPS::addLat(char* p) {
 	p += sprintf(p, ",%02d", latdeg);
+	if (latmin * 60 < 10)
+		*p++ = '0';
 	p += sprintf(p, "%02.4f", latmin * 60);
 	p += sprintf(p, ",%c", latdir);
 	return p;
@@ -68,6 +67,8 @@ char* MockGPS::addLat(char* p) {
 
 char* MockGPS::addLon(char* p) {
 	p += sprintf(p, ",%03d", londeg);
+	if (lonmin * 60 < 10)
+		*p++ = '0';
 	p += sprintf(p, "%02.4f", lonmin * 60);
 	p += sprintf(p, ",%c", londir);
 	return p;

@@ -28,8 +28,10 @@ public:
 	}
 
 	inline void set(int channel, uint16_t value) {
-		if (value & 0xF000)
-			throw HTException("Failed set ADC Channel Value", "ADC value has maximum 12 bits of precision");
+		if (value > 0xFFF)
+			throw HTException("Failed to set ADC Channel Value", "ADC value has maximum 12 bits of precision");
+		if (channel > 7)
+			throw HTException("Failed to set ADC Channel Value", "ADC channel must be in range 0-7, inclusive");
 		channels[channel] = value;
 	}
 	

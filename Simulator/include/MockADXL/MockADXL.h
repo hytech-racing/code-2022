@@ -31,7 +31,8 @@ public:
 		return 0;
 	};
 
-	inline void setRegister (byte reg, byte value) { registers[reg] = value; }
+	inline byte getRegister (byte reg)				{ return registers[reg]; }
+	inline void setRegister (byte reg, byte value) 	{ registers[reg] = value; }
 	inline void setValues (float x, float y, float z) { setX(x); setY(y); setZ(z); }
 	inline void setX (float x) { set16(ADXL345_REG_DATAX0, x); };
 	inline void setY (float y) { set16(ADXL345_REG_DATAY0, y); };

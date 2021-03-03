@@ -22,3 +22,7 @@ add_subdirectory(Wire)
 add_library					( ACCEL INTERFACE )
 target_include_directories	( ACCEL INTERFACE ${INC}/MockADXL )
 target_link_libraries		( ACCEL INTERFACE ADXL345 )
+
+add_library					( ADC INTERFACE )
+target_include_directories	( ADC INTERFACE ${INC}/MockADC )
+target_link_libraries		( ADC INTERFACE ADC_SPI )
