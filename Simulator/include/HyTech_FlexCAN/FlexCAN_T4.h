@@ -1,4 +1,7 @@
 #pragma once
+#include "BoardDef.h"
+
+#ifdef HYTECH_ARDUINO_TEENSY_40
 
 #include <MockCAN.h>
 #include <stdint.h>
@@ -73,3 +76,6 @@ private:
 	bool enableInterrupts;
 	std::list<void(*)(CAN_message_t&)> interrupts;
 };
+
+#undef assert
+#endif
