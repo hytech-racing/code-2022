@@ -11,9 +11,9 @@ void MockMCP::processByte(byte value) {
 	else if (opcode == OPCODE_WRITE)
 		values[targetRegister] = value;
 	else if (targetRegister == GPIOA)
-		write((values[targetRegister] & values[IODIRA] | (values[GPPUA] & unknown[UNKWNA])) ^ values[IPOLA]);
+		write((values[GPIOA] & values[IODIRA] | (values[GPPUA] & unknown[UNKWNA])) ^ values[IPOLA]);
 	else if (targetRegister == GPIOB)
-		write((values[targetRegister] & values[IODIRB] | (values[GPPUB] & unknown[UNKWNB])) ^ values[IPOLB]);
+		write((values[GPIOB] & values[IODIRB] | (values[GPPUB] & unknown[UNKWNB])) ^ values[IPOLB]);
 	else
 		write(values[targetRegister]);
 

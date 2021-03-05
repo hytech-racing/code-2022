@@ -29,17 +29,17 @@ public:
 	inline void setGPIOValue(uint8_t channel, bool value) {
 		if (channel >= 16) throw MCPException("GPIO", channel);
 		setGPIOUnknown(channel, false);
-		bitWrite(values[GPIOA + (channel > 8)], channel & 0x7, value);
+		bitWrite(values[GPIOA + (channel >= 8)], channel & 0x7, value);
 	}
 
 	inline void setGPIOUnknown(uint8_t channel, bool value) {
 		if (channel >= 16) throw MCPException("GPIO", channel);
-		bitWrite(unknown[channel > 8], channel & 0x7, value);
+		bitWrite(unknown[channel >= 8], channel & 0x7, value);
 	}
 
 	inline bool getOLATValue(uint8_t channel) {
 		if (channel >= 16) throw MCPException("OLAT", channel);
-		return bitRead(values[OLATA + (channel > 8)], channel & 0x7);
+		return bitRead(values[OLATA + (channel >= 8)], channel & 0x7);
 	}
 	
 private:

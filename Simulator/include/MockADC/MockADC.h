@@ -17,8 +17,6 @@ public:
 		state = IDLE;
 	}
 
-	inline void teardown() { state = IDLE; }
-
 	inline void processByte(byte value) {
 		if (state == IDLE)				currentChannel = (value & ~B01100000) >> 2;
 		else if (state == SEND_MSB)		write(channels[currentChannel] >> 4);
