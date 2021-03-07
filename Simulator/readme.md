@@ -96,7 +96,10 @@ This simulator facilitates the CAN bus. The user interface is similar to that of
 - `CAN_simulator::read(CAN_message_t &msg)` - gets CAN message sent by simulator
 - `CAN_simulator::write(const CAN_message_t& msg)` - creates CAN message to be read by simulator
 
-For cleanup purposes, Simulator::teardown calls an additional method `CAN_simulator::purge()`, which removes all messages still sitting in the simulator buffer and resets all CAN configuration flags
+For cleanup purposes, there is an additional method `CAN_simulator::teardown()`, which removes all messages still sitting in the simulator buffer and resets all CAN configuration flags
 
 ## Serial Buses
-As a helpful debugging utility, Serial and Serial2 both support a new function `setOutputPath(String filepath)`, which, if called before Serial.begin(), will redirect all Serial logging output to the specified filepath. Output path resets to `stdout` after each test case
+As a helpful debugging utility, Serial and Serial2 both support a new function `setOutputPath(String filepath)`, which, if called before Serial.begin(), will redirect all Serial logging output to the specified filepath. Output path resets to `stdout` after each test case.
+
+## General Architecture
+Excluding libraries which can be imported from the C++ STL, are two classifications of libraries: those which directly interface with specific registers and those which invoke software APIs. Libraries which interact with registers (i.e. those responsible for communication protocols) have been mocked. These include SPI, Wire (I2C), Serial, and CAN. Libraries which do not interact with registers (i.e. most third-party-libraries) are directly injected into the compilation environment. Since the APIs have been substituted for our custom software, the third-party libraries do not need to be modified. The peripherals with which these libraries interact have been emulated as state machines (see MockLTC, MockADC, etc etc).
