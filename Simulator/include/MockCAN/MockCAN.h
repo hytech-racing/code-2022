@@ -4,9 +4,9 @@
 #include "BoardDef.h"
 
 #ifdef HYTECH_ARDUINO_TEENSY_40
-#include "FlexCAN_T4"
+#include "FlexCAN_T4.h"
 #else
-#include "HyTech_FlexCAN"
+#include "HyTech_FlexCAN.h"
 #endif
 
 class MockCAN {
