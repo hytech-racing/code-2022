@@ -185,7 +185,7 @@ static const unsigned int crc15Table[256] = {0x0,0xc599, 0xceab, 0xb32, 0xd8cf, 
 #define DCP_DISABLED 0
 #define DCP_ENABLED 1
 
-
+#include "LT_SPI.h"
 
 
 void LTC6804_initialize();

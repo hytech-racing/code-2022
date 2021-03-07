@@ -27,8 +27,8 @@ public:
 
 	inline void setCellVoltage(int ic, int cell, uint16_t value)	{ cellVoltages[ic][cell] = value; }
 	inline void setAuxVoltage(int ic, int cell, uint16_t value) 	{ auxVoltages[ic][cell] = value; }
-	inline void setConfig(uint8_t* newConfig)	{ memcpy(cfg, newConfig, 6); }
-	inline void getConfig(uint8_t* dest)		{ memcpy(dest, cfg, 6); }
+	inline void setConfig(int ic, uint8_t* newConfig)	{ memcpy(cfg[ic], newConfig, 6); }
+	inline void getConfig(int ic, uint8_t* dest)		{ memcpy(dest, cfg[ic], 6); }
 
 private:
 	State state;
@@ -38,4 +38,6 @@ private:
 	uint8_t cmd [2], checksum [2];
 	const int TOTAL_IC;
 	unsigned long long adcvReady, adaxReady;
+
+	void setState(State newState, uint8_t* newCurrent);
 };

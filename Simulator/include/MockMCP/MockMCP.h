@@ -22,8 +22,6 @@ public:
 		state = IDLE;
 	}
 
-	inline void teardown() {}
-
 	void processByte(byte);
 
 	inline void setGPIOValue(uint8_t channel, bool value) {
