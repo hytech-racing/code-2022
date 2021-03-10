@@ -233,4 +233,8 @@ $RECYCLE.BIN/
 .nfs*
 
 # CMake
-*/build/**
+**/build/**
+
+# Parser output files
+Telemetry/autoparse/log
+Telemetry/autoparse/webserver/uploads

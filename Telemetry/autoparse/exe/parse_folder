@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Usage: parse_folder [directory]
+
+mkdir -p ../log
+
+if [[ -d $1 ]]; then
+	indir=$1
+	outdir=../log/$(basename $1)
+	mkdir -p $outdir
+	for infile in $(ls $indir/*.csv $indir/*.CSV); do
+		../build/CANParser -i $infile -o $outdir/$(basename $infile)
+	done
+
+	echo "Parsed data available at $outdir"
+else
+	echo $1 not a valid directory
+fi
