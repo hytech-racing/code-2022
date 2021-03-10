@@ -42,7 +42,6 @@ void Simulator::teardown() {
     Simulator::sys_time = 0;
     Simulator::sys_us = 0;
     Serial.end();
-    Serial2.end();
     running = false;
 }
 
