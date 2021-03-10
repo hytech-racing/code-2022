@@ -5,9 +5,10 @@ FILE* include;
 FILE* parseMessage;
 FILE* userDefined;
 
-Writer::Writer(char* classname, std::list<ClassDef*> classdefs, std::list<VarDef*> vars) : 
+Writer::Writer(char* classname, std::list<ClassDef*> classdefs, std::list<VarDef*> vars, std::list<DimDef*> dimList) : 
 	classdefs(classdefs), 
-	vars(vars) {
+	vars(vars),
+	dimensions(dimList) {
 	strcpy(this->classname, classname);
 }
 
@@ -25,15 +26,44 @@ void Writer::run() {
 	// 	vdef->print();
 
 	for (ClassDef* cdef : classdefs) {
-		fprintf(include, "void parse_%s (const char* const timestamp, uint8_t* buf);\n", cdef->id);
-		fprintf(source, "void parse_%s (const char* const timestamp, uint8_t* buf) {\n", cdef->id);
 		fprintf(parseMessage, "\t\tcase %s: parse_%s(timestamp, buf); break;\n", cdef->id, cdef->id);
 
+		fprintf(include, "void parse_%s (const char* const timestamp, uint8_t* buf);\n", cdef->id);
+		fprintf(source, "void parse_%s (const char* const timestamp, uint8_t* buf) {\n", cdef->id);
 		fprintf(source, "\t%s data(buf);\n", classname);
 		addPrefix(cdef);
+
+		prevAccessor[0] = '\0';
+
+		if (dimensions.size()) {
+			fprintf(source, "\n\tstatic %s prev", classname);
+			for (DimDef* ddef : dimensions) fprintf(source, "[%d]", ddef->maxSize);
+			fprintf(source, ";\n");
+
+			fprintf(source, "\tstatic bool init");
+			for (DimDef* ddef : dimensions) fprintf(source, "[%d]", ddef->maxSize);
+			fprintf(source, " = { 0 };\n");
+
+			int i = 0;
+			char* accessorIter = prevAccessor;
+			for (DimDef* ddef : dimensions) {
+				fprintf(source, "\tconst size_t idx_%d = data.%s;\n", i, ddef->getter);
+				accessorIter += sprintf(accessorIter, "[idx_%d]", i++);
+			}
+
+			fprintf(source, "\tif (!init%s) {\n", prevAccessor);
+			fprintf(source, "\t\tinit%s = true;\n", prevAccessor);
+			fprintf(source, "\t\tprev%s.load(getNeg(buf));\n", prevAccessor);
+			fprintf(source, "\t}\n");
+		}
+		else
+			fprintf(source, "\tstatic %s prev(getNeg(buf));\n", classname);
+
+		fputc('\n', source);
+
 		if (!strempty(cdef->custom)) {
-			fprintf(source, "\t%s(timestamp, prefix, data);\n", cdef->custom);
-			fprintf(userDefined, "void %s (const char* const timestamp, const char* const prefix, %s& data);\n", cdef->custom, classname);
+			fprintf(source, "\t%s(timestamp, prefix, data, prev%s);\n", cdef->custom, prevAccessor);
+			fprintf(userDefined, "void %s (const char* const timestamp, const char* const prefix, %s& data, %s& prev);\n", cdef->custom, classname, classname);
 		}
 
 		for (VarDef* vdef : vars) {
@@ -42,12 +72,13 @@ void Writer::run() {
 			else
 				writeNumericalParser(vdef);
 		}
+		fprintf(source, "\n\tprev%s.load(buf);\n", prevAccessor);
 		fputs("}\n\n", source);
 	}
 }
 
 void Writer::writeNumericalParser(VarDef* vdef) {
-	startLine(vdef->name);
+	startLine(vdef->name, vdef->getter);
 
 	if (vdef->scale)
 		fprintf(source, "%%.%df", vdef->precision);
@@ -64,29 +95,23 @@ void Writer::writeNumericalParser(VarDef* vdef) {
 
 void Writer::writeFlagParser(VarDef* vdef) {
 	if (vdef->hex) {
-		startLine(vdef->name);
+		startLine(vdef->name, vdef->getter);
 		fputs("0x%X", source);
 		writeParams(vdef->getter);
 	}
 	if (!vdef->flags)
 		return;
 	
-	if (!strempty(vdef->flags->prefix)) {
-		char fullname [256];
-		char* start = fullname + sprintf(fullname, "%s_", vdef->flags->prefix);
-		for (FlagDef* fdef : vdef->flags->flags) {
-			strcpy(start, fullname);
-			fputs("%d", source);
-			writeParams(fdef->getter);
-		}
-	}
+	bool hasPrefix = !strempty(vdef->flags->prefix);
 
-	else {
-		for (FlagDef* fdef : vdef->flags->flags) {
-			startLine(fdef->name);
-			fputs("%d", source);
-			writeParams(fdef->getter);
-		}
+	char fullname [256], *start;
+	if (hasPrefix)
+		start = fullname + sprintf(fullname, "%s_", vdef->flags->prefix);
+
+	for (FlagDef* fdef : vdef->flags->flags) {
+		startLine(hasPrefix ? strcpy(start, fdef->name) : fdef->name, fdef->getter);
+		fputs("%d", source);
+		writeParams(fdef->getter);
 	}
 }
 

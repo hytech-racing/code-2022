@@ -84,8 +84,12 @@ void run (FILE* infile) {
 	uint64_t timeRaw; uint32_t ms;
 
 	while (!feof(infile)) {
-		if (fscanf(infile, "%lu.%u,%x,%u,%lx", &timeRaw, &ms, &id, &len, (uint64_t*) data) == EOF)
+		if (fscanf(infile, "%lu,%x,%u,%lx", &timeRaw, &id, &len, (uint64_t*) data) == EOF)
 			continue;
+
+		// split ms time to seconds for processing
+		ms = timeRaw % 1000;	
+		timeRaw /= 1000;
 
 		strftime(timeString, 32, "%Y-%m-%dT%H:%M:%S", gmtime((time_t*) &timeRaw));
 		sprintf(timeString + ct_strlen("YYYY-MM-DDTHH:MM:SS"), ".%03dZ", ms);

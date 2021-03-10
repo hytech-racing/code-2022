@@ -1,6 +1,6 @@
 #pragma once
 #include <string.h>
-#include <cstdint>
+#include <stdint.h>
 
 #pragma pack(push,1)
 
@@ -98,10 +98,10 @@ public:
 #endif
 
 private:
-    uint16_t post_fault_lo; // @Parse @Flagset @Hex
-    uint16_t post_fault_hi; // @Parse @Flagset @Hex
-    uint16_t run_fault_lo; // @Parse @Flagset @Hex
-    uint16_t run_fault_hi; // @Parse @Flagset @Hex
+    uint16_t post_fault_lo; // @Parse @Flagset @Hex @Sparse
+    uint16_t post_fault_hi; // @Parse @Flagset @Hex @Sparse
+    uint16_t run_fault_lo; // @Parse @Flagset @Hex @Sparse
+    uint16_t run_fault_hi; // @Parse @Flagset @Hex @Sparse
 };
 
 #pragma pack(pop)

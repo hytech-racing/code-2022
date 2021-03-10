@@ -2,8 +2,8 @@
 #include "VarDef.h"
 
 void AnnotationParser::parseFlag() {
-	FlagSetDef* fsdef = new FlagSetDef;
-	FlagDef* fdef = new FlagDef;
+	FlagSetDef* fsdef = new FlagSetDef();
+	FlagDef* fdef = new FlagDef();
 
 	try {
 		input.getParam(fsdef->set, FLAG);

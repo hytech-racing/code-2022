@@ -1,6 +1,6 @@
 #pragma once
 #include <string.h>
-#include <cstdint>
+#include <stdint.h>
 
 #pragma pack(push,1)
 
@@ -13,10 +13,10 @@ public:
     inline void load(uint8_t buf[])     { memcpy(this, buf, sizeof(*this)); }
     inline void write(uint8_t buf[])    { memcpy(buf, this, sizeof(*this)); }
 
-    inline int16_t get_rtd_4_temperature()  { return rtd_4_temperature; }
-    inline int16_t get_rtd_5_temperature()  { return rtd_5_temperature; }
-    inline int16_t get_motor_temperature()  { return motor_temperature; }
-    inline int16_t get_torque_shudder()     { return torque_shudder; }
+    inline int16_t get_rtd_4_temperature()  const { return rtd_4_temperature; }
+    inline int16_t get_rtd_5_temperature()  const { return rtd_5_temperature; }
+    inline int16_t get_motor_temperature()  const { return motor_temperature; }
+    inline int16_t get_torque_shudder()     const { return torque_shudder; }
 
 #ifdef HT_DEBUG_EN
     void print() {

@@ -54,7 +54,7 @@ def mqtt_message(client, userdata, msg):
 
 	if data != -1:
 		timestamp = int(msg.payload[0:comma_index].decode()) + EPOCH_OFFSET_MS + TIMEZONE_OFFSET_MS
-		print('{}.{},{},{},{}'.format(timestamp // 1000, timestamp % 1000, hexstring(data[0:1]), 8, hexstring(data[5:13])), flush=True)
+		print('{},{},{},{}'.format(timestamp, hexstring(data[0:1]), 8, hexstring(data[5:13])), flush=True)
 
 def tz_message(client, userdata, msg):
 	global TIMEZONE_OFFSET_MS

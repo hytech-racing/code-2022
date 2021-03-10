@@ -20,6 +20,7 @@ private:
 	bool samelineComment;
 
 	ClassDef defaultClassProps;
+	std::list<DimDef*> dimensionList;
 	std::list<ClassDef*> classdefs;
 	std::list<VarDef*> vars;
 	std::list<FlagSetDef*> floaters;

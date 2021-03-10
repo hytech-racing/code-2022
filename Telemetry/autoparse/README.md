@@ -110,7 +110,7 @@ There are three types of annotation - class-level, variable-level, and function-
 | `@ID(id,name?)`		| `@Name(str)`		|							|
 | `@Prefix(str, id?)`	| `@Getter(fname)`	|							|
 | `@Custom(fname)`		| `@Hex`			|							|
-| 						| `@Unit(str)`		|							|
+| `@Indexable(getter(max), ...)` | `@Unit(str)`|						|
 | 						| `@Scale(factor, precision?)`	|				|
 | 						| `@Flagprefix(str?)`	|						|
 | 						| `@Flaglist(name[(fname)]?, ...)`	|			|
@@ -172,16 +172,25 @@ Another point to note: annotations that do not accept a parameter may be followe
 - `name`: CAN message name associated with ID (defaults to class name)
 - If no @ID label present, assumes CAN ID = `ID_{classname.toUpperCase()}`
 
-`@Prefix(str, id?)` - Prefixes all variable names with `str`
+`@Prefix(str, id?)` - Prefixes all variable names with `str` followed by an underscore `_`
 - id: Binds prefix to specific CAN ID. 
 - If omitted, sets default prefix for all CAN IDs associated with class
 - ID-specific prefix will override default
+- `str` may contain parameters (e.g. `IC_{get_ic_id()}`)
+	- parameters must be member functions of the class
 
 `@Custom(fname)` - Custom parser function for all CAN IDs associated with class
 - DO NOT include parentheses in `fname`
 - Implement custom function in any .cpp file in [user](./user) directory. That file should `#include "UserDefined.h"`.
-- Function prototype: `CUSTOMFUNC(<fname>, <Classname> & data)`
+- Function prototype: `CUSTOMFUNC(<fname>, <Classname> & data, <Classname> & prev)`
 - Custom function should output using `show(formatstring, ...params)`, a macro that overwrites `fprintf`
+
+`@Indexable(getter(max), ...)` - Indicates that the same ID is associated with an array (commonly used for ICs)
+- `getter` indicates index of a struct within the array, must be a member function of the class
+- `max` represents the greatest possible value for that index
+- Adding more than one getter indicates multi-dimensional arrays (order matters)
+- Example: for `BMS_detailed_voltages` we build an 8x3 array using IC and group IDs
+	- This is implemented as `@Indexable(get_ic_id(8), get_group_id(3))
 
 ### Variable-Level Annotations
 

@@ -24,7 +24,7 @@ typedef struct FlagSetDef {
 			delete fdef;
 	}
 	void print() {
-		printf("FLAG PREFIX\t%s\n", prefix);
+		printf("FLAG PREFIX:\t%s\n", prefix);
 		for (FlagDef* fdef : flags)
 			fdef->print();
 	}

@@ -21,3 +21,12 @@ typedef struct ClassDef {
 		printf("CUSTOM:\t\t%s\n\n", custom);
 	}
 } ClassDef;
+
+typedef struct DimDef {
+	DimDef() {
+		getter[0] = '\0';
+		maxSize = 0;
+	}
+	char getter [128];
+	int maxSize;
+} DimDef;
