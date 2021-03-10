@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass
 class MC_temperatures_2 {
 public:
     MC_temperatures_2() = default;
@@ -17,10 +18,10 @@ public:
     inline int16_t get_rtd_2_temperature()          const { return rtd_2_temperature; }
     inline int16_t get_rtd_3_temperature()          const { return rtd_3_temperature; }
 private:
-    int16_t control_board_temperature;
-    int16_t rtd_1_temperature;
-    int16_t rtd_2_temperature;
-    int16_t rtd_3_temperature;
+    int16_t control_board_temperature; // @Parse @Scale(10) @Unit(C)
+    int16_t rtd_1_temperature; // @Parse @Scale(10) @Unit(C)
+    int16_t rtd_2_temperature; // @Parse @Scale(10) @Unit(C)
+    int16_t rtd_3_temperature; // @Parse @Scale(10) @Unit(C)
 };
 
 #pragma pack(pop)

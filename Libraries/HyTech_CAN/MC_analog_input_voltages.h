@@ -5,6 +5,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass @ID(ID_MC_ANALOG_INPUTS_VOLTAGES) @Prefix(MC)
 class MC_analog_input_voltages {
 public:
     MC_analog_input_voltages() = default;
@@ -19,10 +20,10 @@ public:
     inline int16_t get_analog_input_4() const { return analog_input_4; }
 
 private:
-    int16_t analog_input_1;
-    int16_t analog_input_2;
-    int16_t analog_input_3;
-    int16_t analog_input_4;
+    int16_t analog_input_1; // @Parse
+    int16_t analog_input_2; // @Parse
+    int16_t analog_input_3; // @Parse
+    int16_t analog_input_4; // @Parse
 };
 
 #pragma pack(pop)

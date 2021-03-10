@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass @ID(ID_FCU_ACCELEROMETER)
 class FCU_accelerometer_values {
 public:
 	FCU_accelerometer_values() = default;
@@ -23,9 +24,9 @@ public:
 	}
 
 private:
-   	uint8_t XValue_x100;
-   	uint8_t YValue_x100;
-   	uint8_t ZValue_x100;
+   	uint8_t XValue_x100; // @Parse @Name(accel_x) @Getter(get_x) @Scale(100) @Unit(m/s^2)
+   	uint8_t YValue_x100; // @Parse @Name(accel_y) @Getter(get_y) @Scale(100) @Unit(m/s^2)
+   	uint8_t ZValue_x100; // @Parse @Name(accel_z) @Getter(get_z) @Scale(100) @Unit(m/s^2)
 };
 
 #pragma pack(pop)

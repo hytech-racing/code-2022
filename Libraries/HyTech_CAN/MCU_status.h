@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass @Custom(print_shutdown_status) @Prefix(MCU)
 class MCU_status {
 public:
     MCU_status() = default;
@@ -44,10 +45,10 @@ public:
     inline void set_temperature(int16_t temperature)                            { this->temperature = temperature; }
     inline void set_glv_battery_voltage(uint16_t glv_battery_voltage)           { this->glv_battery_voltage = glv_battery_voltage; }
 private:
-    uint8_t state;
+    uint8_t state; // @Parse
     uint8_t flags;
-    int16_t temperature;
-    uint16_t glv_battery_voltage;
+    int16_t temperature; // @Parse @Scale(100) @Unit(C)
+    uint16_t glv_battery_voltage; // @Parse @Name(glv_voltage) @Scale(100) @Unit(V)
 };
 
 #pragma pack(pop)

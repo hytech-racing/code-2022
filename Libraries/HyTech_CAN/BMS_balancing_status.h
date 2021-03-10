@@ -13,6 +13,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass @Custom(parse_bms_balancing_status);
 class BMS_balancing_status {
     private:
         uint64_t message;
@@ -27,10 +28,10 @@ class BMS_balancing_status {
         inline void load(uint8_t buf[])     { memcpy(this, buf, sizeof(*this)); }
         inline void write(uint8_t buf[])    { memcpy(buf, this, sizeof(*this)); }
 
-        inline uint8_t get_group_id()   { return message & 0xF; }
-        inline uint64_t get_balancing() { return message >> 0x4; }
-        inline uint16_t get_ic_balancing(uint8_t ic_id) { return (message >> (0x4 + 0x9 * ic_id)) & 0x1FF; }
-        inline bool get_cell_balancing(uint8_t ic_id, uint16_t cell_id) { return (get_ic_balancing(ic_id) >> cell_id) & 0x1; }
+        inline uint8_t get_group_id()   const { return message & 0xF; }
+        inline uint64_t get_balancing() const { return message >> 0x4; }
+        inline uint16_t get_ic_balancing(uint8_t ic_id) const { return (message >> (0x4 + 0x9 * ic_id)) & 0x1FF; }
+        inline bool get_cell_balancing(uint8_t ic_id, uint16_t cell_id) const { return (get_ic_balancing(ic_id) >> cell_id) & 0x1; }
 
         inline void set_group_id(uint8_t group_id) { message = (message & 0xFFFFFFFFF0) | (group_id & 0xF); }
         inline void set_balancing(uint64_t balancing_status) { message = (message & 0xF) | (balancing_status << 4); }

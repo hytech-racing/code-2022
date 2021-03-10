@@ -4,6 +4,11 @@
 
 #pragma pack(push,1)
 
+/**
+ * @Parseclass
+ * @ID(ID_TCU_WHEEL_RPM_FRONT, TCU_wheel_rpm_front) @Prefix(front, ID_TCU_WHEEL_RPM_FRONT)
+ * @ID(ID_TCU_WHEEL_RPM_REAR, TCU_wheel_rpm_rear) @Prefix(rear, ID_TCU_WHEEL_RPM_REAR)
+ */
 class TCU_wheel_rpm {
 public:
     TCU_wheel_rpm() = default;
@@ -19,8 +24,8 @@ public:
     inline void set_wheel_rpm_right(uint16_t value) { this->wheel_rpm_right = value; }
 
 private:
-    int16_t wheel_rpm_left;
-    int16_t wheel_rpm_right;
+    int16_t wheel_rpm_left; // @Parse @Scale(100) @Unit(RPM)
+    int16_t wheel_rpm_right; // @Parse @Scale(100) @Unit(RPM)
 };
 
 #pragma pack(pop)

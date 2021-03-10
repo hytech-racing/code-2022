@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass @Prefix(BMS)
 class BMS_status {
 public:
     BMS_status() = default;
@@ -14,15 +15,15 @@ public:
 
     inline uint8_t get_state()                   const { return state; }
     inline uint16_t get_error_flags()            const { return error_flags; }
-    inline bool get_overvoltage()                const { return error_flags & 0x1; }
-    inline bool get_undervoltage()               const { return error_flags & 0x2; }
-    inline bool get_total_voltage_high()         const { return error_flags & 0x4; }
-    inline bool get_discharge_overcurrent()      const { return error_flags & 0x8; }
-    inline bool get_charge_overcurrent()         const { return error_flags & 0x10; }
-    inline bool get_discharge_overtemp()         const { return error_flags & 0x20; }
-    inline bool get_charge_overtemp()            const { return error_flags & 0x40; }
-    inline bool get_undertemp()                  const { return error_flags & 0x80; }
-    inline bool get_onboard_overtemp()           const { return error_flags & 0x100; }
+    inline bool get_overvoltage()                const { return error_flags & 0x1; }    // @Parseflag(error_flags)
+    inline bool get_undervoltage()               const { return error_flags & 0x2; }    // @Parseflag(error_flags)
+    inline bool get_total_voltage_high()         const { return error_flags & 0x4; }    // @Parseflag(error_flags)
+    inline bool get_discharge_overcurrent()      const { return error_flags & 0x8; }    // @Parseflag(error_flags)
+    inline bool get_charge_overcurrent()         const { return error_flags & 0x10; }   // @Parseflag(error_flags)
+    inline bool get_discharge_overtemp()         const { return error_flags & 0x20; }   // @Parseflag(error_flags)
+    inline bool get_charge_overtemp()            const { return error_flags & 0x40; }   // @Parseflag(error_flags)
+    inline bool get_undertemp()                  const { return error_flags & 0x80; }   // @Parseflag(error_flags)
+    inline bool get_onboard_overtemp()           const { return error_flags & 0x100; }  // @Parseflag(error_flags)
     inline int16_t get_current()                 const { return current; }
     inline uint8_t get_flags()                   const { return flags; }
     inline bool get_shutdown_g_above_threshold() const { return flags & 0x1; }
@@ -45,10 +46,10 @@ public:
     inline void set_shutdown_h_above_threshold(bool shutdown_h_above_threshold) { flags = (flags & 0xFFFD) | (shutdown_h_above_threshold << 1); }
 
 private:
-	uint8_t state;
-    uint16_t error_flags;
-    int16_t current;
-    uint8_t flags;
+	uint8_t state; // @Parse @Hex
+    uint16_t error_flags; // @Parse @Flagset @Hex
+    int16_t current; // @Parse @Scale(100) @Unit(A)
+    uint8_t flags; // @Parse @Hex @Flaglist(shutdown_g_above_threshold, shutdown_h_above_threshold)
 };
 
 #pragma pack(pop)

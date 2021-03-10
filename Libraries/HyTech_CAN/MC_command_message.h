@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass
 class MC_command_message {
 public:
     MC_command_message() = default;
@@ -35,11 +36,11 @@ public:
     inline void set_commanded_torque_limit(int16_t commanded_torque_limit) { this->commanded_torque_limit = commanded_torque_limit; }
 
 private:
-    int16_t torque_command;
-    int16_t angular_velocity;
-    bool direction;
-    uint8_t inverter_enable_discharge_enable;
-    int16_t commanded_torque_limit;
+    int16_t torque_command; // @Parse @Scale(10) @Name(requested_torque)
+    int16_t angular_velocity; // @Parse
+    bool direction; // @Parse
+    uint8_t inverter_enable_discharge_enable; // @Parse @Flaglist(inverter_enable, discharge_enable)
+    int16_t commanded_torque_limit; // @Parse
 };
 
 #pragma pack(pop)

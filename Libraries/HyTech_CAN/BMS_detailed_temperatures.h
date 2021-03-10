@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass @Prefix(IC_{get_ic_id()}) @Indexable(get_ic_id(8))
 class BMS_detailed_temperatures {
 public:
     BMS_detailed_temperatures() = default;
@@ -18,10 +19,10 @@ public:
     inline void load(uint8_t buf[])     { memcpy(this, buf, sizeof(*this)); }
     inline void write(uint8_t buf[])    { memcpy(buf, this, sizeof(*this)); }
 
-    inline uint8_t get_ic_id()          { return ic_id; }
-    inline int16_t get_temperature_0()  { return temperature_0; }
-    inline int16_t get_temperature_1()  { return temperature_1; }
-    inline int16_t get_temperature_2()  { return temperature_2; }
+    inline uint8_t get_ic_id() const          { return ic_id; }
+    inline int16_t get_temperature_0() const  { return temperature_0; }
+    inline int16_t get_temperature_1() const  { return temperature_1; }
+    inline int16_t get_temperature_2() const  { return temperature_2; }
     int16_t get_temperature(uint8_t temperature_id) {
         switch (temperature_id) {
             case 0: return temperature_0;
@@ -45,9 +46,9 @@ public:
 
 private:
     uint8_t ic_id;
-    int16_t temperature_0;
-    int16_t temperature_1;
-    int16_t temperature_2;
+    int16_t temperature_0; // @Parse @Name(therm_0) @Scale(100) @Unit(C)
+    int16_t temperature_1; // @Parse @Name(therm_1) @Scale(100) @Unit(C)
+    int16_t temperature_2; // @Parse @Name(therm_2) @Scale(100) @Unit(C)
 };
 
 #pragma pack(pop)

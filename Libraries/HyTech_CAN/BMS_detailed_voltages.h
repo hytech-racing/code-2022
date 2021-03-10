@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass @Prefix(IC_{get_ic_id()}) @Custom(parse_detailed_voltages) @Indexable(get_ic_id(8), get_group_id(3))
 class BMS_detailed_voltages {
 public:
     BMS_detailed_voltages() = default;

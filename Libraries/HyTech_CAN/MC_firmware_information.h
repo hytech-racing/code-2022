@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass
 class MC_firmware_information {
 public:
     MC_firmware_information() = default;
@@ -18,10 +19,10 @@ public:
     inline uint16_t get_date_code_yyyy()                const { return date_code_yyyy; }
 
 private:
-    uint16_t eeprom_version_project_code;
-    uint16_t software_version;
-    uint16_t date_code_mmdd;
-    uint16_t date_code_yyyy;
+    uint16_t eeprom_version_project_code; // @Parse
+    uint16_t software_version; // @Parse
+    uint16_t date_code_mmdd; // @Parse
+    uint16_t date_code_yyyy; // @Parse
 };
 
 #pragma pack(pop)

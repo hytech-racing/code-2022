@@ -1,0 +1,6 @@
+#!/bin/bash
+
+mkdir -p ../log
+outfile=../log/$(date +%Y-%m-%d-%H-%M-%S).csv
+
+../app/mqtt_server.py | ../build/CANParser --pipelined | tee $outfile | ../app/console.py

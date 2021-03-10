@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass
 class MC_current_information {
 public:
     MC_current_information() = default;
@@ -17,10 +18,10 @@ public:
     inline int16_t get_phase_c_current()    const { return phase_c_current; }
     inline int16_t get_dc_bus_current()     const { return dc_bus_current; }
 private:
-    int16_t phase_a_current;
-    int16_t phase_b_current;
-    int16_t phase_c_current;
-    int16_t dc_bus_current;
+    int16_t phase_a_current; // @Parse @Scale(10) @Unit(A)
+    int16_t phase_b_current; // @Parse @Scale(10) @Unit(A)
+    int16_t phase_c_current; // @Parse @Scale(10) @Unit(A)
+    int16_t dc_bus_current; // @Parse @Scale(10) @Unit(A)
 };
 
 #pragma pack(pop)

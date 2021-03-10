@@ -4,6 +4,7 @@
 
 #pragma pack(push,1)
 
+// @Parseclass @Prefix(BMS_voltage)
 class BMS_voltages {
 public:
     BMS_voltages() = default;
@@ -29,10 +30,10 @@ public:
     inline void set_total(uint16_t total_voltage)     { this->total_voltage   = total_voltage; }
 
 private:
-    uint16_t average_voltage;
-    uint16_t low_voltage;
-    uint16_t high_voltage;
-    uint16_t total_voltage;
+    uint16_t average_voltage; // @Parse @Name(average) @Getter(get_average) @Scale(10000) @Unit(V)
+    uint16_t low_voltage; // @Parse @Name(low) @Getter(get_low) @Scale(10000) @Unit(V)
+    uint16_t high_voltage; // @Parse @Name(high) @Getter(get_high) @Scale(10000) @Unit(V)
+    uint16_t total_voltage; // @Parse @Name(total) @Getter(get_total) @Scale(10000) @Unit(V)
 };
 
 #pragma pack(pop)
