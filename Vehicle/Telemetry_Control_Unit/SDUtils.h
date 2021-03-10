@@ -8,7 +8,7 @@
 namespace HT {
 namespace SDUtil {
 
-	namespace { uint32_t rtc_ms(); }
+	namespace { static uint32_t rtc_ms(); }
 
 	void datetime_callback(uint16_t* date, uint16_t* time) {
 		*date = FAT_DATE(year(), month(), day());
@@ -33,19 +33,18 @@ namespace SDUtil {
 	}
 
 	void write(File& logfile, CAN_message_t& msg) { // Note: This function does not flush data to disk! It will happen when the buffer fills or when the above flush timer fires
-		logfile.print(rtc_ms()); logfile.print(',');
+		logfile.print(rtc_ms());	logfile.print(',');
 		logfile.print(msg.id, HEX); logfile.print(',');
-		logfile.print(msg.len);	logfile.print(',');
+		logfile.print(msg.len);		logfile.print(',');
 		for (int i = 0; i < msg.len; i++) {
-			if (msg.buf[i] < 0x10)
-				logfile.print('0');
-			logfile.print(msg.buf[i], HEX);
+			logfile.print(msg.buf[i] >> 4, HEX);
+			logfile.print(msg.buf[i] & 0xF, HEX);
 		}
 		logfile.println();
 	}
 
 	namespace {
-		uint32_t rtc_ms() {
+		static uint32_t rtc_ms() {
 			#define stable_read(reading, src) { do { reading = src; } while (reading != src); }
 
 			uint32_t sec,us;

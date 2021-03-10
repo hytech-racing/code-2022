@@ -90,10 +90,10 @@ public:
     void print() {
         Serial.println("\n\nMC Fault Codes");
         Serial.println("--------------");
-		Serial.print("POST FAULT LO: 0x"); Serial.println(post_fault_lo, HEX);
-		Serial.print("POST FAULT HI: 0x"); Serial.println(post_fault_hi, HEX);
-		Serial.print("RUN FAULT LO: 0x"); Serial.println(run_fault_lo, HEX);
-		Serial.print("RUN FAULT HI: 0x"); Serial.println(run_fault_hi, HEX);
+        Serial.print("POST FAULT LO: 0x");  Serial.println(post_fault_lo, HEX);
+        Serial.print("POST FAULT HI: 0x");  Serial.println(post_fault_hi, HEX);
+        Serial.print("RUN FAULT LO: 0x");   Serial.println(run_fault_lo, HEX);
+        Serial.print("RUN FAULT HI: 0x");   Serial.println(run_fault_hi, HEX);
     }
 #endif
 

@@ -32,14 +32,14 @@ public:
     void print() {
         Serial.println("\n\nMC Internal States");
         Serial.println("------------------");
-		Serial.print("VSM STATE: "); Serial.println(vsm_state);
-		Serial.print("INVERTER STATE: "); Serial.println(inverter_state);
-		Serial.print("INVERTER RUN MODE: "); Serial.println(get_inverter_run_mode());
-		Serial.print("INVERTER ACTIVE DISCHARGE STATE: "); Serial.println(get_inverter_active_discharge_state());
-		Serial.print("INVERTER COMMAND MODE: "); Serial.println(inverter_command_mode);
-		Serial.print("INVERTER ENABLE: "); Serial.println(get_inverter_enable_state());
-		Serial.print("INVERTER LOCKOUT: "); Serial.println(get_inverter_enable_lockout());
-		Serial.print("DIRECTION COMMAND: "); Serial.println(direction_command);
+        Serial.print("VSM STATE: ");                        Serial.println(vsm_state);
+        Serial.print("INVERTER STATE: ");                   Serial.println(inverter_state);
+        Serial.print("INVERTER RUN MODE: ");                Serial.println(get_inverter_run_mode());
+        Serial.print("INVERTER ACTIVE DISCHARGE STATE: ");  Serial.println(get_inverter_active_discharge_state());
+        Serial.print("INVERTER COMMAND MODE: ");            Serial.println(inverter_command_mode);
+        Serial.print("INVERTER ENABLE: ");                  Serial.println(get_inverter_enable_state());
+        Serial.print("INVERTER LOCKOUT: ");                 Serial.println(get_inverter_enable_lockout());
+        Serial.print("DIRECTION COMMAND: ");                Serial.println(direction_command);
     }
 #endif
 

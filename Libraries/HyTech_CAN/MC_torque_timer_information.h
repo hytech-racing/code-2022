@@ -22,8 +22,8 @@ public:
         Serial.println("\n\nMC Torque Timer Information");
         Serial.println("---------------------------");
         Serial.print("COMMANDED TORQUE: "); Serial.println(commanded_torque / 10.0, 1);
-		Serial.print("TORQUE FEEDBACK: "); Serial.println(torque_feedback);
-		Serial.print("RMS UPTIME: "); Serial.println(power_on_timer * .003, 0);
+        Serial.print("TORQUE FEEDBACK: ");  Serial.println(torque_feedback);
+        Serial.print("RMS UPTIME: ");       Serial.println(power_on_timer * .003, 0);
     }
 #endif
 

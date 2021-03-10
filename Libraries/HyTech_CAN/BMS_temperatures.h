@@ -30,9 +30,9 @@ public:
     void print() {
         Serial.println("\n\nBMS Temperatures");
         Serial.println("----------------");
-		Serial.print("BMS AVERAGE TEMPERATURE: "); Serial.println(average_temperature / 100.0, 2);
-		Serial.print("BMS LOW TEMPERATURE: "); Serial.println(low_temperature / 100.0, 2);
-		Serial.print("BMS HIGH TEMPERATURE: "); Serial.println(high_temperature / 100.0, 2);
+        Serial.print("BMS AVERAGE TEMPERATURE: ");  Serial.println(average_temperature / 100.0, 2);
+        Serial.print("BMS LOW TEMPERATURE: ");      Serial.println(low_temperature / 100.0, 2);
+        Serial.print("BMS HIGH TEMPERATURE: ");     Serial.println(high_temperature / 100.0, 2);
     }
 #endif
 

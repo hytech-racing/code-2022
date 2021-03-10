@@ -23,8 +23,8 @@ public:
     void print() {
         Serial.println("\n\nGPS Readings");
         Serial.println("-----------");
-    	Serial.print("Latitude (x100000): "); Serial.println(get_latitude());
-        Serial.print("Longitude (x100000): "); Serial.println(get_longitude());
+        Serial.print("Latitude (x100000): ");   Serial.println(get_latitude());
+        Serial.print("Longitude (x100000): ");  Serial.println(get_longitude());
     }
 #endif
 

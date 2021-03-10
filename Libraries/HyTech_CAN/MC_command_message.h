@@ -39,12 +39,12 @@ public:
     void print() {
         Serial.println("\n\nMC Command Message");
         Serial.println("------------------");
-		Serial.print("CMD_MSG TORQUE COMMAND: "); Serial.println(torque_command / 10.0, 1);
-		Serial.print("CMD_MSG ANGULAR VELOCITY: "); Serial.println(angular_velocity);
-		Serial.print("CMD_MSG DIRECTION: "); Serial.println(direction);
-		Serial.print("CMD_MSG INVERTER ENABLE: "); Serial.println(get_inverter_enable());
-		Serial.print("CMD_MSG DISCHARGE ENABLE: "); Serial.println(get_discharge_enable());
-		Serial.print("CMD_MSG COMMANDED TORQUE LIMIT: "); Serial.println(commanded_torque_limit / 10.0, 1);
+        Serial.print("CMD_MSG TORQUE COMMAND: ");           Serial.println(torque_command / 10.0, 1);
+        Serial.print("CMD_MSG ANGULAR VELOCITY: ");         Serial.println(angular_velocity);
+        Serial.print("CMD_MSG DIRECTION: ");                Serial.println(direction);
+        Serial.print("CMD_MSG INVERTER ENABLE: ");          Serial.println(get_inverter_enable());
+        Serial.print("CMD_MSG DISCHARGE ENABLE: ");         Serial.println(get_discharge_enable());
+        Serial.print("CMD_MSG COMMANDED TORQUE LIMIT: ");   Serial.println(commanded_torque_limit / 10.0, 1);
     }
 #endif
 

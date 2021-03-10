@@ -27,8 +27,8 @@ public:
     void print() {
         Serial.println("\n\nGLV Current");
         Serial.println("-----------");
-	    Serial.print("ECU Current: "); Serial.println(ecu_current_value);
-	    Serial.print("Cooling Current: "); Serial.println(cooling_current_value);
+        Serial.print("ECU Current: ");      Serial.println(ecu_current_value);
+        Serial.print("Cooling Current: ");  Serial.println(cooling_current_value);
     }
 #endif
 

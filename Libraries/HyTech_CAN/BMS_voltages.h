@@ -30,13 +30,13 @@ public:
     inline void set_total(uint16_t total_voltage)     { this->total_voltage   = total_voltage; }
 
 #ifdef HT_DEBUG_EN
-    void print() {
-        Serial.println("\n\nBMS Voltages");
-        Serial.println("------------");
-		Serial.print("BMS VOLTAGE AVERAGE: "); Serial.println(average_voltage / 10000.0, 4);
-		Serial.print("BMS VOLTAGE LOW: "); Serial.println(low_voltage / 10000.0, 4);
-		Serial.print("BMS VOLTAGE HIGH: "); Serial.println(high_voltage / 10000.0, 4);
-		Serial.print("BMS VOLTAGE TOTAL: "); Serial.println(total_voltage / 100.0, 2);
+	void print() {
+		Serial.println("\n\nBMS Voltages");
+		Serial.println("------------");
+		Serial.print("BMS VOLTAGE AVERAGE: ");  Serial.println(average_voltage / 10000.0, 4);
+		Serial.print("BMS VOLTAGE LOW: ");      Serial.println(low_voltage / 10000.0, 4);
+		Serial.print("BMS VOLTAGE HIGH: ");     Serial.println(high_voltage / 10000.0, 4);
+		Serial.print("BMS VOLTAGE TOTAL: ");    Serial.println(total_voltage / 100.0, 2);
     }
 #endif
 

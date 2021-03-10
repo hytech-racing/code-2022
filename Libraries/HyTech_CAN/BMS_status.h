@@ -49,9 +49,9 @@ public:
     void print() {
         Serial.println("\n\nBMS Status");
         Serial.println("----------");
-		Serial.print("BMS STATE: "); Serial.println(state);
-		Serial.print("BMS ERROR FLAGS: 0x"); Serial.println(error_flags, HEX);
-		Serial.print("BMS CURRENT: "); Serial.println(current / 100.0, 2);
+        Serial.print("BMS STATE: ");            Serial.println(state);
+        Serial.print("BMS ERROR FLAGS: 0x");    Serial.println(error_flags, HEX);
+        Serial.print("BMS CURRENT: ");          Serial.println(current / 100.0, 2);
     }
 #endif
 

@@ -22,10 +22,10 @@ public:
     void print() {
         Serial.println("\n\nMC Temperatures 1");
         Serial.println("-----------------");
-        Serial.print("MODULE A TEMP: "); Serial.println(module_a_temperature / 10.0, 1);
-        Serial.print("MODULE B TEMP: "); Serial.println(module_b_temperature / 10.0, 1);
-        Serial.print("MODULE C TEMP: "); Serial.println(module_c_temperature / 10.0, 1);
-        Serial.print("GATE DRIVER BOARD TEMP: "); Serial.println(gate_driver_board_temperature / 10.0, 1);
+        Serial.print("MODULE A TEMP: ");            Serial.println(module_a_temperature / 10.0, 1);
+        Serial.print("MODULE B TEMP: ");            Serial.println(module_b_temperature / 10.0, 1);
+        Serial.print("MODULE C TEMP: ");            Serial.println(module_c_temperature / 10.0, 1);
+        Serial.print("GATE DRIVER BOARD TEMP: ");   Serial.println(gate_driver_board_temperature / 10.0, 1);
     }
 #endif
 

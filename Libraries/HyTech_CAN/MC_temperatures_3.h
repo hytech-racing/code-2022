@@ -22,10 +22,10 @@ public:
     void print() {
         Serial.println("\n\nMC Temperatures 3");
         Serial.println("-----------------");
-        Serial.print("RTD 4 TEMP: "); Serial.println(rtd_4_temperature);
-		Serial.print("RTD 5 TEMP: "); Serial.println(rtd_5_temperature);
-		Serial.print("MOTOR TEMP: "); Serial.println(motor_temperature / 10.0, 1);
-		Serial.print("TORQUE SHUDDER: "); Serial.println(torque_shudder / 10.0, 1);
+        Serial.print("RTD 4 TEMP: ");       Serial.println(rtd_4_temperature);
+        Serial.print("RTD 5 TEMP: ");       Serial.println(rtd_5_temperature);
+        Serial.print("MOTOR TEMP: ");       Serial.println(motor_temperature / 10.0, 1);
+        Serial.print("TORQUE SHUDDER: ");   Serial.println(torque_shudder / 10.0, 1);
     }
 #endif
 

@@ -105,8 +105,8 @@ void loop() {
 	}
 	if (timer_gps.check() && pending_gps_data) {
 		pending_gps_data = false;
-        mcu_gps_readings.set_latitude(GPS.latitude_fixed);
-        mcu_gps_readings.set_longitude(GPS.longitude_fixed);
+        mcu_gps_readings.set_latitude(GPS.latitudeDegrees);
+        mcu_gps_readings.set_longitude(GPS.longitudeDegrees);
         CAN.write(HT::XBUtil::write(ID_MCU_GPS_READINGS, mcu_gps_readings));
 	}
 }

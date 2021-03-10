@@ -22,10 +22,10 @@ public:
     void print() {
         Serial.println("\n\nMC Current Information");
         Serial.println("----------------------");
-        Serial.print("PHASE A CURRENT: "); Serial.println(phase_a_current / 10.0, 1);
-		Serial.print("PHASE B CURRENT: "); Serial.println(phase_b_current / 10.0, 1);
-		Serial.print("PHASE C CURRENT: "); Serial.println(phase_c_current / 10.0, 1);
-		Serial.print("DC BUS CURRENT: "); Serial.println(dc_bus_current / 10.0, 1);
+        Serial.print("PHASE A CURRENT: ");  Serial.println(phase_a_current / 10.0, 1);
+        Serial.print("PHASE B CURRENT: ");  Serial.println(phase_b_current / 10.0, 1);
+        Serial.print("PHASE C CURRENT: ");  Serial.println(phase_c_current / 10.0, 1);
+        Serial.print("DC BUS CURRENT: ");   Serial.println(dc_bus_current / 10.0, 1);
     }
 #endif
 

@@ -22,10 +22,10 @@ public:
     void print() {
         Serial.println("\n\nMC Motor Position Information");
         Serial.println("-----------------------------");
-        Serial.print("MOTOR ANGLE: "); Serial.println(motor_angle / 10.0, 1);
-		Serial.print("MOTOR SPEED: "); Serial.println(motor_speed);
-		Serial.print("ELEC OUTPUT FREQ: "); Serial.println(electrical_output_frequency);
-		Serial.print("DELTA RESOLVER FILT: "); Serial.println(delta_resolver_filtered);
+        Serial.print("MOTOR ANGLE: ");          Serial.println(motor_angle / 10.0, 1);
+        Serial.print("MOTOR SPEED: ");          Serial.println(motor_speed);
+        Serial.print("ELEC OUTPUT FREQ: ");     Serial.println(electrical_output_frequency);
+        Serial.print("DELTA RESOLVER FILT: ");  Serial.println(delta_resolver_filtered);
     }
 #endif
 

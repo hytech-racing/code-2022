@@ -22,10 +22,10 @@ public:
     void print() {
         Serial.println("\n\nMC Voltage Information");
         Serial.println("----------------------");
-        Serial.print("DC BUS VOLTAGE: "); Serial.println(dc_bus_voltage / 10.0, 1);
-		Serial.print("OUTPUT VOLTAGE: "); Serial.println(output_voltage / 10.0, 1);
-		Serial.print("PHASE AB VOLTAGE: "); Serial.println(phase_ab_voltage / 10.0, 1);
-		Serial.print("PHASE BC VOLTAGE: "); Serial.println(phase_bc_voltage / 10.0, 1);
+        Serial.print("DC BUS VOLTAGE: ");   Serial.println(dc_bus_voltage / 10.0, 1);
+        Serial.print("OUTPUT VOLTAGE: ");   Serial.println(output_voltage / 10.0, 1);
+        Serial.print("PHASE AB VOLTAGE: "); Serial.println(phase_ab_voltage / 10.0, 1);
+        Serial.print("PHASE BC VOLTAGE: "); Serial.println(phase_bc_voltage / 10.0, 1);
     }
 #endif
 
