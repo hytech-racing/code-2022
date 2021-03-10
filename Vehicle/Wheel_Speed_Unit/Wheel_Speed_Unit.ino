@@ -134,7 +134,7 @@ void loop()
         if (is_front) { tx_msg.id = ID_TCU_WHEEL_RPM_FRONT; }
         else { tx_msg.id = ID_TCU_WHEEL_RPM_REAR; }
         
-        tx_msg.len = sizeof(CAN_message_tcu_wheel_rpm_t);
+        tx_msg.len = sizeof(TCU_wheel_rpm);
         CAN.write(tx_msg);
         tx_msg.timeout = 0;
 
@@ -143,7 +143,7 @@ void loop()
           tcu_distance_traveled.set_distance_traveled(total_revs * wheel_circumference * 100);
           tcu_distance_traveled.write(tx_msg.buf);
           tx_msg.id = ID_TCU_DISTANCE_TRAVELED;
-          tx_msg.len = sizeof(CAN_message_tcu_distance_traveled_t);
+          tx_msg.len = sizeof(TCU_distance_traveled);
           CAN.write(tx_msg);
           tx_msg.timeout = 0;
         }
