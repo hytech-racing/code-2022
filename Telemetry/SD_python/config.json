@@ -773,7 +773,7 @@
     ]
   },
   "AD": {
-    "name": "ID_MC_MODULATION_INDEX_FLUX_WEAKENING_OUTPUT_INFORMATION",
+    "name": "ID_MC_FLUX_WEAKENING_OUTPUT",
     "fields": [{
         "id": "modulation_index",
         "size": 16,

@@ -5,10 +5,10 @@
 #pragma pack(push,1)
 
 // @Parseclass
-class MC_modulation_index_flux_weakening_output_information {
+class MC_flux_weakening_output {
 public:
-    MC_modulation_index_flux_weakening_output_information() = default;
-    MC_modulation_index_flux_weakening_output_information(uint8_t buf[8]) { load(buf); }
+    MC_flux_weakening_output() = default;
+    MC_flux_weakening_output(uint8_t buf[8]) { load(buf); }
 
     inline void load(uint8_t buf[])     { memcpy(this, buf, sizeof(*this)); }
     inline void write(uint8_t buf[])    { memcpy(buf, this, sizeof(*this)); }
