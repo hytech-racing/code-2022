@@ -55,7 +55,6 @@ MC_command_message mc_command_message;
 MC_read_write_parameter_command mc_read_write_parameter_command;
 MC_read_write_parameter_response mc_read_write_parameter_response;
 FCU_accelerometer_values fcu_accelerometer_values;
-MCU_GPS_readings mcu_gps_readings;
 TCU_wheel_rpm tcu_wheel_rpm_front;
 TCU_wheel_rpm tcu_wheel_rpm_rear;
 TCU_distance_traveled tcu_distance_traveled;
@@ -64,7 +63,7 @@ void setup() {
 	// Real-time clock
 	//Teensy3Clock.set(9999999999); // set time (epoch) at powerup (COMMENT OUT THIS LINE AND PUSH ONCE RTC HAS BEEN SET!!!!)
 	setSyncProvider((getExternalTime) teensy3_clock_class::get); // registers Teensy RTC as system time
-	Serial.println(timeStatus() == timeSet ? "System time set to RTC" : "RTC not set up - uncomment Teensy3Clock.set() to set time");
+	Serial.println(timeStatus() == timeStatus_t::timeSet ? "System time set to RTC" : "RTC not set up - uncomment Teensy3Clock.set() to set time");
 
 	// Serial / XBee / CAN 
 	Serial.begin(115200);
@@ -91,20 +90,23 @@ void loop() {
 	parse_can_message();
 	check_xbee_timers();
 
-    static Metro timer_flush = Metro(1000);
-	if (timer_flush.check()) // Occasionally flush SD buffer (max one second data loss after power-off)
+    static Metro timer = Metro(1000);
+	if (timer.check()) // Occasionally flush SD buffer (max one second data loss after power-off)
 		logfile.flush();
 
-	// GPS
-    static Metro timer_gps = Metro(100);
-	static bool pending_gps_data = false;
-	GPS.read();
-	if (GPS.newNMEAreceived()) {
-		GPS.parse(GPS.lastNMEA());
-		pending_gps_data = true;
-	}
-	if (timer_gps.check() && pending_gps_data) {
-		pending_gps_data = false;
+	process_gps();
+}
+
+void process_gps() {}
+    static Metro timer = Metro(100);
+	static bool stale = false;
+
+	for (int i = 0; i < MAXLINELENGTH && GPS.read(); ++i)
+		if (GPS.newNMEAReceived())
+			pending_data ||= GPS.parse(GPS.lastNMEA());
+	if (timer.check() && stale) {
+		stale = false;
+		MCU_GPS_readings mcu_gps_readings;
         mcu_gps_readings.set_latitude(GPS.latitudeDegrees);
         mcu_gps_readings.set_longitude(GPS.longitudeDegrees);
         CAN.write(HT::XBUtil::write(ID_MCU_GPS_READINGS, mcu_gps_readings));
@@ -127,7 +129,6 @@ void parse_can_message() {
 		switch(msg_rx.id) {
 #define loadcase(id, msg, ...) case id: msg.load(msg_rx.buf); __VA_ARGS__; break;
 		loadcase(ID_MCU_STATUS, 						mcu_status);
-		loadcase(ID_MCU_STATUS,							mcu_status);
 		loadcase(ID_MCU_PEDAL_READINGS,					mcu_pedal_readings);
 		loadcase(ID_GLV_CURRENT_READINGS,				current_readings);
 		loadcase(ID_BMS_VOLTAGES,						bms_voltages);
@@ -139,8 +140,6 @@ void parse_can_message() {
 		loadcase(ID_MC_TEMPERATURES_1,					mc_temperatures_1);
 		loadcase(ID_MC_TEMPERATURES_2,					mc_temperatures_2);
 		loadcase(ID_MC_TEMPERATURES_3,					mc_temperatures_3);
-		// loadcase(ID_MC_ANALOG_INPUTS_VOLTAGES,		mc_analog_input_voltages);
-		// loadcase(ID_MC_DIGITAL_INPUT_STATUS,			mc_digital_input_status);
 		loadcase(ID_MC_MOTOR_POSITION_INFORMATION,		mc_motor_position_information);
 		loadcase(ID_MC_CURRENT_INFORMATION,				mc_current_information);
 		loadcase(ID_MC_VOLTAGE_INFORMATION,				mc_voltage_information);
@@ -155,11 +154,13 @@ void parse_can_message() {
 		loadcase(ID_TCU_WHEEL_RPM_REAR,					tcu_wheel_rpm_rear);
 		loadcase(ID_TCU_WHEEL_RPM_FRONT,				tcu_wheel_rpm_front);
 		loadcase(ID_TCU_DISTANCE_TRAVELED,				tcu_distance_traveled);
-		loadcase(ID_BMS_DETAILED_VOLTAGES, 				temp.bdv, 	bms_detailed_voltages[temp.bdv.get_ic_id()][temp.bdv.get_group_id].load(msg_rx.buf));
+		loadcase(ID_BMS_DETAILED_VOLTAGES, 				temp.bdv, 	bms_detailed_voltages[temp.bdv.get_ic_id()][temp.bdv.get_group_id()].load(msg_rx.buf));
 		loadcase(ID_BMS_DETAILED_TEMPERATURES, 			temp.bdt, 	bms_detailed_temperatures[temp.bdt.get_ic_id()].load(msg_rx.buf));
 		loadcase(ID_BMS_ONBOARD_DETAILED_TEMPERATURES,	temp.bodt, 	bms_onboard_detailed_temperatures[temp.bodt.get_ic_id()].load(msg_rx.buf));
 		loadcase(ID_BMS_BALANCING_STATUS, 				temp.bbs, 	bms_balancing_status[temp.bdv.get_group_id].load(msg_rx.buf));
 		loadcase(ID_MC_MODULATION_INDEX_FLUX_WEAKENING_OUTPUT_INFORMATION, mc_modulation_index_flux_weakening_output_information);
+		// loadcase(ID_MC_ANALOG_INPUTS_VOLTAGES,		mc_analog_input_voltages);
+		// loadcase(ID_MC_DIGITAL_INPUT_STATUS,			mc_digital_input_status);
 #undef loadcase
 		}
 	}
@@ -168,49 +169,81 @@ void parse_can_message() {
 void check_xbee_timers() {
 
     static Metro xb_metro_100ms = Metro(100);
+	static Metro xb_metro_200ms = Metro(200);
+	static Metro xb_metro_500ms = Metro(500);
+	static Metro xb_metro_1s	= Metro(1000);
+	static Metro xb_metro_2s	= Metro(2000);
+	static Metro xb_metro_3s	= Metro(3000);
+
+
     if (xb_metro_100ms.check()) {
-		HT::XBUtil::write(ID_MC_MOTOR_POSITION_INFORMATION, 	mc_motor_position_information);
-		HT::XBUtil::write(ID_MC_CURRENT_INFORMATION, 			mc_current_information);
-		HT::XBUtil::write(ID_MC_VOLTAGE_INFORMATION, 			mc_voltage_information);
+		HT::XBUtil::write(ID_MC_MOTOR_POSITION_INFORMATION, 		mc_motor_position_information);
+		HT::XBUtil::write(ID_MC_CURRENT_INFORMATION, 				mc_current_information);
+		HT::XBUtil::write(ID_MC_VOLTAGE_INFORMATION, 				mc_voltage_information);
+		HT::XBUtil::write(ID_MC_MODULATION_INDEX_FLUX_WEAKENING_OUTPUT_INFORMATION, mc_modulation_index_flux_weakening_output_information);
+		// HT::XBUtil::write(ID_MC_DIGITAL_INPUT_STATUS,						mc_digital_input_status);
+		// HT::XBUtil::write(ID_MC_ANALOG_INPUTS_VOLTAGES,						mc_analog_input_voltages);
 	}
 
-	static Metro xb_metro_200ms = Metro(200);
     if (xb_metro_200ms.check()) {
-		HT::XBUtil::write(ID_MC_COMMAND_MESSAGE,				mc_command_message);
-		HT::XBUtil::write(ID_MC_TORQUE_TIMER_INFORMATION,		mc_torque_timer_information);
-		HT::XBUtil::write(ID_MCU_PEDAL_READINGS,				mcu_pedal_readings);
-		HT::XBUtil::write(ID_TCU_WHEEL_RPM_REAR,				tcu_wheel_rpm_rear);
-		HT::XBUtil::write(ID_TCU_WHEEL_RPM_FRONT,				tcu_wheel_rpm_front);
-		HT::XBUtil::write(ID_TCU_DISTANCE_TRAVELED,				tcu_distance_traveled);
+		HT::XBUtil::write(ID_MC_COMMAND_MESSAGE,					mc_command_message);
+		HT::XBUtil::write(ID_MC_TORQUE_TIMER_INFORMATION,			mc_torque_timer_information);
+		HT::XBUtil::write(ID_MC_READ_WRITE_PARAMETER_COMMAND,		mc_read_write_parameter_command);
+		HT::XBUtil::write(ID_MC_READ_WRITE_PARAMETER_RESPONSE,		mc_read_write_parameter_response);
+		HT::XBUtil::write(ID_MCU_PEDAL_READINGS,					mcu_pedal_readings);
+		HT::XBUtil::write(ID_TCU_WHEEL_RPM_REAR,					tcu_wheel_rpm_rear);
+		HT::XBUtil::write(ID_TCU_WHEEL_RPM_FRONT,					tcu_wheel_rpm_front);
+		HT::XBUtil::write(ID_TCU_DISTANCE_TRAVELED,					tcu_distance_traveled);
+		HT::XBUtil::write(ID_FCU_ACCELEROMETER,						fcu_accelerometer_values);
+	}
+
+	if (xb_metro_500ms.check()) {
+		HT::XBUtil::write(ID_GLV_CURRENT_READINGS,					current_readings);
 	}
 	
-	static Metro xb_metro_1s = Metro(1000);
     if (xb_metro_1s.check()) {
-		HT::XBUtil::write(ID_BMS_VOLTAGES,						bms_voltages );
-		HT::XBUtil::write(ID_BMS_STATUS,						bms_status );
-		HT::XBUtil::write(ID_BMS_COULOMB_COUNTS,				bms_coulomb_counts );
+		HT::XBUtil::write(ID_BMS_VOLTAGES,							bms_voltages );
+		HT::XBUtil::write(ID_BMS_STATUS,							bms_status );
+		HT::XBUtil::write(ID_BMS_COULOMB_COUNTS,					bms_coulomb_counts );
 	}
 
-	static Metro xb_metro_2s = Metro(2000);
     if (xb_metro_2s.check()) {
-		HT::XBUtil::write(ID_MC_INTERNAL_STATES,				mc_internal_states);
-		HT::XBUtil::write(ID_MC_FAULT_CODES,					mc_fault_codes);
-		HT::XBUtil::write(ID_MCU_STATUS,						mcu_status);
+		HT::XBUtil::write(ID_MC_INTERNAL_STATES,					mc_internal_states);
+		HT::XBUtil::write(ID_MC_FAULT_CODES,						mc_fault_codes);
+		HT::XBUtil::write(ID_MCU_STATUS,							mcu_status);
 	}
 
-	static Metro xb_metro_3s = Metro(3000);
     if (xb_metro_3s.check()) {
-		HT::XBUtil::write(ID_MC_TEMPERATURES_1, 				mc_temperatures_1);
-		HT::XBUtil::write(ID_MC_TEMPERATURES_2, 				mc_temperatures_2);
-		HT::XBUtil::write(ID_MC_TEMPERATURES_3, 				mc_temperatures_3);
-		HT::XBUtil::write(ID_BMS_TEMPERATURES, 					bms_temperatures);
+		HT::XBUtil::write(ID_MC_TEMPERATURES_1, 					mc_temperatures_1);
+		HT::XBUtil::write(ID_MC_TEMPERATURES_2, 					mc_temperatures_2);
+		HT::XBUtil::write(ID_MC_TEMPERATURES_3, 					mc_temperatures_3);
+		HT::XBUtil::write(ID_BMS_TEMPERATURES, 						bms_temperatures);
+		HT::XBUtil::write(ID_BMS_ONBOARD_TEMPERATURES, 				bms_onboard_temperatures);
 
 		for (int ic = 0; ic < 8; ic++)
 			for (int group = 0; group < 3; group++)
-				HT::XBUtil::write(ID_BMS_DETAILED_VOLTAGES, 	bms_detailed_voltages[ic][group]);
+				HT::XBUtil::write(ID_BMS_DETAILED_VOLTAGES, 		bms_detailed_voltages[ic][group]);
 		for (int ic = 0; ic < 8; ic++)
-			HT::XBUtil::write(ID_BMS_DETAILED_TEMPERATURES, 	bms_detailed_temperatures[ic]);
+			HT::XBUtil::write(ID_BMS_DETAILED_TEMPERATURES, 		bms_detailed_temperatures[ic]);
+		for (int ic = 0; ic < 8; ic++)
+			HT::XBUtil::write(ID_BMS_ONBOARD_DETAILED_TEMPERATURES, bms_onboard_detailed_temperatures[ic]);
 		for (int i = 0; i < 2; i++)
-			HT::XBUtil::write(ID_BMS_BALANCING_STATUS, 			bms_balancing_status[i]);
+			HT::XBUtil::write(ID_BMS_BALANCING_STATUS, 				bms_balancing_status[i]);
+
+
+		// These guys should only change once in a blue moon so we're going to use difference tracking
+		static CCU_status prev_ccu_status;
+		static MC_firmware_information prev_mc_firmware_information;
+
+		if (memcmp(&prev_ccu_status, &ccu_status, sizeof(CCU_status))) {
+			HT::XBUtil::write(ID_CCU_STATUS,						ccu_status );
+			memcpy(prev_ccu_status, ccu_status);
+		}
+		
+		if (memcmp(&prev_mc_firmware_information, &mc_firmware_information, sizeof(MC_firmware_information)) {
+			HT::XBUtil::write(ID_MC_FIRMWARE_INFORMATION,			mc_firmware_information );
+			memcpy(prev_mc_firmware_information, mc_firmware_information);
+		}
 	}
+
 }
