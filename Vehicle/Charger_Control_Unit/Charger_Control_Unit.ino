@@ -37,6 +37,10 @@ FlexCAN CAN(500000);
 Metro timer_update_CAN = Metro(100);
 Metro timer_update_serial = Metro(500);
 
+void print_cells();
+void print_temps();
+void parse_can_message();
+
 void setup() {
     pinMode(POWER, OUTPUT);
     digitalWrite(POWER, HIGH);
