@@ -86,7 +86,7 @@ MC_voltage_information mc_voltage_information;
 MC_internal_states mc_internal_states;
 MC_fault_codes mc_fault_codes;
 MC_torque_timer_information mc_torque_timer_information;
-MC_modulation_index_flux_weakening_output_information mc_modulation_index_flux_weakening_output_information;
+MC_flux_weakening_output mc_flux_weakening_output;
 MC_firmware_information mc_firmware_information;
 MC_command_message mc_command_message;
 MC_read_write_parameter_command mc_read_write_parameter_command;
@@ -252,9 +252,7 @@ void parse_can_message() {
             case ID_MC_INTERNAL_STATES:                 mc_internal_states.load(msg_rx.buf);                break;
             case ID_MC_FAULT_CODES:                     mc_fault_codes.load(msg_rx.buf);                    break;
             case ID_MC_TORQUE_TIMER_INFORMATION:        mc_torque_timer_information.load(msg_rx.buf);       break;
-            case ID_MC_MODULATION_INDEX_FLUX_WEAKENING_OUTPUT_INFORMATION: 
-                mc_modulation_index_flux_weakening_output_information.load(msg_rx.buf); 
-                break;
+            case ID_MC_FLUX_WEAKENING_OUTPUT: 			mc_flux_weakening_output.load(msg_rx.buf);			break;
             case ID_MC_FIRMWARE_INFORMATION:            mc_firmware_information.load(msg_rx.buf);           break;
             case ID_MC_COMMAND_MESSAGE:                 mc_command_message.load(msg_rx.buf);                break;
             case ID_MC_READ_WRITE_PARAMETER_COMMAND:    mc_read_write_parameter_command.load(msg_rx.buf);   break;

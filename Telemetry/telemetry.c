@@ -31,7 +31,7 @@ typedef struct Telem_message {
         MC_fault_codes                                          mc_fault_codes;
         MC_firmware_information                                 mc_firmware_information;
         MC_internal_states                                      mc_internal_states;
-        MC_modulation_index_flux_weakening_output_information   mc_modulation_index_flux_weakening_output_information;
+        MC_flux_weakening_output                                mc_flux_weakening_output;
         MC_motor_position_information                           mc_motor_position_information;
         MC_read_write_parameter_command                         mc_read_write_parameter_command;
         MC_read_write_parameter_response                        mc_read_write_parameter_response;
@@ -304,7 +304,7 @@ static void process_message(uint64_t timestamp, Telem_message_t *msg)
             current_status.mc_torque_timer_information = *data;
             break;
         }
-        case ID_MC_MODULATION_INDEX_FLUX_WEAKENING_OUTPUT_INFORMATION:
+        case ID_MC_FLUX_WEAKENING_OUTPUT:
             break;
         case ID_MC_FIRMWARE_INFORMATION:
             break;
