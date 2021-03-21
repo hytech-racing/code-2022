@@ -1,6 +1,7 @@
 #pragma once
 #include <string.h>
 #include <stdint.h>
+#include "Arduino.h"
 
 #pragma pack(push,1)
 
@@ -10,8 +11,8 @@ public:
     BMS_status() = default;
     BMS_status(uint8_t buf[]) { load(buf); }
 
-    inline void load(uint8_t buf[])     { memcpy(this, buf, sizeof(*this)); }
-    inline void write(uint8_t buf[])    { memcpy(buf, this, sizeof(*this)); }
+    inline void load(uint8_t buf[])         { memcpy(this, buf, sizeof(*this)); }
+    inline void write(uint8_t buf[])  const { memcpy(buf, this, sizeof(*this)); }
 
     inline uint8_t get_state()                   const { return state; }
     inline uint16_t get_error_flags()            const { return error_flags; }
@@ -45,11 +46,20 @@ public:
     inline void set_shutdown_g_above_threshold(bool shutdown_g_above_threshold) { flags = (flags & 0xFFFE) | shutdown_g_above_threshold; }
     inline void set_shutdown_h_above_threshold(bool shutdown_h_above_threshold) { flags = (flags & 0xFFFD) | (shutdown_h_above_threshold << 1); }
 
+    void print() {
+        Serial.println("\n\nBMS Status");
+        Serial.println("----------");
+        Serial.print("STATE:       ");      Serial.println(state, HEX);
+        Serial.print("ERROR FLAGS: 0x");    Serial.println(error_flags, HEX);
+        Serial.print("CURRENT:     ");      Serial.println(current / 100.0, 2);
+        Serial.print("FLAGS:       0x");    Serial.println(flags, HEX);
+    }
+
 private:
-	uint8_t state; // @Parse @Hex
-    uint16_t error_flags; // @Parse @Flagset @Hex
-    int16_t current; // @Parse @Scale(100) @Unit(A)
-    uint8_t flags; // @Parse @Hex @Flaglist(shutdown_g_above_threshold, shutdown_h_above_threshold)
+	uint8_t state;          // @Parse @Hex
+    uint16_t error_flags;   // @Parse @Flagset @Hex
+    int16_t current;        // @Parse @Scale(100) @Unit(A)
+    uint8_t flags;          // @Parse @Hex @Flaglist(shutdown_g_above_threshold, shutdown_h_above_threshold)
 };
 
 #pragma pack(pop)

@@ -1,6 +1,7 @@
 #pragma once
 #include <string.h>
 #include <stdint.h>
+#include "Arduino.h"
 
 #pragma pack(push,1)
 
@@ -16,10 +17,10 @@ public:
         set_temperature_2(temperature_2);
     }
 
-    inline void load(uint8_t buf[])     { memcpy(this, buf, sizeof(*this)); }
-    inline void write(uint8_t buf[])    { memcpy(buf, this, sizeof(*this)); }
+    inline void load(uint8_t buf[])         { memcpy(this, buf, sizeof(*this)); }
+    inline void write(uint8_t buf[])  const { memcpy(buf, this, sizeof(*this)); }
 
-    inline uint8_t get_ic_id() const          { return ic_id; }
+    inline uint8_t get_ic_id()         const  { return ic_id; }
     inline int16_t get_temperature_0() const  { return temperature_0; }
     inline int16_t get_temperature_1() const  { return temperature_1; }
     inline int16_t get_temperature_2() const  { return temperature_2; }
@@ -32,7 +33,7 @@ public:
         return 0;
     }
 
-    inline void set_ic_id(uint8_t ic_id) { this->ic_id = ic_id; }
+    inline void set_ic_id(uint8_t ic_id)                 { this->ic_id         = ic_id;         }
     inline void set_temperature_0(int16_t temperature_0) { this->temperature_0 = temperature_0; }
     inline void set_temperature_1(int16_t temperature_1) { this->temperature_1 = temperature_1; }
     inline void set_temperature_2(int16_t temperature_2) { this->temperature_2 = temperature_2; }
@@ -42,6 +43,15 @@ public:
             case 1: this->temperature_1 = temperature_1; return;
             case 2: this->temperature_2 = temperature_2; return;
         }
+    }
+
+    void print() {
+        Serial.println("\n\nBMS DETAILED TEMPERATURES");
+        Serial.println    ("-------------------------");
+        Serial.print("IC:            ");    Serial.println((uint32_t) ic_id);
+        Serial.print("TEMPERATURE 0: ");    Serial.println(temperature_0 / 100., 2);
+        Serial.print("TEMPERATURE 1: ");    Serial.println(temperature_1 / 100., 2);
+        Serial.print("TEMPERATURE 2: ");    Serial.println(temperature_2 / 100., 2);
     }
 
 private:

@@ -1,6 +1,7 @@
 #pragma once
 #include <string.h>
 #include <stdint.h>
+#include "Arduino.h"
 
 #pragma pack(push,1)
 
@@ -10,8 +11,8 @@ public:
     MC_internal_states() = default;
     MC_internal_states(uint8_t buf[8]) { load(buf); }
 
-    inline void load(uint8_t buf[])     { memcpy(this, buf, sizeof(*this)); }
-    inline void write(uint8_t buf[])    { memcpy(buf, this, sizeof(*this)); }
+    inline void load(uint8_t buf[])         { memcpy(this, buf, sizeof(*this)); }
+    inline void write(uint8_t buf[])  const { memcpy(buf, this, sizeof(*this)); }
 
     inline uint8_t get_vsm_state()                          const { return vsm_state; }
     inline uint8_t get_inverter_state()                     const { return inverter_state; }
@@ -27,14 +28,28 @@ public:
     inline bool get_inverter_enable_state()                 const { return inverter_enable & 1; }
     inline bool get_inverter_enable_lockout()               const { return inverter_enable & 0x80; }
     inline bool get_direction_command()                     const { return direction_command; }
+
+    void print() {
+        Serial.println("\n\nMC INTERNAL STATES");
+        Serial.println(    "------------------");
+        Serial.print("VSM STATE:                       ");  Serial.println(vsm_state, HEX);
+        Serial.print("INVERTER STATE:                  ");  Serial.println(inverter_state, HEX);
+        Serial.print("INVERTER RUN MODE:               ");  Serial.println(get_inverter_run_mode());
+        Serial.print("INVERTER ACTIVE DISCHARGE STATE: ");  Serial.println(get_inverter_active_discharge_state());
+        Serial.print("INVERTER COMMAND MODE:           ");  Serial.println(inverter_command_mode, HEX);
+        Serial.print("INVERTER ENABLE:                 ");  Serial.println((uint32_t) get_inverter_enable_state());
+        Serial.print("INVERTER LOCKOUT:                ");  Serial.println((uint32_t) get_inverter_enable_lockout());
+        Serial.print("DIRECTION COMMAND:               ");  Serial.println(direction_command);
+    }
+
 private:
-    uint16_t vsm_state; // @Parse @Hex
-    uint8_t inverter_state; // @Parse @Hex
-    uint8_t relay_state; // @Parse @Flagset
-    uint8_t inverter_run_mode_discharge_state; // @Parse @Flaglist(inverter_run_mode, inverter_active_discharge_state)
-    uint8_t inverter_command_mode; // @Parse
-    uint8_t inverter_enable; // @Parse @Flaglist(inverter_enable_state, inverter_enable_lockout)
-    uint8_t direction_command; // @Parse
+    uint16_t vsm_state;                         // @Parse @Hex
+    uint8_t inverter_state;                     // @Parse @Hex
+    uint8_t relay_state;                        // @Parse @Flagset
+    uint8_t inverter_run_mode_discharge_state;  // @Parse @Flaglist(inverter_run_mode, inverter_active_discharge_state)
+    uint8_t inverter_command_mode;              // @Parse @Hex
+    uint8_t inverter_enable;                    // @Parse @Flaglist(inverter_enable_state, inverter_enable_lockout)
+    uint8_t direction_command;                  // @Parse @Hex
 };
 
 #pragma pack(pop)

@@ -1,6 +1,7 @@
 #pragma once
 #include <string.h>
 #include <stdint.h>
+#include "Arduino.h"
 
 #pragma pack(push,1)
 
@@ -10,8 +11,8 @@ public:
     MC_fault_codes() = default;
     MC_fault_codes(uint8_t buf[8]) { load(buf); }
 
-    inline void load(uint8_t buf[])     { memcpy(this, buf, sizeof(*this)); }
-    inline void write(uint8_t buf[])    { memcpy(buf, this, sizeof(*this)); }
+    inline void load(uint8_t buf[])         { memcpy(this, buf, sizeof(*this)); }
+    inline void write(uint8_t buf[])  const { memcpy(buf, this, sizeof(*this)); }
 
     uint16_t get_post_fault_lo() { return post_fault_lo; }
     uint16_t get_post_fault_hi() { return post_fault_hi; }
@@ -86,11 +87,20 @@ public:
     inline bool get_run_hi_resolver_not_connected()                     const { return run_fault_hi & 0x4000; } // @Parseflag(run_fault_hi)
     inline bool get_run_hi_inverter_discharge_active()                  const { return run_fault_hi & 0x8000; } // @Parseflag(run_fault_hi)
 
+    void print() {
+        Serial.println("\n\nMC FAULT CODES");
+        Serial.println    ("--------------");
+        Serial.print("POST FAULT LO: 0x");  Serial.println(post_fault_lo, HEX);
+        Serial.print("POST FAULT HI: 0x");  Serial.println(post_fault_hi, HEX);
+        Serial.print("RUN FAULT LO:  0x");  Serial.println(run_fault_lo, HEX);
+        Serial.print("RUN FAULT HI:  0x");  Serial.println(run_fault_hi, HEX);
+    }
+
 private:
     uint16_t post_fault_lo; // @Parse @Flagset @Hex @Sparse
     uint16_t post_fault_hi; // @Parse @Flagset @Hex @Sparse
-    uint16_t run_fault_lo; // @Parse @Flagset @Hex @Sparse
-    uint16_t run_fault_hi; // @Parse @Flagset @Hex @Sparse
+    uint16_t run_fault_lo;  // @Parse @Flagset @Hex @Sparse
+    uint16_t run_fault_hi;  // @Parse @Flagset @Hex @Sparse
 };
 
 #pragma pack(pop)

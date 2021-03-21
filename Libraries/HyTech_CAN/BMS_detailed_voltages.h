@@ -1,6 +1,7 @@
 #pragma once
 #include <string.h>
 #include <stdint.h>
+#include "Arduino.h"
 
 #pragma pack(push,1)
 
@@ -17,8 +18,8 @@ public:
         set_voltage_2(voltage_2);        
     }
 
-    inline void load(uint8_t buf[])     { memcpy(this, buf, sizeof(*this)); }
-    inline void write(uint8_t buf[])    { memcpy(buf, this, sizeof(*this)); }
+    inline void load(uint8_t buf[])         { memcpy(this, buf, sizeof(*this)); }
+    inline void write(uint8_t buf[])  const { memcpy(buf, this, sizeof(*this)); }
 
     inline uint8_t get_ic_id()      const { return ic_id_group_id & 0xF; }
     inline uint8_t get_group_id()   const { return ic_id_group_id >> 4; }
@@ -45,6 +46,16 @@ public:
             case 1: voltage_1 = voltage; return;
             case 2: voltage_2 = voltage; return;
         }
+    }
+
+    void print() {
+        Serial.println("\n\nBMS DETAILED VOLTAGES");
+        Serial.println(    "---------------------");
+        Serial.print("IC:        ");    Serial.println((uint32_t) get_ic_id());
+        Serial.print("GROUP:     ");    Serial.println((uint32_t) get_group_id());
+        Serial.print("VOLTAGE 0: ");    Serial.println(voltage_0 / 10000., 4);
+        Serial.print("VOLTAGE 1: ");    Serial.println(voltage_1 / 10000., 4);
+        Serial.print("VOLTAGE 2: ");    Serial.println(voltage_2 / 10000., 4);
     }
 
 private:
