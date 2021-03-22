@@ -1,6 +1,9 @@
 #pragma once
 #include <string.h>
 #include <stdint.h>
+#ifdef HT_DEBUG_EN
+    #include "Arduino.h"
+#endif
 
 #pragma pack(push,1)
 
@@ -15,8 +18,8 @@ public:
         set_temperature_1(temperature_1);
     }
 
-    inline void load(uint8_t buf[])     { memcpy(this, buf, sizeof(*this)); }
-    inline void write(uint8_t buf[])    { memcpy(buf, this, sizeof(*this)); }
+    inline void load(uint8_t buf[])         { memcpy(this, buf, sizeof(*this)); }
+    inline void write(uint8_t buf[])  const { memcpy(buf, this, sizeof(*this)); }
 
     inline uint8_t get_ic_id()          const { return ic_id; }
     inline int16_t get_temperature_0()  const { return temperature_0; }
@@ -38,6 +41,16 @@ public:
             case 1: temperature_1 = temperature; return;
         }
     }
+
+#ifdef HT_DEBUG_EN
+    void print() {
+        Serial.println("\n\nBMS ONBOARD DETAILED TEMPERATURES");
+        Serial.println(    "---------------------------------");
+        Serial.print("IC:            ");    Serial.println((uint32_t) ic_id);
+        Serial.print("TEMPERATURE 0: ");    Serial.println(temperature_0 / 100., 2);
+        Serial.print("TEMPERATURE 1: ");    Serial.println(temperature_1 / 100., 2);
+    }
+#endif
 
 private:
     uint8_t ic_id;
