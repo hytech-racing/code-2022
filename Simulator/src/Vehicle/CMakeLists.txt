@@ -32,7 +32,6 @@ target_link_libraries		( ADC_SPI PUBLIC SPI )
 # HyTech_CAN
 add_library					( HYTECH_CAN INTERFACE )
 target_include_directories	( HYTECH_CAN INTERFACE ${LIB}/HyTech_CAN )
-target_link_libraries		( HYTECH_CAN INTERFACE CORE )
 
 # Linduino
 add_library					( LINDUINO INTERFACE )

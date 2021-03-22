@@ -1,7 +1,6 @@
 #pragma once
 #include <string.h>
 #include <stdint.h>
-#include "Arduino.h"
 
 #pragma pack(push,1)
 
@@ -17,8 +16,8 @@ public:
         set_total(total_voltage);
     }
 
-    inline void load(uint8_t buf[])         { memcpy(this, buf, sizeof(*this)); }
-    inline void write(uint8_t buf[])  const { memcpy(buf, this, sizeof(*this)); }
+    inline void load(uint8_t buf[])     { memcpy(this, buf, sizeof(*this)); }
+    inline void write(uint8_t buf[])    { memcpy(buf, this, sizeof(*this)); }
 
     inline uint16_t get_average()   const { return average_voltage; }
     inline uint16_t get_low()       const { return low_voltage; }
@@ -30,20 +29,11 @@ public:
     inline void set_high(uint16_t high_voltage)       { this->high_voltage    = high_voltage; }
     inline void set_total(uint16_t total_voltage)     { this->total_voltage   = total_voltage; }
 
-    void print() {
-		Serial.println("\n\nBMS VOLTAGES");
-		Serial.println(    "------------");
-		Serial.print("AVERAGE VOLTAGE: ");  Serial.println(average_voltage / 10000.0, 4);
-		Serial.print("LOW VOLTAGE:     ");  Serial.println(low_voltage / 10000.0, 4);
-		Serial.print("HIGH VOLTAGE:    ");  Serial.println(high_voltage / 10000.0, 4);
-		Serial.print("TOTAL VOLTAGE:   ");  Serial.println(total_voltage / 100.0, 2);
-    }
-
 private:
-    uint16_t average_voltage;   // @Parse @Scale(10000) @Unit(V) @Name(average) Getter(get_average)
-    uint16_t low_voltage;       // @Parse @Scale(10000) @Unit(V) @Name(low)     Getter(get_low)
-    uint16_t high_voltage;      // @Parse @Scale(10000) @Unit(V) @Name(high)    Getter(get_high)
-    uint16_t total_voltage;     // @Parse @Scale(10000) @Unit(V) @Name(total)   Getter(get_total)
+    uint16_t average_voltage; // @Parse @Name(average) @Getter(get_average) @Scale(10000) @Unit(V)
+    uint16_t low_voltage; // @Parse @Name(low) @Getter(get_low) @Scale(10000) @Unit(V)
+    uint16_t high_voltage; // @Parse @Name(high) @Getter(get_high) @Scale(10000) @Unit(V)
+    uint16_t total_voltage; // @Parse @Name(total) @Getter(get_total) @Scale(10000) @Unit(V)
 };
 
 #pragma pack(pop)
