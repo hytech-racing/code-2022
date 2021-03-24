@@ -41,3 +41,8 @@
 #define ID_TCU_WHEEL_RPM_REAR										0xEA
 #define ID_TCU_WHEEL_RPM_FRONT										0xEB
 #define ID_TCU_DISTANCE_TRAVELED									0xED
+
+#define ID_EM_STATUS                                                0x100
+#define ID_EM_MEASUREMENT                                           0x400
+#define ID_EM_RESERVED1                                             0x7E7
+#define ID_EM_RESERVED2                                             0x7EF
