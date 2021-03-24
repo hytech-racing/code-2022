@@ -1,5 +1,6 @@
 #!/bin/bash
 
+cd `dirname $0`
 mkdir -p ../log
 outfile=../log/$(date +%Y-%m-%d-%H-%M-%S).csv
 

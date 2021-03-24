@@ -7,8 +7,8 @@ import threading
 import time
 import paho.mqtt.client as mqtt
 
-MQTT_SERVER = 'localhost'
-# MQTT_SERVER = 'ec2-3-134-2-166.us-east-2.compute.amazonaws.com'
+# MQTT_SERVER = 'localhost'
+MQTT_SERVER = 'ec2-3-134-2-166.us-east-2.compute.amazonaws.com'
 
 MQTT_PORT   = 1883                    # MQTT broker port (non-SSL)
 MQTT_TOPIC  = 'hytech_car/telemetry'
