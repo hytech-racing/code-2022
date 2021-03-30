@@ -126,6 +126,9 @@
 #define GYR_AM_THRESH       0x1E
 #define GYR_AM_SET          0x1F
 
+// Macro for unpacking the raw data
+#define UNPACK(x,y)    ((((itn16_t)(y)) << 8) | (x))
+
 typedef enum {
     GYRO, GRAVITY, ACCEL, EUL, QUAT
 } DataMode;
@@ -145,7 +148,7 @@ typedef struct data {
     float gravAxes[3];
     float eulerAngles[3];
     float orientation[3];
-} Data;
+} IMUData;
 
 // quaternion
 typedef struct quaternion {
@@ -160,7 +163,7 @@ typedef struct quaternion {
 // read data from registers
 void read_data(AxisData *data, DataMode mode);
 
-void update_data(Data *my_data);
+void update_data(IMUData *my_data);
 
 // initialize the IMU
 void imu_init();
