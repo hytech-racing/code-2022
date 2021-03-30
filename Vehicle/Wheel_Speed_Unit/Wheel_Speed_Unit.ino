@@ -49,6 +49,18 @@ void set_states() {
   cur_state_right = digitalRead(10);
 }
 
+void print_rpms() {
+    Serial.print("RPM Left: ");
+    Serial.print(rpm_left);
+    Serial.print("    RPM Right: ");
+    Serial.print(rpm_right);
+    if(is_front) {
+      Serial.print("    Total Revs: ");
+      Serial.print(total_revs);
+    }
+    Serial.println();
+}
+
 void set_rpm_left() {
   cur_time_left = micros();
   int micros_elapsed = cur_time_left - prev_time_left;
@@ -71,6 +83,10 @@ void set_rpm_right() {
     total_ticks_right += 1;
     print_rpms();
   }
+}
+
+void update_distance_traveled() {
+  total_revs = ((total_ticks_left + total_ticks_right) / (1.0 * num_teeth)); //Should be devided by 2 * num_teeth, but currently only one wheel is sensed
 }
 
 void update_wheel_speeds() {
@@ -104,22 +120,6 @@ void update_wheel_speeds() {
   prev_state_right = cur_state_right;
 }
 
-void update_distance_traveled() {
-  total_revs = ((total_ticks_left + total_ticks_right) / (1.0 * num_teeth)); //Should be devided by 2 * num_teeth, but currently only one wheel is sensed
-}
-
-void print_rpms() {
-    Serial.print("RPM Left: ");
-    Serial.print(rpm_left);
-    Serial.print("    RPM Right: ");
-    Serial.print(rpm_right);
-    if(is_front) {
-      Serial.print("    Total Revs: ");
-      Serial.print(total_revs);
-    }
-    Serial.println();
-}
-
 void loop()
 {
   update_wheel_speeds();
@@ -134,7 +134,7 @@ void loop()
         if (is_front) { tx_msg.id = ID_TCU_WHEEL_RPM_FRONT; }
         else { tx_msg.id = ID_TCU_WHEEL_RPM_REAR; }
         
-        tx_msg.len = sizeof(CAN_message_tcu_wheel_rpm_t);
+        tx_msg.len = sizeof(TCU_wheel_rpm);
         CAN.write(tx_msg);
         tx_msg.timeout = 0;
 
@@ -143,7 +143,7 @@ void loop()
           tcu_distance_traveled.set_distance_traveled(total_revs * wheel_circumference * 100);
           tcu_distance_traveled.write(tx_msg.buf);
           tx_msg.id = ID_TCU_DISTANCE_TRAVELED;
-          tx_msg.len = sizeof(CAN_message_tcu_distance_traveled_t);
+          tx_msg.len = sizeof(TCU_distance_traveled);
           CAN.write(tx_msg);
           tx_msg.timeout = 0;
         }

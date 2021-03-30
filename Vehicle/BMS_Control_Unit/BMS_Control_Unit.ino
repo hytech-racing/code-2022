@@ -222,6 +222,41 @@ bool watchdog_high = true; // Initialize watchdog signal - this alternates every
 uint8_t balance_offcycle = 0; // Tracks which loops balancing will be disabled on
 bool charge_mode_entered = false; // Used to enter charge mode immediately at startup instead of waiting for timer
 
+void initialize();
+void init_cfg();
+void modify_discharge_config(int ic, int cell, bool setDischarge);
+void discharge_cell(int ic, int cell);
+void discharge_cell(int ic, int cell, bool setDischarge);
+void discharge_all();
+void stop_discharge_cell(int ic, int cell);
+void stop_discharge_all(bool skip_clearing_status);
+void stop_discharge_all();
+void balance_cells();
+void poll_cell_voltages();
+void process_voltages();
+void poll_aux_voltages();
+void process_temps();
+void process_cell_temps() ;
+double calculate_cell_temp(double aux_voltage, double v_ref);
+void process_onboard_temps() ;
+double calculate_onboard_temp(double aux_voltage, double v_ref);
+void process_adc();
+int update_constraints(uint8_t address, uint16_t value) ;
+void print_temps();
+void print_cells();
+void print_current();
+void print_aux();
+void print_cell_temperatures();
+void print_onboard_temperatures();
+void print_uptime();
+void cfg_set_overvoltage_comparison_voltage(uint16_t voltage);
+void cfg_set_undervoltage_comparison_voltage(uint16_t voltage);
+void parse_can_message();
+int16_t get_current();
+void integrate_current();
+void process_coulombs();
+int read_adc(int channel);
+
 void setup() {
     ADC.read_adc(0); // TODO isoSPI doesn't work until some other SPI gets called. This is a placeholder until we fix the problem
     pinMode(BMS_OK, OUTPUT);
@@ -387,7 +422,7 @@ void loop() {
 
         bms_status.write(tx_msg.buf);
         tx_msg.id = ID_BMS_STATUS;
-        tx_msg.len = sizeof(CAN_message_bms_status_t);
+        tx_msg.len = sizeof(BMS_status);
         CAN.write(tx_msg);
 
         tx_msg.timeout = 0;
@@ -400,21 +435,21 @@ void loop() {
 
         bms_voltages.write(tx_msg.buf);
         tx_msg.id = ID_BMS_VOLTAGES;
-        tx_msg.len = sizeof(CAN_message_bms_voltages_t);
+        tx_msg.len = sizeof(BMS_voltages);
         CAN.write(tx_msg);
 
         bms_temperatures.write(tx_msg.buf);
         tx_msg.id = ID_BMS_TEMPERATURES;
-        tx_msg.len = sizeof(CAN_message_bms_temperatures_t);
+        tx_msg.len = sizeof(BMS_temperatures);
         CAN.write(tx_msg);
 
         bms_onboard_temperatures.write(tx_msg.buf);
         tx_msg.id = ID_BMS_ONBOARD_TEMPERATURES;
-        tx_msg.len = sizeof(CAN_message_bms_onboard_temperatures_t);
+        tx_msg.len = sizeof(BMS_onboard_temperatures);
         CAN.write(tx_msg);
 
         tx_msg.id = ID_BMS_DETAILED_VOLTAGES;
-        tx_msg.len = sizeof(CAN_message_bms_detailed_voltages_t);
+        tx_msg.len = sizeof(BMS_detailed_voltages);
         for (int i = 0; i < TOTAL_IC; i++) {
             for (int j = 0; j < 3; j++) {
                 bms_detailed_voltages[i][j].write(tx_msg.buf);
@@ -423,21 +458,21 @@ void loop() {
         }
 
         tx_msg.id = ID_BMS_DETAILED_TEMPERATURES;
-        tx_msg.len = sizeof(CAN_message_bms_detailed_temperatures_t);
+        tx_msg.len = sizeof(BMS_detailed_temperatures);
         for (int i = 0; i < TOTAL_IC; i++) {
             bms_detailed_temperatures[i].write(tx_msg.buf);
             CAN.write(tx_msg);
         }
 
         tx_msg.id = ID_BMS_ONBOARD_DETAILED_TEMPERATURES;
-        tx_msg.len = sizeof(CAN_message_bms_onboard_detailed_temperatures_t);
+        tx_msg.len = sizeof(BMS_onboard_detailed_temperatures);
         for (int i = 0; i < TOTAL_IC; i++) {
             bms_onboard_detailed_temperatures[i].write(tx_msg.buf);
             CAN.write(tx_msg);
         }
         
         tx_msg.id = ID_BMS_BALANCING_STATUS;
-        tx_msg.len = sizeof(CAN_message_bms_balancing_status_t);
+        tx_msg.len = sizeof(BMS_balancing_status);
         for (int i = 0; i < (TOTAL_IC + 3) / 4; i++) {
             bms_balancing_status[i].write(tx_msg.buf);
             CAN.write(tx_msg);

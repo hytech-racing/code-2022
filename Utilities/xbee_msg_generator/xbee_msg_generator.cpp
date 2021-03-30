@@ -48,16 +48,22 @@ int write_xbee_data() {
     memcpy(&xb_buf[XBEE_PKT_LEN - 2], &checksum, sizeof(uint16_t));
 
     uint8_t cobs_buf[2 + XBEE_PKT_LEN];
+
+    for (int i = 0; i < XBEE_PKT_LEN; ++i)
+        printf("%02x ", xb_buf[i]);
+    printf("\n");
+
     cobs_encode(xb_buf, XBEE_PKT_LEN, cobs_buf);
     cobs_buf[XBEE_PKT_LEN+1] = 0x0;
 
     std::ofstream outfile;
     outfile.open("message.txt", std::ios::out);
     for (int i = 0; i < XBEE_PKT_LEN+2; i++) {
-        std::cout << std::hex << std::showbase << std::setfill('0') << std::setw(2) << (int)cobs_buf[i];
-        if (i < XBEE_PKT_LEN + 1) {
-            std::cout << ",";
-        }
+        printf("%#x,", cobs_buf[i]);
+        // std::cout << std::hex << std::showbase << std::setfill('0') << std::setw(2) << (int)cobs_buf[i];
+        // if (i < XBEE_PKT_LEN + 1) {
+        //     std::cout << ",";
+        // }
         outfile << cobs_buf[i];
     }
     std::cout << std::endl;
@@ -69,10 +75,11 @@ int write_xbee_data() {
 
 int main() {
     //MC_command_message command = MC_command_message(250, 0, 0, 1, 0, 0);
-    FCU_status command = FCU_status(3, 0, 1);
+    MCU_status command = MCU_status(5, 0xFF,5,5);
     xb_msg.id = ID_MCU_STATUS;
     //xb_msg.len = sizeof(CAN_message_mc_command_message_t);
-    xb_msg.len = sizeof(CAN_message_fcu_status_t);
+    xb_msg.len = sizeof(MCU_status);
+    command.write(xb_msg.buf);
     write_xbee_data();
     return 0;
 }

@@ -37,6 +37,10 @@ FlexCAN CAN(500000);
 Metro timer_update_CAN = Metro(100);
 Metro timer_update_serial = Metro(500);
 
+void print_cells();
+void print_temps();
+void parse_can_message();
+
 void setup() {
     pinMode(POWER, OUTPUT);
     digitalWrite(POWER, HIGH);
@@ -62,7 +66,7 @@ void loop() {
     if (timer_update_CAN.check()) {
         ccu_status.write(tx_msg.buf);
         tx_msg.id = ID_CCU_STATUS;
-        tx_msg.len = sizeof(CAN_message_ccu_status_t);
+        tx_msg.len = sizeof(CCU_status);
         CAN.write(tx_msg);
     }
     

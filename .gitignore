@@ -153,12 +153,16 @@ dist
 # VSCode
 .vscode/
 .vscode/*
+.vscode/**
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
 *.code-workspace
 .dist/
+
+# VS
+.vs/**
 
 # Local History for Visual Studio Code
 .history/
@@ -234,3 +238,10 @@ $RECYCLE.BIN/
 
 # .nfs files are created when an open file is removed but is still being accessed
 .nfs*
+
+# CMake
+**/build/**
+
+# Parser output files
+Telemetry/autoparse/log
+Telemetry/autoparse/webserver/uploads

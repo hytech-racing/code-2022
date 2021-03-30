@@ -6,6 +6,10 @@
 #include <Wire.h>
 #include <MCP23S17.h>
 
+//These come from Atul's VehicleUtilities folder under the refactored branch.  currently not in master
+#include <DebouncedButton.h>
+#include <VariableLED.h> 
+
 /*
  * Teensy Pin definitions
  */
@@ -53,7 +57,7 @@
 MCU_status mcu_status;
 MCU_pedal_readings mcu_pedal_readings;
 BMS_status bms_status;
-BMS_temperatures bms_temperatures;
+  BMS_temperatures bms_temperatures;
 BMS_voltages bms_voltages;
 MC_motor_position_information mc_motor_position_information;
 MC_current_information mc_current_informtarion;
@@ -159,6 +163,19 @@ ADC_SPI ADC(ADC_CS, ADC_SPI_SPEED);
 MCP23S17 EXPANDER(0, EXPANDER_CS, EXPANDER_SPI_SPEED);
 FlexCAN CAN(500000);
 
+void parse_can_message();
+void reset_inverter();
+void read_pedal_values();
+void read_status_values();
+void set_mode_led(uint8_t type);
+void set_start_led(uint8_t type);
+void set_state(uint8_t new_state);
+int calculate_torque();
+void read_dashboard_buttons();
+void set_dashboard_leds();
+int calculate_torque_with_regen();
+void update_couloumb_count();
+
 void setup() {
     EXPANDER.begin();
 
@@ -226,7 +243,7 @@ void loop() {
         // Send Main Control Unit status message
         mcu_status.write(tx_msg.buf);
         tx_msg.id = ID_MCU_STATUS;
-        tx_msg.len = sizeof(CAN_message_mcu_status_t);
+        tx_msg.len = sizeof(MCU_status);
         CAN.write(tx_msg);
 
         // Update the pedal readings to send over CAN
@@ -237,14 +254,14 @@ void loop() {
         // Send Main Control Unit pedal reading message
         mcu_pedal_readings.write(tx_msg.buf);
         tx_msg.id = ID_MCU_PEDAL_READINGS;
-        tx_msg.len = sizeof(CAN_message_mcu_pedal_readings_t);
+        tx_msg.len = sizeof(MCU_pedal_readings);
         CAN.write(tx_msg);
 
         // Send couloumb counting information
         bms_coulomb_counts.set_total_charge(total_charge_amount);
         bms_coulomb_counts.set_total_discharge(total_discharge_amount);
         tx_msg.id = ID_BMS_COULOMB_COUNTS;
-        tx_msg.len = sizeof(CAN_message_bms_coulomb_counts_t);
+        tx_msg.len = sizeof(BMS_coulomb_counts);
         CAN.write(tx_msg);
     }
 
