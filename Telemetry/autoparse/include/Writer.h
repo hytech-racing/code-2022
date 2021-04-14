@@ -26,7 +26,7 @@ private:
 	void addPrefix(ClassDef* cdef);
 
 	inline void startLine(char* varname, char* getter) {
-		fprintf(source, "\tif (data.%s != prev%s.%s)\n\t", getter, prevAccessor, getter);
+		fprintf(source, "\tif (verbose || data.%s != prev%s.%s)\n\t", getter, prevAccessor, getter);
 		fputs("\tfprintf(outfile, \"%s,%s\" \"", source);
 		int len;
 		fprintf(source, "%s%n\"", varname, &len);

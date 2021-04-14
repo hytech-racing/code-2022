@@ -25,6 +25,8 @@ For all future builds you can just run `make CANParser`
 
 Parse a single file using `./CANParser -i <input filepath> -o <output filepath>`
 
+If `-v` flag is used, difference checking is disabled.
+
 If `--pipelined` flag is used, input filepath defaults to stdin, output filepath defaults to stdout.
 
 If `--pipelined` flag is omitted, output filepath defaults to `{input filepath}_parsed.csv`
