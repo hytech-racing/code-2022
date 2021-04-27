@@ -331,8 +331,8 @@ void process_accelerometer() {
 }
 
 void process_glv_voltage() {
-  double glv_voltage_reading = ADC.read_adc(2);
-  double glv_voltage_value = (((glv_voltage_reading/4096) * 5) * 55/12) + 0.14; //ADC->12V conversion + offset likely due to resistor values
+  float glv_voltage_reading = ADC.read_adc(2);
+  float glv_voltage_value = (((glv_voltage_reading/4096) * 5) * 55/12) + 0.14; //ADC->12V conversion + offset likely due to resistor values
   //Serial.print("GLV: ");
   //Serial.println(glv_voltage_value);
 
