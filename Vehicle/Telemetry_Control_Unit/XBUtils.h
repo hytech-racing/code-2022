@@ -19,7 +19,7 @@ namespace XBUtil {
 	// 		}
 	// 	}
 
-		static CAN_message_t& xb_msg;
+		static CAN_message_t xb_msg;
 
 		static int write_to_xbee(const CAN_message_t& xb_msg) {
 			// [ msg id (4) | msg len (1) | msg contents (8) | checksum (2) ]
@@ -49,7 +49,7 @@ namespace XBUtil {
 		}
 	}
 
-	inline template<typename T> CAN_message_t& write(uint32_t can_id, const T& can_msg) {
+	 template<typename T> CAN_message_t& write(uint32_t can_id, const T& can_msg) {
 		can_msg.write(xb_msg.buf);
 		xb_msg.len = sizeof(T);
 		xb_msg.id = can_id;

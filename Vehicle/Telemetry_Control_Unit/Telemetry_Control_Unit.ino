@@ -94,10 +94,10 @@ void loop() {
 	if (timer.check()) // Occasionally flush SD buffer (max one second data loss after power-off)
 		logfile.flush();
 
-	process_gps();
+	//process_gps();
 }
 
-void process_gps() {}
+/*void process_gps() {
     static Metro timer = Metro(100);
 	static bool stale = false;
 
@@ -111,7 +111,7 @@ void process_gps() {}
         mcu_gps_readings.set_longitude(GPS.longitudeDegrees);
         CAN.write(HT::XBUtil::write(ID_MCU_GPS_READINGS, mcu_gps_readings));
 	}
-}
+}*/
 
 void parse_can_message() {
     CAN_message_t msg_rx;
@@ -157,7 +157,7 @@ void parse_can_message() {
 		loadcase(ID_BMS_DETAILED_VOLTAGES, 				temp.bdv, 	bms_detailed_voltages[temp.bdv.get_ic_id()][temp.bdv.get_group_id()].load(msg_rx.buf));
 		loadcase(ID_BMS_DETAILED_TEMPERATURES, 			temp.bdt, 	bms_detailed_temperatures[temp.bdt.get_ic_id()].load(msg_rx.buf));
 		loadcase(ID_BMS_ONBOARD_DETAILED_TEMPERATURES,	temp.bodt, 	bms_onboard_detailed_temperatures[temp.bodt.get_ic_id()].load(msg_rx.buf));
-		loadcase(ID_BMS_BALANCING_STATUS, 				temp.bbs, 	bms_balancing_status[temp.bdv.get_group_id].load(msg_rx.buf));
+		loadcase(ID_BMS_BALANCING_STATUS, 				temp.bbs, 	bms_balancing_status[temp.bdv.get_group_id()].load(msg_rx.buf));
 		loadcase(ID_MC_MODULATION_INDEX_FLUX_WEAKENING_OUTPUT_INFORMATION, mc_modulation_index_flux_weakening_output_information);
 		// loadcase(ID_MC_ANALOG_INPUTS_VOLTAGES,		mc_analog_input_voltages);
 		// loadcase(ID_MC_DIGITAL_INPUT_STATUS,			mc_digital_input_status);
@@ -237,12 +237,12 @@ void check_xbee_timers() {
 
 		if (memcmp(&prev_ccu_status, &ccu_status, sizeof(CCU_status))) {
 			HT::XBUtil::write(ID_CCU_STATUS,						ccu_status );
-			memcpy(prev_ccu_status, ccu_status);
+			memcpy(&prev_ccu_status, &ccu_status, sizeof(CCU_status));
 		}
 		
-		if (memcmp(&prev_mc_firmware_information, &mc_firmware_information, sizeof(MC_firmware_information)) {
+		if (memcmp(&prev_mc_firmware_information, &mc_firmware_information, sizeof(MC_firmware_information))) {
 			HT::XBUtil::write(ID_MC_FIRMWARE_INFORMATION,			mc_firmware_information );
-			memcpy(prev_mc_firmware_information, mc_firmware_information);
+			memcpy(&prev_mc_firmware_information, &mc_firmware_information, sizeof(MC_firmware_information));
 		}
 	}
 
