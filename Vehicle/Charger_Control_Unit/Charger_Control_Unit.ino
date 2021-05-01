@@ -15,13 +15,12 @@
 #define THERMISTORS_PER_IC 3            // Number of cell thermistors per IC
 #define PCB_THERM_PER_IC 2              // Number of PCB thermistors per IC
 
-#define CHARGE_ENABLE 11
+#define CHARGE_ENABLE 12
 #define SHUTDOWN_B 8
 #define SHUTDOWN_C 9
 #define SHUTDOWN_D 10
-#define SOFTWARE_SHUTDOWN 12
 #define WATCHDOG_OUT 13
-#define WATCHDOG_RESET 14
+#define TEENSY_OK 14
 #define VOLTAGE_READ 16
 #define IMON_B 20
 
@@ -66,14 +65,11 @@ void setup() {
     pinMode(CHARGE_ENABLE, OUTPUT);
     digitalWrite(CHARGE_ENABLE, HIGH);
 
-    pinMode(SOFTWARE_SHUTDOWN, OUTPUT);
-    digitalWrite(SOFTWARE_SHUTDOWN, HIGH);
-
     pinMode(WATCHDOG_OUT, OUTPUT);
-    pinMode(WATCHDOG_RESET, OUTPUT);
-    digitalWrite(WATCHDOG_RESET, HIGH);
+    pinMode(TEENSY_OK, OUTPUT);
+    digitalWrite(TEENSY_OK, HIGH);
 
-    prev_time = millis();
+    //prev_time = millis();
 
     Serial.begin(115200);
     CAN.begin();
@@ -116,6 +112,7 @@ void loop() {
 
     check_shutdown_signals();
     check_over_voltage_current();
+
 }
 
 void print_cells() {
@@ -233,7 +230,7 @@ void parse_can_message() {
         
         if (rx_msg.id == ID_BMS_STATUS) {
             bms_status = BMS_status(rx_msg.buf);
-            ccu_status.set_charger_enabled(bms_status.get_state() == BMS_STATE_CHARGING);
+            ccu_status.set_charger_enabled(bms_status.get_state() == BMS_STATE_CHARGING || bms_status.get_state() == BMS_STATE_BALANCING);
             digitalWrite(CHARGE_ENABLE, ccu_status.get_charger_enabled());
         }
 
@@ -249,10 +246,10 @@ void check_shutdown_signals() {
   int shutdown_c = digitalRead(SHUTDOWN_C);
   int shutdown_d = digitalRead(SHUTDOWN_D);
 
-  if(shutdown_b == 0 || shutdown_c == 0) {
-    digitalWrite(SOFTWARE_SHUTDOWN, LOW);
-    digitalWrite(CHARGE_ENABLE, LOW);
-  }
+//  if(shutdown_b == 0 || shutdown_c == 0) {
+//    digitalWrite(TEENSY_OK, LOW);
+//    digitalWrite(CHARGE_ENABLE, LOW);
+//  }
 }
 
 
@@ -264,11 +261,11 @@ void check_over_voltage_current() {
   int voltage_read = analogRead(VOLTAGE_READ);
 
   //assuming 10 bit resolution, 0 - 1023
-  if(imon_b > 907) {
-    digitalWrite(SOFTWARE_SHUTDOWN, LOW);
-  }
+ // if(imon_b > 907) {
+    //digitalWrite(TEENSY_OK, LOW);
+ // }
 
-  if(voltage_read < 675 || voltage_read > 992) {
-    digitalWrite(SOFTWARE_SHUTDOWN, LOW);
-  }
+  /*if(voltage_read < 675 || voltage_read > 992) {
+    digitalWrite(TEENSY_OK, LOW);
+  }*/
 }
