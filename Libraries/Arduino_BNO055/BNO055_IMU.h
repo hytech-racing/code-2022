@@ -127,7 +127,7 @@
 #define GYR_AM_SET          0x1F
 
 // Macro for unpacking the raw data
-#define UNPACK(x,y)    ((((itn16_t)(y)) << 8) | (x))
+#define UNPACK(x,y)    ((((int16_t)(y)) << 8) | (x))
 
 typedef enum {
     GYRO, GRAVITY, ACCEL, EUL, QUAT
