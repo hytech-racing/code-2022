@@ -245,3 +245,4 @@ $RECYCLE.BIN/
 # Parser output files
 Telemetry/autoparse/log
 Telemetry/autoparse/webserver/uploads
+*.csv

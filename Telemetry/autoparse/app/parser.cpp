@@ -11,13 +11,16 @@ void showMenu(char* exe) {
 	puts("------------------------");
 	printf("Usage: %s [options]\n", exe);
 	puts("Options:");
-	puts("  --help          Shows this message");
-	puts("  --pipelined     Use stdin for input file, stdout for output file");
-	puts("  -i              Input filepath");
-	puts("  -o              Output filepath (defaults to -i + _parsed)\n");
+	puts("  -h, --help          Shows this message");
+	puts("  -p, --pipelined     Use stdin for input file, stdout for output file");
+	puts("  -v, --verbose       Verbose (print all parsed datapoints)");
+	puts("  -i [inpath]         Input filepath");
+	puts("  -o [outpath]        Output filepath (defaults to inpath + _parsed)\n");
 }
 
 FILE* outfile;
+int verbose = 0;
+
 void run(FILE* infile);
 
 int main(int argc, char** argv) {
@@ -28,15 +31,19 @@ int main(int argc, char** argv) {
 	const struct option long_options[] = {
 		{"help",		no_argument,	&help_flag, 1},
 		{"pipelined",	no_argument,	&pipelined, 1},
+		{"verbose",		no_argument,	&verbose, 1},
 		{0, 0, 0, 0}
 	};
 
 	char c;
-	while ((c = getopt_long(argc, argv, "i:o:", long_options, nullptr)) != -1) {
+	while ((c = getopt_long(argc, argv, "i:o:hpv", long_options, nullptr)) != -1) {
 		switch (c) {
 			case 0: break;
 			case 'i': attemptCopy(infilepath, optarg, "Input File (-i)"); break;
 			case 'o': attemptCopy(outfilepath, optarg, "Output File (-o)"); break;
+			case 'h': help_flag = true; break;
+			case 'p': pipelined = true; break;
+			case 'v': verbose = true; break;
 			default: return 0;
 		}
     }
@@ -62,10 +69,18 @@ int main(int argc, char** argv) {
 			strcpy(outfilepath, infilepath);
 			strcpy(outfilepath + strlen(infilepath) - ct_strlen(".csv"), "_parsed.csv");
 		}
-		outfile = fopen(outfilepath, "w");
+		if (!(outfile = fopen(outfilepath, "w"))) {
+			perror("Unable to open output file\n");
+			return 0;
+		}
 	}
 
-	run(strempty(infilepath) ? stdin : fopen(infilepath, "r"));
+	FILE* infile = strempty(infilepath) ? stdin : fopen(infilepath, "r");
+	if (!infile) {
+		perror("Unable to open input file\n");
+		return 0;
+	}
+	run(infile);
 	return 0;
 }
 
@@ -86,7 +101,6 @@ void run (FILE* infile) {
 	while (!feof(infile)) {
 		if (fscanf(infile, "%lu,%x,%u,%lx", &timeRaw, &id, &len, (uint64_t*) data) == EOF)
 			continue;
-
 		// split ms time to seconds for processing
 		ms = timeRaw % 1000;	
 		timeRaw /= 1000;

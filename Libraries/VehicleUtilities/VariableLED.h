@@ -5,14 +5,13 @@ enum class BLINK_MODES { OFF = 0, ON = 1, FAST = 2, SLOW = 3 };
 const int BLINK_RATES[4] = { 0, 0, 150, 400 }; // OFF, ON, FAST, SLOW
 
 typedef struct VariableLED {
-    Metro blinker;
-    int pin;
-    BLINK_MODES mode;
-    bool led_value = false;
 
-    VariableLED(int p, bool metro_should_autoreset = true) : 
+    VariableLED(int p, bool metro_should_autoreset = true, uint8_t brightness = 255) : 
         blinker(0, metro_should_autoreset),
-        pin(p) {};
+        pin(p),
+        BRIGHTNESS(brightness) {};
+
+    BLINK_MODES getMode() { return mode; }
 
     void setMode(BLINK_MODES m) {
         if (mode == m)
@@ -26,10 +25,18 @@ typedef struct VariableLED {
 
     void update() {
         if (mode == BLINK_MODES::OFF)
-            digitalWrite(pin, led_value = LOW);
+            analogWrite(pin, value = LOW);
         else if (mode == BLINK_MODES::ON)
-            digitalWrite(pin, led_value = HIGH);
+            analogWrite(pin, value = BRIGHTNESS);
         else if (blinker.check()) // blinker mode
-            digitalWrite(pin, led_value = !led_value);
+            analogWrite(pin, value ^= BRIGHTNESS);
     }
+
+private:
+    Metro blinker;
+    int pin;
+    BLINK_MODES mode;
+    const uint8_t BRIGHTNESS;
+    uint8_t value = 0;
+
 } VariableLED;
