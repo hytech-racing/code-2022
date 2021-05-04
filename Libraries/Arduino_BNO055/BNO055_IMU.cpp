@@ -50,37 +50,34 @@ void read_data(AxisData *data, DataMode mode)
 
 void update_data(IMUData *my_data)
 {
-    AxisData *data;
-    if (!(data = (AxisData *)malloc(sizeof(AxisData)))) {
-        return;
+    AxisData data;
+
+    read_data(&data, ACCEL);
+    for (size_t i = 0; i < 3; i++) {
+        my_data->accelAxes[i] = (float) data.accelAxes[i] / 100.;
     }
 
-    read_data(data, ACCEL);
+    read_data(&data, GYRO);
     for (size_t i = 0; i < 3; i++) {
-        my_data->accelAxes[i] = (float) data->accelAxes[i] / 100.;
+        my_data->gyroAxes[i] = (float) data.gyroAxes[i] / 16.;
     }
 
-    read_data(data, GYRO);
+    read_data(&data, GRAVITY);
     for (size_t i = 0; i < 3; i++) {
-        my_data->gyroAxes[i] = (float) data->gyroAxes[i] / 16.;
+        my_data->gravAxes[i] = (float) data.gravAxes[i] / 100.;
     }
 
-    read_data(data, GRAVITY);
+    read_data(&data, EUL);
     for (size_t i = 0; i < 3; i++) {
-        my_data->gravAxes[i] = (float) data->gravAxes[i] / 100.;
-    }
-
-    read_data(data, EUL);
-    for (size_t i = 0; i < 3; i++) {
-        my_data->eulerAngles[i] = (float) data->eulerAngles[i] / 16.;
+        my_data->eulerAngles[i] = (float) data.eulerAngles[i] / 16.;
     }
 
     Quaternion q;
-    read_data(data, QUAT);
-    q.x = (float) data->quaternions[0] / 16384.;
-    q.y = (float) data->quaternions[1] / 16384.;
-    q.z = (float) data->quaternions[2] / 16384.;
-    q.w = (float) data->quaternions[3] / 16384.;
+    read_data(&data, QUAT);
+    q.x = (float) data.quaternions[0] / 16384.;
+    q.y = (float) data.quaternions[1] / 16384.;
+    q.z = (float) data.quaternions[2] / 16384.;
+    q.w = (float) data.quaternions[3] / 16384.;
 
     float yaw = atan2(2.0f*(q.y*q.z + q.w*q.x), q.x*q.x + q.y*q.y - q.z*q.z - q.w*q.w);
     float pitch = -asin(2.0f*(q.y*q.w - q.x*q.z));
@@ -93,8 +90,6 @@ void update_data(IMUData *my_data)
     my_data->orientation[0] = yaw;
     my_data->orientation[1] = pitch;
     my_data->orientation[2] = roll;
-
-    free(data);
 }
 
 void imu_init()

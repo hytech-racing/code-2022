@@ -31,27 +31,21 @@ To use the library, simply add the header file as an include. Then, in your `set
 ```ino
 #include <BNO055_IMU.h>
 
-Data *data;
-
 void setup()
 {
   Wire.begin();
 
   imu_init(); // initializes the IMU
-
-  if (!(data = (Data *)malloc(sizeof(Data)))) {
-    return;
-  }
 }
 ```
 
-To read data from the IMU, simply call `update_data(*data)` with a `Data` destination called `data`. An implementation of this would be the following:
+To read data from the IMU, simply call `update_data(*data)` with a `IMUData` destination called `data`. An implementation of this would be the following:
 ```ino
 void loop()
 {
-  if (!data) return;
+  IMUData data;
 
-  update_data(data);
+  update_data(&data);
 
   // you can then use the data
 }
