@@ -16,6 +16,7 @@
 #include <Metro.h>
 #include <XBTools.h>
 #include <Adafruit_GPS.h>
+#include <ADC_SPI.h>
 
 #define XB Serial2
 #define XBEE_PKT_LEN 15
@@ -31,12 +32,14 @@ File logger;
 
 Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
 Adafruit_GPS GPS(&Serial1);
+ADC_SPI ADC(A1, 1800000);
 
 Metro timer_debug_mcu_status = Metro(2000);
 Metro timer_debug_mcu_pedal_readings = Metro(200);
 Metro timer_debug_bms_balancing_status = Metro(3000);
 Metro timer_accelerometer = Metro(100);
 Metro timer_current = Metro(500);
+Metro timer_voltage = Metro(500);
 Metro timer_debug_bms_status = Metro(1000);
 Metro timer_debug_bms_temperatures = Metro(3000);
 Metro timer_debug_bms_detailed_temperatures = Metro(3000);
@@ -185,6 +188,10 @@ void loop() {
         Serial.println(Teensy3Clock.get());
     }
 
+    if (timer_voltage.check()) {
+        process_glv_voltage();
+    }
+
     /* Process accelerometer readings occasionally */
     if (timer_accelerometer.check()) {
         process_accelerometer(); 
@@ -321,6 +328,25 @@ void process_accelerometer() {
     Serial.print(event.acceleration.y); Serial.print(", ");
     Serial.print(event.acceleration.z); Serial.println("\n\n");
     */
+}
+
+void process_glv_voltage() {
+  float glv_voltage_reading = ADC.read_adc(2);
+  float glv_voltage_value = (((glv_voltage_reading/4096) * 5) * 55/12) + 0.14; //ADC->12V conversion + offset likely due to resistor values
+  //Serial.print("GLV: ");
+  //Serial.println(glv_voltage_value);
+
+  mcu_status.set_glv_battery_voltage(glv_voltage_value * 100);
+
+  mcu_status.write(msg_tx.buf);
+  msg_tx.id = ID_MCU_STATUS;
+  msg_tx.len = sizeof(MCU_status);
+  CAN.write(msg_tx);
+
+  mcu_status.write(xb_msg.buf);
+  xb_msg.id = ID_MCU_STATUS;
+  xb_msg.len = sizeof(MCU_status);
+  write_xbee_data();  
 }
 
 void process_current() {
