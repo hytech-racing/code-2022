@@ -151,8 +151,15 @@ dist
 .pnp.*
 
 # VSCode
+.vscode/
+.vscode/*
 .vscode/**
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 *.code-workspace
+.dist/
 
 # VS
 .vs/**
@@ -238,3 +245,4 @@ $RECYCLE.BIN/
 # Parser output files
 Telemetry/autoparse/log
 Telemetry/autoparse/webserver/uploads
+*.csv
