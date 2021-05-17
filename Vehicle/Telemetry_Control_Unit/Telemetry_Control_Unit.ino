@@ -40,6 +40,7 @@ Metro timer_debug_bms_balancing_status = Metro(3000);
 Metro timer_accelerometer = Metro(100);
 Metro timer_current = Metro(500);
 Metro timer_voltage = Metro(500);
+Metro timer_total_discharge = Metro(1000);
 Metro timer_debug_bms_status = Metro(1000);
 Metro timer_debug_bms_temperatures = Metro(3000);
 Metro timer_debug_bms_detailed_temperatures = Metro(3000);
@@ -101,6 +102,8 @@ TCU_wheel_rpm tcu_wheel_rpm_rear;
 TCU_distance_traveled tcu_distance_traveled;
 
 static bool pending_gps_data;
+uint32_t total_discharge;
+unsigned long previous_data_time;
 
 void parse_can_message();
 void write_to_SD(CAN_message_t *msg);
@@ -109,6 +112,10 @@ void setup_accelerometer();
 void process_accelerometer();
 void process_current();
 void process_gps();
+void process_glv_voltage();
+void setup_total_discharge();
+void process_total_discharge();
+void write_total_discharge();
 int write_xbee_data();
 void send_xbee();
 void sd_date_time(uint16_t* date, uint16_t* time);
@@ -142,6 +149,9 @@ void setup() {
     GPS.sendCommand(PMTK_SET_NMEA_UPDATE_10HZ); // set update rate (10Hz)
     GPS.sendCommand(PGCMD_ANTENNA); // report data about antenna
 
+    /* Set up total discharge readings */
+    setup_total_discharge();
+
     /* Set up SD card */
     Serial.println("Initializing SD card...");
     SdFile::dateTimeCallback(sd_date_time); // Set date/time callback function
@@ -168,7 +178,7 @@ void setup() {
         Serial.println("Failed to open SD file");
     }
     logger.println("time,msg.id,msg.len,data"); // Print CSV heading to the logfile
-    logger.flush();
+    logger.flush();    
 }
 
 void loop() {
@@ -190,6 +200,10 @@ void loop() {
 
     if (timer_voltage.check()) {
         process_glv_voltage();
+    }
+
+    if (timer_total_discharge.check()) {
+        write_total_discharge();
     }
 
     /* Process accelerometer readings occasionally */
@@ -254,12 +268,15 @@ void parse_can_message() {
             case ID_MC_TEMPERATURES_2:                  mc_temperatures_2.load(msg_rx.buf);                 break;
             case ID_MC_TEMPERATURES_3:                  mc_temperatures_3.load(msg_rx.buf);                 break;
             case ID_MC_MOTOR_POSITION_INFORMATION:      mc_motor_position_information.load(msg_rx.buf);     break;
-            case ID_MC_CURRENT_INFORMATION:             mc_current_information.load(msg_rx.buf);            break;
+            case ID_MC_CURRENT_INFORMATION:             
+              mc_current_information.load(msg_rx.buf);
+              process_total_discharge();            
+              break;
             case ID_MC_VOLTAGE_INFORMATION:             mc_voltage_information.load(msg_rx.buf);            break;
             case ID_MC_INTERNAL_STATES:                 mc_internal_states.load(msg_rx.buf);                break;
             case ID_MC_FAULT_CODES:                     mc_fault_codes.load(msg_rx.buf);                    break;
             case ID_MC_TORQUE_TIMER_INFORMATION:        mc_torque_timer_information.load(msg_rx.buf);       break;
-            case ID_MC_FLUX_WEAKENING_OUTPUT: 			mc_flux_weakening_output.load(msg_rx.buf);			break;
+            case ID_MC_FLUX_WEAKENING_OUTPUT: 			    mc_flux_weakening_output.load(msg_rx.buf);			break;
             case ID_MC_FIRMWARE_INFORMATION:            mc_firmware_information.load(msg_rx.buf);           break;
             case ID_MC_COMMAND_MESSAGE:                 mc_command_message.load(msg_rx.buf);                break;
             case ID_MC_READ_WRITE_PARAMETER_COMMAND:    mc_read_write_parameter_command.load(msg_rx.buf);   break;
@@ -290,6 +307,28 @@ void write_to_SD(CAN_message_t *msg) { // Note: This function does not flush dat
 
 time_t getTeensy3Time() {
     return Teensy3Clock.get();
+}
+
+void setup_total_discharge() {
+  total_discharge = 0;
+  previous_data_time = millis();
+  bms_coulomb_counts.set_total_discharge(total_discharge);
+}
+
+void process_total_discharge() {
+  double new_current = mc_current_information.get_dc_bus_current() / 10;
+  unsigned long current_time = millis();
+  uint32_t added_Ah = new_current * ((current_time - previous_data_time) / (1000 * 60 * 60 )) * 10000; //scaled by 10000 for telemetry parsing
+  previous_data_time = current_time;
+  total_discharge += added_Ah;
+  bms_coulomb_counts.set_total_discharge(total_discharge);
+}
+
+void write_total_discharge() {
+  bms_coulomb_counts.write(msg_tx.buf);
+  msg_tx.id = ID_BMS_COULOMB_COUNTS;
+  msg_tx.len = sizeof(bms_coulomb_counts);
+  CAN.write(msg_tx);
 }
 
 void setup_accelerometer() {
