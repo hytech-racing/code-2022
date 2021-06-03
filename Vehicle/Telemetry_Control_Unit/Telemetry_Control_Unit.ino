@@ -318,7 +318,7 @@ void setup_total_discharge() {
 void process_total_discharge() {
   double new_current = mc_current_information.get_dc_bus_current() / 10;
   unsigned long current_time = millis();
-  uint32_t added_Ah = new_current * ((current_time - previous_data_time) / (1000 * 60 * 60 )) * 10000; //scaled by 10000 for telemetry parsing
+  uint32_t added_Ah = new_current * ((current_time - previous_data_time) * 10000 / (1000 * 60 * 60 )); //scaled by 10000 for telemetry parsing
   previous_data_time = current_time;
   total_discharge += added_Ah;
   bms_coulomb_counts.set_total_discharge(total_discharge);
