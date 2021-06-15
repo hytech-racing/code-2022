@@ -125,7 +125,7 @@ static void loadLookupTable() {
     definition(2, 2, true, "TORQUE FEEDBACK", "Nm", 0.1),
     definition(0, 4, false, "RMS UPTIME", "s", 0.003)
   });
-  CAN_MSG_DEFINITION[0xAD] = pair<string, vector<definition>> ("ID_MC_MODULATION_INDEX_FLUX_WEAKENING_OUTPUT_INFORMATION", {
+  CAN_MSG_DEFINITION[0xAD] = pair<string, vector<definition>> ("ID_MC_FLUX_WEAKENING_OUTPUT", {
     definition(6, 2, false, "MODULATION INDEX"),
     definition(4, 2, true, "FLUX WEAKENING OUTPUT"),
     definition(2, 2, true, "ID COMMAND"),

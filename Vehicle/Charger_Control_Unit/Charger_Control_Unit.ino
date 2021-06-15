@@ -54,6 +54,10 @@ void parse_can_message();
 void check_shutdown_signals();
 void check_over_voltage_current();
 
+void print_cells();
+void print_temps();
+void parse_can_message();
+
 void setup() {
     pinMode(LED, OUTPUT);
     digitalWrite(LED, HIGH);

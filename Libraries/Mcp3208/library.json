@@ -1,0 +1,37 @@
+{
+  "name": "Mcp3208",
+  "keywords": "converter, signal, adc, analog, input, spi",
+  "description": "Arduino library for the MCP320x 12 bit ADC family. The library supports: MCP3201, MCP3202, MCP3204, MCP3208",
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/labfruits/mcp3208.git"
+  },
+  "authors":
+  {
+    "name": "Patrick Rogalla",
+    "email": "patrick@labfruits.com",
+    "maintainer": true
+  },
+  "dependencies":
+  {
+    "name": "SPI",
+    "frameworks": "arduino"
+  },
+  "version": "1.4.0",
+  "license": "MIT",
+  "examples": "examples/*/*.ino",
+  "frameworks": "arduino",
+  "platforms":
+  [
+    "atmelavr",
+    "atmelsam",
+    "espressif32",
+    "espressif8266",
+    "intel_arc32",
+    "nordicnrf51",
+    "nordicnrf52",
+    "ststm32",
+    "teensy"
+  ]
+}

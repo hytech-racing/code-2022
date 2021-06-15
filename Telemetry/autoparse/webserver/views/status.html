@@ -1,0 +1,50 @@
+<!doctype html>
+
+<html>
+<head>
+	<title>HyTech Telemetry Server Status</title>
+	<style>
+		body { max-width: 50rem; margin: 3rem auto !important; }
+ 		h1, h2, h3 { text-align: center; }
+		form { display: flex; flex-direction: column; }
+ 		div { display: flex; flex-direction: row; margin-top: 1rem; }
+ 		label, input, select { flex: 1; }
+	</style>
+</head>
+<body>
+	<h1>Hytech Telemetry Server Status</h1>
+  	<h2 id="status">(Loading MQTT Receiver Status)</h2>
+  	<h3 id="branch">Current Branch: (loading)</h3>
+  	<form method="POST" id="update_source" enctype="application/x-www-form-urlencoded" action="/refresh" onsubmit="let el = document.getElementById('submit'); el.parentNode.removeChild(el);">
+  		<div>
+			<label>Refresh config from branch:&nbsp</label>
+			<select name="new_branch" id="branches" form="update_source"></select>
+  		</div>
+  		<br/>
+		<input type="submit" value="Refresh Config" id="submit"/>
+	</form>
+	<br/>
+	<h3 id="build-date"></h3>
+	<h3>CANParser has generated parsing config for:</h3>
+	<ul id="parser-ids"></ul>
+  	<script>
+		function refresh() {
+			fetch('/config').then(res => res.json()).then(config => {
+				document.getElementById('status').innerText = config.status;
+				document.getElementById('branch').innerText = "Current Branch: " + config.current;
+				document.getElementById('build-date').innerText = "CANParser last built: " + config.buildDate;
+				document.getElementById('parser-ids').innerHTML = config.parserIDs.sort().map(x => `<li>${x}</li>`).join('');
+
+				// doing this takes a few extra steps to avoid screwing up the form
+				const branches = config.branches.map(x => `<option value=${x} ${x == config.current ? 'selected' : ''}>${x}</option>`).join('');
+				const branchEl = document.getElementById('branches');
+				if (branchEl.innerHTML != branches)
+					document.getElementById('branches').innerHTML = branches;
+			})
+		}
+		refresh();
+		setInterval(refresh, 60000);
+  	</script>
+</body>
+</html>
+

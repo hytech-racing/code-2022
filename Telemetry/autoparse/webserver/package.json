@@ -1,0 +1,15 @@
+{
+  "name": "upload_server",
+  "version": "1.0.0",
+  "description": "uploader for grafana csv files",
+  "main": "csv_server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Atul Merchia",
+  "license": "ISC",
+  "dependencies": {
+    "connect-busboy": "0.0.2",
+    "express": "^4.17.1"
+  }
+}
