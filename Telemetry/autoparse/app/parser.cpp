@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <ctime>
 #include <getopt.h>
+#include <stdio.h>
+#include <iostream>
 
 void showMenu(char* exe) {
 	puts("\nHyTech SD Parsing System");
@@ -102,7 +104,7 @@ void run (FILE* infile) {
 		if (fscanf(infile, "%lu,%x,%u,%lx", &timeRaw, &id, &len, (uint64_t*) data) == EOF)
 			continue;
 		// split ms time to seconds for processing
-		ms = timeRaw % 1000;	
+		ms = timeRaw % 1000;
 		timeRaw /= 1000;
 
 		strftime(timeString, 32, "%Y-%m-%dT%H:%M:%S", gmtime((time_t*) &timeRaw));
@@ -118,5 +120,5 @@ void run (FILE* infile) {
 			fflush(outfile);
 	}
 
-	fcloseall();
+	exit(0);
 }
