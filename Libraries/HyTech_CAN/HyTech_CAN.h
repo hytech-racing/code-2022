@@ -2,12 +2,6 @@
 #define __HYTECH_CAN_H__
 
 // ECU state definitions // TODO make these enums?
-#define MCU_STATE_TRACTIVE_SYSTEM_NOT_ACTIVE 1
-#define MCU_STATE_TRACTIVE_SYSTEM_ACTIVE 2
-#define MCU_STATE_ENABLING_INVERTER 3
-#define MCU_STATE_WAITING_READY_TO_DRIVE_SOUND 4
-#define MCU_STATE_READY_TO_DRIVE 5
-
 #define BMS_STATE_DISCHARGING 1
 #define BMS_STATE_CHARGING 2
 #define BMS_STATE_BALANCING 3
@@ -25,11 +19,12 @@
 #include "BMS_temperatures.h"
 #include "BMS_voltages.h"
 #include "CCU_status.h"
-#include "FCU_accelerometer_values.h"
-#include "GLV_current_readings.h"
+#include "Dashboard_status.h"
 #include "MCU_GPS_readings.h"
 #include "MCU_pedal_readings.h"
 #include "MCU_status.h"
+#include "MCU_wheel_speed.h"
+#include "MCU_analog_readings.h"
 #include "MC_analog_input_voltages.h"
 #include "MC_command_message.h"
 #include "MC_current_information.h"
@@ -46,6 +41,5 @@
 #include "MC_temperatures_3.h"
 #include "MC_torque_timer_information.h"
 #include "MC_voltage_information.h"
-#include "TCU_distance_traveled.h"
-#include "TCU_wheel_rpm.h"
+#include "SAB_readings.h"
 #endif

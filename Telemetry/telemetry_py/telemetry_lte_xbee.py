@@ -92,7 +92,8 @@ class TelemetryClient:
 
         self.screen.addstr(0,5,'HYTECH RACING 2019 VEHICLE SERIAL DEBUGGER')
         self.screen.addstr(3,5,'RMS INVERTER')
-        self.screen.addstr(40,5,'GLV CURRENT READINGS')
+        self.screen.addstr(40,5,'MCU ANALOG READINGS')
+        self.screen.addstr(46,5,'DASHBOARD STATUS FLAGS')
         self.screen.addstr(3,55,'BATTERY MANAGEMENT SYSTEM')
         self.screen.addstr(3,105,'BATTERY MANAGEMENT SYSTEM DETAILED VOLTAGES')
         self.screen.addstr(3,155,'BATTERY MANAGEMENT SYSTEM DETAILED TEMPERATURES')

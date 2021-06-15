@@ -1,17 +1,24 @@
 #pragma once
 #include <Metro.h>
 
-enum class BLINK_MODES { OFF = 0, ON = 1, FAST = 2, SLOW = 3 };
-const int BLINK_RATES[4] = { 0, 0, 150, 400 }; // OFF, ON, FAST, SLOW
+enum class BLINK_MODES { OFF = 0, ON = 1, FAST = 2, SLOW = 3};
+const int BLINK_RATES[4] = { 0, 0, 150, 400}; // OFF, ON, FAST, SLOW, FASTER
 
-typedef struct VariableLED {
+class VariableLED {
+private:
+    Metro blinker;
+    int pin;
+    BLINK_MODES mode;
+    bool led_value = false;
+    bool pwm = false;
+    uint8_t pwm_speed = 0;
 
-    VariableLED(int p, bool metro_should_autoreset = true, uint8_t brightness = 255) : 
+public:
+    VariableLED(int p, bool metro_should_autoreset = true, bool pwm = false, uint8_t pwm_speed = 0) :
         blinker(0, metro_should_autoreset),
         pin(p),
-        BRIGHTNESS(brightness) {};
-
-    BLINK_MODES getMode() { return mode; }
+        pwm(pwm),
+        pwm_speed(pwm_speed) {};
 
     void setMode(BLINK_MODES m) {
         if (mode == m)
@@ -24,19 +31,31 @@ typedef struct VariableLED {
     }
 
     void update() {
-        if (mode == BLINK_MODES::OFF)
-            analogWrite(pin, value = LOW);
-        else if (mode == BLINK_MODES::ON)
-            analogWrite(pin, value = BRIGHTNESS);
-        else if (blinker.check()) // blinker mode
-            analogWrite(pin, value ^= BRIGHTNESS);
+        if (mode == BLINK_MODES::OFF){
+            if (pwm)
+                analogWrite(pin, led_value = LOW);
+            else
+                digitalWrite(pin, led_value = LOW);
+        }
+        else if (mode == BLINK_MODES::ON) {
+            if (pwm){
+                analogWrite(pin, pwm_speed);
+                led_value = HIGH;
+            }
+            else
+                digitalWrite(pin, led_value = HIGH);
+        }
+        else if (blinker.check()) { // blinker mode
+            if (pwm){
+                if (led_value = !led_value)
+                    analogWrite(pin, pwm_speed);
+                else
+                    analogWrite(pin, 0);
+            }
+            else
+                digitalWrite(pin, led_value = !led_value);
+        }
     }
 
-private:
-    Metro blinker;
-    int pin;
-    BLINK_MODES mode;
-    const uint8_t BRIGHTNESS;
-    uint8_t value = 0;
-
-} VariableLED;
+    BLINK_MODES getMode() { return mode; }
+};

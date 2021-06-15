@@ -16,7 +16,7 @@ public:
 	static inline void write(const CAN_message_t& msg)			{ vehicle_inbox.push(msg); }
 	static inline void vehicle_write(const CAN_message_t &msg) 	{ vehicle_outbox.push(msg); }
 	static inline size_t vehicle_avail()						{ return vehicle_inbox.size(); }
-	static void teardown();
+	static inline void teardown()								{ vehicle_inbox = std::queue<CAN_message_t>(); vehicle_outbox = std::queue<CAN_message_t>(); }
 private:
 	static std::queue<CAN_message_t> vehicle_inbox;
 	static std::queue<CAN_message_t> vehicle_outbox;
