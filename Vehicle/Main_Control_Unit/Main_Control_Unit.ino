@@ -147,7 +147,7 @@ void setup() {
     // pinMode(FAN_2, OUTPUT);
 
     pinMode(WATCHDOG_INPUT, OUTPUT);
-    // the initial state of the watchdog is high 
+    // the initial state of the watchdog is high
     // this is reflected in the static watchdog_state
     // starting high
     digitalWrite(WATCHDOG_INPUT, HIGH);
@@ -222,7 +222,7 @@ void loop() {
         mcu_pedal_readings.set_accelerator_pedal_2(filtered_accel2_reading);
         mcu_pedal_readings.set_brake_transducer_1(filtered_brake1_reading);
         mcu_pedal_readings.set_brake_transducer_2(filtered_brake2_reading);
-        
+
         // Send Main Control Unit pedal reading message
         mcu_pedal_readings.write(tx_msg.buf);
         tx_msg.id = ID_MCU_PEDAL_READINGS;
@@ -287,11 +287,11 @@ inline void state_machine() {
                 set_state(MCU_STATE::TRACTIVE_SYSTEM_ACTIVE);
             }
             break;
-        
+
         case MCU_STATE::TRACTIVE_SYSTEM_ACTIVE:
             check_TS_active();
             inverter_heartbeat(0);
-            
+
             // if start button has been pressed and brake pedal is held down, transition to the next state
             if (dashboard_status.get_start_btn() && mcu_status.get_brake_pedal_active()) {
                 #if DEBUG
@@ -347,13 +347,13 @@ inline void state_machine() {
                 // FSAE T.4.2.10
                 if (filtered_accel1_reading < MIN_ACCELERATOR_PEDAL_1 || filtered_accel1_reading > MAX_ACCELERATOR_PEDAL_1) {
                     mcu_status.set_no_accel_implausability(false);
-                    #if DEBUG 
+                    #if DEBUG
                     Serial.println("T.4.2.10 1");
                     #endif
                 }
                 else if (filtered_accel2_reading < MAX_ACCELERATOR_PEDAL_2 ||filtered_accel2_reading > MIN_ACCELERATOR_PEDAL_2) {
                     mcu_status.set_no_accel_implausability(false);
-                    #if DEBUG 
+                    #if DEBUG
                     Serial.println("T.4.2.10 2");
                     #endif
                 }
@@ -449,7 +449,7 @@ inline void state_machine() {
                 // Serial.println(mc_motor_position_information.get_motor_speed());
                 // Serial.println(calculated_torque);
 
-                mc_command_message.set_torque_command(calculated_torque); 
+                mc_command_message.set_torque_command(calculated_torque);
 
                 mc_command_message.write(tx_msg.buf);
                 tx_msg.id = ID_MC_COMMAND_MESSAGE;
@@ -505,7 +505,7 @@ inline void software_shutdown() {
             timer_software_enable_interval.interval(0);
             // if software ok based signals are low 100 ms after software ok has been turned on, fault software ok
             if ((mcu_status.get_shutdown_inputs() & 0xC0) != 0xC0){
-                mcu_status.set_software_is_ok(false); 
+                mcu_status.set_software_is_ok(false);
             }
         }
     }
@@ -516,8 +516,8 @@ inline void software_shutdown() {
             mcu_status.set_software_is_ok(false);
         }
         // assume software is ok because any subsequent check will fail it
-        // because all software ok based checks have been preforned 
-        else { 
+        // because all software ok based checks have been preforned
+        else {
             mcu_status.set_software_is_ok(true);
        // }
     }*/
@@ -593,10 +593,10 @@ void parse_can_message() {
                 if (dashboard_status.get_mode_btn()){
                     switch (mcu_status.get_torque_mode()){
                         case 1:
-                            mcu_status.set_max_torque(TORQUE_2); 
+                            mcu_status.set_max_torque(TORQUE_2);
                             mcu_status.set_torque_mode(2); break;
                         case 2:
-                            mcu_status.set_max_torque(TORQUE_3); 
+                            mcu_status.set_max_torque(TORQUE_3);
                             mcu_status.set_torque_mode(3); break;
                         case 3:
                             mcu_status.set_max_torque(TORQUE_1);
@@ -758,7 +758,7 @@ int calculate_torque() {
         calculated_torque = 0;
     }
 
-    
+
     #if DEBUG
     if (timer_debug_raw_torque.check()) {
         Serial.print("TORQUE REQUEST DELTA PERCENT: "); // Print the % difference between the 2 accelerator sensor requests
