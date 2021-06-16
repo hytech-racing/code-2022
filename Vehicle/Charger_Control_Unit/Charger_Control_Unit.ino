@@ -15,8 +15,17 @@
 #define THERMISTORS_PER_IC 3            // Number of cell thermistors per IC
 #define PCB_THERM_PER_IC 2              // Number of PCB thermistors per IC
 
-#define CHARGE_ENABLE 0
-#define POWER 8
+#define CHARGE_ENABLE 12
+#define SHUTDOWN_B 8
+#define SHUTDOWN_C 9
+#define SHUTDOWN_D 10
+#define WATCHDOG_OUT 13
+#define TEENSY_OK 14
+#define VOLTAGE_READ 16
+#define IMON_B 20
+
+#define LED A8
+
 
 CCU_status ccu_status;
 
@@ -30,20 +39,41 @@ BMS_onboard_detailed_temperatures bms_onboard_detailed_temperatures[TOTAL_IC];
 BMS_onboard_temperatures bms_onboard_temperatures;
 BMS_balancing_status bms_balancing_status[(TOTAL_IC + 3) / 4]; // Round up TOTAL_IC / 4 since data from 4 ICs can fit in a single message
 
+int watchdog_state = 0;
+
 static CAN_message_t rx_msg;
 static CAN_message_t tx_msg;
 FlexCAN CAN(500000);
 
 Metro timer_update_CAN = Metro(100);
-Metro timer_update_serial = Metro(500);
+Metro timer_1s = Metro(1000);
+
+void print_cells();
+void print_temps();
+void parse_can_message();
+void check_shutdown_signals();
+void check_over_voltage_current();
 
 void print_cells();
 void print_temps();
 void parse_can_message();
 
 void setup() {
-    pinMode(POWER, OUTPUT);
-    digitalWrite(POWER, HIGH);
+    pinMode(LED, OUTPUT);
+    digitalWrite(LED, HIGH);
+
+    pinMode(SHUTDOWN_B, INPUT);
+    pinMode(SHUTDOWN_C, INPUT);
+    pinMode(SHUTDOWN_D, INPUT);
+    
+    pinMode(CHARGE_ENABLE, OUTPUT);
+    digitalWrite(CHARGE_ENABLE, HIGH);
+
+    pinMode(WATCHDOG_OUT, OUTPUT);
+    pinMode(TEENSY_OK, OUTPUT);
+    digitalWrite(TEENSY_OK, HIGH);
+
+    //prev_time = millis();
 
     Serial.begin(115200);
     CAN.begin();
@@ -64,20 +94,29 @@ void setup() {
 
 void loop() {
     if (timer_update_CAN.check()) {
-        ccu_status.write(tx_msg.buf);
-        tx_msg.id = ID_CCU_STATUS;
-        tx_msg.len = sizeof(CCU_status);
-        CAN.write(tx_msg);
-    }
-    
-    if (timer_update_serial.check()) {
+          ccu_status.write(tx_msg.buf);
+          tx_msg.id = ID_CCU_STATUS;
+          tx_msg.len = sizeof(CAN_message_ccu_status_t);
+          CAN.write(tx_msg);
+    } 
+
+    if (timer_1s.check()) {
+        //update serial
         print_cells();
         print_temps();
         Serial.print("Charge enable: ");
         Serial.println(ccu_status.get_charger_enabled());
         Serial.print("BMS state: ");
         Serial.println(bms_status.get_state());
+
+        //update watchdog
+        watchdog_state = !watchdog_state;
+        digitalWrite(WATCHDOG_OUT, watchdog_state);
     }
+
+    check_shutdown_signals();
+    check_over_voltage_current();
+
 }
 
 void print_cells() {
@@ -195,7 +234,7 @@ void parse_can_message() {
         
         if (rx_msg.id == ID_BMS_STATUS) {
             bms_status = BMS_status(rx_msg.buf);
-            ccu_status.set_charger_enabled(bms_status.get_state() == BMS_STATE_CHARGING);
+            ccu_status.set_charger_enabled(bms_status.get_state() == BMS_STATE_CHARGING || bms_status.get_state() == BMS_STATE_BALANCING);
             digitalWrite(CHARGE_ENABLE, ccu_status.get_charger_enabled());
         }
 
@@ -204,4 +243,33 @@ void parse_can_message() {
             bms_balancing_status[temp.get_group_id()].load(rx_msg.buf);
         }
     }
+}
+
+void check_shutdown_signals() {
+  int shutdown_b = digitalRead(SHUTDOWN_B);
+  int shutdown_c = digitalRead(SHUTDOWN_C);
+  int shutdown_d = digitalRead(SHUTDOWN_D);
+
+//  if(shutdown_b == 0 || shutdown_c == 0) {
+//    digitalWrite(TEENSY_OK, LOW);
+//    digitalWrite(CHARGE_ENABLE, LOW);
+//  }
+}
+
+
+//CURRENT_MAX 2.925
+//VOLTAGE_MAX 14.66
+//VOLTAGE_MIN 9.99
+void check_over_voltage_current() {
+  int imon_b = analogRead(IMON_B);
+  int voltage_read = analogRead(VOLTAGE_READ);
+
+  //assuming 10 bit resolution, 0 - 1023
+ // if(imon_b > 907) {
+    //digitalWrite(TEENSY_OK, LOW);
+ // }
+
+  /*if(voltage_read < 675 || voltage_read > 992) {
+    digitalWrite(TEENSY_OK, LOW);
+  }*/
 }
