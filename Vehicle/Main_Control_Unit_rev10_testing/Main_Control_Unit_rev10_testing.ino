@@ -11,7 +11,7 @@
 // conditional parameter selection based on simulator
 #ifndef HYTECH_ARDUINO_TEENSY_32
 
-#include "drivers.h"
+#include "../../Vehicle/Main_Control_Unit/drivers.h"
 
 // constants to define for different operation
 
@@ -40,7 +40,7 @@
 
 #define MAP_MODE LINEAR
 
-#include "driver_constants.h"
+#include "../../Vehicle/Main_Control_Unit/driver_constants.h"
 
 #else
 #define TORQUE_1 40
@@ -97,7 +97,7 @@ inline void read_wheel_speed();
 inline void update_distance_traveled();
 #endif
 
-#include "MCU_rev10_dfs.h"
+#include "../../Vehicle/Main_Control_Unit/MCU_rev10_dfs.h"
 
 // Outbound CAN messages
 MCU_pedal_readings mcu_pedal_readings{};

@@ -1,3 +1,11 @@
+/*
+ * Teensy 3.2 Main Control Unit code
+ * Written by Ethan Weinstock with assistance from Shaan Dhawan
+ * 
+ * Rev 10 - 6/16/2021
+ * FSAE Nevada
+ */
+
 #include <stdint.h>
 #define _USE_MATH_DEFINES
 #include <cmath>
