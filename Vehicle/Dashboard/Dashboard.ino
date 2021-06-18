@@ -70,7 +70,7 @@ void setup() {
     delay(7000);
 }
 
-void loop() { 
+void loop() {
     read_can();
     led_update();
     btn_update();
@@ -84,7 +84,7 @@ void loop() {
     else {
         should_send = true;
     }
-    
+
     static uint8_t prev_buttons{}, curr_buttons{}, temp_buttons{};
     prev_buttons = curr_buttons;
     curr_buttons = dashboard_status.get_button_flags();
@@ -97,7 +97,7 @@ void loop() {
     // How does the check for button press work
     // the xor against previous buttons removes the button flags that were sent previously
     // the and enforces that only buttons that are currently pressed are allowed to be sent
-    if(should_send && 
+    if(should_send &&
         (timer_can_update.check() || (temp_buttons) || (prev_start_state != dashboard_status.get_start_btn()))
       ){
         //create message to send
@@ -135,7 +135,7 @@ inline void read_can(){
     //len is message length, buf is the actual data from the CAN message
     static unsigned char len = 0;
     static unsigned char buf[8] = {0};
-    
+
     while(CAN_MSGAVAIL == CAN.checkReceive()){
         CAN.readMsgBuf(&len, buf);
         static unsigned long canID = {};
@@ -174,10 +174,10 @@ inline void mcu_status_received(){
     //     init_ams = false;
     // }
     else if (led_ams.getMode() != BLINK_MODES::OFF && timer_led_ams.check()){
-        led_ams.setMode(BLINK_MODES::OFF);
-        dashboard_status.set_ams_led(static_cast<uint8_t>(BLINK_MODES::OFF));
+        led_ams.setMode(BLINK_MODES::SLOW);
+        dashboard_status.set_ams_led(static_cast<uint8_t>(BLINK_MODES::SLOW));
     }
-    
+
     //IMD LED
     if (!mcu_status.get_imd_ok_high()){
         led_imd.setMode(BLINK_MODES::ON);
@@ -190,8 +190,8 @@ inline void mcu_status_received(){
     //     init_imd = false;
     // }
     else if (led_imd.getMode() != BLINK_MODES::OFF && timer_led_imd.check()){
-        led_imd.setMode(BLINK_MODES::OFF);
-        dashboard_status.set_imd_led(static_cast<uint8_t>(BLINK_MODES::OFF));
+        led_imd.setMode(BLINK_MODES::SLOW);
+        dashboard_status.set_imd_led(static_cast<uint8_t>(BLINK_MODES::SLOW));
     }
 
     //Start LED
@@ -262,7 +262,7 @@ inline void mc_fault_codes_received(){
         led_mc_err.setMode(BLINK_MODES::OFF);
         dashboard_status.set_mc_error_led(static_cast<uint8_t>(BLINK_MODES::OFF));
     }
-    
+
     /*if (is_mc_err){
         led_mc_err.setMode(BLINK_MODES::ON);
         dashboard_status.set_mc_error_led(static_cast<uint8_t>(BLINK_MODES::ON));
