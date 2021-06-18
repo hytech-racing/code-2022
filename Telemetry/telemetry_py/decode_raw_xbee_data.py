@@ -22,32 +22,32 @@ def main():
                 print("CAN ID:        0x" + binascii.hexlify(msg[0]).upper())
                 size = ord(msg[4])
                 print("MSG LEN:       " + str(size))
-                if (id == 0xA0):
+                if (id == 0xA0): #ID_MC_TEMPERATURES_1
                     print("MODULE A TEMP: " + str(b2i16(msg[5:7]) / 10.) + " C")
                     print("MODULE B TEMP: " + str(b2i16(msg[7:9]) / 10.) + " C")
                     print("MODULE C TEMP: " + str(b2i16(msg[9:11]) / 10.) + " C")
                     print("GATE DRIVER BOARD TEMP: " + str(b2i16(msg[11:13]) / 10.) + " C")
-                if (id == 0xA2):
+                if (id == 0xA2): #ID_MC_TEMPERATURES_3
                     print("RTD 4 TEMP: " + str(b2i16(msg[5:7]) / 10.) + " C")
                     print("RTD 5 TEMP: " + str(b2i16(msg[7:9]) / 10.) + " C")
                     print("MOTOR TEMP: " + str(b2i16(msg[9:11]) / 10.) + " C")
                     print("TORQUE SHUDDER: " + str(b2i16(msg[11:13]) / 10.) + " Nm")
-                if (id == 0xA5):
+                if (id == 0xA5): #ID_MC_MOTOR_POSITION_INFORMATION
                     print("MOTOR ANGLE: " + str(b2i16(msg[5:7]) / 10.))
                     print("MOTOR SPEED: " + str(b2i16(msg[7:9])) + " RPM")
                     print("ELEC OUTPUT FREQ: " + str(b2i16(msg[9:11]) / 10.))
                     print("DELTA RESOLVER FILT: " + str(b2i16(msg[11:13])))
-                if (id == 0xA6):
+                if (id == 0xA6): #ID_MC_CURRENT_INFORMATION
                     print("PHASE A CURRENT: " + str(b2i16(msg[5:7]) / 10.) + " A")
                     print("PHASE B CURRENT: " + str(b2i16(msg[7:9]) / 10.) + " A")
                     print("PHASE C CURRENT: " + str(b2i16(msg[9:11]) / 10.) + " A")
                     print("DC BUS CURRENT: " + str(b2i16(msg[11:13]) / 10.) + " A")
-                if (id == 0xA7):
+                if (id == 0xA7): # ID_MC_VOLTAGE_INFORMATION
                     print("DC BUS VOLTAGE: " + str(b2i16(msg[5:7]) / 10.) + " V")
                     print("OUTPUT VOLTAGE: " + str(b2i16(msg[7:9]) / 10.) + " V")
                     print("PHASE AB VOLTAGE: " + str(b2i16(msg[9:11]) / 10.) + " V")
                     print("PHASE BC VOLTAGE: " + str(b2i16(msg[11:13]) / 10.) + " V")
-                if (id == 0xAA):
+                if (id == 0xAA): # ID_MC_INTERNAL_STATES
                     print("VSM STATE: " + str(b2ui16(msg[5:7])))
                     print("INVERTER STATE: " + str(ord(msg[7])))
                     print("INVERTER RUN MODE: " + str(ord(msg[9]) & 0x1))
@@ -56,48 +56,80 @@ def main():
                     print("INVERTER ENABLE: " + str(ord(msg[11]) & 0x1))
                     print("INVERTER LOCKOUT: " + str((ord(msg[11]) & 0x80) >> 7))
                     print("DIRECTION COMMAND: " + str(ord(msg[12])))
-                if (id == 0xAB):
+                if (id == 0xAB): # ID_MC_FAULT_CODES
                     print("POST FAULT LO: 0x" + binascii.hexlify(msg[6]).upper() + binascii.hexlify(msg[5]).upper())
                     print("POST FAULT HI: 0x" + binascii.hexlify(msg[8]).upper() + binascii.hexlify(msg[7]).upper())
                     print("RUN FAULT LO: 0x" + binascii.hexlify(msg[10]).upper() + binascii.hexlify(msg[9]).upper())
                     print("RUN FAULT HI: 0x" + binascii.hexlify(msg[12]).upper() + binascii.hexlify(msg[11]).upper())
-                if (id == 0xAC):
+                if (id == 0xAC): # ID_MC_TORQUE_TIMER_INFORMATION
                     print("COMMANDED TORQUE: " + str(b2i16(msg[5:7]) / 10.) + " Nm")
                     print("TORQUE FEEDBACK: " + str(b2i16(msg[7:9]) / 10.) + " Nm")
                     print("RMS UPTIME: " + str(int(b2ui32(msg[9:13]) * .003)) + " s")
-                if (id == 0xC0):
-                    print("FCU REQUESTED TORQUE: " + str(b2i16(msg[5:7]) / 10.) + " N")
+                # if (id == 0xC0): #ID_MC_COMMAND_MESSAGE
+                    # print("FCU REQUESTED TORQUE: " + str(b2i16(msg[5:7]) / 10.) + " N")
                     #print("FCU REQUESTED INVERTER ENABLE: " + str(ord(msg[10]) & 0x1))
-                if (id == 0xD0):
-                    print("RCU STATE: " + str(ord(msg[5])))
-                    print("RCU FLAGS: 0x" + binascii.hexlify(msg[6]).upper())
-                    print("GLV BATT VOLTAGE: " + str(b2ui16(msg[7:9]) / 100.) + " V")
-                    print("RCU BMS FAULT: " + str(not ord(msg[6]) & 0x1))
-                    print("RCU IMD FAULT: " + str(not (ord(msg[6]) & 0x2) >> 1))
-                if (id == 0xD2):
-                    print("FCU STATE: " + str(ord(msg[5])))
-                    print("FCU FLAGS: 0x" + binascii.hexlify(msg[6]).upper())
-                    print("FCU START BUTTON ID: " + str(ord(msg[7])))
-                    print("FCU BRAKE ACT: " + str((ord(msg[6]) & 0x8) >> 3))
-                    print("FCU IMPLAUS ACCEL: " + str(ord(msg[6]) & 0x1))
-                    print("FCU IMPLAUS BRAKE: " + str((ord(msg[6]) & 0x4) >> 2))
-                if (id == 0xD3):
-                    print("FCU PEDAL ACCEL 1: " + str(b2ui16(msg[5:7])))
-                    print("FCU PEDAL ACCEL 2: " + str(b2ui16(msg[7:9])))
-                    print("FCU PEDAL BRAKE: " + str(b2ui16(msg[9:11])))
-                if (id == 0xD7):
+                # if (id == 0xD0):
+                #     print("RCU STATE: " + str(ord(msg[5])))
+                #     print("RCU FLAGS: 0x" + binascii.hexlify(msg[6]).upper())
+                #     print("GLV BATT VOLTAGE: " + str(b2ui16(msg[7:9]) / 100.) + " V")
+                #     print("RCU BMS FAULT: " + str(not ord(msg[6]) & 0x1))
+                #     print("RCU IMD FAULT: " + str(not (ord(msg[6]) & 0x2) >> 1))
+                # if (id == 0xD2):
+                #     print("FCU STATE: " + str(ord(msg[5])))
+                #     print("FCU FLAGS: 0x" + binascii.hexlify(msg[6]).upper())
+                #     print("FCU START BUTTON ID: " + str(ord(msg[7])))
+                #     print("FCU BRAKE ACT: " + str((ord(msg[6]) & 0x8) >> 3))
+                #     print("FCU IMPLAUS ACCEL: " + str(ord(msg[6]) & 0x1))
+                #     print("FCU IMPLAUS BRAKE: " + str((ord(msg[6]) & 0x4) >> 2))
+                # if (id == 0xD3):
+                #     print("FCU PEDAL ACCEL 1: " + str(b2ui16(msg[5:7])))
+                #     print("FCU PEDAL ACCEL 2: " + str(b2ui16(msg[7:9])))
+                #     print("FCU PEDAL BRAKE: " + str(b2ui16(msg[9:11])))
+                if (id == 0xD7): # ID_BMS_VOLTAGES
                     print("BMS VOLTAGE AVERAGE: " + str(b2ui16(msg[5:7]) / 10e3) + " V")
                     print("BMS VOLTAGE LOW: " + str(b2ui16(msg[7:9]) / 10e3) + " V")
                     print("BMS VOLTAGE HIGH: " + str(b2ui16(msg[9:11]) / 10e3) + " V")
                     print("BMS VOLTAGE TOTAL: " + str(b2ui16(msg[11:13]) / 100.) + " V")
-                if (id == 0xD9):
+                if (id == 0xD9): # ID_BMS_TEMPERATURES
                     print("BMS AVERAGE TEMPERATURE: " + str(b2i16(msg[5:7]) / 100.) + " C")
                     print("BMS LOW TEMPERATURE: " + str(b2i16(msg[7:9]) / 100.) + " C")
                     print("BMS HIGH TEMPERATURE: " + str(b2i16(msg[9:11]) / 100.) + " C")
-                if (id == 0xDB):
+                if (id == 0xDB): # ID_BMS_DETAILED_VOLTAGES
                     print("BMS STATE: " + str(ord(msg[5])))
                     print("BMS ERROR FLAGS: 0x" + binascii.hexlify(msg[7]).upper() + binascii.hexlify(msg[6]).upper())
                     print("BMS CURRENT: " + str(b2i16(msg[8:10]) / 100.) + " A")
+                # if (id == 0xCC) # ID_MCU_ANALOG_READINGS
+                #     print("ECU CURRENT: " + )
+                #     print("COOLING CURRENT: " +)
+                #     print("TEMPERATURE: " + ) 
+                #     print("GLV BATTERY VOLTAGE: ")
+                if (id == 0xC3): # ID_MCU_STATUS
+                    print("IMD OK HIGH: " + str(b2ui8(msg[5])[1]))
+                    print("BMS OK HIGH: " + str(b2ui8(msg[5])[3]))
+                    print("BSPD OK HIGH: " + str(b2ui8(msg[5])[5]))
+                    print("SOFTWARE OK HIGH: " + str(b2ui8(msg[5])[7]))
+                    print("SHUTDOWN D ABOVE THRESHOLD: " + str(b2ui8(msg[5])[6]))
+                    print("SHUTDOWN E ABOVE THRESHOLD: " + str(b2ui8(msg[5])[8]))
+                    print("INVERTER POWERED: " + str(b2ui8(msg[7])[1]))
+                    print("BRAKE PEDAL ACTIVE: " + str(b2ui8(msg[6])[3]))
+                    print("NO ACCEL IMPLAUSIBILITY: " + str(b2ui8(msg[6])[1]))
+                    print("NO BRAKE IMPLAUSIBILITY: " + str(b2ui8(msg[6])[2]))
+                    print("TORQUE MODE: " + str(b2ui8(msg[9])))
+                    print("MAX TORQUE: " + str(b2ui8(msg[8])) + " Nm")
+                # if (id == 0xC4): # ID_MCU_PEDAL_READINGS
+                #     print("ACCELERATOR PEDAL 1: " + )
+                #     print("ACCELERATOR PEDAL 2: " + )
+                #     print("BRAKE TRANSDUCER 1: " + )
+                #     print("BRAKE TRANSDUCER 2: " + )
+                # if (id == 0xEB): # ID_DASHBOARD_STATUS
+                #     print("SSOK ABOVE THRESHOLD: " + )
+                #     print("SHUTDOWN H ABOVE THRESHOLD: " + )
+                # if (id == 0xEA): # ID_MCU_WHEEL_SPEED
+                #     print("RPM BACK LEFT: " + )
+                #     print("RPM BACK RIGHT: " + )
+                #     print("RPM FRONT LEFT: " + )
+                #     print("RPM FRONT RIGHT: " + )
+
             else:
                     countBad += 1
     f.close()
@@ -106,6 +138,9 @@ def main():
 
 def b2i8(data):
     return struct.unpack("<1b", chr(ord(data[0])))[0]
+
+def b2ui8(data):
+    return struct.unpack("<1B", chr(ord(data[0])))[0]
 
 def b2i16(data):
     return struct.unpack("<1h", chr(ord(data[0])) + chr(ord(data[1])))[0]

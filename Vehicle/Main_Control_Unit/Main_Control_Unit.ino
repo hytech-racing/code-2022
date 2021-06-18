@@ -55,7 +55,7 @@ BMS_status bms_status{};
 BMS_temperatures bms_temperatures{};
 BMS_voltages bms_voltages{};
 Dashboard_status dashboard_status{};
-MC_current_information mc_current_informtarion{};
+MC_current_information mc_current_information{};
 MC_internal_states mc_internal_states{};
 MC_motor_position_information mc_motor_position_information{};
 MC_voltage_information mc_voltage_information{};
@@ -71,6 +71,7 @@ Metro timer_imd_print_fault = Metro(500);
 #endif
 Metro timer_inverter_enable = Metro(2000); // Timeout failed inverter enable
 Metro timer_motor_controller_send = Metro(50);
+Metro timer_coloumb_count_send = Metro(1000);
 Metro timer_ready_sound = Metro(2000); // Time to play RTD sound
 Metro timer_can_update = Metro(100);
 Metro timer_sensor_can_update = Metro(5);
@@ -136,6 +137,10 @@ float rpm_back_right{};
 
 static CAN_message_t tx_msg;
 
+// coloumb counts
+uint32_t total_discharge;
+unsigned long previous_data_time;
+
 void setup() {
     // no torque can be provided on startup
     mcu_status.set_max_torque(0);
@@ -198,6 +203,10 @@ void setup() {
     set_state(MCU_STATE::TRACTIVE_SYSTEM_NOT_ACTIVE);
     mcu_status.set_max_torque(TORQUE_1);
     mcu_status.set_torque_mode(1);
+
+    /* Set up total discharge readings */
+    setup_total_discharge();
+
 }
 
 void loop() {
@@ -250,6 +259,13 @@ void loop() {
         CAN.write(tx_msg);
     }
 
+    if (timer_coloumb_count_send.check()){
+        bms_coulomb_counts.write(tx_msg.buf);
+        tx_msg.id = ID_BMS_COULOMB_COUNTS;
+        tx_msg.len = sizeof(bms_coulomb_counts);
+        CAN.write(tx_msg);
+    }
+
     /* Finish restarting the inverter when timer expires */
     if (timer_restart_inverter.check() && inverter_restart) {
         inverter_restart = false;
@@ -276,6 +292,21 @@ void loop() {
     }
     if (bms_print && timer_bms_print.check()) print_bms();
     #endif
+}
+
+inline void setup_total_discharge() {
+    total_discharge = 0;
+    previous_data_time = millis();
+    bms_coulomb_counts.set_total_discharge(total_discharge);
+}
+
+inline void process_total_discharge() {
+    unsigned long current_time = millis();
+    double new_current = mc_current_information.get_dc_bus_current() / 10;
+    uint32_t added_Ah = new_current * ((current_time - previous_data_time) * 10000 / (1000 * 60 * 60 )); //scaled by 10000 for telemetry parsing
+    previous_data_time = current_time;
+    total_discharge += added_Ah;
+    bms_coulomb_counts.set_total_discharge(total_discharge);
 }
 
 inline void state_machine() {
@@ -580,7 +611,10 @@ void parse_can_message() {
         switch (rx_msg.id) {
             case ID_MC_VOLTAGE_INFORMATION:        mc_voltage_information.load(rx_msg.buf);        break;
             case ID_MC_INTERNAL_STATES:            mc_internal_states.load(rx_msg.buf);            break;
-            case ID_MC_CURRENT_INFORMATION:        mc_current_informtarion.load(rx_msg.buf);       break;
+            case ID_MC_CURRENT_INFORMATION:       
+                mc_current_information.load(rx_msg.buf);
+                process_total_discharge();
+                break;
             case ID_MC_MOTOR_POSITION_INFORMATION: mc_motor_position_information.load(rx_msg.buf); break;
             case ID_BMS_TEMPERATURES:              bms_temperatures.load(rx_msg.buf);              break;
             case ID_BMS_VOLTAGES:                  bms_voltages.load(rx_msg.buf);                  break;
@@ -782,14 +816,14 @@ int calculate_torque() {
     return calculated_torque;
 }
 
-inline void update_coulomb_count() {
-    int new_current = mc_current_informtarion.get_dc_bus_current() * 10; // get current in Amps * 100
-    if (new_current > 0) {
-        total_discharge_amount += new_current;
-    } else {
-        total_charge_amount -= new_current;
-    }
-}
+// inline void update_coulomb_count() {
+//     int new_current = mc_current_informtarion.get_dc_bus_current() * 10; // get current in Amps * 100
+//     if (new_current > 0) {
+//         total_discharge_amount += new_current;
+//     } else {
+//         total_charge_amount -= new_current;
+//     }
+// }
 
 /* Read pedal sensor values */
 inline void read_pedal_values() {

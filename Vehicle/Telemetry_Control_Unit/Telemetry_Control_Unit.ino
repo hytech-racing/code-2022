@@ -49,7 +49,8 @@ Adafruit_GPS GPS(&Serial1);
 #endif
 ADC_SPI ADC(A1, 1800000);
 
-Metro timer_debug_mcu_status = Metro(2000);
+Metro timer_mcu_status = Metro(2000);
+Metro timer_debug_dashboard = Metro(2000);
 Metro timer_debug_mcu_pedal_readings = Metro(200);
 Metro timer_debug_mcu_wheel_speed = Metro(200);
 Metro timer_debug_bms_balancing_status = Metro(3000);
@@ -94,6 +95,7 @@ CCU_status ccu_status;
 MC_temperatures_1 mc_temperatures_1;
 MC_temperatures_2 mc_temperatures_2;
 MC_temperatures_3 mc_temperatures_3;
+Dashboard_status dashboard_status;
 //MC_analog_input_voltages mc_analog_input_voltages;
 //MC_digital_input_status mc_digital_input_status;
 MC_motor_position_information mc_motor_position_information;
@@ -239,7 +241,10 @@ void parse_can_message() {
             bms_balancing_status[temp.get_group_id()].load(msg_rx.buf);
         }
         else switch(msg_rx.id) {
-            case ID_MCU_STATUS:                         mcu_status.load(msg_rx.buf);                        break;
+            case ID_MCU_STATUS:                         
+                // Serial.println("mcu_received");
+                mcu_status.load(msg_rx.buf);                        break;
+            case ID_DASHBOARD_STATUS:                   dashboard_status.load(msg_rx.buf);                  break;
             case ID_MCU_PEDAL_READINGS:                 mcu_pedal_readings.load(msg_rx.buf);                break;
             case ID_MCU_ANALOG_READINGS:                mcu_analog_readings.load(msg_rx.buf);               break;
             case ID_BMS_VOLTAGES:                       bms_voltages.load(msg_rx.buf);                      break;
@@ -595,10 +600,11 @@ void send_xbee() {
         XB.print("CMD_MSG COMMANDED TORQUE LIMIT: ");
         XB.println(mc_command_message.get_commanded_torque_limit() / (double) 10, 1);*/
     }
-    if (timer_debug_mcu_status.check()) {
+    if (timer_mcu_status.check()) {
         mcu_status.write(xb_msg.buf);
         xb_msg.len = sizeof(MCU_status);
         xb_msg.id = ID_MCU_STATUS;
+        // Serial.println("xbee mcu send");
         write_xbee_data();
     }
 
@@ -622,6 +628,13 @@ void send_xbee() {
         mcu_wheel_speed.write(xb_msg.buf);
         xb_msg.len = sizeof(MCU_wheel_speed);
         xb_msg.id = ID_MCU_WHEEL_SPEED;
+        write_xbee_data();
+    }
+
+    if (timer_debug_dashboard.check()) {
+        dashboard_status.write(xb_msg.buf);
+        xb_msg.len = sizeof(dashboard_status);
+        xb_msg.id = ID_DASHBOARD_STATUS;
         write_xbee_data();
     }
 }
