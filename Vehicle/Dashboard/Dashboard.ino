@@ -174,8 +174,8 @@ inline void mcu_status_received(){
     //     init_ams = false;
     // }
     else if (led_ams.getMode() != BLINK_MODES::OFF && timer_led_ams.check()){
-        led_ams.setMode(BLINK_MODES::SLOW);
-        dashboard_status.set_ams_led(static_cast<uint8_t>(BLINK_MODES::SLOW));
+        led_ams.setMode(BLINK_MODES::OFF);
+        dashboard_status.set_ams_led(static_cast<uint8_t>(BLINK_MODES::OFF));
     }
     
     //IMD LED
@@ -190,8 +190,8 @@ inline void mcu_status_received(){
     //     init_imd = false;
     // }
     else if (led_imd.getMode() != BLINK_MODES::OFF && timer_led_imd.check()){
-        led_imd.setMode(BLINK_MODES::SLOW);
-        dashboard_status.set_imd_led(static_cast<uint8_t>(BLINK_MODES::SLOW));
+        led_imd.setMode(BLINK_MODES::OFF);
+        dashboard_status.set_imd_led(static_cast<uint8_t>(BLINK_MODES::OFF));
     }
 
     //Start LED
