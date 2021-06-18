@@ -84,8 +84,8 @@ Metro timer_watchdog_timer = Metro(500);
 // until a CAN message comes in which resets the timer and the interval
 Metro timer_bms_heartbeat = Metro(0, 1);
 // add dashboard heartbeat
-Metro timer_dashboard_heartbeat = Metro(0, 1);
-Metro timer_software_enable_interval = Metro(TIMER_SOFTWARE_ENABLE, 1);
+// Metro timer_dashboard_heartbeat = Metro(0, 1);
+// Metro timer_software_enable_interval = Metro(TIMER_SOFTWARE_ENABLE, 1);
 
 #if BMS_DEBUG_ENABLE
 #define TOTAL_IC 8                      // Number of ICs in the system
@@ -540,13 +540,13 @@ inline void software_shutdown() {
         #endif
         mcu_status.set_software_is_ok(false);
     }
-    if (timer_dashboard_heartbeat.check()){
-        timer_dashboard_heartbeat.interval(0);
-        #if DEBUG
-           Serial.println("no dashboard");
-        #endif
-        mcu_status.set_software_is_ok(false);
-    }
+    // if (timer_dashboard_heartbeat.check()){
+    //     timer_dashboard_heartbeat.interval(0);
+    //     #if DEBUG
+    //        Serial.println("no dashboard");
+    //     #endif
+    //     mcu_status.set_software_is_ok(false);
+    // }
     // check if any shutdown circuit inputs are low except software shutdown ones
     /*if ((mcu_status.get_shutdown_inputs() & 0x3F) != 0x3F){
        // Serial.println("not 3F");
@@ -595,8 +595,8 @@ void parse_can_message() {
             case ID_DASHBOARD_STATUS:
                 dashboard_status.load(rx_msg.buf);
 
-                timer_dashboard_heartbeat.reset();
-                timer_dashboard_heartbeat.interval(DASH_HEARTBEAT_TIMEOUT);
+                // timer_dashboard_heartbeat.reset();
+                // timer_dashboard_heartbeat.interval(DASH_HEARTBEAT_TIMEOUT);
                 /* process dashboard buttons */
                 if (dashboard_status.get_mode_btn()){
                     switch (mcu_status.get_torque_mode()){
