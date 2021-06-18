@@ -109,8 +109,8 @@
 #define CELLS_PER_IC 9                  // Number of cells per IC
 #define THERMISTORS_PER_IC 3            // Number of cell thermistors per IC
 #define PCB_THERM_PER_IC 2              // Number of PCB thermistors per IC
-#define IGNORE_FAULT_THRESHOLD 10       // Number of fault-worthy values to read in succession before faulting
-#define CURRENT_FAULT_THRESHOLD 10      // Number of fault-worthy electrical current values to read in succession before faulting
+#define IGNORE_FAULT_THRESHOLD 20       // Number of fault-worthy values to read in succession before faulting
+#define CURRENT_FAULT_THRESHOLD 20      // Number of fault-worthy electrical current values to read in succession before faulting
 #define SHUTDOWN_HIGH_THRESHOLD 1500    // Value returned by ADC above which the shutdown circuit is considered powered (balancing not allowed when AIRs open)
 #define BALANCE_LIMIT_FACTOR 2          // Reciprocal of the cell balancing duty cycle (3 means balancing can happen during 1 out of every 3 loops, etc)
 #define COULOUMB_COUNT_INTERVAL 800000  // Microseconds between current readings
@@ -126,7 +126,7 @@
  * Timers
  */
 Metro timer_watchdog_timer = Metro(500);
-Metro timer_charge_enable_limit = Metro(30000, 1); // Don't allow charger to re-enable more than once every 30 seconds
+Metro timer_charge_enable_limit = Metro(10000, 1); // Don't allow charger to re-enable more than once every 10 seconds
 Metro timer_charge_timeout = Metro(1000);
 
 /*
@@ -142,12 +142,12 @@ uint16_t voltage_cutoff_high = 42000; // 4.2000V
 uint16_t total_voltage_cutoff = 30000; // 300.00V
 uint16_t discharge_current_constant_high = 22000; // 220.00A
 int16_t  charge_current_constant_high = -11000; // 110.00A
-uint16_t charge_temp_cell_critical_high = 4400; // 44.00C
+uint16_t charge_temp_cell_critical_high = 5500; // 55.00C
 uint16_t discharge_temp_cell_critical_high = 6000; // 60.00C
-uint16_t onboard_temp_balance_disable = 6000;  // 60.00C
-uint16_t onboard_temp_balance_reenable = 5000; // 50.00C
-uint16_t onboard_temp_critical_high = 6000; // 60.00C
-uint16_t voltage_difference_threshold = 150; // 0.0150V
+uint16_t onboard_temp_balance_disable = 8000;  // 80.00C
+uint16_t onboard_temp_balance_reenable = 7000; // 70.00C
+uint16_t onboard_temp_critical_high = 8000; // 80.00C
+uint16_t voltage_difference_threshold = 100; // 0.0100V
 
 uint8_t total_count_cells = CELLS_PER_IC * TOTAL_IC; // Number of non-ignored cells (used for calculating averages)
 uint8_t total_count_cell_thermistors = THERMISTORS_PER_IC * TOTAL_IC; // Number of non-ignored cell thermistors (used for calculating averages)
