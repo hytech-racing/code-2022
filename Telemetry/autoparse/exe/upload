@@ -1,0 +1,7 @@
+#!/bin/bash
+
+#usage: upload [database name] [csv input]
+input=$(pwd)/$2
+cd `dirname $0`
+
+../build/CANParser -i $input --pipelined | ../app/database_client.py $1

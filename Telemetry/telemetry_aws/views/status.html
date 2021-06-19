@@ -1,0 +1,34 @@
+<!doctype html>
+
+<html>
+<head>
+	<style>
+		body { max-width: 50rem; margin: 3rem auto; }
+ 		h1, h2, h3 { text-align: center; }
+		form { display: flex; flex-direction: column; }
+ 		div { display: flex; flex-direction: row; margin-top: 1rem; }
+ 		label, input, select { flex: 1; }
+	</style>
+</head>
+<body>
+	<h1>Hytech Telemetry Server Status</h1>
+  	<h2 id="status">(Loading MQTT Receiver Status)</h2>
+  	<h3 id="branch">Current Branch: (loading)</h3>
+  	<form method="POST" id="update_source" enctype="multipart/form-data" action="/refresh" onsubmit="let el = document.getElementById('submit'); el.parentNode.removeChild(el);">
+  		<div>
+    			<label>Refresh config from branch:&nbsp</label>
+    			<select name="new_branch" id="branches" form="update_source"></select>
+  		</div>
+  		<br/>
+    		<input type="submit" value="Refresh Config" id="submit"/>
+  	</form>
+  	<script>
+		fetch('/config').then(res => res.json()).then(config => {
+      			document.getElementById('status').innerText = config.status;
+      			document.getElementById('branch').innerText = "Current Branch: " + config.current_branch;
+      			document.getElementById('branches').innerHTML = config.branches.sort().map(x => `<option value=${x} ${x == config.current_branch ? 'selected' : ''}>${x}</option>`).join('');
+		})
+  	</script>
+</body>
+</html>
+

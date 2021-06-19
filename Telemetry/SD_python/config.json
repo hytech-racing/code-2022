@@ -1,0 +1,975 @@
+{
+  "C3": {
+    "name": "ID_MCU_STATUS",
+    "fields": [{
+        "id": "state",
+        "size": 8,
+        "pos": 0,
+        "desc": "ECU State"
+      },
+      {
+        "id": "flags:bms_ok_high",
+        "size": 1,
+        "pos": 8,
+        "desc": "Wheter the bms_ok signal is high"
+      },
+      {
+        "id": "flags:bms_okhs_high",
+        "size": 1,
+        "pos": 9,
+        "desc": "Wheter the bms_okhs signal is high"
+      },
+      {
+        "id": "flags:inverter_powered",
+        "size": 1,
+        "pos": 10,
+        "desc": "Wheter the power is inverted"
+      },
+      {
+        "id": "flags:shutdown_b_above_threshold",
+        "size": 1,
+        "pos": 11,
+        "desc": "Whether Shutdown Circuit is high past IMD Relay"
+      },
+      {
+        "id": "flags:shutdown_c_above_threshold",
+        "size": 1,
+        "pos": 12,
+        "desc": "Whether Shutdown Circuit is high past BMS Relay"
+      },
+      {
+        "id": "flags:shutdown_d_above_threshold",
+        "size": 1,
+        "pos": 13,
+        "desc": "Whether Shutdown Circuit is high past Software Relay"
+      },
+      {
+        "id": "flags:shutdown_e_above_threshold",
+        "size": 1,
+        "pos": 14,
+        "desc": "Whether Shutdown Circuit is high past Bake Overtravel Switch"
+      },
+      {
+        "id": "flags:shutdown_e_above_threshold",
+        "size": 1,
+        "pos": 15,
+        "desc": "Whether Shutdown Circuit is high past Cockpit BRB"
+      },
+      {
+        "id": "temperature",
+        "size": 16,
+        "pos": 16,
+        "desc": "temperature of the board in C times 100"
+      }
+    ]
+  },
+  "C4": {
+    "FIXME": "TODO",
+    "name": "ID_MCU_PEDAL_READINGS",
+    "fields": [{
+        "id": "accelerator_pedal_raw_1",
+        "size": 16,
+        "pos": 0,
+        "desc": "Accelerator Pedal 1 Raw ADC Reading"
+      },
+      {
+        "id": "accelerator_pedal_raw_2",
+        "size": 16,
+        "pos": 16,
+        "desc": "Accelerator Pedal 2 Raw ADC Reading"
+      },
+      {
+        "id": "brake_pedal_raw",
+        "size": 16,
+        "pos": 32,
+        "desc": "Brake Pedal Raw ADC Reading"
+      },
+      {
+        "id": "pedal_flags:accelerator_implausibility",
+        "size": 1,
+        "pos": 48,
+        "desc": "Whether accelerator implausibility is currently detected"
+      },
+      {
+        "id": "pedal_flags:brake_implausibility",
+        "size": 1,
+        "pos": 49,
+        "desc": "Whether brake implausibility is currently detected"
+      },
+      {
+        "id": "pedal_flags:brake_pedal_active",
+        "size": 1,
+        "pos": 50,
+        "desc": "Whether brake pedal is active"
+      },
+      {
+        "id": "torque_map_mode",
+        "size": 8,
+        "pos": 56,
+        "desc": "Torque map mode in use (pedal mapping, regen, etc)"
+      }
+    ]
+  },
+  "D5": {
+    "name": "ID_BMS_ONBOARD_TEMPERATURES",
+    "fields": [{
+        "id": "average_temperature",
+        "size": 16,
+        "type": "int16",
+        "pos": 0,
+        "desc": "Average BMS Temperature (in ºC) times 100"
+      },
+      {
+        "id": "low_temperature",
+        "size": 16,
+        "type": "int16",
+        "pos": 16,
+        "desc": "Lowest BMS Temperature (in ºC) times 100"
+      },
+      {
+        "id": "high_temperature",
+        "size": 16,
+        "pos": 32,
+        "type": "int16",
+        "desc": "Highest BMS Temperature (in ºC) times 100"
+      }
+    ]
+  },
+  "D6": {
+    "name": "ID_BMS_ONBOARD_DETAILED_TEMPERATURES",
+    "fields": [{
+        "id": "ic_id",
+        "size": 8,
+        "type": "uint8",
+        "pos": 0,
+        "desc": "ID of the BMS IC"
+      },
+      {
+        "id": "temperature_0",
+        "size": 16,
+        "type": "int16",
+        "pos": 8,
+        "desc": "PCB Thermistor 0 Temperature (in ºC) times 100"
+      },
+      {
+        "id": "temperature_1",
+        "size": 16,
+        "pos": 24,
+        "type": "int16",
+        "desc": "PCB Thermistor 1 Temperature (in ºC) times 100"
+      }
+    ]
+  },
+  "D7": {
+    "name": "ID_BMS_VOLTAGES",
+    "fields": [{
+        "id": "average_voltage",
+        "size": 16,
+        "type": "uint16",
+        "pos": 0,
+        "desc": "Average Cell Voltage (in V) times 1000"
+      },
+      {
+        "id": "low_voltage",
+        "size": 16,
+        "type": "uint16",
+        "pos": 16,
+        "desc": "Low Cell Voltage (in V) times 1000"
+      },
+      {
+        "id": "high_voltage",
+        "size": 16,
+        "pos": 32,
+        "type": "uint16",
+        "desc": "High Cell Voltage (in V) times 1000"
+      },
+      {
+        "id": "total_voltage",
+        "size": 16,
+        "pos": 48,
+        "type": "uint16",
+        "desc": "Total Accumulator Voltage (in V) times 1000"
+      }
+    ]
+  },
+  "D8": {
+    "name": "ID_BMS_VOLTAGES",
+    "fields": [{
+        "id": "ic_id_group_id",
+        "size": 8,
+        "type": "uint8",
+        "pos": 0,
+        "desc": "ic_id_group_id"
+      },
+      {
+        "id": "voltage_0",
+        "size": 16,
+        "type": "uint16",
+        "pos": 8,
+        "desc": "voltage_0"
+      },
+      {
+        "id": "voltage_1",
+        "size": 16,
+        "pos": 24,
+        "type": "uint16",
+        "desc": "voltage_1"
+      },
+      {
+        "id": "voltage_2",
+        "size": 16,
+        "pos": 40,
+        "type": "uint16",
+        "desc": "voltage_2"
+      }
+    ]
+  },
+  "D9": {
+    "name": "ID_BMS_TEMPERATURES",
+    "fields": [{
+        "id": "average_temperature",
+        "size": 16,
+        "type": "int16",
+        "pos": 0,
+        "desc": "Average BMS Temperature (in ºC) times 100"
+      },
+      {
+        "id": "low_temperature",
+        "size": 16,
+        "type": "int16",
+        "pos": 16,
+        "desc": "Lowest BMS Temperature (in ºC) times 100"
+      },
+      {
+        "id": "high_temperature",
+        "size": 16,
+        "pos": 32,
+        "type": "int16",
+        "desc": "Highest BMS Temperature (in ºC) times 100"
+      }
+    ]
+  },
+  "DA": {
+    "name": "ID_BMS_TEMPERATURES",
+    "fields": [{
+        "id": "ic_id",
+        "size": 8,
+        "type": "uint8",
+        "pos": 0,
+        "desc": "ID of the BMS IC"
+      },
+      {
+        "id": "temperature_0",
+        "size": 16,
+        "type": "int16",
+        "pos": 8,
+        "desc": "PCB Thermistor 0 Temperature (in ºC) times 100"
+      },
+      {
+        "id": "temperature_1",
+        "size": 16,
+        "pos": 24,
+        "type": "int16",
+        "desc": "PCB Thermistor 1 Temperature (in ºC) times 100"
+      },
+      {
+        "id": "temperature_2",
+        "size": 16,
+        "pos": 40,
+        "type": "int16",
+        "desc": "PCB Thermistor 1 Temperature (in ºC) times 100"
+      }
+    ]
+  },
+  "DB": {
+    "name": "ID_BMS_STATUS",
+    "fields": [{
+        "id": "state",
+        "size": 8,
+        "type": "uint8",
+        "pos": 0,
+        "desc": "state"
+      },
+      {
+        "id": "error_flags",
+        "size": 16,
+        "type": "uint16",
+        "pos": 8,
+        "desc": "error_flags"
+      },
+      {
+        "id": "current",
+        "size": 16,
+        "pos": 24,
+        "type": "int16",
+        "desc": "current"
+      },
+      {
+        "id": "flags",
+        "size": 8,
+        "pos": 32,
+        "type": "uint8",
+        "desc": "flags"
+      }
+    ]
+  },
+  "DE": {
+    "name": "ID_BMS_BALANCING_STATUS",
+    "fields": [{
+        "id": "balancing_status_1",
+        "size": 8,
+        "type": "uint8",
+        "pos": 0,
+        "desc": "balancing_status_1"
+      },
+      {
+        "id": "balancing_status_2",
+        "size": 8,
+        "type": "uint8",
+        "pos": 8,
+        "desc": "balancing_status_2"
+      },
+      {
+        "id": "balancing_status_3",
+        "size": 8,
+        "type": "uint8",
+        "pos": 16,
+        "desc": "balancing_status_3"
+      },
+      {
+        "id": "balancing_status_4",
+        "size": 8,
+        "type": "uint8",
+        "pos": 24,
+        "desc": "balancing_status_4"
+      },
+      {
+        "id": "balancing_status_5",
+        "size": 8,
+        "type": "uint8",
+        "pos": 32,
+        "desc": "balancing_status_5"
+      }
+    ]
+  },
+  "E2": {
+    "name": "ID_BMS_COULOMB_COUNTS",
+    "fields": [{
+        "id": "total_charge",
+        "size": 32,
+        "type": "uint32",
+        "pos": 0,
+        "desc": "total_charge"
+      },
+      {
+        "id": "total_discharge",
+        "size": 32,
+        "type": "uint8",
+        "pos": 32,
+        "desc": "total_discharge"
+      }
+    ]
+  },
+  "DD": {
+    "name": "ID_CCU_STATUS",
+    "fields": [{
+      "id": "charger_enabled",
+      "size": 8,
+      "type": "boolean",
+      "pos": 0,
+      "desc": "charger_enabled"
+    }]
+  },
+  "A0": {
+    "name": "ID_MC_TEMPERATURES_1",
+    "fields": [{
+        "id": "module_a_temperature",
+        "size": 16,
+        "type": "int16",
+        "pos": 0,
+        "desc": "module_a_temperature"
+      },
+      {
+        "id": "module_b_temperature",
+        "size": 16,
+        "type": "int16",
+        "pos": 16,
+        "desc": "module_b_temperature"
+      },
+      {
+        "id": "module_c_temperature",
+        "size": 16,
+        "type": "int16",
+        "pos": 32,
+        "desc": "module_c_temperature"
+      },
+      {
+        "id": "gate_driver_board_temperature",
+        "size": 16,
+        "type": "int16",
+        "pos": 48,
+        "desc": "gate_driver_board_temperature"
+      }
+    ]
+  },
+  "A1": {
+    "name": "ID_MC_TEMPERATURES_2",
+    "fields": [{
+        "id": "control_board_temperature",
+        "size": 16,
+        "type": "int16",
+        "pos": 0,
+        "desc": "control_board_temperature"
+      },
+      {
+        "id": "rtd_1_temperature",
+        "size": 16,
+        "type": "int16",
+        "pos": 16,
+        "desc": "rtd_1_temperature"
+      },
+      {
+        "id": "rtd_2_temperature",
+        "size": 16,
+        "type": "int16",
+        "pos": 32,
+        "desc": "rtd_2_temperature"
+      },
+      {
+        "id": "rtd_3_temperature",
+        "size": 16,
+        "type": "int16",
+        "pos": 48,
+        "desc": "rtd_3_temperature"
+      }
+    ]
+  },
+  "A2": {
+    "name": "ID_MC_TEMPERATURES_3",
+    "fields": [{
+        "id": "rtd_4_temperature",
+        "size": 16,
+        "type": "int16",
+        "pos": 0,
+        "desc": "rtd_4_temperature"
+      },
+      {
+        "id": "rtd_5_temperature",
+        "size": 16,
+        "type": "int16",
+        "pos": 16,
+        "desc": "rtd_5_temperature"
+      },
+      {
+        "id": "motor_temperature",
+        "size": 16,
+        "type": "int16",
+        "pos": 32,
+        "desc": "motor_temperature"
+      },
+      {
+        "id": "torque_shudder",
+        "size": 16,
+        "type": "int16",
+        "pos": 48,
+        "desc": "torque_shudder"
+      }
+    ]
+  },
+  "A3": {
+    "name": "ID_MC_ANALOG_INPUTS_VOLTAGES",
+    "fields": [{
+        "id": "analog_input_1",
+        "size": 16,
+        "type": "int16",
+        "pos": 0,
+        "desc": "analog_input_1"
+      },
+      {
+        "id": "analog_input_2",
+        "size": 16,
+        "type": "int16",
+        "pos": 16,
+        "desc": "analog_input_2"
+      },
+      {
+        "id": "analog_input_3",
+        "size": 16,
+        "type": "int16",
+        "pos": 32,
+        "desc": "analog_input_3"
+      },
+      {
+        "id": "analog_input_4",
+        "size": 16,
+        "type": "int16",
+        "pos": 48,
+        "desc": "analog_input_4"
+      }
+    ]
+  },
+  "A4": {
+    "name": "ID_MC_DIGITAL_INPUT_STATUS",
+    "fields": [{
+        "id": "digital_input_1",
+        "size": 8,
+        "type": "boolean",
+        "pos": 0,
+        "desc": "digital_input_1"
+      }, {
+        "id": "digital_input_2",
+        "size": 8,
+        "type": "boolean",
+        "pos": 8,
+        "desc": "digital_input_2"
+      },
+      {
+        "id": "digital_input_3",
+        "size": 8,
+        "type": "boolean",
+        "pos": 16,
+        "desc": "digital_input_3"
+      },
+      {
+        "id": "digital_input_4",
+        "size": 8,
+        "type": "boolean",
+        "pos": 24,
+        "desc": "digital_input_4"
+      },
+      {
+        "id": "digital_input_5",
+        "size": 8,
+        "type": "boolean",
+        "pos": 32,
+        "desc": "digital_input_5"
+      }, {
+        "id": "digital_input_6",
+        "size": 8,
+        "type": "boolean",
+        "pos": 40,
+        "desc": "digital_input_6"
+      },
+      {
+        "id": "digital_input_7",
+        "size": 8,
+        "type": "boolean",
+        "pos": 48,
+        "desc": "digital_input_7"
+      },
+      {
+        "id": "digital_input_8",
+        "size": 8,
+        "type": "boolean",
+        "pos": 56,
+        "desc": "digital_input_8"
+      }
+    ]
+  },
+  "A5": {
+    "name": "ID_MC_MOTOR_POSITION_INFORMATION",
+    "fields": [{
+        "id": "motor_angle",
+        "size": 16,
+        "type": "int16",
+        "pos": 0,
+        "desc": "motor_angle"
+      },
+      {
+        "id": "motor_speed",
+        "size": 16,
+        "type": "int16",
+        "pos": 16,
+        "desc": "motor_speed"
+      },
+      {
+        "id": "electrical_output_frequency",
+        "size": 16,
+        "type": "int16",
+        "pos": 32,
+        "desc": "electrical_output_frequency"
+      },
+      {
+        "id": "delta_resolver_filtered",
+        "size": 16,
+        "type": "int16",
+        "pos": 48,
+        "desc": "delta_resolver_filtered"
+      }
+    ]
+  },
+  "A6": {
+    "name": "ID_MC_CURRENT_INFORMATION",
+    "fields": [{
+        "id": "phase_a_current",
+        "size": 16,
+        "type": "int16",
+        "pos": 0,
+        "desc": "phase_a_current"
+      },
+      {
+        "id": "phase_b_current",
+        "size": 16,
+        "type": "int16",
+        "pos": 16,
+        "desc": "phase_b_current"
+      },
+      {
+        "id": "phase_c_current",
+        "size": 16,
+        "type": "int16",
+        "pos": 32,
+        "desc": "phase_c_current"
+      },
+      {
+        "id": "dc_bus_current",
+        "size": 16,
+        "type": "int16",
+        "pos": 48,
+        "desc": "dc_bus_current"
+      }
+    ]
+  },
+  "A7": {
+    "name": "ID_MC_VOLTAGE_INFORMATION",
+    "fields": [{
+        "id": "dc_bus_voltage",
+        "size": 16,
+        "type": "int16",
+        "pos": 0,
+        "desc": "dc_bus_voltage"
+      },
+      {
+        "id": "output_voltage",
+        "size": 16,
+        "type": "int16",
+        "pos": 16,
+        "desc": "output_voltage"
+      },
+      {
+        "id": "phase_ab_voltage",
+        "size": 16,
+        "type": "int16",
+        "pos": 32,
+        "desc": "phase_ab_voltage"
+      },
+      {
+        "id": "phase_bc_voltage",
+        "size": 16,
+        "type": "int16",
+        "pos": 48,
+        "desc": "phase_bc_voltage"
+      }
+    ]
+  },
+  "AA": {
+    "name": "ID_MC_INTERNAL_STATES",
+    "fields": [{
+        "id": "vsm_state",
+        "size": 16,
+        "type": "uint16",
+        "pos": 0,
+        "desc": "dc_bus_voltage"
+      },
+      {
+        "id": "inverter_state",
+        "size": 8,
+        "type": "uint8",
+        "pos": 16,
+        "desc": "output_voltage"
+      },
+      {
+        "id": "relay_state",
+        "size": 8,
+        "type": "uint8",
+        "pos": 24,
+        "desc": "relay_state"
+      },
+      {
+        "id": "inverter_run_mode_discharge_state",
+        "size": 8,
+        "type": "uint8",
+        "pos": 32,
+        "desc": "inverter_run_mode_discharge_state"
+      },
+      {
+        "id": "inverter_command_mode",
+        "size": 8,
+        "type": "uint8",
+        "pos": 40,
+        "desc": "inverter_command_mode"
+      },
+      {
+        "id": "inverter_enable",
+        "size": 8,
+        "type": "uint8",
+        "pos": 48,
+        "desc": "inverter_enable"
+      },
+      {
+        "id": "direction_command",
+        "size": 8,
+        "type": "uint8",
+        "pos": 56,
+        "desc": "direction_command"
+      }
+    ]
+  },
+  "AB": {
+    "name": "ID_MC_FAULT_CODES",
+    "fields": [{
+        "id": "post_fault_lo",
+        "size": 16,
+        "type": "uint16",
+        "pos": 0,
+        "desc": "post_fault_lo"
+      },
+      {
+        "id": "post_fault_hi",
+        "size": 16,
+        "type": "uint16",
+        "pos": 16,
+        "desc": "post_fault_hi"
+      },
+      {
+        "id": "run_fault_lo",
+        "size": 16,
+        "type": "uint16",
+        "pos": 32,
+        "desc": "run_fault_lo"
+      },
+      {
+        "id": "run_fault_hi",
+        "size": 16,
+        "type": "uint16",
+        "pos": 48,
+        "desc": "run_fault_hi"
+      }
+    ]
+  },
+  "AC": {
+    "name": "ID_MC_TORQUE_TIMER_INFORMATION",
+    "fields": [{
+        "id": "commanded_torque",
+        "size": 16,
+        "type": "int16",
+        "pos": 0,
+        "desc": "commanded_torque"
+      },
+      {
+        "id": "torque_feedback",
+        "size": 16,
+        "type": "int16",
+        "pos": 16,
+        "desc": "torque_feedback"
+      },
+      {
+        "id": "power_on_timer",
+        "size": 32,
+        "type": "uint32",
+        "pos": 32,
+        "desc": "run_fault_lo"
+      }
+    ]
+  },
+  "AD": {
+    "name": "ID_MC_FLUX_WEAKENING_OUTPUT",
+    "fields": [{
+        "id": "modulation_index",
+        "size": 16,
+        "type": "uint16",
+        "pos": 0,
+        "desc": "modulation_index"
+      },
+      {
+        "id": "flux_weakening_output",
+        "size": 16,
+        "type": "int16",
+        "pos": 16,
+        "desc": "flux_weakening_output"
+      },
+      {
+        "id": "id_command",
+        "size": 16,
+        "type": "int16",
+        "pos": 32,
+        "desc": "id_command"
+      },
+      {
+        "id": "iq_command",
+        "size": 16,
+        "type": "int16",
+        "pos": 48,
+        "desc": "iq_command"
+      }
+    ]
+  },
+  "AE": {
+    "name": "ID_MC_FIRMWARE_INFORMATION",
+    "fields": [{
+        "id": "eeprom_version_project_code",
+        "size": 16,
+        "type": "uint16",
+        "pos": 0,
+        "desc": "eeprom_version_project_code"
+      },
+      {
+        "id": "software_version",
+        "size": 16,
+        "type": "uint16",
+        "pos": 16,
+        "desc": "software_version"
+      },
+      {
+        "id": "date_code_mmdd",
+        "size": 16,
+        "type": "uint16",
+        "pos": 32,
+        "desc": "date_code_mmdd"
+      },
+      {
+        "id": "date_code_yyyy",
+        "size": 16,
+        "type": "uint16",
+        "pos": 48,
+        "desc": "date_code_yyyy"
+      }
+    ]
+  },
+  "DF": {
+    "name": "ID_FCU_ACCELEROMETER",
+    "FIXME": "TODO",
+    "fields": [{
+      "id": "ACCELEROMETER",
+      "size": 32,
+      "type": "int32",
+      "pos": 0,
+      "desc": "ACCELEROMETER"
+    }]
+  },
+  "A8": {
+    "name": "ID_MC_FLUX_INFORMATION",
+    "FIXME": "TODO",
+    "fields": [{
+      "id": "ID_MC_FLUX_INFORMATION",
+      "size": 32,
+      "type": "int32",
+      "pos": 0,
+      "desc": "ID_MC_FLUX_INFORMATION"
+    }]
+  },
+  "A9": {
+    "name": "ID_MC_INTERNAL_VOLTAGES",
+    "FIXME": "TODO",
+    "fields": [{
+      "id": "ID_MC_INTERNAL_VOLTAGES",
+      "size": 32,
+      "type": "int32",
+      "pos": 0,
+      "desc": "ID_MC_INTERNAL_VOLTAGES"
+    }]
+  },
+  "C0": {
+    "name": "ID_MC_COMMAND_MESSAGE",
+    "fields": [{
+        "id": "torque_command",
+        "size": 16,
+        "type": "int16",
+        "pos": 0,
+        "desc": "torque_command"
+      },
+      {
+        "id": "angular_velocity",
+        "size": 16,
+        "type": "int16",
+        "pos": 16,
+        "desc": "angular_velocity"
+      },
+      {
+        "id": "direction",
+        "size": 8,
+        "type": "uint8",
+        "pos": 32,
+        "desc": "direction"
+      },
+      {
+        "id": "inverter_enable_discharge_enable",
+        "size": 8,
+        "type": "uint8",
+        "pos": 40,
+        "desc": "inverter_enable_discharge_enable"
+      },
+      {
+        "id": "commanded_torque_limit",
+        "size": 16,
+        "type": "int16",
+        "pos": 48,
+        "desc": "commanded_torque_limit"
+      }
+    ]
+  },
+  "C1": {
+    "name": "ID_MC_READ_WRITE_PARAMETER_COMMAND",
+    "fields": [{
+        "id": "parameter_address",
+        "size": 16,
+        "type": "uint16",
+        "pos": 0,
+        "desc": "parameter_address"
+      },
+      {
+        "id": "rw_command",
+        "size": 8,
+        "type": "boolean",
+        "pos": 16,
+        "desc": "rw_command"
+      },
+      {
+        "id": "reserved",
+        "size": 8,
+        "type": "uint8",
+        "pos": 24,
+        "desc": "reserved"
+      },
+      {
+        "id": "data",
+        "size": 32,
+        "type": "uint32",
+        "pos": 32,
+        "desc": "data"
+      }
+    ]
+  },
+  "C2": {
+    "name": "ID_MC_READ_WRITE_PARAMETER_RESPONSE",
+    "fields": [{
+        "id": "parameter_address",
+        "size": 16,
+        "type": "uint16",
+        "pos": 0,
+        "desc": "parameter_address"
+      },
+      {
+        "id": "write_success",
+        "size": 8,
+        "type": "boolean",
+        "pos": 16,
+        "desc": "write_success"
+      },
+      {
+        "id": "reserved",
+        "size": 8,
+        "type": "uint8",
+        "pos": 24,
+        "desc": "reserved"
+      },
+      {
+        "id": "data",
+        "size": 32,
+        "type": "uint32",
+        "pos": 32,
+        "desc": "data"
+      }
+    ]
+  }
+}
