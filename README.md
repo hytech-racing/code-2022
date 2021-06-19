@@ -1,6 +1,6 @@
 ![HyTech Logo](https://hytechracing.gatech.edu/images/hytech_logo_small.png)
 
-# 2020 Code
+# 2022 Code
 
 Repository for all of the code for the 2019-2020 car.
 
