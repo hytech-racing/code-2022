@@ -195,6 +195,10 @@ def decode(msg):
                 bal = "BAL_IC" + str(ic + 4 if group == 1 else ic) + "_CELL" + str(cell)
                 state = ("ON" if (((data >> (0x4 + 0x9 * ic)) & 0x1FF) >> cell) & 0x1 == 1 else "OFF")
                 ret.append([bal, state])
+    elif (id == 0x100):
+        ret.append(["Energy meter message 1"])
+    elif (id == 0x400):
+        ret.append(["Energy meter message 2"])
     # elif (id == 0xE7): # ID_MCU_GPS_READINGS
     #     ret.append(["LATITUDE",                         b2i32(msg[5:9]) / 10000.               ])
     #     ret.append(["LONGITUDE",                        b2i32(msg[9:13]) / 10000.              ])
