@@ -134,6 +134,7 @@ def decode(msg):
     elif (id == 0xEB): # ID_DSAHBOARD_STATUS
         ret.append(["SSOK_ABOVE_THRESHOLD",             ((msg[5] & 0x4) >> 2)                   ])
         ret.append(['SHUTDOWN_H_ABOVE_THRESHOLD',       ((msg[5] & 0x8) >> 3)                   ])
+        ret.append(["TORQUE_MODE",                      ((msg[7] & 0x30) >> 4)                  ])
     elif (id == 0xD9): # ID_BMS_TEMPERATURES
         ret.append(["BMS_AVERAGE_TEMPERATURE",          (b2i16(msg[5:7]) / 100.),       "C"     ])
         ret.append(["BMS_LOW_TEMPERATURE",              (b2i16(msg[7:9]) / 100.),       "C"     ])
@@ -161,7 +162,6 @@ def decode(msg):
         ret.append(["BRAKE_PEDAL_ACTIVE",               ((msg[6] & 0x04) >> 2)                  ])
         ret.append(["NO_ACCEL_IMPLAUSIBILITY",          ((msg[6] & 0x01))                                            ])
         ret.append(["NO_BRAKE_IMPLAUSIBILITY",          ((msg[6] & 0x02) >> 1)                                            ])
-        ret.append(["TORQUE_MODE",                      b2ui8(msg[9])                                ])
         ret.append(["MAX_TORQUE",                       b2ui8(msg[8])                                 ])
         ret.append(["TCU_DISTANCE_TRAVELED",            b2ui16(msg[10:12]) / 100.,         "m"    ])
     elif (id == 0xC0): # ID_MC_COMMAND_MESSAGE
