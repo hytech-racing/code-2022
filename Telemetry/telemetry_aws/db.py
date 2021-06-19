@@ -62,12 +62,12 @@ class DB:
                 threading.Thread(target=self.buffered_write).start()
             except Exception as e:
                 print(e)
-        
+
     def buffered_write(self):
         json = self.json_body
         self.json_body = []
         self.writing = True
-        
+
         try:
             self.influx_client.write_points(points=json, time_precision=self.time_precision)
             self.writing = False
@@ -134,7 +134,16 @@ def decode(msg):
     elif (id == 0xEB): # ID_DSAHBOARD_STATUS
         ret.append(["SSOK_ABOVE_THRESHOLD",             ((msg[5] & 0x4) >> 2)                   ])
         ret.append(['SHUTDOWN_H_ABOVE_THRESHOLD',       ((msg[5] & 0x8) >> 3)                   ])
-        ret.append(["TORQUE_MODE",                      ((msg[7] & 0x30) >> 4)                  ])
+        val = ((msg[7] & 0x30) >> 4)
+        if (val == 0):
+            ret.append(["TORQUE_MODE",                      0                  ])
+            ret.append(["MAX_TORQUE",                       60                                 ])
+        elif (val == 2):
+            ret.append(["TORQUE_MODE",                      1                  ])
+            ret.append(["MAX_TORQUE",                       100                                 ])
+        else:
+            ret.append(["TORQUE_MODE",                      2                  ])
+            ret.append(["MAX_TORQUE",                       120                                ])
     elif (id == 0xD9): # ID_BMS_TEMPERATURES
         ret.append(["BMS_AVERAGE_TEMPERATURE",          (b2i16(msg[5:7]) / 100.),       "C"     ])
         ret.append(["BMS_LOW_TEMPERATURE",              (b2i16(msg[7:9]) / 100.),       "C"     ])
@@ -151,19 +160,19 @@ def decode(msg):
     elif (id == 0xE2): # ID_BMS_COULOMB_COUNTS
         ret.append(["BMS_TOTAL_CHARGE",                 b2ui32(msg[5:9]) / 10000.,      "Ah"    ])
         ret.append(["BMS_TOTAL_DISCHARGE",              b2ui32(msg[9:13]) / 10000.,     "Ah"    ])
-    elif (id == 0xC3): # ID_MCU_STATUS
-        ret.append(["IMD_OK_HIGH",                      (msg[5] & 0x1)                          ])
-        ret.append(["BMS_OK_HIGH",                      ((msg[5] & 0x4) >> 2)                   ])
-        ret.append(["BSPD_OK_HIGH",                     ((msg[5] & 0x10) >> 4)                  ])
-        ret.append(["SOFTWARE_OK_HIGH",                 ((msg[5] & 0x40) >> 6)                  ])
-        ret.append(["SHUTDOWN_D_ABOVE_THRESHOLD",       ((msg[5] & 0x20) >> 5)                  ])
-        ret.append(["SHUTDOWN_E_ABOVE_THRESHOLD",       ((msg[5] & 0x80) >> 7)                  ])
-        ret.append(["INVERTER_POWERED",                 ((msg[7] & 0x08) >> 3)                  ])
-        ret.append(["BRAKE_PEDAL_ACTIVE",               ((msg[6] & 0x04) >> 2)                  ])
-        ret.append(["NO_ACCEL_IMPLAUSIBILITY",          ((msg[6] & 0x01))                                            ])
-        ret.append(["NO_BRAKE_IMPLAUSIBILITY",          ((msg[6] & 0x02) >> 1)                                            ])
-        ret.append(["MAX_TORQUE",                       b2ui8(msg[8])                                 ])
-        ret.append(["TCU_DISTANCE_TRAVELED",            b2ui16(msg[10:12]) / 100.,         "m"    ])
+    # elif (id == 0xC3): # ID_MCU_STATUS
+    #     ret.append(["IMD_OK_HIGH",                      (msg[5] & 0x1)                          ])
+    #     ret.append(["BMS_OK_HIGH",                      ((msg[5] & 0x4) >> 2)                   ])
+    #     ret.append(["BSPD_OK_HIGH",                     ((msg[5] & 0x10) >> 4)                  ])
+    #     ret.append(["SOFTWARE_OK_HIGH",                 ((msg[5] & 0x40) >> 6)                  ])
+    #     ret.append(["SHUTDOWN_D_ABOVE_THRESHOLD",       ((msg[5] & 0x20) >> 5)                  ])
+    #     ret.append(["SHUTDOWN_E_ABOVE_THRESHOLD",       ((msg[5] & 0x80) >> 7)                  ])
+    #     ret.append(["INVERTER_POWERED",                 ((msg[7] & 0x08) >> 3)                  ])
+    #     ret.append(["BRAKE_PEDAL_ACTIVE",               ((msg[6] & 0x04) >> 2)                  ])
+    #     ret.append(["NO_ACCEL_IMPLAUSIBILITY",          ((msg[6] & 0x01))                                            ])
+    #     ret.append(["NO_BRAKE_IMPLAUSIBILITY",          ((msg[6] & 0x02) >> 1)                                            ])
+    #     ret.append(["MAX_TORQUE",                       b2ui8(msg[8])                                 ])
+    #     ret.append(["TCU_DISTANCE_TRAVELED",            b2ui16(msg[10:12]) / 100.,         "m"    ])
     elif (id == 0xC0): # ID_MC_COMMAND_MESSAGE
         ret.append(["REQUESTED_TORQUE",                 (b2i16(msg[5:7]) / 10.),         "Nm"    ])
     elif (id == 0xC4): # ID_MCU_PEDAL_READINGS
