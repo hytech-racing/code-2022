@@ -2,7 +2,7 @@
 
 # 2022 Code
 
-Repository for all of the code for the 2019-2020 car.
+Repository for all of the code for the 2021-2022 car.
 
 ## Getting Started with this Git Repository
 1. Follow HyTech's [Software Guide](https://github.com/hytech-racing/training/blob/master/Resources/2020%20Electrical%20Software%20Guide.pdf).
