@@ -16,10 +16,13 @@ public:
     inline void load(uint8_t buf[])           { memcpy(this, buf, sizeof(*this)); }
     inline void write(uint8_t buf[])    const { memcpy(buf, this, sizeof(*this)); }
 
+    // Big endian byte ordering
     inline void load_from_emeter(uint8_t buf[]) {
         voltage = (buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | (buf[3]);
-        current = (buf[5] << 24) | (buf[6] << 16) | (buf[7] << 8) | (buf[8]);
+        current = (buf[4] << 24) | (buf[5] << 16) | (buf[6] << 8) | (buf[7]);
     }
+
+    // Big endian byte ordering
     inline void write_for_emeter(uint8_t buf[]) {
         buf[0] = voltage >> 24;
         buf[1] = voltage >> 16  & 0xFF;

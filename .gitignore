@@ -157,6 +157,9 @@ dist
 # VS
 .vs/**
 
+# Idea
+.idea/**
+
 # Local History for Visual Studio Code
 .history/
 
