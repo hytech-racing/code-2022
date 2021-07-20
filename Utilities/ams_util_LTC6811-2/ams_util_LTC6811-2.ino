@@ -25,9 +25,9 @@
 
   @endverbatim
 
-  http://www.linear.com/product/LTC6804-1
+  http://www.linear.com/product/LTC6811-1
 
-  http://www.linear.com/product/LTC6804-1#demoboards
+  http://www.linear.com/product/LTC6811-1#demoboards
 
   REVISION HISTORY
   $Revision: 4432 $
@@ -80,6 +80,7 @@
 
 const uint8_t TOTAL_IC = 16;
 
+
 /** All data packaged into an array of cell_asic structs
   * ic_data[index].config.tx_data is used to write config to the cells
   * ic_data[index].config.rx_data is used to read config from the cells
@@ -88,18 +89,19 @@ const uint8_t TOTAL_IC = 16;
 */
 cell_asic ic_data[TOTAL_IC];
 
+uint8_t balance_cell_index = 0;
+uint8_t IC_INDEX = 0;
 
+ADC_SPI adc;
 
 void setup() {
   //pinMode(10, OUTPUT);  
   Serial.begin(115200);
-  //adc = ADC_SPI(9);
+  adc = ADC_SPI(9); //reads 100A sense filter from 100A current sensor, reference from the current sensor, 12V smth reading 
   LTC6811_init_cfg(TOTAL_IC, ic_data);
   quikeval_SPI_connect();
   spi_enable(SPI_CLOCK_DIV16);
   init_cfg();
-  print_menu();
-
 }
 
 void loop() {
@@ -107,6 +109,7 @@ void loop() {
   if(Serial.available()) {
     uint32_t user_command = read_int();
     Serial.println(user_command);
+    print_menu();
     run_command(user_command);
   }
 }
@@ -116,27 +119,27 @@ void loop() {
   \brief executes the user inputted command
 
   Menu Entry 1: Write Configuration \n
-   Writes the configuration register of the LTC6804. This command can be used to turn on the reference
+   Writes the configuration register of the LTC6811. This command can be used to turn on the reference
    and increase the speed of the ADC conversions.
 
   Menu Entry 2: Read Configuration \n
-   Reads the configuration register of the LTC6804, the read configuration can differ from the written configuration.
+   Reads the configuration register of the LTC6811, the read configuration can differ from the written configuration.
    The GPIO pins will reflect the state of the pin
 
   Menu Entry 3: Start Cell voltage conversion \n
-   Starts a LTC6804 cell channel adc conversion.
+   Starts a LTC6811 cell channel adc conversion.
 
   Menu Entry 4: Read cell voltages
-    Reads the LTC6804 cell voltage registers and prints the results to the serial port.
+    Reads the LTC6811 cell voltage registers and prints the results to the serial port.
 
   Menu Entry 5: Start Auxiliary voltage conversion
-    Starts a LTC6804 GPIO channel adc conversion.
+    Starts a LTC6811 GPIO channel adc conversion.
 
   Menu Entry 6: Read Auxiliary voltages
-    Reads the LTC6804 axiliary registers and prints the GPIO voltages to the serial port.
+    Reads the LTC6811 axiliary registers and prints the GPIO voltages to the serial port.
 
   Menu Entry 7: Start cell voltage measurement loop
-    The command will continuously measure the LTC6804 cell voltages and print the results to the serial port.
+    The command will continuously measure the LTC6811 cell voltages and print the results to the serial port.
     The loop can be exited by sending the MCU a 'm' character over the serial link.
 
   Menu Entry 8: Start aux voltage measurement loop
@@ -152,8 +155,8 @@ void loop() {
 
 void run_command(uint16_t cmd) {
   int8_t error = 0;
-
   char input = 0;
+  
   switch(cmd) {
     case 1:
       wakeup_sleep(TOTAL_IC);
@@ -199,8 +202,234 @@ void run_command(uint16_t cmd) {
       }
       print_aux();
       break;
+    case 7:
+      Serial.println("transmit 'm' to quit");
+      wakeup_sleep(TOTAL_IC);
+      LTC6811_wrcfg(TOTAL_IC, ic_data);
+
+      while(input != 'm') {
+
+        if(Serial.available() > 0) {
+          input = read_char();
+        }
+        //case 3 and 4 combined
+        wakeup_idle(TOTAL_IC);
+        LTC6811_adcv(MD_7KHZ_3KHZ, DCP_DISABLED, CELL_CH_ALL);
+        delay(10);
+        wakeup_idle(TOTAL_IC);
+        error = LTC6811_rdcv(0, TOTAL_IC, ic_data);
+        if(error == -1) {
+          Serial.println("A PEC error was detected in the received data");
+        }
+        print_cells();
+
+        Serial.println("ADC ");
+        for (int i = 0; i < 8; i++) {
+          int val = adc.read_adc(i);
+          Serial.print("C");
+          Serial.print(i);
+          Serial.print(": ");
+          Serial.print(val);
+          Serial.print('\t');
+        }
+        Serial.println();
+        Serial.println();
+        spi_enable(SPI_CLOCK_DIV16); // Set SPI back to 1MHz for next isoSPI call; It might be best practice to put this right before each isoSPI call
+        delay(500);
+      }
+      break;
+    case 8:
+      Serial.println("transmit 'm' to quit");
+      wakeup_sleep(TOTAL_IC);
+      LTC6811_wrcfg(TOTAL_IC, ic_data);
+
+      while(input != 'm') {
+
+        if(Serial.available() > 0) {
+          input = read_char();
+        }
+        //case 5 and 6 combined
+        wakeup_idle(TOTAL_IC);
+        LTC6811_adax(MD_7KHZ_3KHZ, AUX_CH_ALL);
+        delay(10);
+        wakeup_idle(TOTAL_IC);
+        error = LTC6811_rdaux(0, TOTAL_IC, ic_data);
+        if(error == -1) {
+          Serial.println("A PEC error was detected in the received data");
+        }
+        print_aux();
+        delay(500);
+      }
+      break;
+    case 9:
+      Serial.println("transmit 'm' to quit");
+      wakeup_sleep(TOTAL_IC);
+      LTC6811_wrcfg(TOTAL_IC, ic_data);
+
+      while(input != 'm') {
+
+        if(Serial.available() > 0) {
+          input = read_char();
+        }
+        //case 5 and 6 combined
+        wakeup_idle(TOTAL_IC);
+        LTC6811_adax(MD_7KHZ_3KHZ, AUX_CH_ALL);
+        delay(10);
+        wakeup_idle(TOTAL_IC);
+        error = LTC6811_rdaux(0, TOTAL_IC, ic_data);
+        if(error == -1) {
+          Serial.println("A PEC error was detected in the received data");
+        }
+        Serial.println("Reading back newly measured values: ");
+        print_aux();
 
 
+        //clear the registers and read back
+        delay(5);
+        LTC6811_clraux();
+        delay(10);
+        error = LTC6811_rdaux(0, TOTAL_IC, ic_data);
+        if(error == -1) {
+          Serial.println("A PEC error was detected in the received data");
+        }
+        print_aux();
+        Serial.println("--------------");
+        delay(500);
+      }
+      break;
+    case 10:
+      Serial.println("transmit 'm' to quit");
+      wakeup_sleep(TOTAL_IC);
+      LTC6811_wrcfg(TOTAL_IC, ic_data);
+      while (input != 'm')
+      {
+        if (Serial.available() > 0)
+        {
+          input = read_char();
+        }
+
+        //calculate which cell has the lowest voltage
+        wakeup_idle(TOTAL_IC);
+        LTC6811_adcv(MD_7KHZ_3KHZ, DCP_DISABLED, CELL_CH_ALL);
+        delay(10);
+        wakeup_idle(TOTAL_IC);
+        error = LTC6811_rdcv(0, TOTAL_IC, ic_data);
+        if(error == -1) {
+          Serial.println("A PEC error was detected in the received data");
+        }
+
+        int max = ic_data[0].cells.c_codes[0], max_ic = 0, max_cell = 0;
+        for(int ic = 0; ic < TOTAL_IC; ic++) {
+          for (int cell = 0; cell < 12; cell++) {
+            if(ic_data[ic].cells.c_codes[cell] < max) {
+              max = ic_data[ic].cells.c_codes[cell];
+              max_ic = ic;
+              max_cell = cell;
+            }
+          }
+        }
+
+        //discharge all cells except the lowest
+        for (int ic = 0; ic < TOTAL_IC; ic++) { // Turn off discharging on previous cell
+          if (balance_cell_index < 8) {
+            ic_data[ic].config.tx_data[4] = ic_data[ic].config.tx_data[4] & ~(0b1 << balance_cell_index );
+          } else {
+            ic_data[ic].config.tx_data[5] = ic_data[ic].config.tx_data[5] & ~(0b1 << (balance_cell_index - 8));
+          }
+        }
+        balance_cell_index = (balance_cell_index + 1) % 12;
+        for (int ic = 0; ic < TOTAL_IC; ic++) { // Turn on discharging on next cell
+          if(ic != max_ic || balance_cell_index != max_cell) {
+            if (balance_cell_index < 8) {
+              ic_data[ic].config.tx_data[4] = ic_data[ic].config.tx_data[4] | (0b1 << balance_cell_index);
+            } else {
+              ic_data[ic].config.tx_data[5] = ic_data[ic].config.tx_data[5] | (0b1 << (balance_cell_index - 8));
+            }
+          }
+        }
+        wakeup_sleep(TOTAL_IC);
+        LTC6811_wrcfg(TOTAL_IC, ic_data);
+        Serial.print("Balancing cell ");
+        Serial.print(balance_cell_index);
+        Serial.println(" for all ICs");
+        delay(500);
+      }
+      for (int ic = 0; ic < TOTAL_IC; ic++) {
+        ic_data[ic].config.tx_data[4] = 0;
+        ic_data[ic].config.tx_data[5] = 0;
+      }
+      wakeup_sleep(TOTAL_IC);
+      LTC6811_wrcfg(TOTAL_IC, ic_data);
+      break;
+    case 11:
+      Serial.println("transmit 'm' to quit");
+      wakeup_sleep(TOTAL_IC);
+      LTC6811_wrcfg(TOTAL_IC, ic_data);
+      while (input != 'm')
+      {
+        if (Serial.available() > 0)
+        {
+          input = read_char();
+        }
+
+        //calculate which cell has the lowest voltage
+        wakeup_idle(TOTAL_IC);
+        LTC6811_adcv(MD_7KHZ_3KHZ, DCP_DISABLED, CELL_CH_ALL);
+        delay(10);
+        wakeup_idle(TOTAL_IC);
+        error = LTC6811_rdcv(0, TOTAL_IC, ic_data);
+        if(error == -1) {
+          Serial.println("A PEC error was detected in the received data");
+        }
+
+        int max = ic_data[0].cells.c_codes[0], max_ic = 0, max_cell = 0;
+        for(int ic = 0; ic < TOTAL_IC; ic++) {
+          for (int cell = 0; cell < 12; cell++) {
+            if(ic_data[ic].cells.c_codes[cell] < max) {
+              max = ic_data[ic].cells.c_codes[cell];
+              max_ic = ic;
+              max_cell = cell;
+            }
+          }
+        }
+
+
+        //go through discharge loop
+        for(int ic = 0; ic < TOTAL_IC; ic++) {
+          for(int current_cell = 0; current_cell < 12; current_cell++) {
+            //stop discharge of previous cell
+            if (current_cell < 8) {
+              ic_data[ic].config.tx_data[4] = ic_data[ic].config.tx_data[4] & ~(0b1 << current_cell );
+            } else {
+              ic_data[ic].config.tx_data[5] = ic_data[ic].config.tx_data[5] & ~(0b1 << (current_cell - 8));
+            }
+            
+            //start discharge of next cell if it isn't the minimum
+            if(ic != max_ic || balance_cell_index != max_cell) {
+              if (balance_cell_index < 8) {
+              ic_data[ic].config.tx_data[4] = ic_data[ic].config.tx_data[4] | (0b1 << current_cell);
+              } else {
+                ic_data[ic].config.tx_data[5] = ic_data[ic].config.tx_data[5] | (0b1 << (current_cell - 8));
+              }
+            }
+            LTC6811_wrcfg(TOTAL_IC, ic_data);
+            delay(500);
+          }
+        }
+        wakeup_sleep(TOTAL_IC);
+        LTC6811_wrcfg(TOTAL_IC, ic_data);
+        Serial.print("Balancing cell ");
+        Serial.print(balance_cell_index);
+        Serial.println(" for all ICs");
+        delay(1000);
+      }
+      for (int ic = 0; ic < TOTAL_IC; ic++) {
+        ic_data[ic].config.tx_data[4] = 0;
+        ic_data[ic].config.tx_data[5] = 0;
+      }
+      wakeup_sleep(TOTAL_IC);
+      LTC6811_wrcfg(TOTAL_IC, ic_data);
+      break;
     default:
       Serial.println("Incorrect Operation");
       break;
@@ -290,7 +519,7 @@ void print_menu() {
 }
 
 /*!******************************************************************************
-  \brief Prints the Configuration data that is going to be written to the LTC6804
+  \brief Prints the Configuration data that is going to be written to the LTC6811
   to the serial port.
  ********************************************************************************/
 void print_config()
@@ -327,7 +556,7 @@ void print_config()
 
 /*!*****************************************************************
   \brief Prints the Configuration data that was read back from the
-  LTC6804 to the serial port.
+  LTC6811 to the serial port.
  *******************************************************************/
 void print_rxconfig()
 {
