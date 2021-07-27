@@ -15,8 +15,8 @@ Repository for all of the code for the 2021-2022 car.
     * You may want to keep a copy of [GitHub's Git Cheat Sheet](https://services.github.com/kit/downloads/github-git-cheat-sheet.pdf) as a reference.
 4. Talk to your subteam lead to be added to the team within the GitHub organization.
 5. Clone this repository to your computer using the URLs:
-    * SSH: `git@github.com:hytech-racing/code-2020.git`
-    * HTTPS: `https://github.com/hytech-racing/code-2020.git`
+    * SSH: `git@github.com:hytech-racing/code-2022.git`
+    * HTTPS: `https://github.com/hytech-racing/code-2022.git`
 
 ## Github Software Guidelines and Electrical Designs Rules Review Process
 Follow HyTech's [Github Software Guidelines](https://gtvault.sharepoint.com/:w:/r/sites/HyTechRacing2/Shared%20Documents/Electrical%20-%20All/HT06/Guidelines%20Rules%20and%20Procedures/Github%20Software%20Guidelines.docx?d=w7e0d7e36afeb47b5a935bd7a4851bceb&csf=1&web=1&e=sudzjV) to understand our development flow and pull request procedure.
