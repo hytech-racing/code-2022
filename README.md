@@ -1,8 +1,8 @@
 ![HyTech Logo](https://hytechracing.gatech.edu/images/hytech_logo_small.png)
 
-# 2020 Code
+# 2022 Code
 
-Repository for all of the code for the 2019-2020 car.
+Repository for all of the code for the 2021-2022 car.
 
 ## Getting Started with this Git Repository
 1. Follow HyTech's [Software Guide](https://github.com/hytech-racing/training/blob/master/Resources/2020%20Electrical%20Software%20Guide.pdf).
@@ -15,8 +15,12 @@ Repository for all of the code for the 2019-2020 car.
     * You may want to keep a copy of [GitHub's Git Cheat Sheet](https://services.github.com/kit/downloads/github-git-cheat-sheet.pdf) as a reference.
 4. Talk to your subteam lead to be added to the team within the GitHub organization.
 5. Clone this repository to your computer using the URLs:
-    * SSH: `git@github.com:hytech-racing/code-2020.git`
-    * HTTPS: `https://github.com/hytech-racing/code-2020.git`
+    * SSH: `git@github.com:hytech-racing/code-2022.git`
+    * HTTPS: `https://github.com/hytech-racing/code-2022.git`
+
+## Github Software Guidelines and Electrical Designs Rules Review Process
+Follow HyTech's [Github Software Guidelines](https://gtvault.sharepoint.com/:w:/r/sites/HyTechRacing2/Shared%20Documents/Electrical%20-%20All/HT06/Guidelines%20Rules%20and%20Procedures/Github%20Software%20Guidelines.docx?d=w7e0d7e36afeb47b5a935bd7a4851bceb&csf=1&web=1&e=sudzjV) to understand our development flow and pull request procedure.
+Follow HyTech's [Electrical Designs Rules Review Process](https://gtvault.sharepoint.com/:w:/r/sites/HyTechRacing2/Shared%20Documents/Electrical%20-%20All/HT06/Guidelines%20Rules%20and%20Procedures/Electrical%20Designs%20Rules%20Review%20Process.docx?d=w0277498dfb4b4b9fbfad0e5db8a187c8&csf=1&web=1&e=LDFCNz) to understand circuit design flow. 
 
 ## Organization
 * `CellTesting/`  Code related to battery cell testing
