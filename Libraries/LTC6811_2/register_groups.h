@@ -182,7 +182,51 @@ private:
 
 };
 
-Reg_Group_COMM
+class Reg_Group_COMM {
+public:
+    Reg_Group_COMM() = default;
+    Reg_Group_COMM(uint8_t d1, 
+                    uint8_t d2, 
+                    uint8_t d3, 
+                    uint8_t icom1, 
+                    uint8_t icom2, 
+                    uint8_t icom3, 
+                    uint8_t fcom1, 
+                    uint8_t fcom2,
+                    uint8_t fcom3) :
+        data_byte1(d1),
+        data_byte2(d2),
+        data_byte3(d3),
+        initial_comm_control1(icom1),
+        initial_comm_control2(icom2),
+        initial_comm_control3(icom3),
+        final_comm_control1(fcom1),
+        final_comm_control2(fcom2),
+        final_comm_control3(fcom3) { };
+
+    uint8_t get_data_byte1() { return data_byte1; };
+    uint8_t get_data_byte2() { return data_byte2; };
+    uint8_t get_data_byte3() { return data_byte3; };
+    uint8_t initial_comm_control1() { return initial_comm_control1; };
+    uint8_t initial_comm_control2() { return initial_comm_control2; };
+    uint8_t initial_comm_control3() { return initial_comm_control3; };
+    uint8_t final_comm_control1() { return final_comm_control1; };
+    uint8_t final_comm_control2() { return final_comm_control2; };
+    uint8_t final_comm_control3() { return final_comm_control3; };
+
+private:
+    uint8_t data_byte1;
+    uint8_t data_byte2;
+    uint8_t data_byte3;
+    uint8_t initial_comm_control1;
+    uint8_t initial_comm_control2;
+    uint8_t initial_comm_control3;
+    uint8_t final_comm_control1;
+    uint8_t final_comm_control2;
+    uint8_t final_comm_control3;
+
+};
+
 class Reg_Group_S_Ctrl {
 public:
     Reg_Group_S_Ctrl() = default;
@@ -240,7 +284,59 @@ private:
 };
 
 class Reg_Group_PWM {
+public:
+    Reg_Group_PWM() = default;
+    Reg_Group_PWM(uint8_t pwm1_,
+                    uint8_t pwm2_,
+                    uint8_t pwm3_,
+                    uint8_t pwm4_,
+                    uint8_t pwm5_,
+                    uint8_t pwm6_,
+                    uint8_t pwm7_,
+                    uint8_t pwm8_,
+                    uint8_t pwm9_,
+                    uint8_t pwm10_,
+                    uint8_t pwm11_,
+                    uint8_t pwm12_) :
+        pwm1(pwm1_),
+        pwm2(pwm2_),
+        pwm3(pwm3_),
+        pwm4(pwm4_),
+        pwm5(pwm5_),
+        pwm6(pwm6_),
+        pwm7(pwm7_),
+        pwm8(pwm8_),
+        pwm9(pwm9_),
+        pwm10(pwm10_),
+        pwm11(pwm11_),
+        pwm12(pwm12_) { };
 
+    uint8_t get_pwm1() { return pwm1; };
+    uint8_t get_pwm2() { return pwm2; };
+    uint8_t get_pwm3() { return pwm3; };
+    uint8_t get_pwm4() { return pwm4; };
+    uint8_t get_pwm5() { return pwm5; };
+    uint8_t get_pwm6() { return pwm6; };
+    uint8_t get_pwm7() { return pwm7; };
+    uint8_t get_pwm8() { return pwm8; };
+    uint8_t get_pwm9() { return pwm9; };
+    uint8_t get_pwm10() { return pwm10; };
+    uint8_t get_pwm11() { return pwm11; };
+    uint8_t get_pwm12() { return pwm12; };
+
+private:
+    uint8_t pwm1;
+    uint8_t pwm2;
+    uint8_t pwm3;
+    uint8_t pwm4;
+    uint8_t pwm5;
+    uint8_t pwm6;
+    uint8_t pwm7;
+    uint8_t pwm8;
+    uint8_t pwm9;
+    uint8_t pwm10;
+    uint8_t pwm11;
+    uint8_t pwm12;
 };
 
 }
