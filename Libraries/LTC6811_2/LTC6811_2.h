@@ -1,0 +1,81 @@
+#include <Arduino.h>
+#include <SPI.h>
+
+
+namespace LTC6811_2 {
+
+class LTC6811_2 {
+public:
+	lTC6811_2() = default;
+    LTC6811_2(int addr_, int cs_);
+    void init();
+
+    //write register commands
+    void wrcfga(Reg_Group_Config reg_group);
+    void wrsctrl(Reg_Group_S_Ctrl reg_group);
+    void wrpwm(Reg_Group_PWM reg_group);
+    void wrcomm(Reg_Group_COMM reg_group);
+
+
+    //read register commands
+    Reg_Group_Config rdcfga();
+    
+    Reg_Group_CV_A rdcva();
+    Reg_Group_CV_B rdcvb();
+    Reg_Group_CV_C rdcvc();
+    Reg_Group_CV_D rdcvd();
+
+   	Reg_Group_Aux_A rdauxa();
+
+   	Reg_Group_Status_A rdstata();
+   	Reg_Group_Status_B rdstatab();
+
+   	Reg_Group_S_Ctrl rdsctrl();
+   	Reg_Group_PWM rdpwm();
+
+   	Reg_Group_COMM rdcomm();
+
+
+   	//start commands
+   	void stsctrl();
+   	void adcv(ADC_MODE adc_mode, DISCHARGE discharge, CELL_SELECT cell_select);
+   	// void adow(ADC_MODE adc_mode, OPEN_WIRE_CURRENT_PUP pup, DISCHARGE discharge, CELL_SELECT cell_select)
+   	// void cvst(ADC_MODE adc_mode, SELF_TEST_MODE self_test);
+   	// void adol(ADC_MODE adc_mode, DISCHARGE discharge);
+   	void adax(ADC_MODE adc_mode, GPIO_SELECT gpio_select);
+   	// void adaxd(ADC_MODE adc_mode, GPIO_SELECT gpio_select);
+   	// void axst(ADC_MODE adc_mode, SELF_TEST_MODE self_test);
+   	// void adstat(ADC_MODE adc_mode, STATUS_GROUP_SELECT status_group);
+   	// void adstatd(ADC_MODE adc_mode, STATUS_GROUP_SELECT status_group);
+   	// void statst(ADC_MODE adc_mode, SELF_TEST_MODE self_test);
+   	void adcvax(ADC_MODE adc_mode, DISCHARGE discharge);
+   	void adcvsc(ADC_MODE adc_mode, DISCHARGE discharge);
+
+
+   	//clear commands
+   	void clrsctrl();
+   	void clraux();
+   	void clrstat();
+
+   	//misc commands
+   	void pladc();
+   	void diagn();
+   	void stcomm();
+   	void wakeup_sleep();
+   	void wakeup_idle();
+
+private:
+	int address;
+    int CS;
+
+    uint16_t pec15_calc(uint8_t len, uint8_t *data);
+}
+
+
+
+
+
+
+
+
+}
