@@ -1,0 +1,27 @@
+#pragma once
+#include <string.h>
+#include <stdint.h>
+#ifdef HT_DEBUG_EN
+    #include "Arduino.h"
+#endif
+
+class Reg_Group_Aux_A {
+public:
+    Reg_Group_Aux_A() = default;
+    Reg_Group_Aux_A(uint16_t g1, uint16_t g2, uint16_t g3) :
+        gpio1_voltage(g1),
+        gpio2_voltage(g2),
+        gpoi3_voltage(g3) { };
+    uint16_t get_gpio1_voltage() { return gpio1_voltage; };
+    uint16_t get_gpio2_voltage() { return gpio2_voltage; };
+    uint16_t get_gpio3_voltage() { return gpio3_voltage; };
+
+    uint8_t* buf() {
+        return new uint8_t[6]{gpio1_voltage & 0xFF, (gpio1_voltage & 0xFF00) >> 8, gpio2_voltage & 0xFF, (gpio2_voltage & 0xFF00) >> 8, gpio3_voltage & 0xFF, (gpio3_voltage & 0xFF00) >> 8, };
+    };
+
+private:
+    uint16_t gpio1_voltage;
+    uint16_t gpio2_voltage;
+    uint16_t gpio3_voltage;
+};

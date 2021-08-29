@@ -1,0 +1,26 @@
+#pragma once
+#include <string.h>
+#include <stdint.h>
+#ifdef HT_DEBUG_EN
+    #include "Arduino.h"
+#endif
+
+class Reg_Group_Cell_B {
+public:
+    Reg_Group_Cell_B() = default;
+    Reg_Group_Cell_B(uint16_t c4, uint16_t c5, uint16_t c6) :
+        cell4_voltage(c4),
+        cell5_voltage(c5),
+        cell6_voltage(c6) { };
+    uint16_t get_cell4_voltage() { return cell4_voltage; };
+    uint16_t get_cell5_voltage() { return cell5_voltage; };
+    uint16_t get_cell6_voltage() { return cell6_voltage; };
+
+    uint8_t* buf() {
+        return new uint8_t[6]{cell4_voltage & 0xFF, (cell4_voltage & 0xFF00) >> 8, cell5_voltage & 0xFF, (cell5_voltage & 0xFF00) >> 8, cell6_voltage & 0xFF, (cell6_voltage & 0xFF00) >> 8, };
+    };
+private:
+    uint16_t cell4_voltage;
+    uint16_t cell5_voltage;
+    uint16_t cell6_voltage;
+};

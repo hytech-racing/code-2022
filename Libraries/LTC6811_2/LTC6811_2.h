@@ -1,8 +1,10 @@
-#include <Arduino.h>
-#include <SPI.h>
+#pragma once
+#include <string.h>
+#include <stdint.h>
+#ifdef HT_DEBUG_EN
+    #include "Arduino.h"
+#endif
 
-
-namespace LTC6811_2 {
 
 class LTC6811_2 {
 public:
@@ -76,6 +78,3 @@ private:
 
 
 
-
-
-}
