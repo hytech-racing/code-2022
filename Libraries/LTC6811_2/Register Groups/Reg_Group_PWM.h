@@ -49,6 +49,10 @@ public:
     uint8_t get_pwm11() { return byte5 & 0x0F; };
     uint8_t get_pwm12() { return (byte5 & 0xF0) >> 4; };
 
+    uint8_t* buf(){
+        return static_cast<uint8_t*>(this);
+    };
+
 private:
     uint8_t byte0, byte1, byte2, byte3, byte4, byte5;
 };

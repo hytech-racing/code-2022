@@ -21,8 +21,8 @@ public:
     uint16_t get_gpio2_voltage() { return gpio2_voltage; };
     uint16_t get_gpio3_voltage() { return gpio3_voltage; };
 
-    uint8_t* buf() {
-        return new uint8_t[6]{gpio1_voltage & 0xFF, (gpio1_voltage & 0xFF00) >> 8, gpio2_voltage & 0xFF, (gpio2_voltage & 0xFF00) >> 8, gpio3_voltage & 0xFF, (gpio3_voltage & 0xFF00) >> 8, };
+    uint8_t* buf(){
+        return static_cast<uint8_t*>(this);
     };
 
 private:

@@ -21,8 +21,8 @@ public:
     uint16_t get_cell11_voltage() { return cell11_voltage; };
     uint16_t get_cell12_voltage() { return cell12_voltage; };
 
-    uint8_t* buf() {
-        return new uint8_t[6]{cell10_voltage & 0xFF, (cell10_voltage & 0xFF00) >> 8, cell11_voltage & 0xFF, (cell11_voltage & 0xFF00) >> 8, cell12_voltage & 0xFF, (cell12_voltage & 0xFF00) >> 8, };
+    uint8_t* buf(){
+        return static_cast<uint8_t*>(this);
     };
 
 private:

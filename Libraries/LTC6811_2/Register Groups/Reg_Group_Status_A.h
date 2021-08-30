@@ -21,8 +21,8 @@ public:
     uint16_t get_internal_die_temp() { return internal_die_temp; };
     uint16_t get_analog_supply_voltage() { return analog_supply_voltage; };
 
-    uint8_t* buf() {
-        return new uint8_t[6]{sum_of_all_cells & 0xFF, (sum_of_all_cells & 0xFF00) >> 8, internal_die_temp & 0xFF, (internal_die_temp & 0xFF00) >> 8, analog_supply_voltage & 0xFF, (analog_supply_voltage & 0xFF00) >> 8, };
+    uint8_t* buf(){
+        return static_cast<uint8_t*>(this);
     };
     
 private:

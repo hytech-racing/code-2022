@@ -42,9 +42,9 @@ public:
     uint8_t final_comm_control1() { return byte3 & 0x0F; };
     uint8_t final_comm_control2() { return byte5 & 0x0F; };
 
-    uint8_t* buf() {
-        return new uint8_t[6]{byte0, byte1, byte2, byte3, byte4, byte5};
-    }
+    uint8_t* buf(){
+        return static_cast<uint8_t*>(this);
+    };
 
 
 private:

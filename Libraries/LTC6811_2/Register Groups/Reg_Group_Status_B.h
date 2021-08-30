@@ -51,6 +51,10 @@ public:
     bool get_mux_self_test_result() { return (byte5 & 0b10) > 0; };
     bool get_thermal_shutdown_status() { return (byte5 & 0b1) > 0; };
 
+    uint8_t* buf(){
+        return static_cast<uint8_t*>(this);
+    };
+
 private:
     uint16_t digital_supply_voltage;
 

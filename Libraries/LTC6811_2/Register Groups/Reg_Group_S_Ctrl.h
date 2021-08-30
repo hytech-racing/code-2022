@@ -48,6 +48,10 @@ public:
     S_CONTROL get_pin11() { return (S_CONTROL)(byte5 & 0x0F); };
     S_CONTROL get_pin12() { return (S_CONTROL)((byte5 & 0xF0) >> 4); };
 
+    uint8_t* buf(){
+        return static_cast<uint8_t*>(this);
+    };
+
 private:
     uint8_t byte0, byte1, byte2, byte3, byte4, byte5;
 };
