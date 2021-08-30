@@ -23,8 +23,14 @@ public:
         byte3 = (d1 & 0x0F) << 4 + fcom1;
         byte4 = (icom2 << 4) + (d2 & 0xF0) >> 4;
         byte5 = (d2 & 0x0F) << 4 + fcom2;
-
     };
+    Reg_Group_COMM(uint8_t* byte_arr) : 
+        byte0(byte_arr[0]), 
+        byte1(byte_arr[1]), 
+        byte2(byte_arr[2]), 
+        byte3(byte_arr[3]), 
+        byte4(byte_arr[4]), 
+        byte5(byte_arr[5]) { };
 
     uint8_t get_data_byte0() { return (byte1 & 0xF0) >> 4 + (byte0 & 0x0F) << 4; };
     uint8_t get_data_byte1() { return (byte3 & 0xF0) >> 4 + (byte2 & 0x0F) << 4;; };

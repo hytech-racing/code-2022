@@ -55,15 +55,3 @@ enum class STATUS_GROUP_SELECT {
 	VA,
 	VD
 };
-
-enum class S_CONTROL {
-	S_DRIVE_HIGH = 0,
-	S_1_PULSE,
-	S_2_PULSES,
-	S_3_PULSES,
-	S_4_PULSES,
-	S_5_PULSES,
-	S_6_PULSES,
-	S_7_PULSES,
-	S_DRIVE_LOW
-};

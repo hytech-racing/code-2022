@@ -12,6 +12,11 @@ public:
         gpio1_voltage(g4),
         gpio2_voltage(g5),
         gpoi3_voltage(g6) { };
+    Reg_Group_Aux_B(uint8_t* byte_arr) {
+        gpio4_voltage = byte_arr[1] << 8 + byte_arr[0];
+        gpio5_voltage = byte_arr[3] << 8 + byte_arr[2];
+        gpio6_voltage = byte_arr[5] << 8 + byte_arr[4];
+    };
     uint16_t get_gpio4_voltage() { return gpio4_voltage; };
     uint16_t get_gpio5_voltage() { return gpio5_voltage; };
     uint16_t get_gpio6_voltage() { return gpio6_voltage; };
