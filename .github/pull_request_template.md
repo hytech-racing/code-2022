@@ -18,7 +18,8 @@ Follow HyTech's [Github Software Guidelines](https://gtvault.sharepoint.com/:w:/
 - [ ] Is this code linked to a new board or board rev?
 - - [ ] Is *there a PR* for that board in `circuits-2022`? If so, please pause until that PR is merged.
 - [ ] Did you test the code in real-world conditions before submitting?
-- - [ ] Did you *use CPU Speed = 76 Mhz and Optimize = Faster* when testing?
+- - [ ] Did you *use CPU Speed = 720 Mhz and Optimize = Fastest* when testing?
+- - [ ] Did you *use Teensyduino 1.55 with Arduino 1.8.16* when testing?
 - [ ] Did you pull `main` into your branch?
 - - [ ] Did you *check for merge conflicts*?
 - - [ ] Did you *resolve* any that occurred? ***If you are having trouble or are confused, contact a lead!***
