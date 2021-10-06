@@ -261,9 +261,9 @@ static void loadLookupTable() {
     definition(4, 2, true, "VERTICAL ACCELERATION", "G")
   });
   CAN_MSG_DEFINITION[0x471] = pair<string, vector<definition>> ("ID_IMU_GYROSCOPE", {
-    definition(0, 2, true, "YAW ROTATIONAL RATE", "DEG/S"),
-    definition(2, 2, true, "PITCH ROTATIONAL RATE", "DEG/S"),
-    definition(4, 2, true, "ROLL ROTATIONAL RATE", "DEG/S")
+    definition(0, 2, true, "YAW ROTATIONAL RATE", "DEG/S", 360),
+    definition(2, 2, true, "PITCH ROTATIONAL RATE", "DEG/S", 360),
+    definition(4, 2, true, "ROLL ROTATIONAL RATE", "DEG/S", 360)
   });
 }
 
