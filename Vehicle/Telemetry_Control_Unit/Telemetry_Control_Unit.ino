@@ -109,6 +109,8 @@ MC_firmware_information mc_firmware_information;
 MC_command_message mc_command_message;
 MC_read_write_parameter_command mc_read_write_parameter_command;
 MC_read_write_parameter_response mc_read_write_parameter_response;
+IMU_accelerometer imu_accelerometer;
+IMU_gyroscope imu_gyroscope;
 
 void parse_can_message();
 void write_to_SD(CAN_message_t *msg);
@@ -268,6 +270,8 @@ void parse_can_message() {
             case ID_MC_READ_WRITE_PARAMETER_COMMAND:    mc_read_write_parameter_command.load(msg_rx.buf);   break;
             case ID_MC_READ_WRITE_PARAMETER_RESPONSE:   mc_read_write_parameter_response.load(msg_rx.buf);  break;
             case ID_MCU_WHEEL_SPEED:                    mcu_wheel_speed.load(msg_rx.buf);                   break;
+            case ID_IMU_ACCELEROMETER:                  imu_accelerometer.load(msg_rx.buf);                 break;
+            case ID_IMU_GYROSCOPE:                       imu_gyroscope.load(msg_rx.buf);                     break;
         }
     }
 }

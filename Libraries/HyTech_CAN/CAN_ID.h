@@ -41,3 +41,5 @@
 #define ID_DASHBOARD_STATUS                                         0xEB
 #define ID_SAB_FRONT                                                0xEC
 #define ID_SAB_REAR                                                 0xED
+#define ID_IMU_ACCELEROMETER                                        0x470
+#define ID_IMU_GYROSCOPE                                            0x471

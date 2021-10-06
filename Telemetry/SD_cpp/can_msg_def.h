@@ -51,7 +51,7 @@ struct definition {
     }
 };
 
-static vector<pair<string, vector<definition>>> CAN_MSG_DEFINITION (0x100, pair<string, vector<definition>>("ERROR: NO DEFINITION FOUND", {}));
+static vector<pair<string, vector<definition>>> CAN_MSG_DEFINITION (0x500, pair<string, vector<definition>>("ERROR: NO DEFINITION FOUND", {}));
 
 static void loadLookupTable() {
   CAN_MSG_DEFINITION[0xA0] = pair<string, vector<definition>> ("ID_MC_TEMPERATURES_1", {
@@ -254,6 +254,16 @@ static void loadLookupTable() {
   });
   CAN_MSG_DEFINITION[0xED] = pair<string, vector<definition>> ("ID_TCU_DISTANCE_TRAVELED", {
     definition(0, 2, true, "TCU DISTANCE TRAVELED", "", 0.01)
+  });
+  CAN_MSG_DEFINITION[0x470] = pair<string, vector<definition>> ("ID_IMU_ACCELEROMETER", {
+    definition(0, 2, true, "LATERAL ACCELERATION", "G"),
+    definition(2, 2, true, "LONGITUDAL ACCELERATION", "G"),
+    definition(4, 2, true, "VERTICAL ACCELERATION", "G")
+  });
+  CAN_MSG_DEFINITION[0x471] = pair<string, vector<definition>> ("ID_IMU_GYROSCOPE", {
+    definition(0, 2, true, "YAW ROTATIONAL RATE", "DEG/S"),
+    definition(2, 2, true, "PITCH ROTATIONAL RATE", "DEG/S"),
+    definition(4, 2, true, "ROLL ROTATIONAL RATE", "DEG/S")
   });
 }
 
