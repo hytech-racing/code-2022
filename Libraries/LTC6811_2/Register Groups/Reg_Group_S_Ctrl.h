@@ -5,6 +5,19 @@
     #include "Arduino.h"
 #endif
 
+
+enum class S_CONTROL {
+    S_DRIVE_HIGH = 0,
+    S_1_PULSE,
+    S_2_PULSES,
+    S_3_PULSES,
+    S_4_PULSES,
+    S_5_PULSES,
+    S_6_PULSES,
+    S_7_PULSES,
+    S_DRIVE_LOW
+};
+
 class Reg_Group_S_Ctrl {
 public:
     Reg_Group_S_Ctrl() = default;
@@ -20,12 +33,12 @@ public:
                     S_CONTROL pin10_,
                     S_CONTROL pin11_,
                     S_CONTROL pin12_) {
-        byte0 = ((int)pin2_ << 4) + pin1_;
-        byte1 = ((int)pin4_ << 4) + pin3_;
-        byte2 = ((int)pin6_ << 4) + pin5_;
-        byte3 = ((int)pin8_ << 4) + pin7_;
-        byte4 = ((int)pin10_ << 4) + pin9_;
-        byte5 = ((int)pin12_ << 4) + pin11_;
+        byte0 = ((int)pin2_ << 4) + (int)pin1_;
+        byte1 = ((int)pin4_ << 4) + (int)pin3_;
+        byte2 = ((int)pin6_ << 4) + (int)pin5_;
+        byte3 = ((int)pin8_ << 4) + (int)pin7_;
+        byte4 = ((int)pin10_ << 4) + (int)pin9_;
+        byte5 = ((int)pin12_ << 4) + (int)pin11_;
     };
     Reg_Group_S_Ctrl(uint8_t* byte_arr) : 
         byte0(byte_arr[0]), 
@@ -49,21 +62,9 @@ public:
     S_CONTROL get_pin12() { return (S_CONTROL)((byte5 & 0xF0) >> 4); };
 
     uint8_t* buf(){
-        return static_cast<uint8_t*>(this);
+        return reinterpret_cast<uint8_t*>(this);
     };
 
 private:
     uint8_t byte0, byte1, byte2, byte3, byte4, byte5;
-};
-
-enum class S_CONTROL {
-    S_DRIVE_HIGH = 0,
-    S_1_PULSE,
-    S_2_PULSES,
-    S_3_PULSES,
-    S_4_PULSES,
-    S_5_PULSES,
-    S_6_PULSES,
-    S_7_PULSES,
-    S_DRIVE_LOW
 };

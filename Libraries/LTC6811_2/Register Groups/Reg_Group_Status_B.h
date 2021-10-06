@@ -13,7 +13,7 @@ public:
         byte2(byte2_),
         byte3(byte3_),
         byte4(byte4_),
-        byte5(byte5_), { 
+        byte5(byte5_) { 
     };
 
     uint16_t get_digital_supply_voltage() { return digital_supply_voltage; };
@@ -27,14 +27,14 @@ public:
             ((byte3 & 0b10) << 3) + 
             ((byte3 & 0b1000) << 2) + 
             ((byte3 & 0b100000) << 1) + 
-            byte3 & 0b10000000 +
+            (byte3 & 0b10000000) +
             ((byte3 & 0b10) << 7) + 
             ((byte3 & 0b1000) << 6) + 
             ((byte3 & 0b100000) << 5) + 
             ((byte3 & 0b10000000) << 4);
     };
     uint16_t get_cell_undervoltage_flags() { 
-        return byte2 & 0b1 + 
+        return (byte2 & 0b1) + 
             ((byte2 & 0b100) >> 1) + 
             ((byte2 & 0b10000) >> 2) + 
             ((byte2 & 0b1000000) >> 3) +
@@ -52,7 +52,7 @@ public:
     bool get_thermal_shutdown_status() { return (byte5 & 0b1) > 0; };
 
     uint8_t* buf(){
-        return static_cast<uint8_t*>(this);
+        return reinterpret_cast<uint8_t*>(this);
     };
 
 private:

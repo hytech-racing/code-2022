@@ -17,12 +17,12 @@ public:
                     uint8_t fcom0, 
                     uint8_t fcom1,
                     uint8_t fcom2) {
-        byte0 = (icom0 << 4) + (d0 & 0xF0) >> 4;
-        byte1 = (d0 & 0x0F) << 4 + fcom0;
-        byte2 = (icom1 << 4) + (d1 & 0xF0) >> 4;
-        byte3 = (d1 & 0x0F) << 4 + fcom1;
-        byte4 = (icom2 << 4) + (d2 & 0xF0) >> 4;
-        byte5 = (d2 & 0x0F) << 4 + fcom2;
+        byte0 = (icom0 << 4) + ((d0 & 0xF0) >> 4);
+        byte1 = ((d0 & 0x0F) << 4) + fcom0;
+        byte2 = (icom1 << 4) + ((d1 & 0xF0) >> 4);
+        byte3 = ((d1 & 0x0F) << 4) + fcom1;
+        byte4 = (icom2 << 4) + ((d2 & 0xF0) >> 4);
+        byte5 = ((d2 & 0x0F) << 4) + fcom2;
     };
     Reg_Group_COMM(uint8_t* byte_arr) : 
         byte0(byte_arr[0]), 
@@ -32,9 +32,9 @@ public:
         byte4(byte_arr[4]), 
         byte5(byte_arr[5]) { };
 
-    uint8_t get_data_byte0() { return (byte1 & 0xF0) >> 4 + (byte0 & 0x0F) << 4; };
-    uint8_t get_data_byte1() { return (byte3 & 0xF0) >> 4 + (byte2 & 0x0F) << 4;; };
-    uint8_t get_data_byte2() { return (byte5 & 0xF0) >> 4 + (byte4 & 0x0F) << 4;; };
+    uint8_t get_data_byte0() { return ((byte1 & 0xF0) >> 4) + ((byte0 & 0x0F) << 4); };
+    uint8_t get_data_byte1() { return ((byte3 & 0xF0) >> 4) + ((byte2 & 0x0F) << 4); };
+    uint8_t get_data_byte2() { return ((byte5 & 0xF0) >> 4) + ((byte4 & 0x0F) << 4); };
     uint8_t initial_comm_control0() { return (byte0 & 0xF0) >> 4; };
     uint8_t initial_comm_control1() { return (byte2 & 0xF0) >> 4; };
     uint8_t initial_comm_control2() { return (byte4 & 0xF0) >> 4; };
@@ -43,7 +43,7 @@ public:
     uint8_t final_comm_control2() { return byte5 & 0x0F; };
 
     uint8_t* buf(){
-        return static_cast<uint8_t*>(this);
+        return reinterpret_cast<uint8_t*>(this);
     };
 
 

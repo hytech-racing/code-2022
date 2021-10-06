@@ -50,7 +50,7 @@ public:
     uint8_t get_pwm12() { return (byte5 & 0xF0) >> 4; };
 
     uint8_t* buf(){
-        return static_cast<uint8_t*>(this);
+        return reinterpret_cast<uint8_t*>(this);
     };
 
 private:

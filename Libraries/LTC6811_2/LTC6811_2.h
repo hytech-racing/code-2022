@@ -5,10 +5,24 @@
     #include "Arduino.h"
 #endif
 
+#include "Register Groups/Reg_Group_Aux_A.h"
+#include "Register Groups/Reg_Group_Aux_B.h"
+#include "Register Groups/Reg_Group_Cell_A.h"
+#include "Register Groups/Reg_Group_Cell_B.h"
+#include "Register Groups/Reg_Group_Cell_C.h"
+#include "Register Groups/Reg_Group_Cell_D.h"
+#include "Register Groups/Reg_Group_COMM.h"
+#include "Register Groups/Reg_Group_Config.h"
+#include "Register Groups/Reg_Group_PWM.h"
+#include "Register Groups/Reg_Group_S_Ctrl.h"
+#include "Register Groups/Reg_Group_Status_A.h"
+#include "Register Groups/Reg_Group_Status_B.h"
+#include "option_enums.h"
+
 
 class LTC6811_2 {
 public:
-	lTC6811_2() = default;
+	LTC6811_2() = default;
     LTC6811_2(int addr_, int cs_);
     void init();
 
@@ -22,10 +36,10 @@ public:
     //read register commands
     Reg_Group_Config rdcfga();
     
-    Reg_Group_CV_A rdcva();
-    Reg_Group_CV_B rdcvb();
-    Reg_Group_CV_C rdcvc();
-    Reg_Group_CV_D rdcvd();
+    Reg_Group_Cell_A rdcva();
+    Reg_Group_Cell_B rdcvb();
+    Reg_Group_Cell_C rdcvc();
+    Reg_Group_Cell_D rdcvd();
 
    	Reg_Group_Aux_A rdauxa();
 
@@ -71,10 +85,4 @@ private:
     int CS;
 
     uint16_t pec15_calc(uint8_t len, uint8_t *data);
-}
-
-
-
-
-
-
+};  

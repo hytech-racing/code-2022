@@ -9,7 +9,7 @@ class Reg_Group_Config {
 public:
     Reg_Group_Config() = default;
     Reg_Group_Config(uint8_t gpio_, bool refon_, bool dten_, bool adcpot_, uint16_t undervoltage_, uint16_t overvoltage_, uint16_t discharge_, uint8_t dcto_) { 
-        byte0 = (gpio << 3) + (static_cast<int>(refon_) << 2) + (static_cast<int>(dten_) << 1) + static_cast<int>(adcpot_);
+        byte0 = (gpio_ << 3) + (static_cast<int>(refon_) << 2) + (static_cast<int>(dten_) << 1) + static_cast<int>(adcpot_);
         byte1 = (undervoltage_ & 0x0FF);
         byte2 = ((overvoltage_ & 0x00F) << 4) + ((undervoltage_ & 0xF00) >> 8);
         byte3 = ((overvoltage_ & 0xFF0) >> 4);
@@ -29,12 +29,12 @@ public:
     bool get_dten() { return (byte0 & 0b10) > 0; };
     bool get_adcpot() { return (byte0 & 0b1) > 0; };
     uint16_t get_undervoltage() { return ((byte2 & 0x0F) << 8) + (byte1); };
-    uint16_t get_overvoltage() { return ((byte2 & 0xF0) >> 4) + byte3 << 4; };
+    uint16_t get_overvoltage() { return ((byte2 & 0xF0) >> 4) + (byte3 << 4); };
     uint16_t get_discharge() { return ((byte5 & 0x0F) << 8) + byte4; };
     uint8_t get_dcto() { return (byte5 & 0xF0) >> 4; };
 
     uint8_t* buf(){
-        return static_cast<uint8_t*>(this);
+        return reinterpret_cast<uint8_t*>(this);
     };
 
 private:
