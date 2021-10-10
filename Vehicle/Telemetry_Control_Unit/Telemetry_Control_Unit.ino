@@ -271,7 +271,7 @@ void parse_can_message() {
             case ID_MC_READ_WRITE_PARAMETER_RESPONSE:   mc_read_write_parameter_response.load(msg_rx.buf);  break;
             case ID_MCU_WHEEL_SPEED:                    mcu_wheel_speed.load(msg_rx.buf);                   break;
             case ID_IMU_ACCELEROMETER:                  imu_accelerometer.load(msg_rx.buf);                 break;
-            case ID_IMU_GYROSCOPE:                       imu_gyroscope.load(msg_rx.buf);                     break;
+            case ID_IMU_GYROSCOPE:                      imu_gyroscope.load(msg_rx.buf);                     break;
         }
     }
 }
