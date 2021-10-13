@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include "FlexCAN_T4.h"
 
 // CAN Variables
@@ -7,6 +8,8 @@ CAN_message_t msg;
 unsigned char len = 0;
 unsigned char buf[8];
 #define BASE_ID 0x470
+
+void swap_bytes(uint8_t *low_byte, uint8_t high_byte);
 
 // Initialize LEDs
 #define IMU_LED 5
@@ -65,7 +68,7 @@ void loop() {
     } 
 
     // gyroscope
-    if (msg.if == BASE_ID + 1) {
+    if (msg.id == BASE_ID + 1) {
       // multiply by 360 to get degrees
       int16_t yaw = (((int16_t)(buf[0]) << 8) | buf[1]) * 360;
       int16_t pitch = (((int16_t)(buf[2]) << 8) | buf[3]) * 360;
@@ -82,6 +85,11 @@ void loop() {
     }
     #endif
 
+    swap_bytes(&buf[1], &buf[0]);
+    swap_bytes(&buf[3], &buf[2]);
+    swap_bytes(&buf[5], &buf[4]);
+    msg.buf = buf;
+
     CAN_Vehicle.write(msg);
     digitalWrite(Vehicle_LED, HIGH);
   }
@@ -91,4 +99,10 @@ void loop() {
     digitalWrite(IMU_LED, LOW);
     digitalWrite(Vehicle_LED, LOW);
   }
+}
+
+void swap_bytes(uint8_t *low_byte, uint8_t *high_byte) {
+  uint8_t temp = *low_byte;
+  *low_byte = *high_byte;
+  *high_byte = temp;
 }

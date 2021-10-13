@@ -256,14 +256,14 @@ static void loadLookupTable() {
     definition(0, 2, true, "TCU DISTANCE TRAVELED", "", 0.01)
   });
   CAN_MSG_DEFINITION[0x470] = pair<string, vector<definition>> ("ID_IMU_ACCELEROMETER", {
-    definition(0, 2, true, "LATERAL ACCELERATION", "G"),
-    definition(2, 2, true, "LONGITUDAL ACCELERATION", "G"),
-    definition(4, 2, true, "VERTICAL ACCELERATION", "G")
+    definition(0, 2, true, "LATERAL ACCELERATION", "m/s/s", 0.009813),
+    definition(2, 2, true, "LONGITUDAL ACCELERATION", "m/s/s", 0.009813),
+    definition(4, 2, true, "VERTICAL ACCELERATION", "m/s/s", 0.009813)
   });
   CAN_MSG_DEFINITION[0x471] = pair<string, vector<definition>> ("ID_IMU_GYROSCOPE", {
-    definition(0, 2, true, "YAW ROTATIONAL RATE", "DEG/S", 360),
-    definition(2, 2, true, "PITCH ROTATIONAL RATE", "DEG/S", 360),
-    definition(4, 2, true, "ROLL ROTATIONAL RATE", "DEG/S", 360)
+    definition(0, 2, true, "YAW ROTATIONAL RATE", "DEG/S", 0.360),
+    definition(2, 2, true, "PITCH ROTATIONAL RATE", "DEG/S", 0.360),
+    definition(4, 2, true, "ROLL ROTATIONAL RATE", "DEG/S", 0.360)
   });
 }
 
