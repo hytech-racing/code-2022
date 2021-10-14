@@ -8,8 +8,8 @@ sys.path.insert(1, '../telemetry_aws')
 from db import decode, unpack, fletcher16
 from console_config import CONSOLE_CONFIG
 
-MQTT_SERVER = 'localhost'
-# MQTT_SERVER = 'ec2-3-134-2-166.us-east-2.compute.amazonaws.com'
+#MQTT_SERVER = 'localhost'
+MQTT_SERVER = 'ec2-3-134-2-166.us-east-2.compute.amazonaws.com'
 # MQTT_SERVER = 'hytech-telemetry.ryangallaway.me'     # MQTT broker hostname
 
 MQTT_PORT   = 1883                    # MQTT broker port (non-SSL)
