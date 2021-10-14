@@ -15,12 +15,12 @@
 #define THERMISTORS_PER_IC 3            // Number of cell thermistors per IC
 #define PCB_THERM_PER_IC 2              // Number of PCB thermistors per IC
 
-#define CHARGE_ENABLE 12
+#define CHARGE_ENABLE 11
 #define SHUTDOWN_B 8
 #define SHUTDOWN_C 9
 #define SHUTDOWN_D 10
 #define WATCHDOG_OUT 13
-#define TEENSY_OK 14
+#define TEENSY_OK 12
 #define VOLTAGE_READ 16
 #define IMON_B 20
 
@@ -96,7 +96,7 @@ void loop() {
     if (timer_update_CAN.check()) {
           ccu_status.write(tx_msg.buf);
           tx_msg.id = ID_CCU_STATUS;
-          tx_msg.len = sizeof(CAN_message_ccu_status_t);
+          tx_msg.len = sizeof(CCU_status);
           CAN.write(tx_msg);
     } 
 
