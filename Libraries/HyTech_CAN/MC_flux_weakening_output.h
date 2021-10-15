@@ -35,8 +35,8 @@ public:
 private:
     uint16_t modulation_index;      // @Parse @Hex TODO Signed or Unsigned?
     int16_t flux_weakening_output;  // @Parse @Hex
-    int16_t id_command;             // @Parse @Hex
-    int16_t iq_command;             // @Parse @Hex
+    int16_t id_command;             // @Parse
+    int16_t iq_command;             // @Parse 
 };
 
 #pragma pack(pop)

@@ -2,11 +2,15 @@
 
 # Usage: parse_folder [directory]
 
+indir=$(pwd)/$1
+cd `dirname $0`
+
+echo $indir
+
 mkdir -p ../log
 
-if [[ -d $1 ]]; then
-	indir=$1
-	outdir=../log/$(basename $1)
+if [[ -d $indir ]]; then
+	outdir=../log/$(basename $indir)
 	mkdir -p $outdir
 	for infile in $(ls $indir/*.csv $indir/*.CSV); do
 		../build/CANParser -i $infile -o $outdir/$(basename $infile)

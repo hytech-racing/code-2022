@@ -20,7 +20,7 @@
 #define ID_MC_READ_WRITE_PARAMETER_RESPONSE							0xC2
 #define ID_MCU_STATUS												0xC3
 #define ID_MCU_PEDAL_READINGS										0xC4
-#define ID_GLV_CURRENT_READINGS										0xCC
+#define ID_MCU_ANALOG_READINGS										0xCC
 
 #define ID_BMS_ONBOARD_TEMPERATURES									0xD5
 #define ID_BMS_ONBOARD_DETAILED_TEMPERATURES						0xD6 // TODO rename to bms_detailed_onboard_temperatures when we're not in the middle of a development cycle
@@ -32,7 +32,6 @@
 #define ID_FH_WATCHDOG_TEST											0xDC
 #define ID_CCU_STATUS												0xDD
 #define ID_BMS_BALANCING_STATUS										0xDE // TODO rename to bms_balancing_cells when we're not in the middle of a development cycle
-#define ID_FCU_ACCELEROMETER										0xDF // TODO rename to mcu_accelerometer_readings when we're not in the middle of a development cycle
 
 #define ID_BMS_READ_WRITE_PARAMETER_COMMAND							0xE0 // TODO define this message
 #define ID_BMS_PARAMETER_RESPONSE									0xE1 // TODO define this message

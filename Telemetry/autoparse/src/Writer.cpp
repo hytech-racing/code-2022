@@ -88,9 +88,13 @@ void Writer::writeNumericalParser(VarDef* vdef) {
 	if (!strempty(vdef->unit))
 		fprintf(source, ",%s", vdef->unit);
 
-	if (vdef->scale)
-		sprintf(vdef->getter + strlen(vdef->getter), " / (double) %d", vdef->scale);
-	writeParams(vdef->getter);
+	if (!vdef->scale)
+		writeParams(vdef->getter);
+	else {
+		char buffer [256];
+		sprintf(buffer, "%s / (double) %d", vdef->getter, vdef->scale);
+		writeParams(buffer);
+	}
 }
 
 void Writer::writeFlagParser(VarDef* vdef) {

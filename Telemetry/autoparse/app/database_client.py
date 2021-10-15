@@ -33,33 +33,34 @@ class DatabaseClient:
 
 		print("Connected using database {}".format(INFLUX_DB_NAME))
 		self.json_body = []
-		self.writing = False
+		self.writing = True
 
 	def write(self, data):
 		# print("Writing document: ")
 		# print(data)
 		
 		self.json_body.append(data)
-		if not self.writing:
-			try:
-				threading.Thread(target=self.buffered_write).start()
-			except Exception as e:
-				print(e)
 
 	def buffered_write(self):
-		# print("Writing set: ")
-		# print(json)
-		
-		json = self.json_body
-		self.json_body = []
-		self.writing = True
+		while self.writing:
+			json = self.json_body
+			self.json_body = []
 
-		try:
-			self.influx_client.write_points(points=json)
-			self.writing = False
-		except Exception as e:
-			print("Operation failed. Printing error:")
-			print(e)
+			if not json:
+				time.sleep(5)
+				continue
+
+			# print("Writing set: ")
+			# print(json)
+
+			try:
+				self.influx_client.write_points(points=json)
+			except Exception as e:
+				print("Operation failed. Printing error:")
+				print(e)
+
+	def shutdown(self):
+		self.writing = False
 
 def get_value(val):
 	try:
@@ -83,6 +84,8 @@ LABEL_COL = HEADER.index('label')
 VALUE_COL = HEADER.index('value')
 UNIT_COL = HEADER.index('unit')
 
+writer = threading.Thread(target=telem_client.buffered_write).start()
+
 for record in reader:
 	telem_client.write({
 		'measurement': record[LABEL_COL],
@@ -94,4 +97,5 @@ for record in reader:
 		}
 	})
 
-telem_client.buffered_write()
+telem_client.shutdown()
+writer.join()

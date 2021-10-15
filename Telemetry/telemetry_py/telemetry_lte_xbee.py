@@ -61,17 +61,17 @@ class TelemetryClient:
                     line = key + ': ' + str(line[1]) + ((" " + line[2]) if len(line) > 2 else "")
                     f.write(timestamp + ' ' + line + '\n')
 
-                    if data[0] == 0xD8:
+                    if data[0] == 0xD8: # ID_BMS_DETAILED_VOLTAGES
                         row = 10 * (int(key[3]) % 4) + int(key[10]) + 4
                         col = 105 + 25 * (int(key[3]) // 4)
                         self.clearLineShort(row, col)
                         self.screen.addstr(row, col, line)
-                    elif data[0] == 0xDA:
+                    elif data[0] == 0xDA: # ID_BMS_DETAILED_TEMPERATURES
                         row = 4 * (int(key[3]) % 4 + 1) + int(key[11])
                         col = 155 + 25 * (int(key[3]) // 4)
                         self.clearLineShort(row, col)
                         self.screen.addstr(row, col, line)
-                    elif data[0] == 0xDE:
+                    elif data[0] == 0xDE: # ID_BMS_BALANCING_STATUS
                         row = 22 + int(key[6])
                         col = 160 + 5 * int(key[12])
                         self.clearLineBal(row, col)
@@ -92,7 +92,8 @@ class TelemetryClient:
 
         self.screen.addstr(0,5,'HYTECH RACING 2019 VEHICLE SERIAL DEBUGGER')
         self.screen.addstr(3,5,'RMS INVERTER')
-        self.screen.addstr(40,5,'GLV CURRENT READINGS')
+        self.screen.addstr(40,5,'MCU ANALOG READINGS')
+        self.screen.addstr(46,5,'DASHBOARD STATUS FLAGS')
         self.screen.addstr(3,55,'BATTERY MANAGEMENT SYSTEM')
         self.screen.addstr(3,105,'BATTERY MANAGEMENT SYSTEM DETAILED VOLTAGES')
         self.screen.addstr(3,155,'BATTERY MANAGEMENT SYSTEM DETAILED TEMPERATURES')
