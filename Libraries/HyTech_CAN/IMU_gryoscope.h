@@ -24,4 +24,4 @@ private:
     int16_t roll = (((int16_t)(buf[5]) << 8) | buf[4]) * 360;
 */
 
-}
+};
