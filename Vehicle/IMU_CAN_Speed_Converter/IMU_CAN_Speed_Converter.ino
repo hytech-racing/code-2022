@@ -15,8 +15,9 @@ void swap_bytes(uint8_t *low_byte, uint8_t high_byte);
 #define IMU_LED 5
 #define Vehicle_LED 6
 
-// Debug Print to Console
-#define DEBUG (true)
+// Options
+#define DEBUG (false)
+#define ZERO (false)
 
 void setup() {
   // Initialize both sets of CAN lines
@@ -30,7 +31,7 @@ void setup() {
   pinMode(Vehicle_LED, OUTPUT);
 
   // Zero IMU
-  /*
+  #if ZERO
   CAN_message_t zero_msg;
   zero_msg.id = 0x10;
   zero_msg.len = 8;
@@ -40,7 +41,7 @@ void setup() {
   }
   CAN_IMU.write(zero_msg);  
   delay(6000); // delay 6 seconds to perform zeroing
-  */
+  #endif
   
   
   #if DEBUG
