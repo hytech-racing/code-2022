@@ -30,6 +30,9 @@
 #define DEBUG false
 #define BMS_DEBUG_ENABLE false
 
+// set to true or false to test functionality
+#define REGEN_ENABLE false
+
 #define LINEAR 0
 
 // EXP
@@ -795,10 +798,20 @@ int calculate_torque() {
     if (calculated_torque > max_torque) {
         calculated_torque = max_torque;
     }
-    if (calculated_torque < 0) {
+    #if REGEN_ENABLE
+      if (calculated_torque < 5) {
+        if (abs(mc_motor_position_information.get_motor_speed()) > 300) {
+          calculated_torque = -100; //-10 Nm 
+        } else {
+          calculated_torque = 0;
+        }
+      }
+    #else
+      if (calculated_torque < 0) {
         calculated_torque = 0;
-    }
-
+      }
+    #endif
+    
 
     #if DEBUG
     if (timer_debug_raw_torque.check()) {
