@@ -30,13 +30,18 @@ void setup() {
   pinMode(Vehicle_LED, OUTPUT);
 
   // Zero IMU
+  /*
   CAN_message_t zero_msg;
   zero_msg.id = 0x10;
   zero_msg.len = 8;
   uint8_t zero_buf[8] = {0x69, 0x6d, 0x75, 0x7a, 0x65, 0x72, 0x6f, 0x7a};
-  zero_msg.buf = zero_buf;
+  for (int i = 0; i < 8; i++) {
+    buf[i] = zero_buf[i];
+  }
   CAN_IMU.write(zero_msg);  
   delay(6000); // delay 6 seconds to perform zeroing
+  */
+  
   
   #if DEBUG
   Serial.begin(9600);
@@ -49,13 +54,12 @@ void loop() {
     digitalWrite(IMU_LED, HIGH);
     
     #if DEBUG
-    uint8_t buf[8] = msg.buf; //get message buf
     
     // accelerometer
     if (msg.id == BASE_ID) {
-      int16_t lat_accel = ((int16_t)(buf[0]) << 8) | buf[1];
-      int16_t long_accel = ((int16_t)(buf[2]) << 8) | buf[3];
-      int16_t vert_accel = ((int16_t)(buf[4]) << 8) | buf[5];
+      int16_t lat_accel = ((int16_t)(msg.buf[0]) << 8) | msg.buf[1];
+      int16_t long_accel = ((int16_t)(msg.buf[2]) << 8) | msg.buf[3];
+      int16_t vert_accel = ((int16_t)(msg.buf[4]) << 8) | msg.buf[5];
       
       Serial.println("-----------------------------");
       Serial.print("Lateral:\t");
@@ -70,13 +74,13 @@ void loop() {
     // gyroscope
     if (msg.id == BASE_ID + 1) {
       // multiply by 360 to get degrees
-      int16_t yaw = (((int16_t)(buf[0]) << 8) | buf[1]) * 360;
-      int16_t pitch = (((int16_t)(buf[2]) << 8) | buf[3]) * 360;
-      int16_t roll = (((int16_t)(buf[4]) << 8) | buf[5]) * 360;
+      int16_t yaw = (((int16_t)(msg.buf[0]) << 8) | msg.buf[1]) * 360;
+      int16_t pitch = (((int16_t)(msg.buf[2]) << 8) | msg.buf[3]) * 360;
+      int16_t roll = (((int16_t)(msg.buf[4]) << 8) | msg.buf[5]) * 360;
 
       Serial.println("-----------------------------");
       Serial.print("Yaw:\t");
-      Serial.println(yaw / 1000.)
+      Serial.println(yaw / 1000.);
       Serial.print("Pitch:\t");
       Serial.println(pitch / 1000.);
       Serial.print("Roll:\t");
@@ -85,10 +89,9 @@ void loop() {
     }
     #endif
 
-    swap_bytes(&buf[1], &buf[0]);
-    swap_bytes(&buf[3], &buf[2]);
-    swap_bytes(&buf[5], &buf[4]);
-    msg.buf = buf;
+    swap_bytes(&msg.buf[1], &msg.buf[0]);
+    swap_bytes(&msg.buf[3], &msg.buf[2]);
+    swap_bytes(&msg.buf[5], &msg.buf[4]);
 
     CAN_Vehicle.write(msg);
     digitalWrite(Vehicle_LED, HIGH);
