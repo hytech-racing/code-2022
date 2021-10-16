@@ -24,4 +24,4 @@ private:
     int16_t long_accel = ((int16_t)(buf[3]) << 8) | buf[2];
     int16_t vert_accel = ((int16_t)(buf[5]) << 8) | buf[4];
     */
-}
+};
