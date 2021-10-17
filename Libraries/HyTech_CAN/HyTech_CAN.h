@@ -42,6 +42,8 @@
 #include "MC_torque_timer_information.h"
 #include "MC_voltage_information.h"
 #include "SAB_readings.h"
+#include "EM_measurement.h"
+#include "EM_status.h"
 #include "IMU_accelerometer.h"
 #include "IMU_gryoscope.h"
 #endif
