@@ -10,14 +10,15 @@
 
 // CAN Variables
 Metro timer_can_update = Metro(100);
-#define SPI_CS 14
+#define SPI_CS A0
 MCP_CAN CAN(SPI_CS);
 
-#define ADC_CS 25
+#define ADC_CS A1
 #define ALPHA 0.9772                     // parameter for the sowftware filter used on ADC pedal channels
 #define ADC_SPI_SPEED 1800000            // max SPI clokc frequency for MCP3208 is 2MHz in ideal conditions
 ADC_SPI mcp3208(ADC_CS, ADC_SPI_SPEED);
 
+#define CAN_LED 5
 SAB_readings sab_readings;
 
 /*
@@ -35,6 +36,7 @@ float filtered_sensor4_reading{};
 
 void setup() {
     //Initiallizes CAN
+    pinMode(CAN_LED, OUTPUT);
     while (CAN_OK != CAN.begin(CAN_500KBPS))              // init can bus : baudrate = 250K
     {
         delay(200);
@@ -43,6 +45,8 @@ void setup() {
 
 void loop() { 
     if (timer_can_update.check()){
+        digitalWrite(CAN_LED, HIGH);
+        
         uint8_t msg[8] = {0};
         sab_readings.set_sensor_1(filtered_sensor1_reading);
         sab_readings.set_sensor_2(filtered_sensor2_reading);
@@ -54,6 +58,8 @@ void loop() {
         #elif
         CAN.sendMsgBuf(ID_SAB_REAR, 0, sizeof(sab_readings), msg);
         #endif
+    } else {
+      digitalWrite(CAN_LED, LOW);
     }
 
     filtered_sensor1_reading = ALPHA * filtered_sensor1_reading + (1 - ALPHA) * mcp3208.read_adc(SENSOR_1_CHANNEL);
