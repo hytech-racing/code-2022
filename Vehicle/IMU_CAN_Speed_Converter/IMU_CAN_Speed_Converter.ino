@@ -13,7 +13,11 @@ void swap_bytes(uint8_t *low_byte, uint8_t high_byte);
 
 // Initialize LEDs
 #define IMU_LED 5
-#define Vehicle_LED 6
+#define VEHICLE_LED 6
+#define IMU_LED_TICKS_LIMIT 1000
+#define VEHICLE_LED_TICKS_LIMIT 1000
+int IMU_LED_ticks = 0;
+int Vehicle_LED_ticks = 0;
 
 // Options
 #define DEBUG (false)
@@ -28,7 +32,7 @@ void setup() {
 
   // Set LED pinmodes
   pinMode(IMU_LED, OUTPUT);
-  pinMode(Vehicle_LED, OUTPUT);
+  pinMode(VEHICLE_LED, OUTPUT);
 
   // Zero IMU
   #if ZERO
@@ -51,8 +55,25 @@ void setup() {
 }
 
 void loop() {
-  if (CAN_IMU.read(msg)) {
+  // LEDs
+  if (IMU_LED_ticks == IMU_LED_TICKS_LIMIT / 2) {
     digitalWrite(IMU_LED, HIGH);
+  }
+  if (IMU_LED_ticks == IMU_LED_TICKS_LIMIT) {
+    digitalWrite(IMU_LED, LOW);
+    IMU_LED_ticks = 0;
+  }
+  if (Vehicle_LED_ticks == VEHICLE_LED_TICKS_LIMIT / 2) {
+    digitalWrite(VEHICLE_LED, HIGH);
+  }
+  if (Vehicle_LED_ticks == VEHICLE_LED_TICKS_LIMIT) {
+    digitalWrite(VEHICLE_LED, LOW);
+    Vehicle_LED_ticks = 0;
+  }
+
+  // Read and write CAN message
+  if (CAN_IMU.read(msg)) {
+    IMU_LED_ticks++;
     
     #if DEBUG
     
@@ -95,13 +116,7 @@ void loop() {
     swap_bytes(&msg.buf[5], &msg.buf[4]);
 
     CAN_Vehicle.write(msg);
-    digitalWrite(Vehicle_LED, HIGH);
-  }
-
-  // turn both LEDS off 
-  else {
-    digitalWrite(IMU_LED, LOW);
-    digitalWrite(Vehicle_LED, LOW);
+    Vehicle_LED_ticks++;
   }
 }
 
