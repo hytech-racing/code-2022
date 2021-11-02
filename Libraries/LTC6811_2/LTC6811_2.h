@@ -23,7 +23,9 @@
 class LTC6811_2 {
 public:
 	LTC6811_2() = default;
-    LTC6811_2(int addr_, int cs_);
+    LTC6811_2(int addr_, int cs_) :
+        address(addr_),
+        cs(cs_) { };
     void init();
 
     //write register commands
@@ -79,10 +81,11 @@ public:
    	void stcomm();
    	void wakeup_sleep();
    	void wakeup_idle();
+    uint8_t get_cmd_address();
 
 private:
-	int address;
-    int CS;
+	uint8_t address;
+    int cs;
 
     uint16_t pec15_calc(uint8_t len, uint8_t *data);
 };  
