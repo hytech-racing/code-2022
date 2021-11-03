@@ -7,7 +7,6 @@ FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> CAN_Vehicle; //Pins to the Vehicle Can
 CAN_message_t msg;
 unsigned char len = 0;
 unsigned char buf[8];
-#define BASE_ID 0x470
 
 void swap_bytes(uint8_t *low_byte, uint8_t high_byte);
 
@@ -78,7 +77,7 @@ void loop() {
     #if DEBUG
     
     // accelerometer
-    if (msg.id == BASE_ID) {
+    if (msg.id == ID_IMU_ACCELEROMETER) {
       int16_t lat_accel = ((int16_t)(msg.buf[0]) << 8) | msg.buf[1];
       int16_t long_accel = ((int16_t)(msg.buf[2]) << 8) | msg.buf[3];
       int16_t vert_accel = ((int16_t)(msg.buf[4]) << 8) | msg.buf[5];
@@ -94,7 +93,7 @@ void loop() {
     } 
 
     // gyroscope
-    if (msg.id == BASE_ID + 1) {
+    if (msg.id == ID_IMU_GYROSCOPE) {
       // multiply by 360 to get degrees
       int16_t yaw = (((int16_t)(msg.buf[0]) << 8) | msg.buf[1]) * 360;
       int16_t pitch = (((int16_t)(msg.buf[2]) << 8) | msg.buf[3]) * 360;
