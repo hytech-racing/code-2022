@@ -82,10 +82,9 @@ public:
    	void wakeup_sleep();
    	void wakeup_idle();
     uint8_t get_cmd_address();
+    void generate_pec(uint8_t *byte, uint8_t *pec, int num_bytes);
 
 private:
 	uint8_t address;
     int cs;
-
-    uint16_t pec15_calc(uint8_t len, uint8_t *data);
 };  
