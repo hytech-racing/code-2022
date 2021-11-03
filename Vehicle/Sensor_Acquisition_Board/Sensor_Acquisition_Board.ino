@@ -19,7 +19,7 @@
 FlexCAN CAN(500000);
 Metro timer_front_update = Metro(100);
 Metro timer_rear_update = Metro(100);
-static CAN_message_t msg;
+CAN_message_t msg;
 
 // Initialize LEDs
 #define CAN_LED 5
@@ -37,6 +37,15 @@ int CAN_LED_ticks = 0;
 #define SENSOR_8_CHANNEL A7
 #define ALPHA 0.9772                      // parameter for the software filter used on ADC pedal channels
 #define INPUT_TO_5000mV 5.908             // expression: 3.3V/(30/11)V * 3.3V/1024counts * 5V/3.3V * 1000mV/1V = 5.9082
+inline float get_sensor1_value() {return analogRead(A0) * INPUT_TO_5000mV * 10.181 + 1.605};
+inline float get_sensor2_value();
+inline float get_sensor3_value();
+inline float get_sensor4_value();
+inline float get_sensor5_value();
+inline float get_sensor6_value();
+inline float get_sensor7_value();
+inline float get_sensor8_value();
+
 
 // Options
 #define DEBUG (true)
@@ -58,7 +67,7 @@ float filtered_sensor8_reading{};
 
 void setup() {
   //Initiallizes CAN
-  pinMode(CAN_LED, OUTPUT)
+  pinMode(CAN_LED, OUTPUT);
   CAN.begin();
   //TODO: Implement these function
   filtered_sensor1_reading = analogRead(SENSOR_1_CHANNEL) * INPUT_TO_5000mV;
@@ -83,12 +92,11 @@ void loop() {
   if (timer_front_update.check()){
       CAN_LED_ticks++;
       
-      uint8_t msg[8] = {0};
       sab_readings.set_sensor_1(filtered_sensor1_reading);
       sab_readings.set_sensor_2(filtered_sensor2_reading);
       sab_readings.set_sensor_3(filtered_sensor3_reading);
       sab_readings.set_sensor_4(filtered_sensor4_reading);
-      sab_readings.write(msg);
+      sab_readings.write(msg.buf);
       msg.id = ID_SAB_FRONT;
       msg.len = sizeof(sab_readings);
       CAN.write(msg);
@@ -114,12 +122,11 @@ void loop() {
   } else if (timer_rear_update.check()) {
       CAN_LED_ticks++;
       
-      uint8_t msg[8] = {0};
       sab_readings.set_sensor_1(filtered_sensor5_reading);
       sab_readings.set_sensor_2(filtered_sensor6_reading);
       sab_readings.set_sensor_3(filtered_sensor7_reading);
       sab_readings.set_sensor_4(filtered_sensor8_reading);
-      sab_readings.write(msg);
+      sab_readings.write(msg.buf);
       msg.id = ID_SAB_REAR;
       msg.len = sizeof(sab_readings);
       CAN.write(msg);
