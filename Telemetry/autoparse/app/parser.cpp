@@ -113,11 +113,19 @@ void run (FILE* infile) {
 		#if (__BYTE_ORDER__ != __ORDER_BIG_ENDIAN__) // handle endianness change
 			for (uint8_t *l = data, *r = data + len - 1; l < r; std::swap(*l++, *r--));
 		#endif
+		
+		// CHANGES BEGIN HERE
+		std::cout << std::to_string(ftell(infile)) << std::endl; // Debug Statement; Comment out if necessary
 
+		if (id == ID_BMS_BALANCING_STATUS) {
+			fseek(infile, ftell(infile) + 20, SEEK_SET); // If id is 0xDE, move cursor to current position + 20 characters
+		}
 		parseMessage(id, timeString, data);
+		//END CHANGES
 
 		if (outfile == stdout)
 			fflush(outfile);
+		
 	}
 
 	exit(0);
