@@ -36,15 +36,16 @@ int CAN_LED_ticks = 0;
 #define SENSOR_7_CHANNEL A6
 #define SENSOR_8_CHANNEL A7
 #define ALPHA 0.9772                      // parameter for the software filter used on ADC pedal channels
-#define INPUT_TO_5000mV 5.908             // expression: 3.3V/(30/11)V * 3.3V/1024counts * 5V/3.3V * 1000mV/1V = 5.9082
-inline float get_sensor1_value() {return analogRead(A0) * INPUT_TO_5000mV * 10.181 + 1.605};
-inline float get_sensor2_value();
-inline float get_sensor3_value();
-inline float get_sensor4_value();
-inline float get_sensor5_value();
-inline float get_sensor6_value();
-inline float get_sensor7_value();
-inline float get_sensor8_value();
+//#define INPUT_TO_5000mV 5.9082, expression: 3.3V/(30/11)V * 3.3V/1024counts * 5V/3.3V * 1000mV/1V = 5.9082, used just for reference
+// Functions scale value up by 1000, will get scaled down 1000 later in autoparse
+inline float get_sensor1_value() {return (analogRead(SENSOR_1_CHANNEL) * 0.06015 + 1.60574) * 1000;} // DO NOT CHANGE THIS W/O SPECIAL REASON
+inline float get_sensor2_value() {return (analogRead(SENSOR_2_CHANNEL) * 0.06015 + 1.60574) * 1000;} // DO NOT CHANGE THIS W/O SPECIAL REASON
+inline float get_sensor3_value() {return analogRead(SENSOR_3_CHANNEL) * 1000;} //TODO: replace this with steering wheel sensor equation
+inline float get_sensor4_value() {return (analogRead(SENSOR_4_CHANNEL) * 0.22988 - 41.93897) * 1000;} // DO NOT CHANGE THIS W/O SPECIAL REASON
+inline float get_sensor5_value() {return (analogRead(SENSOR_5_CHANNEL) * 0.06015 + 1.60574) * 1000;} // DO NOT CHANGE THIS W/O SPECIAL REASON
+inline float get_sensor6_value() {return (analogRead(SENSOR_6_CHANNEL) * 0.06015 + 1.60574) * 1000;} // DO NOT CHANGE THIS W/O SPECIAL REASON
+inline float get_sensor7_value() {return (analogRead(SENSOR_7_CHANNEL) * -0.43003 + 190.95588) * 1000;} // DO NOT CHANGE THIS W/O SPECIAL REASON
+inline float get_sensor8_value() {return (analogRead(SENSOR_8_CHANNEL) * 0.26259 - 61.11111) * 1000;} // DO NOT CHANGE THIS W/O SPECIAL REASON
 
 
 // Options
@@ -69,15 +70,16 @@ void setup() {
   //Initiallizes CAN
   pinMode(CAN_LED, OUTPUT);
   CAN.begin();
-  //TODO: Implement these function
-  filtered_sensor1_reading = analogRead(SENSOR_1_CHANNEL) * INPUT_TO_5000mV;
-  filtered_sensor2_reading = analogRead(SENSOR_2_CHANNEL) * INPUT_TO_5000mV;
-  filtered_sensor3_reading = analogRead(SENSOR_3_CHANNEL) * INPUT_TO_5000mV;
-  filtered_sensor4_reading = analogRead(SENSOR_4_CHANNEL) * INPUT_TO_5000mV;
-  filtered_sensor5_reading = analogRead(SENSOR_5_CHANNEL) * INPUT_TO_5000mV;
-  filtered_sensor6_reading = analogRead(SENSOR_6_CHANNEL) * INPUT_TO_5000mV;
-  filtered_sensor7_reading = analogRead(SENSOR_7_CHANNEL) * INPUT_TO_5000mV;
-  filtered_sensor8_reading = analogRead(SENSOR_8_CHANNEL) * INPUT_TO_5000mV;
+
+  //Get initial readings
+  filtered_sensor1_reading = get_sensor1_value();
+  filtered_sensor2_reading = get_sensor2_value();
+  filtered_sensor3_reading = get_sensor3_value();
+  filtered_sensor4_reading = get_sensor4_value();
+  filtered_sensor5_reading = get_sensor5_value();
+  filtered_sensor6_reading = get_sensor6_value();
+  filtered_sensor7_reading = get_sensor7_value();
+  filtered_sensor8_reading = get_sensor8_value();
 }
 
 void loop() {  
@@ -109,13 +111,13 @@ void loop() {
       
       Serial.println("-----------------------------");
       Serial.print("Sensor 1:\t");
-      Serial.println(sensor1);
+      Serial.println(sensor1 / 1000);
       Serial.print("Sensor 2:\t");
-      Serial.println(sensor2);
+      Serial.println(sensor2 / 1000);
       Serial.print("Sensor 3:\t");
-      Serial.println(sensor3);
+      Serial.println(sensor3 / 1000);
       Serial.print("Sensor 4:\t");
-      Serial.println(sensor4);
+      Serial.println(sensor4 / 1000);
       Serial.println();
       #endif
       
@@ -139,23 +141,24 @@ void loop() {
       
       Serial.println("-----------------------------");
       Serial.print("Sensor 5:\t");
-      Serial.println(sensor5);
+      Serial.println(sensor5 / 1000);
       Serial.print("Sensor 6:\t");
-      Serial.println(sensor6);
+      Serial.println(sensor6 / 1000);
       Serial.print("Sensor 7:\t");
-      Serial.println(sensor7);
+      Serial.println(sensor7 / 1000);
       Serial.print("Sensor 8:\t");
-      Serial.println(sensor8);
+      Serial.println(sensor8 / 1000);
       Serial.println();
       #endif
   }
 
-  filtered_sensor1_reading = ALPHA * filtered_sensor1_reading + (1 - ALPHA) * analogRead(SENSOR_1_CHANNEL) * INPUT_TO_5000mV;
-  filtered_sensor2_reading = ALPHA * filtered_sensor2_reading + (1 - ALPHA) * analogRead(SENSOR_2_CHANNEL) * INPUT_TO_5000mV;
-  filtered_sensor3_reading = ALPHA * filtered_sensor3_reading + (1 - ALPHA) * analogRead(SENSOR_3_CHANNEL) * INPUT_TO_5000mV;
-  filtered_sensor4_reading = ALPHA * filtered_sensor4_reading + (1 - ALPHA) * analogRead(SENSOR_4_CHANNEL) * INPUT_TO_5000mV;
-  filtered_sensor5_reading = ALPHA * filtered_sensor5_reading + (1 - ALPHA) * analogRead(SENSOR_5_CHANNEL) * INPUT_TO_5000mV;
-  filtered_sensor6_reading = ALPHA * filtered_sensor6_reading + (1 - ALPHA) * analogRead(SENSOR_6_CHANNEL) * INPUT_TO_5000mV;
-  filtered_sensor7_reading = ALPHA * filtered_sensor7_reading + (1 - ALPHA) * analogRead(SENSOR_7_CHANNEL) * INPUT_TO_5000mV;
-  filtered_sensor8_reading = ALPHA * filtered_sensor8_reading + (1 - ALPHA) * analogRead(SENSOR_8_CHANNEL) * INPUT_TO_5000mV;
+  // Software filtering
+  filtered_sensor1_reading = ALPHA * filtered_sensor1_reading + (1 - ALPHA) * get_sensor1_value();;
+  filtered_sensor2_reading = ALPHA * filtered_sensor2_reading + (1 - ALPHA) * get_sensor2_value();;
+  filtered_sensor3_reading = ALPHA * filtered_sensor3_reading + (1 - ALPHA) * get_sensor3_value();;
+  filtered_sensor4_reading = ALPHA * filtered_sensor4_reading + (1 - ALPHA) * get_sensor4_value();;
+  filtered_sensor5_reading = ALPHA * filtered_sensor5_reading + (1 - ALPHA) * get_sensor5_value();;
+  filtered_sensor6_reading = ALPHA * filtered_sensor6_reading + (1 - ALPHA) * get_sensor6_value();;
+  filtered_sensor7_reading = ALPHA * filtered_sensor7_reading + (1 - ALPHA) * get_sensor7_value();;
+  filtered_sensor8_reading = ALPHA * filtered_sensor8_reading + (1 - ALPHA) * get_sensor8_value();;
 }

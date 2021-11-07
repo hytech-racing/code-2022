@@ -45,13 +45,13 @@ void loop() {
 
       Serial.println("-----------------------------");
       Serial.print("Sensor 1:\t");
-      Serial.println(sensor_1);
+      Serial.println(sensor_1 / 1000);
       Serial.print("Sensor 2:\t");
-      Serial.println(sensor_2);
+      Serial.println(sensor_2 / 1000);
       Serial.print("Sensor 3:\t");
-      Serial.println(sensor_3);
+      Serial.println(sensor_3 / 1000);
       Serial.print("Sensor 4:\t");
-      Serial.println(sensor_4);
+      Serial.println(sensor_4 / 1000);
       Serial.println();
     } else if (canId == ID_SAB_REAR) {
       int16_t sensor_5 = ((int16_t)(buf[1]) << 8) | buf[0];
@@ -61,13 +61,13 @@ void loop() {
 
       Serial.println("-----------------------------");
       Serial.print("Sensor 5:\t");
-      Serial.println(sensor_5);
+      Serial.println(sensor_5 / 1000);
       Serial.print("Sensor 6:\t");
-      Serial.println(sensor_6);
+      Serial.println(sensor_6 / 1000);
       Serial.print("Sensor 7:\t");
-      Serial.println(sensor_7);
+      Serial.println(sensor_7 / 1000);
       Serial.print("Sensor 8:\t");
-      Serial.println(sensor_8);
+      Serial.println(sensor_8 / 1000);
       Serial.println();
 
     }
