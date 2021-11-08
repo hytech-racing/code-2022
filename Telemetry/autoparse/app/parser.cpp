@@ -7,6 +7,8 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <iostream>
+#include <fstream>
+#include <string>
 
 void showMenu(char* exe) {
 	puts("\nHyTech SD Parsing System");
@@ -22,7 +24,7 @@ void showMenu(char* exe) {
 
 FILE* outfile;
 int verbose = 0;
-
+int lineCount = 1;
 void run(FILE* infile);
 
 int main(int argc, char** argv) {
@@ -101,8 +103,10 @@ void run (FILE* infile) {
 	uint64_t timeRaw; uint32_t ms;
 
 	while (!feof(infile)) {
-		if (fscanf(infile, "%lu,%x,%u,%lx", &timeRaw, &id, &len, (uint64_t*) data) == EOF)
+		char* line;
+		if (fscanf(infile, "%lu,%x,%u,%lx", &timeRaw, &id, &len, (uint64_t*) data) == EOF)	
 			continue;
+		
 		// split ms time to seconds for processing
 		ms = timeRaw % 1000;
 		timeRaw /= 1000;
@@ -116,13 +120,20 @@ void run (FILE* infile) {
 		
 		// CHANGES BEGIN HERE
 		std::cout << std::to_string(ftell(infile)) << std::endl; // Debug Statement; Comment out if necessary
-
+		
+		if (ftell(infile) == 16398614) {
+			std::cout << lineCount << std::endl;
+			fscanf(infile, "%s", line);
+			break;
+		}	
 		if (id == ID_BMS_BALANCING_STATUS) {
-			fseek(infile, ftell(infile) + 20, SEEK_SET); // If id is 0xDE, move cursor to current position + 20 characters
+			if (len == 0) {
+				fseek(infile, ftell(infile) + 20, SEEK_SET); // If id is 0xDE and there is no data, move cursor to current position + 20 characters
+			}
 		}
 		parseMessage(id, timeString, data);
 		//END CHANGES
-
+		lineCount++;
 		if (outfile == stdout)
 			fflush(outfile);
 		
