@@ -24,7 +24,6 @@ void showMenu(char* exe) {
 
 FILE* outfile;
 int verbose = 0;
-int lineCount = 1;
 void run(FILE* infile);
 
 int main(int argc, char** argv) {
@@ -101,7 +100,7 @@ void run (FILE* infile) {
 		fflush(outfile);
 
 	uint64_t timeRaw; uint32_t ms;
-
+	long last = -1;
 	while (!feof(infile)) {
 		char* line;
 		if (fscanf(infile, "%lu,%x,%u,%lx", &timeRaw, &id, &len, (uint64_t*) data) == EOF)	
@@ -119,21 +118,19 @@ void run (FILE* infile) {
 		#endif
 		
 		// CHANGES BEGIN HERE
-		std::cout << std::to_string(ftell(infile)) << std::endl; // Debug Statement; Comment out if necessary
-		
-		if (ftell(infile) == 16398614) {
-			std::cout << lineCount << std::endl;
-			fscanf(infile, "%s", line);
-			break;
-		}	
-		if (id == ID_BMS_BALANCING_STATUS) {
+		//std::cout << std::to_string(ftell(infile)) << std::endl; // Debug Statement; Comment out if necessary
+		long temp = ftell(infile);
+		if (last == ftell(infile)) {
+			fseek(infile, ftell(infile) + 1, SEEK_SET);
+		} else if (id == ID_BMS_BALANCING_STATUS) {
 			if (len == 0) {
 				fseek(infile, ftell(infile) + 20, SEEK_SET); // If id is 0xDE and there is no data, move cursor to current position + 20 characters
 			}
+		} else {
+			parseMessage(id, timeString, data);
 		}
-		parseMessage(id, timeString, data);
+		last = temp;
 		//END CHANGES
-		lineCount++;
 		if (outfile == stdout)
 			fflush(outfile);
 		
