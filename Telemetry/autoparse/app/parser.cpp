@@ -7,6 +7,8 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <iostream>
+#include <fstream>
+#include <string>
 
 void showMenu(char* exe) {
 	puts("\nHyTech SD Parsing System");
@@ -22,7 +24,6 @@ void showMenu(char* exe) {
 
 FILE* outfile;
 int verbose = 0;
-
 void run(FILE* infile);
 
 int main(int argc, char** argv) {
@@ -99,10 +100,12 @@ void run (FILE* infile) {
 		fflush(outfile);
 
 	uint64_t timeRaw; uint32_t ms;
-
+	long last = -1; // variable to keep track of the cursor from the previous iteration
 	while (!feof(infile)) {
-		if (fscanf(infile, "%lu,%x,%u,%lx", &timeRaw, &id, &len, (uint64_t*) data) == EOF)
+		char* line;
+		if (fscanf(infile, "%lu,%x,%u,%lx", &timeRaw, &id, &len, (uint64_t*) data) == EOF)	
 			continue;
+		
 		// split ms time to seconds for processing
 		ms = timeRaw % 1000;
 		timeRaw /= 1000;
@@ -113,11 +116,25 @@ void run (FILE* infile) {
 		#if (__BYTE_ORDER__ != __ORDER_BIG_ENDIAN__) // handle endianness change
 			for (uint8_t *l = data, *r = data + len - 1; l < r; std::swap(*l++, *r--));
 		#endif
-
-		parseMessage(id, timeString, data);
+		
+		// AUTOPARSER 0xDE DEBUGGING CHANGES BEGIN HERE
+		//std::cout << std::to_string(ftell(infile)) << std::endl; 	// Debug Statement; Comment out if necessary
+		long temp = ftell(infile); 									// temporary variable holding the state of the position of the cursor currently
+		if (last == ftell(infile)) {								// If the cursor has not advanced, add one character to its position and try again
+			fseek(infile, ftell(infile) + 1, SEEK_SET);
+		} else if (id == ID_BMS_BALANCING_STATUS) {					// Else if the ID is 0xDE (the buggy ID), advance the cursor 20 characters to skip the lin
+			if (len == 0) {
+				fseek(infile, ftell(infile) + 20, SEEK_SET); 		
+			}
+		} else {													// Else the cursor position is correct and the line can be parsed
+			parseMessage(id, timeString, data);
+		}
+		last = temp;												// Set the tracker from the last iteration
+		//END CHANGES
 
 		if (outfile == stdout)
 			fflush(outfile);
+		
 	}
 
 	exit(0);
