@@ -100,7 +100,7 @@ void run (FILE* infile) {
 		fflush(outfile);
 
 	uint64_t timeRaw; uint32_t ms;
-	long last = -1;
+	long last = -1; // variable to keep track of the cursor from the previous iteration
 	while (!feof(infile)) {
 		char* line;
 		if (fscanf(infile, "%lu,%x,%u,%lx", &timeRaw, &id, &len, (uint64_t*) data) == EOF)	
@@ -117,20 +117,21 @@ void run (FILE* infile) {
 			for (uint8_t *l = data, *r = data + len - 1; l < r; std::swap(*l++, *r--));
 		#endif
 		
-		// CHANGES BEGIN HERE
-		//std::cout << std::to_string(ftell(infile)) << std::endl; // Debug Statement; Comment out if necessary
-		long temp = ftell(infile);
-		if (last == ftell(infile)) {
+		// AUTOPARSER 0xDE DEBUGGING CHANGES BEGIN HERE
+		//std::cout << std::to_string(ftell(infile)) << std::endl; 	// Debug Statement; Comment out if necessary
+		long temp = ftell(infile); 									// temporary variable holding the state of the position of the cursor currently
+		if (last == ftell(infile)) {								// If the cursor has not advanced, add one character to its position and try again
 			fseek(infile, ftell(infile) + 1, SEEK_SET);
-		} else if (id == ID_BMS_BALANCING_STATUS) {
+		} else if (id == ID_BMS_BALANCING_STATUS) {					// Else if the ID is 0xDE (the buggy ID), advance the cursor 20 characters to skip the lin
 			if (len == 0) {
-				fseek(infile, ftell(infile) + 20, SEEK_SET); // If id is 0xDE and there is no data, move cursor to current position + 20 characters
+				fseek(infile, ftell(infile) + 20, SEEK_SET); 		
 			}
-		} else {
+		} else {													// Else the cursor position is correct and the line can be parsed
 			parseMessage(id, timeString, data);
 		}
-		last = temp;
+		last = temp;												// Set the tracker from the last iteration
 		//END CHANGES
+
 		if (outfile == stdout)
 			fflush(outfile);
 		
