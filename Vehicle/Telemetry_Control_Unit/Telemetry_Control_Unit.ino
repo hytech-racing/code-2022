@@ -308,7 +308,7 @@ inline void read_analog_values() {
 void process_mcu_analog_readings() {
     //self derived
     float current_ecu = (filtered_ecu_current_reading/819.2-2.467)/0.4;
-    float current_cooling = (filtered_cooling_current_reading - 2048) / 327.7;
+    float current_cooling = (filtered_cooling_current_reading/819.2-2.49)/0.426;
 
     float glv_voltage_value = (((filtered_supply_reading/4096) * 5) * 55/12) + 0.14; //ADC->12V conversion + offset likely due to resistor values
     //Serial.print("GLV: ");
