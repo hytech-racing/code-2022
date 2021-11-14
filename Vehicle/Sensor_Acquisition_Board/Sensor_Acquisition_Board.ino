@@ -23,7 +23,7 @@ CAN_message_t msg;
 
 // Initialize LEDs
 #define CAN_LED 5
-#define CAN_LED_TICKS_LIMIT 1000
+#define CAN_LED_TICKS_LIMIT 50
 int CAN_LED_ticks = 0;
 
 // Analog Reading
@@ -35,7 +35,7 @@ int CAN_LED_ticks = 0;
 #define SENSOR_6_CHANNEL A5
 #define SENSOR_7_CHANNEL A6
 #define SENSOR_8_CHANNEL A7
-#define ALPHA 0.9772                      // parameter for the software filter used on ADC pedal channels
+#define ALPHA 0.75                      // parameter for the software filter used on ADC pedal channels
 //#define INPUT_TO_5000mV 5.9082, expression: 3.3V/(30/11)V * 3.3V/1024counts * 5V/3.3V * 1000mV/1V = 5.9082, used just for reference
 // Functions scale value up by 1000, will get scaled down 1000 later in autoparse
 inline float get_sensor1_value() {return (analogRead(SENSOR_1_CHANNEL) * 0.06015 + 1.60574) * 1000;} // DO NOT CHANGE THIS W/O SPECIAL REASON
@@ -111,13 +111,13 @@ void loop() {
       
       Serial.println("-----------------------------");
       Serial.print("Sensor 1:\t");
-      Serial.println(sensor1 / 1000);
+      Serial.println(filtered_sensor1_reading / 1000.0);
       Serial.print("Sensor 2:\t");
-      Serial.println(sensor2 / 1000);
+      Serial.println(filtered_sensor2_reading / 1000.0);
       Serial.print("Sensor 3:\t");
-      Serial.println(sensor3 / 1000);
+      Serial.println(filtered_sensor3_reading / 1000.0);
       Serial.print("Sensor 4:\t");
-      Serial.println(sensor4 / 1000);
+      Serial.println(filtered_sensor4_reading / 1000.0);
       Serial.println();
       #endif
       
@@ -141,13 +141,13 @@ void loop() {
       
       Serial.println("-----------------------------");
       Serial.print("Sensor 5:\t");
-      Serial.println(sensor5 / 1000);
+      Serial.println(filtered_sensor5_reading / 1000.0);
       Serial.print("Sensor 6:\t");
-      Serial.println(sensor6 / 1000);
+      Serial.println(filtered_sensor6_reading / 1000.0);
       Serial.print("Sensor 7:\t");
-      Serial.println(sensor7 / 1000);
+      Serial.println(filtered_sensor7_reading / 1000.0);
       Serial.print("Sensor 8:\t");
-      Serial.println(sensor8 / 1000);
+      Serial.println(filtered_sensor8_reading / 1000.0);
       Serial.println();
       #endif
   }
