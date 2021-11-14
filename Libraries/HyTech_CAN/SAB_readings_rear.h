@@ -4,12 +4,12 @@
 
 #pragma pack(push,1)
 
-// @Parseclass @ID(ID_SAB_REAR, SAB_REAR) @ID(ID_SAB_FRONT, SAB_FRONT)
-class SAB_readings {
+// @Parseclass
+class SAB_readings_rear {
 public:
-    SAB_readings() = default;
+    SAB_readings_rear() = default;
 
-    SAB_readings(const uint8_t buf[8]) { load(buf); }
+    SAB_readings_rear(const uint8_t buf[8]) { load(buf); }
 
     inline void load(const uint8_t buf[8]) { memcpy(this, buf, sizeof(*this)); }
     inline void write(uint8_t buf[8]) const { memcpy(buf, this, sizeof(*this)); }
@@ -27,13 +27,13 @@ public:
     inline void set_sensor_4(uint16_t reading) { sensor_4 = reading; }
 
 private:
-    // @Parse
+    // @Parse @Name(Back-Left_Suspension_Linear_Potentiometer) @Unit(mm) @Scale(1000)
     uint16_t sensor_1;
-    // @Parse
+    // @Parse @Name(Back-Right_Suspension_Linear_Potentiometer) @Unit(mm) @Scale(1000)
     uint16_t sensor_2;
-    // @Parse
+    // @Parse @Name(Ambient_Air_Temperature) @Unit(C) @Scale(1000)
     uint16_t sensor_3;
-    // @Parse
+    // @Parse @Name(Motor_Loop_Cooling_Fluid_Temperature) @Unit(C) @Scale(1000)
     uint16_t sensor_4;
 };
 

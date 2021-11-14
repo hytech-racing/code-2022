@@ -10,7 +10,8 @@
  * 8: Motor Loop Cooling Fluid Temperature            A7
  */
 
-#include "SAB_readings.h"
+#include "SAB_readings_front.h"
+#include "SAB_readings_rear.h"
 #include "CAN_ID.h"
 #include "HyTech_FlexCAN.h"
 #include "Metro.h"
@@ -51,7 +52,8 @@ inline float get_sensor8_value() {return (analogRead(SENSOR_8_CHANNEL) * 0.26259
 // Options
 #define DEBUG (true)
 
-SAB_readings sab_readings;
+SAB_readings_front sab_readings_front;
+SAB_readings_rear sab_readings_rear;
 
 /*
  * Variables to store filtered values
@@ -94,21 +96,16 @@ void loop() {
   if (timer_front_update.check()){
       CAN_LED_ticks++;
       
-      sab_readings.set_sensor_1(filtered_sensor1_reading);
-      sab_readings.set_sensor_2(filtered_sensor2_reading);
-      sab_readings.set_sensor_3(filtered_sensor3_reading);
-      sab_readings.set_sensor_4(filtered_sensor4_reading);
-      sab_readings.write(msg.buf);
-      msg.id = ID_SAB_FRONT;
-      msg.len = sizeof(sab_readings);
+      sab_readings_front.set_sensor_1(filtered_sensor1_reading);
+      sab_readings_front.set_sensor_2(filtered_sensor2_reading);
+      sab_readings_front.set_sensor_3(filtered_sensor3_reading);
+      sab_readings_front.set_sensor_4(filtered_sensor4_reading);
+      sab_readings_front.write(msg.buf);
+      msg.id = ID_SAB_READINGS_FRONT;
+      msg.len = sizeof(sab_readings_front);
       CAN.write(msg);
 
-      #if DEBUG
-      int16_t sensor1 = ((int16_t)(msg.buf[1]) << 8) | msg.buf[0];
-      int16_t sensor2 = ((int16_t)(msg.buf[3]) << 8) | msg.buf[2];
-      int16_t sensor3 = ((int16_t)(msg.buf[5]) << 8) | msg.buf[4];
-      int16_t sensor4 = ((int16_t)(msg.buf[7]) << 8) | msg.buf[6];
-      
+      #if DEBUG      
       Serial.println("-----------------------------");
       Serial.print("Sensor 1:\t");
       Serial.println(filtered_sensor1_reading / 1000.0);
@@ -124,21 +121,16 @@ void loop() {
   } else if (timer_rear_update.check()) {
       CAN_LED_ticks++;
       
-      sab_readings.set_sensor_1(filtered_sensor5_reading);
-      sab_readings.set_sensor_2(filtered_sensor6_reading);
-      sab_readings.set_sensor_3(filtered_sensor7_reading);
-      sab_readings.set_sensor_4(filtered_sensor8_reading);
-      sab_readings.write(msg.buf);
-      msg.id = ID_SAB_REAR;
-      msg.len = sizeof(sab_readings);
+      sab_readings_rear.set_sensor_1(filtered_sensor5_reading);
+      sab_readings_rear.set_sensor_2(filtered_sensor6_reading);
+      sab_readings_rear.set_sensor_3(filtered_sensor7_reading);
+      sab_readings_rear.set_sensor_4(filtered_sensor8_reading);
+      sab_readings_rear.write(msg.buf);
+      msg.id = ID_SAB_READINGS_REAR;
+      msg.len = sizeof(sab_readings_rear);
       CAN.write(msg);
 
-      #if DEBUG
-      int16_t sensor5 = ((int16_t)(msg.buf[1]) << 8) | msg.buf[0];
-      int16_t sensor6 = ((int16_t)(msg.buf[3]) << 8) | msg.buf[2];
-      int16_t sensor7 = ((int16_t)(msg.buf[5]) << 8) | msg.buf[4];
-      int16_t sensor8 = ((int16_t)(msg.buf[7]) << 8) | msg.buf[6];
-      
+      #if DEBUG      
       Serial.println("-----------------------------");
       Serial.print("Sensor 5:\t");
       Serial.println(filtered_sensor5_reading / 1000.0);
