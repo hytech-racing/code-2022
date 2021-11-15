@@ -54,6 +54,10 @@ Metro timer_debug_dashboard = Metro(2000);
 Metro timer_debug_mcu_pedal_readings = Metro(200);
 Metro timer_debug_mcu_wheel_speed = Metro(200);
 Metro timer_debug_bms_balancing_status = Metro(3000);
+Metro timer_accelerometer = Metro(100);
+Metro timer_current = Metro(500);
+Metro timer_voltage = Metro(500);
+Metro timer_total_discharge = Metro(1000);
 Metro timer_mcu_analog_readings = Metro(500);
 Metro timer_debug_bms_status = Metro(1000);
 Metro timer_debug_bms_temperatures = Metro(3000);
@@ -109,6 +113,15 @@ MC_firmware_information mc_firmware_information;
 MC_command_message mc_command_message;
 MC_read_write_parameter_command mc_read_write_parameter_command;
 MC_read_write_parameter_response mc_read_write_parameter_response;
+FCU_accelerometer_values fcu_accelerometer_values;
+MCU_GPS_readings mcu_gps_readings;
+TCU_wheel_rpm tcu_wheel_rpm_front;
+TCU_wheel_rpm tcu_wheel_rpm_rear;
+TCU_distance_traveled tcu_distance_traveled;
+
+static bool pending_gps_data;
+uint32_t total_discharge;
+unsigned long previous_data_time;
 IMU_accelerometer imu_accelerometer;
 IMU_gyroscope imu_gyroscope;
 
@@ -118,6 +131,10 @@ time_t getTeensy3Time();
 void process_current();
 #if GPS_EN
 void process_gps();
+void process_glv_voltage();
+void setup_total_discharge();
+void process_total_discharge();
+void write_total_discharge();
 static bool pending_gps_data;
 #endif
 int write_xbee_data();
@@ -149,6 +166,9 @@ void setup() {
     GPS.sendCommand(PGCMD_ANTENNA); // report data about antenna
 	#endif
 
+    /* Set up total discharge readings */
+    setup_total_discharge();
+
     /* Set up SD card */
     Serial.println("Initializing SD card...");
     SdFile::dateTimeCallback(sd_date_time); // Set date/time callback function
@@ -175,7 +195,7 @@ void setup() {
         Serial.println("Failed to open SD file");
     }
     logger.println("time,msg.id,msg.len,data"); // Print CSV heading to the logfile
-    logger.flush();
+    logger.flush();    
 }
 
 void loop() {
@@ -197,6 +217,22 @@ void loop() {
         Serial.println(Teensy3Clock.get());
     }
 
+    if (timer_voltage.check()) {
+        process_glv_voltage();
+    }
+
+    if (timer_total_discharge.check()) {
+        write_total_discharge();
+    }
+
+    /* Process accelerometer readings occasionally */
+    if (timer_accelerometer.check()) {
+        process_accelerometer(); 
+    }
+
+    /* Process current sensor readings occasionally */
+    if (timer_current.check()) {
+        process_current();  
     /* Process MCU analog readings */
     if (timer_mcu_analog_readings.check()) {
         process_mcu_analog_readings();
@@ -259,12 +295,15 @@ void parse_can_message() {
             case ID_MC_TEMPERATURES_2:                  mc_temperatures_2.load(msg_rx.buf);                 break;
             case ID_MC_TEMPERATURES_3:                  mc_temperatures_3.load(msg_rx.buf);                 break;
             case ID_MC_MOTOR_POSITION_INFORMATION:      mc_motor_position_information.load(msg_rx.buf);     break;
-            case ID_MC_CURRENT_INFORMATION:             mc_current_information.load(msg_rx.buf);            break;
+            case ID_MC_CURRENT_INFORMATION:             
+              mc_current_information.load(msg_rx.buf);
+              process_total_discharge();            
+              break;
             case ID_MC_VOLTAGE_INFORMATION:             mc_voltage_information.load(msg_rx.buf);            break;
             case ID_MC_INTERNAL_STATES:                 mc_internal_states.load(msg_rx.buf);                break;
             case ID_MC_FAULT_CODES:                     mc_fault_codes.load(msg_rx.buf);                    break;
             case ID_MC_TORQUE_TIMER_INFORMATION:        mc_torque_timer_information.load(msg_rx.buf);       break;
-            case ID_MC_FLUX_WEAKENING_OUTPUT:           mc_flux_weakening_output.load(msg_rx.buf);          break;
+            case ID_MC_FLUX_WEAKENING_OUTPUT: 			    mc_flux_weakening_output.load(msg_rx.buf);			break;
             case ID_MC_FIRMWARE_INFORMATION:            mc_firmware_information.load(msg_rx.buf);           break;
             case ID_MC_COMMAND_MESSAGE:                 mc_command_message.load(msg_rx.buf);                break;
             case ID_MC_READ_WRITE_PARAMETER_COMMAND:    mc_read_write_parameter_command.load(msg_rx.buf);   break;
@@ -296,6 +335,65 @@ time_t getTeensy3Time() {
     return Teensy3Clock.get();
 }
 
+void setup_total_discharge() {
+  total_discharge = 0;
+  previous_data_time = millis();
+  bms_coulomb_counts.set_total_discharge(total_discharge);
+}
+
+void process_total_discharge() {
+  double new_current = mc_current_information.get_dc_bus_current() / 10;
+  unsigned long current_time = millis();
+  uint32_t added_Ah = new_current * ((current_time - previous_data_time) * 10000 / (1000 * 60 * 60 )); //scaled by 10000 for telemetry parsing
+  previous_data_time = current_time;
+  total_discharge += added_Ah;
+  bms_coulomb_counts.set_total_discharge(total_discharge);
+}
+
+void write_total_discharge() {
+  bms_coulomb_counts.write(msg_tx.buf);
+  msg_tx.id = ID_BMS_COULOMB_COUNTS;
+  msg_tx.len = sizeof(bms_coulomb_counts);
+  CAN.write(msg_tx);
+}
+
+void setup_accelerometer() {
+    // Initialise the sensor
+    if(!accel.begin()) {
+        // There was a problem detecting the ADXL345 ... check your connections
+        Serial.println("Sensor not detected!!!!!");
+    } else {
+        accel.setRange(ADXL345_RANGE_4_G);
+    }
+}
+
+void process_accelerometer() {
+    /* Get a new sensor event */
+    sensors_event_t event;
+    accel.getEvent(&event);
+    
+    /* Read accelerometer values into accelerometer class */
+    fcu_accelerometer_values.set_values((uint8_t) (event.acceleration.x*100), (uint8_t) (event.acceleration.y*100), (uint8_t) (event.acceleration.z*100));
+    
+    /* Send message over XBee */
+    fcu_accelerometer_values.write(xb_msg.buf);
+    xb_msg.id = ID_FCU_ACCELEROMETER;
+    xb_msg.len = sizeof(FCU_accelerometer_values);
+    write_xbee_data();
+
+    /* Send message over CAN */
+    fcu_accelerometer_values.write(msg_tx.buf);
+    msg_tx.id = ID_FCU_ACCELEROMETER;
+    msg_tx.len = sizeof(FCU_accelerometer_values);
+    CAN.write(msg_tx);
+
+    /*
+    Serial.print("\n\nACCELEROMETER DATA\n\n");
+    Serial.print(event.acceleration.x); Serial.print(", ");
+    Serial.print(event.acceleration.y); Serial.print(", ");
+    Serial.print(event.acceleration.z); Serial.println("\n\n");
+    */
+}
 inline void read_analog_values() {
     /* Filter ADC readings */
     filtered_temp_reading 		 	 = ALPHA * filtered_temp_reading 			+ (1 - ALPHA) * ADC.read_adc(TEMP_SENSE_CHANNEL);
