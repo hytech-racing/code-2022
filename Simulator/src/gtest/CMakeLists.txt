@@ -1,4 +1,4 @@
-set(GTEST_INC_DIR ${SIMULATION_INC_DIR}/gtest)
+set(GTEST_INC_DIR ${INC}/gtest)
 set(GTEST_SRC gtest_main.cc
               gtest-all.cc)
 

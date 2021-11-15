@@ -1,5 +1,5 @@
-CC = g++
-GCC = g++
+CC = g++ -std=c++14 -D_GNU_SOURCE
+GCC = g++ -std=c++14 -D_GNU_SOURCE
 
 INC_DIR = include
 USR_DIR = user

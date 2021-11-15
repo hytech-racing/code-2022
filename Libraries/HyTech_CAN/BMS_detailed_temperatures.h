@@ -41,9 +41,9 @@ public:
     inline void set_temperature_2(int16_t temperature_2) { this->temperature_2 = temperature_2; }
     void set_temperature(uint8_t temperature_id, int16_t temperature) {
         switch (temperature_id) {
-            case 0: this->temperature_0 = temperature_0; return;
-            case 1: this->temperature_1 = temperature_1; return;
-            case 2: this->temperature_2 = temperature_2; return;
+            case 0: this->temperature_0 = temperature; return;
+            case 1: this->temperature_1 = temperature; return;
+            case 2: this->temperature_2 = temperature; return;
         }
     }
 

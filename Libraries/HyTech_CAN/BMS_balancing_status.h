@@ -1,7 +1,7 @@
 /*
  * 5-byte message structure from MSB to LSB
- * [3 bits: empty] [1 bit: group][9 bits: IC 4 balancing data] [9 bits: IC 3 balancing data] [9 bits: IC 2 balancing data] [9 bits: IC 1 balancing data] 
- * 
+ * [3 bits: empty] [1 bit: group][9 bits: IC 4 balancing data] [9 bits: IC 3 balancing data] [9 bits: IC 2 balancing data] [9 bits: IC 1 balancing data]
+ *
  * Structure of each IC section from MSB to LSB
  * [Cell 9 balancing] [Cell 8 balancing] [Cell 7 balancing] [Cell 6 balancing] [Cell 5 balancing] [Cell 4 balancing] [Cell 3 balancing] [Cell 2 balancing] [Cell 1 balancing]
  */
@@ -21,7 +21,7 @@ class BMS_balancing_status {
 public:
     BMS_balancing_status() = default;
     BMS_balancing_status(uint8_t buf[]) { load(buf); }
-    BMS_balancing_status(uint8_t group_id, int64_t balancing_status) : BMS_balancing_status() { 
+    BMS_balancing_status(uint8_t group_id, int64_t balancing_status) : BMS_balancing_status() {
         set_group_id(group_id);
         set_balancing(balancing_status);
     }
