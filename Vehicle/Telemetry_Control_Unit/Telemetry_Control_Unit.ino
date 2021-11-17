@@ -124,6 +124,8 @@ uint32_t total_discharge;
 unsigned long previous_data_time;
 IMU_accelerometer imu_accelerometer;
 IMU_gyroscope imu_gyroscope;
+SAB_readings_front sab_readings_front;
+SAB_readings_rear sab_readings_rear;
 
 void parse_can_message();
 void write_to_SD(CAN_message_t *msg);
@@ -311,6 +313,8 @@ void parse_can_message() {
             case ID_MCU_WHEEL_SPEED:                    mcu_wheel_speed.load(msg_rx.buf);                   break;
             case ID_IMU_ACCELEROMETER:                  imu_accelerometer.load(msg_rx.buf);                 break;
             case ID_IMU_GYROSCOPE:                      imu_gyroscope.load(msg_rx.buf);                     break;
+            case ID_SAB_READINGS_FRONT:                 sab_readings_front.load(msg_rx.buf);                break;
+            case ID_SAB_READINGS_REAR:                  sab_readings_rear.load(msg_rx.buf);                 break;
         }
     }
 }

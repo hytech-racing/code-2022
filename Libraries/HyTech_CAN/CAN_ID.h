@@ -39,8 +39,8 @@
 #define ID_MCU_GPS_READINGS											0xE7
 #define ID_MCU_WHEEL_SPEED									    	0xEA
 #define ID_DASHBOARD_STATUS                                         0xEB
-#define ID_SAB_FRONT                                                0xEC
-#define ID_SAB_REAR                                                 0xED
+#define ID_SAB_READINGS_FRONT                                       0xEC
+#define ID_SAB_READINGS_REAR                                        0xED
 
 #define ID_EM_STATUS                                                0x100
 #define ID_EM_MEASUREMENT                                           0x400
