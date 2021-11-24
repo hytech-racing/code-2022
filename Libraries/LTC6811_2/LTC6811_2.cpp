@@ -36,6 +36,8 @@ void LTC6811_2::generate_pec(uint8_t *byte, uint8_t *pec, int num_bytes) {
     }
 }
 
+void LTC6811_2::
+
 void LTC6811_2::wrcfga(Reg_Group_Config reg_group) {
     /* cmd array structure as related to datasheet:
      * cmd[0] = CMD0;
@@ -43,7 +45,7 @@ void LTC6811_2::wrcfga(Reg_Group_Config reg_group) {
      */
     uint8_t cmd[2] = {get_cmd_address(), 0x1};
     uint8_t pec[2];
-    uint_8t cmd_pec[2] = generate_pec()
+    generate_pec(&cmd, &pec, 2);
     reg_group.buf();
 
 }
