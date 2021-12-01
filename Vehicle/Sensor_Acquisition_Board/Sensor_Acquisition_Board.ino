@@ -51,7 +51,7 @@ inline float get_sensor7_value() {return (analogRead(SENSOR_7_CHANNEL) * -0.4300
 inline float get_sensor8_value() {return 0.0;}                                                          // Change this function to the previous one when the motor cooling loop fluid temp sensor is implemented
 
 // Options
-#define DEBUG (true)
+#define DEBUG (false)
 
 SAB_readings_front sab_readings_front;
 SAB_readings_rear sab_readings_rear;
