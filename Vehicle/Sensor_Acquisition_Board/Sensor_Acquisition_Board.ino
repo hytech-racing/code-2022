@@ -39,13 +39,13 @@ int CAN_LED_ticks = 0;
 #define ALPHA 0.75                                                                                      // Adjust Filtering Strength (Higher = More Filtering)
 //#define INPUT_TO_5000mV 5.9082, expression: 3.3V/(30/11)V * 3.3V/1024counts * 5V/3.3V * 1000mV/1V = 5.9082, used just for reference
 // Functions scale value up by 1000, will get scaled down 1000 later in autoparse
-inline float get_sensor1_value() {return (analogRead(SENSOR_1_CHANNEL) * 0.06015 + 1.60574) * 1000;}    // DO NOT CHANGE THIS W/O SPECIAL REASON
-inline float get_sensor2_value() {return (analogRead(SENSOR_2_CHANNEL) * 0.06015 + 1.60574) * 1000;}    // DO NOT CHANGE THIS W/O SPECIAL REASON
+inline float get_sensor1_value() {return (analogRead(SENSOR_1_CHANNEL) * 0.059312 + 3.0) * 1000;}       // DO NOT CHANGE THIS W/O SPECIAL REASON
+inline float get_sensor2_value() {return (analogRead(SENSOR_2_CHANNEL) * 0.059312 + 3.0) * 1000;}       // DO NOT CHANGE THIS W/O SPECIAL REASON
 //inline float get_sensor3_value() {return analogRead(SENSOR_3_CHANNEL) * 1000;} //TODO: replace this with steering wheel sensor equation
 inline float get_sensor3_value() {return 0.0;}                                                          // Change this function to the previous one when the steering wheel sensor is implemented
 inline float get_sensor4_value() {return (analogRead(SENSOR_4_CHANNEL) * 0.22988 - 41.93897) * 1000;}   // DO NOT CHANGE THIS W/O SPECIAL REASON
-inline float get_sensor5_value() {return (analogRead(SENSOR_5_CHANNEL) * 0.06015 + 1.60574) * 1000;}    // DO NOT CHANGE THIS W/O SPECIAL REASON
-inline float get_sensor6_value() {return (analogRead(SENSOR_6_CHANNEL) * 0.06015 + 1.60574) * 1000;}    // DO NOT CHANGE THIS W/O SPECIAL REASON
+inline float get_sensor5_value() {return (analogRead(SENSOR_5_CHANNEL) * 0.059312 + 3.0) * 1000;}       // DO NOT CHANGE THIS W/O SPECIAL REASON
+inline float get_sensor6_value() {return (analogRead(SENSOR_6_CHANNEL) * 0.059312 + 3.0) * 1000;}       // DO NOT CHANGE THIS W/O SPECIAL REASON
 inline float get_sensor7_value() {return (analogRead(SENSOR_7_CHANNEL) * -0.43003 + 190.95588) * 1000;} // DO NOT CHANGE THIS W/O SPECIAL REASON
 //inline float get_sensor8_value() {return (analogRead(SENSOR_8_CHANNEL) * 0.26259 - 61.11111) * 1000;}   // DO NOT CHANGE THIS W/O SPECIAL REASON
 inline float get_sensor8_value() {return 0.0;}                                                          // Change this function to the previous one when the motor cooling loop fluid temp sensor is implemented
