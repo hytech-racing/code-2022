@@ -69,6 +69,7 @@ void LTC6811_2::generate_pec(uint8_t *value, uint8_t *pec, int num_bytes) {
     }
 }
 
+// Write register commands
 /* Write Configuration Register Group A */
 void LTC6811_2::wrcfga(Reg_Group_Config reg_group) {
     /* cmd array structure as related to datasheet:
@@ -87,6 +88,10 @@ void LTC6811_2::wrcfga(Reg_Group_Config reg_group) {
     generate_pec(&data, &data_pec, 5);
     spi_write(&cmd, &cmd_pec, &data, &data_pec, 5);
 }
+
+void LTC6811_2:wrsctrl(Reg_Group_S_Ctrl reg_group) {
+    
+};
 
 
 
