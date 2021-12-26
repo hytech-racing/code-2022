@@ -5,7 +5,7 @@
 
 // SPI slave select pin, as required for Teensy 3.2
 #define SS 10
-// SPI alternate pin definitions (not needed unless using Teensy alternate SPI pins)
+// SPI alternate pin definitions (not needed unless using Teensy 3.2 alternate SPI pins)
 #define MOSI 7 // pin 11 by default
 #define MISO 8 // pin 12 by default
 #define SCLK 14 // pin 13 by default
@@ -18,7 +18,7 @@
 
 
 // SPI write
-void spi_write(uint8_t *cmd, uint8_t *cmd_pec, uint8_t *data, uint8_t *data_pec, int data_size) {
+void LTC6811_2::spi_write(uint8_t *cmd, uint8_t *cmd_pec, uint8_t *data, uint8_t *data_pec, int data_size) {
     SPI.beginTransaction(SPISettings(SPI_SPEED,SPI_BIT_ORDER, SPI_MODE));
     digitalWrite(SS, low);
     SPI.transfer(cmd[0]);
@@ -34,6 +34,9 @@ void spi_write(uint8_t *cmd, uint8_t *cmd_pec, uint8_t *data, uint8_t *data_pec,
     SPI.endTransaction();
 }
 // SPI read
+uint8_t *LTC6811_2::spi_read(uint8_t *cmd, uint8_t* cmd_pec) {
+
+}
 
 
 // returns the address of the specific LTC6811-2 chip to send command to
@@ -70,30 +73,49 @@ void LTC6811_2::generate_pec(uint8_t *value, uint8_t *pec, int num_bytes) {
 }
 
 // Write register commands
-/* Write Configuration Register Group A */
-void LTC6811_2::wrcfga(Reg_Group_Config reg_group) {
+// General write register group handler
+void LTC6811_2::write_register_group(uint16_t *cmd_code, uint8_t *buffer) {
     /* cmd array structure as related to datasheet:
      * cmd[0] = CMD0;
      * cmd[1] = CMD1;
      */
-    uint8_t cmd[2] = {get_cmd_address(), 0x1};
+    uint8_t *cmd_code_bytes = reinterpret_cast<uint8_t *>(cmd_code);
+    uint8_t cmd[2] = {get_cmd_address() | cmd_code_bytes[0], cmd_code_bytes[1]};
     uint8_t cmd_pec[2];
-    uint8_t data[5];
+    uint8_t data[6];
     uint8_t data_pec[2];
+    // generate PEC from command bytes
     generate_pec(&cmd, &cmd_pec, 2);
-    buffer = reg_group.buf();
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 6; i++) {
         data[i] = buffer[i];
     }
-    generate_pec(&data, &data_pec, 5);
-    spi_write(&cmd, &cmd_pec, &data, &data_pec, 5);
+    // generate PEC from data bytes
+    generate_pec(&data, &data_pec, 6);
+    // write out via SPI
+    spi_write(&cmd, &cmd_pec, &data, &data_pec, 6);
+}
+// Write Configuration Register Group A
+void LTC6811_2::wrcfga(Reg_Group_Config reg_group) {
+    write_register_group(0x14, reg_group.buf());
+}
+// Write S Control Register Group
+void LTC6811_2::wrsctrl(Reg_Group_S_Ctrl reg_group) {
+    write_register_group(0x14, reg_group.buf());
+}
+// Write PWM Register group
+void LTC6811_2::wrpwm(Reg_Group_PWM reg_group) {
+    write_register_group(0x20, reg_group.buf());
+}
+// Write COMM Register Group
+void LTC6811_2::wrcomm(Reg_Group_COMM reg_group) {
+    write_register_group(0x721, reg_group.buf());
 }
 
-void LTC6811_2:wrsctrl(Reg_Group_S_Ctrl reg_group) {
-    
-};
 
+// Read register commands
+Reg_Group_Config rdcfga() {
 
+}
 
 int main() {
 
