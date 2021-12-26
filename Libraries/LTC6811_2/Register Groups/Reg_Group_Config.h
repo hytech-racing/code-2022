@@ -16,7 +16,7 @@ public:
         byte4 = ((discharge_ & 0x0FF));
         byte5 = ((dcto_ & 0x0F) << 4) + ((discharge_ & 0xF00) >> 8);
     };
-    Reg_Group_Config(uint8_t* byte_arr)
+    Reg_Group_Config(uint8_t* byte_arr) :
         byte0(byte_arr[0]), 
         byte1(byte_arr[1]), 
         byte2(byte_arr[2]), 
