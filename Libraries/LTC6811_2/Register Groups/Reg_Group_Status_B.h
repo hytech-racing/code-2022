@@ -15,6 +15,14 @@ public:
         byte4(byte4_),
         byte5(byte5_) { 
     };
+    Reg_Group_Status_B(uint8_t *byte_arr) {
+        digital_supply_voltage = (byte_arr[1] << 8) + byte_arr[0];
+        byte2 = byte_arr[2];
+        byte3 = byte_arr[3];
+        byte4 = byte_arr[4];
+        byte5 = byte_arr[5];
+    };
+
 
     uint16_t get_digital_supply_voltage() { return digital_supply_voltage; };
 

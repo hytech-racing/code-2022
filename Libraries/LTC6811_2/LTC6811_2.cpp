@@ -148,12 +148,112 @@ void LTC6811_2::read_register_group(uint16_t cmd_code, uint8_t *data) {
         data[i] = data_in[i];
     }
 }
-// read Configuration Register Group A
+// Read Configuration Register Group A
 Reg_Group_Config LTC6811_2::rdcfga() {
     uint8_t buffer[6];
     // If PECs do not match, then construct default object
     try {
         read_register_group(0x2, buffer);
+        return {buffer};
+    } catch (int error) {
+        return {};
+    }
+}
+// Read Cell Voltage Register Group A
+Reg_Group_Cell_A LTC6811_2::rdcva() {
+    uint8_t buffer[6];
+    try {
+        read_register_group(0x4, buffer);
+        return {buffer};
+    } catch (int error) {
+        return {};
+    }
+}
+// Read Cell Voltage Register Group B
+Reg_Group_Cell_B LTC6811_2::rdcvb() {
+    uint8_t buffer[6];
+    try {
+        read_register_group(0x6, buffer);
+        return {buffer};
+    } catch (int error) {
+        return {};
+    }
+}
+// Read Cell Voltage Register Group C
+Reg_Group_Cell_C LTC6811_2::rdcvc() {
+    uint8_t buffer[6];
+    try {
+        read_register_group(0x8, buffer);
+        return {buffer};
+    } catch (int error) {
+        return {};
+    }
+}
+// Read Cell Voltage Register Group D
+Reg_Group_Cell_D LTC6811_2::rdcvd() {
+    uint8_t buffer[6];
+    try {
+        read_register_group(0xA, buffer);
+        return {buffer};
+    } catch (int error) {
+        return {};
+    }
+}
+// Read Auxiliary Register Group A
+Reg_Group_Aux_A LTC6811_2::rdauxa() {
+    uint8_t buffer[6];
+    try {
+        read_register_group(0xC, buffer);
+        return {buffer};
+    } catch (int error) {
+        return {};
+    }
+}
+// Read Status Register Group A
+Reg_Group_Status_A LTC6811_2::rdstata() {
+    uint8_t buffer[6];
+    try {
+        read_register_group(0x10, buffer);
+        return {buffer};
+    } catch (int error) {
+        return {};
+    }
+}
+// Read Status Register Group B
+Reg_Group_Status_B LTC6811_2::rdstatb() {
+    uint8_t buffer[6];
+    try {
+        read_register_group(0x12, buffer);
+        return {buffer};
+    } catch (int error) {
+        return {};
+    }
+}
+// Read S Control Register Group
+Reg_Group_S_Ctrl LTC6811_2::rdsctrl() {
+    uint8_t buffer[6];
+    try {
+        read_register_group(0x16, buffer);
+        return {buffer};
+    } catch (int error) {
+        return {};
+    }
+}
+// Read PWM Register Group
+Reg_Group_PWM LTC6811_2::rdpwm() {
+    uint8_t buffer[6];
+    try {
+        read_register_group(0x22, buffer);
+        return {buffer};
+    } catch (int error) {
+        return {};
+    }
+}
+// Read COMM Register Group
+Reg_Group_COMM LTC6811_2::rdcomm() {
+    uint8_t buffer[6];
+    try {
+        read_register_group(0x722, buffer);
         return {buffer};
     } catch (int error) {
         return {};

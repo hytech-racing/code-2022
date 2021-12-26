@@ -45,7 +45,7 @@ public:
     Reg_Group_Aux_A rdauxa();
 
     Reg_Group_Status_A rdstata();
-    Reg_Group_Status_B rdstatab();
+    Reg_Group_Status_B rdstatb();
 
     Reg_Group_S_Ctrl rdsctrl();
     Reg_Group_PWM rdpwm();
