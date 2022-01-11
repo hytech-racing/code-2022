@@ -36,7 +36,7 @@ void LTC6811_2::spi_write(uint8_t *cmd, uint8_t *cmd_pec, uint8_t *data, uint8_t
 }
 // SPI read; IF CODE DOES NOT WORK, THIS IS A GOOD PLACE TO START DEBUGGING
 void LTC6811_2::spi_read(uint8_t *cmd, uint8_t* cmd_pec, uint8_t *data_in) {
-    SPI.beginTransaction(SPISettings(SPI_SPEED,SPI_BIT_ORDER, SPI_MODE));
+    SPI.beginTransaction(SPISettings(SPI_SPEED, SPI_BIT_ORDER, SPI_MODE));
     digitalWrite(SS, low);
     SPI.transfer(cmd[0]);
     SPI.transfer(cmd[1]);
@@ -140,7 +140,7 @@ void LTC6811_2::read_register_group(uint16_t cmd_code, uint8_t *data) {
     // generate PEC from read-in data bytes
     generate_pec(data_in, data_pec, 6);
     // Check if the PEC locally generated on the data that is read in matches the PEC that is read in
-    if (data_pec[0] == data_in[6] || data_pec[1] == data_in[7]) {
+    if (data_pec[0] != data_in[6] || data_pec[1] != data_in[7]) {
         throw 1; // should throw actual exception derived from std::exception but I'm tired and don't wanna learn how
     }
     // After confirming matching PECs, add the data that was read in to the array that was passed into the function
@@ -259,3 +259,5 @@ Reg_Group_COMM LTC6811_2::rdcomm() {
         return {};
     }
 }
+
+// Start commands
