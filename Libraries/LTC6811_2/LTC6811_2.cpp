@@ -50,6 +50,17 @@ void LTC6811_2::spi_read(uint8_t *cmd, uint8_t* cmd_pec, uint8_t *data_in) {
     SPI.endTransaction();
 }
 
+// SPI command
+void LTC6811_2::spi_cmd(uint8_t *cmd, uint8_t* cmd_pec) {
+    SPI.beginTransaction(SPISettings(SPI_SPEED,SPI_BIT_ORDER, SPI_MODE));
+    digitalWrite(SS, low);
+    SPI.transfer(cmd[0]);
+    SPI.transfer(cmd[1]);
+    SPI.transfer(cmd_pec[0]);
+    SPI.transfer(cmd_pec[1]);
+    digitalWrite(SS, high);
+    SPI.endTransaction();
+}
 
 // returns the address of the specific LTC6811-2 chip to send command to
 uint8_t LTC6811_2::get_cmd_address() {
@@ -148,7 +159,7 @@ void LTC6811_2::read_register_group(uint16_t cmd_code, uint8_t *data) {
         data[i] = data_in[i];
     }
 }
-// read Configuration Register Group A
+// Read Configuration Register Group A
 Reg_Group_Config LTC6811_2::rdcfga() {
     uint8_t buffer[6];
     // If PECs do not match, then construct default object
@@ -159,3 +170,54 @@ Reg_Group_Config LTC6811_2::rdcfga() {
         return {};
     }
 }
+
+// Command register command - starts or clears register group - maybe rename
+
+// General command register group handler
+void LTC6811_2::cmd_register_group(uint16_t cmd_code) {
+    auto *cmd_code_bytes = reinterpret_cast<uint8_t *>(cmd_code);
+    uint8_t cmd[2] = {static_cast<uint8_t>(get_cmd_address() | cmd_code_bytes[0]), cmd_code_bytes[1]};
+    uint8_t cmd_pec[2];
+    // generate PEC from command bytes
+    generate_pec(cmd, cmd_pec, 2);
+    // write out via SPI
+    spi_cmd(cmd, cmd_pec);
+}
+
+// 
+void LTC6811_2::stsctrl() {
+    command_register_group(0x19);
+}
+
+void adcv(ADC_MODE adc_mode, DISCHARGE discharge, CELL_SELECT cell_select) {
+
+}
+
+void adax(ADC_MODE adc_mode, GPIO_SELECT gpio_select) {
+
+}
+
+void adcvax(ADC_MODE adc_mode, DISCHARGE discharge) {
+
+}
+
+void adcvsc(ADC_MODE adc_mode, DISCHARGE discharge) {
+    
+}
+
+void clrsctrl() {
+    command_register_group(0x18);
+}
+void clraux() {
+    command_register_group(0x712);
+}
+void clrstat() {
+    command_register_group(0x713);
+}
+
+//pladc very important to get right for proper stsctrl and ADC polling
+void pladc();
+void diagn();
+void stcomm();
+void wakeup_sleep();
+void wakeup_idle();

@@ -34,7 +34,7 @@ public:
     void wrcomm(Reg_Group_COMM reg_group);
 
 
-    //read register commandss
+    //read register commands
     Reg_Group_Config rdcfga();
 
     Reg_Group_Cell_A rdcva();
@@ -82,10 +82,12 @@ public:
     void wakeup_idle();
 
     // handlers and helper functions
-    void spi_write(uint8_t *cmd, uint8_t *cmd_pec, uint8_t *data, uint8_t *data_pec;
+    void spi_write(uint8_t *cmd, uint8_t *cmd_pec, uint8_t *data, uint8_t *data_pec);
     void spi_read(uint8_t *cmd, uint8_t* cmd_pec, uint8_t *data_in);
+    void spi_start(uint8_t *cmd, uint8_t* cmd_pec);
     void write_register_group(uint16_t cmd_code, const uint8_t *buffer);
     void read_register_group(uint16_t cmd_code, uint8_t *data);
+    void start_register_group(uint16_t cmd_code);
     uint8_t get_cmd_address();
     void generate_pec(const uint8_t *value, uint8_t *pec, int num_bytes);
 
