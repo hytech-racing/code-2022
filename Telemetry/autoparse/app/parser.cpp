@@ -10,6 +10,8 @@
 #include <fstream>
 #include <string>
 
+#define MAGIC_NUMBER 10						// For some reason this is the magic number to advance the cursor when file parsing gets stuck. Other numbers cause segfaults.
+
 void showMenu(char* exe) {
 	puts("\nHyTech SD Parsing System");
 	puts("------------------------");
@@ -117,18 +119,12 @@ void run (FILE* infile) {
 			for (uint8_t *l = data, *r = data + len - 1; l < r; std::swap(*l++, *r--));
 		#endif
 		
-		// AUTOPARSER 0xDE DEBUGGING CHANGES BEGIN HERE
-		//std::cout << std::to_string(ftell(infile)) << std::endl; 	// Debug Statement; Comment out if necessary
+		// "STUCK" AUTOPARSER DEBUGGING CHANGES BEGIN HERE
 		long temp = ftell(infile); 									// temporary variable holding the state of the position of the cursor currently
-		if (last == ftell(infile)) {								// If the cursor has not advanced, add one character to its position and try again
-			fseek(infile, ftell(infile) + 1, SEEK_SET);
-		} else if (id == ID_BMS_BALANCING_STATUS) {					// Else if the ID is 0xDE (the buggy ID), advance the cursor 20 characters to skip the lin
-			if (len == 0) {
-				fseek(infile, ftell(infile) + 20, SEEK_SET); 		
-			}
-		} else {													// Else the cursor position is correct and the line can be parsed
-			parseMessage(id, timeString, data);
+		while (last == ftell(infile)) {								// If the cursor has not advanced, add MAGIC_NUMBER characters to its position and try again
+			fseek(infile, ftell(infile) + MAGIC_NUMBER, SEEK_SET);
 		}
+		parseMessage(id, timeString, data);
 		last = temp;												// Set the tracker from the last iteration
 		//END CHANGES
 
