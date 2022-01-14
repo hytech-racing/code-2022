@@ -227,10 +227,23 @@ void pladc() {
 void diagn() {
     cmd_register_group(0x715);
 }
-void stcomm()
+void stcomm() {
     cmd_register_group(0x723);
+}
+
+//These receive the same wakeup signal? Why are they separate?
+// Activity on the CSB
+// or SCK pin will wake up the SPI interface.
+// The differential signal |
+// SCK(IPA) – CSB(IMA)|, must be at least VWAKE = 200mV
+// for a minimum duration of tDWELL = 240ns to qualify as a
+// wake-up signal that powers up the serial interface.
+
 void wakeup_sleep() {
-    //cmd_register_group(0x714);
+    digitalWrite(SS, low);
+    delay(1);
+    digitalWrite(SS, high);
+    // does this work? Is CSB eq to CSB in this case to produce our differential signal?
 }
 void wakeup_idle() {
     //cmd_register_group(0x714);
