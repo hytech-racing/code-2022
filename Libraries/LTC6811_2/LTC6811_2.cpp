@@ -186,38 +186,52 @@ void LTC6811_2::cmd_register_group(uint16_t cmd_code) {
 
 // 
 void LTC6811_2::stsctrl() {
-    command_register_group(0x19);
+    cmd_register_group(0x19);
 }
 
 void adcv(ADC_MODE adc_mode, DISCHARGE discharge, CELL_SELECT cell_select) {
-
+    uint16_t adc_cmd = 0x260 | (adc_mode << 7) | (discharge << 4) | cell_select;
+    cmd_register_group(adc_cmd);
 }
 
 void adax(ADC_MODE adc_mode, GPIO_SELECT gpio_select) {
-
+    uint16_t adc_cmd = 0x460 | (adc_mode << 7) | gpio_select;
+    cmd_register_group(adc_cmd);
 }
 
 void adcvax(ADC_MODE adc_mode, DISCHARGE discharge) {
-
+    uint16_t adc_cmd = 0x46F | (adc_mode << 7) | (discharge << 4);
+    cmd_register_group(adc_cmd);
 }
 
 void adcvsc(ADC_MODE adc_mode, DISCHARGE discharge) {
-    
+    uint16_t adc_cmd = 0x467 | (adc_mode << 7) | (discharge << 4);
+    cmd_register_group(adc_cmd);
 }
 
 void clrsctrl() {
-    command_register_group(0x18);
+    cmd_register_group(0x18);
 }
 void clraux() {
-    command_register_group(0x712);
+    cmd_register_group(0x712);
 }
 void clrstat() {
-    command_register_group(0x713);
+    cmd_register_group(0x713);
 }
 
-//pladc very important to get right for proper stsctrl and ADC polling
-void pladc();
-void diagn();
-void stcomm();
-void wakeup_sleep();
-void wakeup_idle();
+//Sure this shouldn't return something?
+//SDO line goes low if conversion in progress
+void pladc() {
+    cmd_register_group(0x714);
+}
+void diagn() {
+    cmd_register_group(0x715);
+}
+void stcomm()
+    cmd_register_group(0x723);
+void wakeup_sleep() {
+    //cmd_register_group(0x714);
+}
+void wakeup_idle() {
+    //cmd_register_group(0x714);
+}
