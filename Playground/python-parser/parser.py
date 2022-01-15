@@ -8,11 +8,162 @@ parse_folder --> parse_file --> parse_time
 """
 
 import os
+from sre_constants import CATEGORY_UNI_NOT_SPACE
 import sys
 from datetime import datetime
 
+########################################################################
+# Custom Parsing Functions Begin
+########################################################################
+
+def parse_ID_MC_TEMPERATURES1(raw_message):
+    return
+def parse_ID_MC_TEMPERATURES2(raw_message):
+    return
+def parse_ID_MC_TEMPERATURES3(raw_message):
+    return
+def parse_ID_MC_ANALOG_INPUTS_VOLTAGES(raw_message):
+    return
+def parse_ID_MC_DIGITAL_INPUTS_STATUS(raw_message):
+    return
+def parse_ID_MC_MOTOR_POSITION_INFORMATION(raw_message):
+    return
+def parse_ID_MC_CURRENT_INFORMATION(raw_message):
+    return
+def parse_ID_MC_VOLTAGE_INFORMATION(raw_message):
+    return
+def parse_ID_MC_FLUX_INFORMATION(raw_message):
+    return
+def parse_ID_MC_INTERNAL_VOLTAGES(raw_message):
+    return
+def parse_ID_MC_INTERNAL_STATES(raw_message):
+    return
+def parse_ID_MC_FAULT_CODES(raw_message):
+    return
+def parse_ID_MC_TORQUE_TIMER_INFORMATION(raw_message):
+    return
+def parse_ID_MC_FLUX_WEAKENING_OUTPUT(raw_message):
+    return
+def parse_ID_MC_FIRMWARE_INFORMATION(raw_message):
+    return
+def parse_ID_MC_DIAGNOSTIC_DATA(raw_message):
+    return
+def parse_ID_MC_COMMAND_MESSAGE(raw_message):
+    return
+def parse_ID_MC_READ_WRITE_PARAMETER_COMMAND(raw_message):
+    return
+def parse_ID_MC_READ_WRITE_PARAMETER_RESPONSE(raw_message):
+    return
+def parse_ID_MCU_STATUS(raw_message):
+    return
+def parse_ID_MCU_PEDAL_READINGS(raw_message):
+    return
+def parse_ID_MCU_ANALOG_READINGS(raw_message):
+    return
+def parse_ID_BMS_ONBOARD_TEMPERATURES(raw_message):
+    return
+def parse_ID_BMS_ONBOARD_DETAILED_TEMPERATURES(raw_message):
+    return
+def parse_ID_BMS_VOLTAGES(raw_message):
+    return
+def parse_ID_BMS_DETAILED_VOLTAGES(raw_message):
+    return
+def parse_ID_BMS_TEMPERATURES(raw_message):
+    return
+def parse_ID_BMS_DETAILED_TEMPERATURES(raw_message):
+    return
+def parse_ID_BMS_STATUS(raw_message):
+    return
+def parse_ID_FH_WATCHDOG_TEST(raw_message):
+    return
+def parse_ID_CCU_STATUS(raw_message):
+    return
+def parse_ID_BMS_BALANCING_STATUS(raw_message):
+    return
+def parse_ID_BMS_READ_WRITE_PARAMETER_COMMAND(raw_message):
+    return
+def parse_ID_BMS_PARAMETER_RESPONSE(raw_message):
+    return
+def parse_ID_BMS_COULOMB_COUNTS(raw_message):
+    return
+def parse_ID_MCU_GPS_READINGS(raw_message):
+    return
+def parse_ID_MCU_WHEEL_SPEED(raw_message):
+    return
+def parse_ID_DASHBOARD_STATUS(raw_message):
+    return
+def parse_ID_SAB_READINGS_FRONT(raw_message):
+    return
+def parse_ID_SAB_READINGS_REAR(raw_message):
+    return
+def parse_ID_EM_STATUS(raw_message):
+    return
+def parse_ID_EM_MEASUREMENT(raw_message):
+    return
+def parse_ID_IMU_ACCELEROMETER(raw_message):
+    return
+def parse_ID_IMU_GYROSCOPE(raw_message):
+    return
+
+
+########################################################################
+# Custom Parsing Functions End
+########################################################################
+
 def parse_message(raw_id, raw_message):
-    return [raw_id, ["N/A"], [raw_message], [""]]
+    if raw_id == "A0": return parse_ID_MC_TEMPERATURES1(raw_message)
+    if raw_id == "A1": return parse_ID_MC_TEMPERATURES2(raw_message)
+    if raw_id == "A2": return parse_ID_MC_TEMPERATURES3(raw_message)
+    if raw_id == "A3": return parse_ID_MC_ANALOG_INPUTS_VOLTAGES(raw_message)
+    if raw_id == "A4": return parse_ID_MC_DIGITAL_INPUTS_STATUS(raw_message)
+    if raw_id == "A5": return parse_ID_MC_MOTOR_POSITION_INFORMATION(raw_message)
+    if raw_id == "A6": return parse_ID_MC_CURRENT_INFORMATION(raw_message)
+    if raw_id == "A7": return parse_ID_MC_VOLTAGE_INFORMATION(raw_message)
+    if raw_id == "A8": return parse_ID_MC_FLUX_INFORMATION(raw_message)
+    if raw_id == "A9": return parse_ID_MC_INTERNAL_VOLTAGES(raw_message)
+    if raw_id == "AA": return parse_ID_MC_INTERNAL_STATES(raw_message)
+    if raw_id == "AB": return parse_ID_MC_FAULT_CODES(raw_message)
+    if raw_id == "AC": return parse_ID_MC_TORQUE_TIMER_INFORMATION(raw_message)
+    if raw_id == "AD": return parse_ID_MC_FLUX_WEAKENING_OUTPUT(raw_message)
+    if raw_id == "AE": return parse_ID_MC_FIRMWARE_INFORMATION(raw_message)
+    if raw_id == "AF": return parse_ID_MC_DIAGNOSTIC_DATA(raw_message)
+    
+    if raw_id == "C0": return parse_ID_MC_COMMAND_MESSAGE(raw_message)
+    if raw_id == "C1": return parse_ID_MC_READ_WRITE_PARAMETER_COMMAND(raw_message)
+    if raw_id == "C2": return parse_ID_MC_READ_WRITE_PARAMETER_RESPONSE(raw_message)
+    if raw_id == "C3": return parse_ID_MCU_STATUS(raw_message)
+    if raw_id == "C4": return parse_ID_MCU_PEDAL_READINGS(raw_message)
+    if raw_id == "CC": return parse_ID_MCU_ANALOG_READINGS(raw_message)
+
+    if raw_id == "D5": return parse_ID_BMS_ONBOARD_TEMPERATURES(raw_message)
+    if raw_id == "D6": return parse_ID_BMS_ONBOARD_DETAILED_TEMPERATURES(raw_message)
+    if raw_id == "D7": return parse_ID_BMS_VOLTAGES(raw_message)
+    if raw_id == "D8": return parse_ID_BMS_DETAILED_VOLTAGES(raw_message)
+    if raw_id == "D9": return parse_ID_BMS_TEMPERATURES(raw_message)
+    if raw_id == "DA": return parse_ID_BMS_DETAILED_TEMPERATURES(raw_message)
+    if raw_id == "DB": return parse_ID_BMS_STATUS(raw_message)
+    if raw_id == "DC": return parse_ID_FH_WATCHDOG_TEST(raw_message)
+    if raw_id == "DD": return parse_ID_CCU_STATUS(raw_message)
+    if raw_id == "DE": return parse_ID_BMS_BALANCING_STATUS(raw_message)
+
+    if raw_id == "E0": return parse_ID_BMS_READ_WRITE_PARAMETER_COMMAND(raw_message)
+    if raw_id == "E1": return parse_ID_BMS_PARAMETER_RESPONSE(raw_message)
+    if raw_id == "E2": return parse_ID_BMS_COULOMB_COUNTS(raw_message)
+    if raw_id == "E7": return parse_ID_MCU_GPS_READINGS(raw_message)
+    if raw_id == "EA": return parse_ID_MCU_WHEEL_SPEED(raw_message)
+    if raw_id == "EB": return parse_ID_DASHBOARD_STATUS(raw_message)
+    if raw_id == "EC": return parse_ID_SAB_READINGS_FRONT(raw_message)
+    if raw_id == "ED": return parse_ID_SAB_READINGS_REAR(raw_message)
+
+    if raw_id == "100": return parse_ID_EM_STATUS(raw_message)
+    if raw_id == "400": return parse_ID_EM_MEASUREMENT(raw_message)
+    if raw_id == "470": return parse_ID_IMU_ACCELEROMETER(raw_message)
+    if raw_id == "471": return parse_ID_IMU_GYROSCOPE(raw_message)
+
+    # Should not come to here if CAN ID was valid
+    print("ERROR: Invalid CAN ID: 0x" + raw_message)
+    sys.exit(0)
+    #return [raw_id, ["N/A"], [raw_message], [""]]
 
 def parse_time(raw_time):
     '''
@@ -52,12 +203,12 @@ def parse_file(filename):
             raw_message = line.split(",")[3]
 
             # Do not parse if the length of the message is 0, otherwise bugs will occur later.
-            if length == 0:
+            if length == 0 or raw_message == "\n":
                 continue
             
             # Call helper functions
             time = parse_time(raw_time)
-            table = parse_message(raw_id, raw_message)
+            table = parse_message(raw_id, int("0x" + raw_message, 16))
 
             # Assertions that check for parser failure. Notifies user on where parser broke.
             assert len(table) == 4, "ERROR: Parser expected 4 arguments from parse_message at ID: 0x" + table[0] + ", got: " + str(len(table))
@@ -67,7 +218,7 @@ def parse_file(filename):
             message = table[0].strip()
             for i in range(len(table[1])):
                 label = table[1][i].strip()
-                value = table[2][i].strip()
+                value = str(table[2][i]).strip()
                 unit = table[3][i].strip()
 
                 outfile.write(time + ",0x" + raw_id + "," + message + "," + label + "," + value + "," + unit + "\n")
@@ -108,5 +259,8 @@ def parse_folder():
 
     return 
 
-parse_folder() # Entry point to parsing framework
+########################################################################
+# Entry Point to Framework
+########################################################################
+parse_folder()
 print("SUCCESS: Parsing Complete.")
