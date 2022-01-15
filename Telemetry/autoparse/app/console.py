@@ -93,4 +93,9 @@ class Console:
         blanks = '   '
         self.screen.addstr(y,x,blanks)
 
-curses.wrapper(Console().setupScreen)
+try:
+    curses.wrapper(Console().setupScreen)
+except:
+    print("ERROR: Console could not display")
+    print("       Please set your computer resolution to 1920 x XXXX and size to 125%")
+    print("       Press Control + C in Windows or Command + . in Mac to exit")
