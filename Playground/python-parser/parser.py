@@ -1,7 +1,7 @@
 """
 @Author: Bo Han Zhu
 @Date: 1/15/2022
-@Description: HyTech custom python parser. Reads CSVs from Raw_Data, parses them, and writes to Parsed_Data
+@Description: HyTech custom python parser. Reads CSVs from Raw_Data, parses them, and writes to Parsed_Data. Uses multiplier.py for multipliers.
 @TODO: Also output to MATLAB struct
 
 parse_folder --> parse_file --> parse_time
@@ -11,8 +11,7 @@ parse_folder --> parse_file --> parse_time
 # Imports
 import os
 import sys
-import importlib
-importlib.import_module("multipliers")
+from multipliers import Multipliers
 from datetime import datetime
 
 DEBUG = False # Set True for option error print statements
@@ -52,56 +51,109 @@ def hex_to_decimal(hex, bits, is_signed):
 def parse_ID_MC_TEMPERATURES1(raw_message):
     message = "MC_temperatures_1"
     labels = ["module_a_temperature", "module_b_temperature", "module_c_temperature", "gate_driver_board_temperature"]
-    values = [hex_to_decimal(raw_message[0:4], 16, True) / 10.0, hex_to_decimal(raw_message[4:8], 16, True) / 10.0, hex_to_decimal(raw_message[8:12], 16, True) / 10.0, hex_to_decimal(raw_message[12:16], 16, True) / 10.0]
+    values = [
+        hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.MC_TEMPERATURES1_MODULE_A_TEMPERATURE.value, 
+        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.MC_TEMPERATURES1_MODULE_B_TEMPERATURE.value, 
+        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.MC_TEMPERATURES1_MODULE_C_TEMPERATURE.value, 
+        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.MC_TEMPERATURES1_GATE_DRIVER_BOARD_TEMPERATURE.value
+    ]
     units = ["C", "C", "C", "C"]
     return [message, labels, values, units]
 
 def parse_ID_MC_TEMPERATURES2(raw_message):
     message = "MC_temperatures_2"
     labels = ["control_board_temperature", "rtd_1_temperature", "rtd_2_temperature", "rtd_3_temperature"]
-    values = [hex_to_decimal(raw_message[0:4], 16, True) / 10.0, hex_to_decimal(raw_message[4:8], 16, True) / 10.0, hex_to_decimal(raw_message[8:12], 16, True) / 10.0, hex_to_decimal(raw_message[12:16], 16, True) / 10.0]
+    values = [
+        hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.MC_TEMPERATURES2_CONTROL_BOARD_TEMPERATURES.value, 
+        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.MC_TEMPERATURES2_RTD_1_TEMPERATURES.value, 
+        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.MC_TEMPERATURES2_RTD_2_TEMPERATURES.value, 
+        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.MC_TEMPERATURES2_RTD_3_TEMPERATURES.value
+    ]
     units = ["C", "C", "C", "C"]
     return [message, labels, values, units]
 
 def parse_ID_MC_TEMPERATURES3(raw_message):
     message = "MC_temperatures_3"
     labels = ["rtd_4_temperatures", "rtd_5_temperature", "motor_temperature", "torque_shudder"]
-    values = [hex_to_decimal(raw_message[0:4], 16, True) / 10.0, hex_to_decimal(raw_message[4:8], 16, True) / 10.0, hex_to_decimal(raw_message[8:12], 16, True) / 10.0, hex_to_decimal(raw_message[12:16], 16, True) / 10.0]
+    values = [
+        hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.MC_TEMPERATURES3_RTD_4_TEMPERATURES.value,
+        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.MC_TEMPERATURES3_RTD_5_TEMPERATURES.value,
+        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.MC_TEMPERATURES3_MOTOR_TEMPERATURE.value, 
+        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.MC_TEMPERATURES3_TORQUE_SHUDDER.value
+    ]
     units = ["C", "C", "C", "N-m"]
     return [message, labels, values, units]
 
 def parse_ID_MC_ANALOG_INPUTS_VOLTAGES(raw_message):
     message = "MC_analog_input_voltages"
     labels = ["MC_analog_input_1", "MC_analog_input_2", "MC_analog_input_3", "MC_analog_input_4"]
-    values = [hex_to_decimal(raw_message[0:4], 16, True), hex_to_decimal(raw_message[4:8], 16, True), hex_to_decimal(raw_message[8:12], 16, True), hex_to_decimal(raw_message[12:16], 16, True)]
+    values = [
+        hex_to_decimal(raw_message[0:4], 16, True),
+        hex_to_decimal(raw_message[4:8], 16, True),
+        hex_to_decimal(raw_message[8:12], 16, True),
+        hex_to_decimal(raw_message[12:16], 16, True)
+    ]
     units = ["", "", "", ""]
     return [message, labels, values, units]
 
 def parse_ID_MC_DIGITAL_INPUTS_STATUS(raw_message):
     message = "MC_digital_input_status"
-    labels = ["MC_digital_input_1", "MC_digital_input_2", "MC_digital_input_3", "MC_digital_input_4", "MC_digital_input_5", "MC_digital_input_6", "MC_digital_input_7", "MC_digital_input_8"]
-    values = [raw_message[1], raw_message[3], raw_message[5], raw_message[7], raw_message[9], raw_message[11], raw_message[13], raw_message[15]]
+    labels = [
+        "MC_digital_input_1", 
+        "MC_digital_input_2", 
+        "MC_digital_input_3", 
+        "MC_digital_input_4", 
+        "MC_digital_input_5", 
+        "MC_digital_input_6", 
+        "MC_digital_input_7", 
+        "MC_digital_input_8"
+    ]
+    values = [
+        raw_message[1], 
+        raw_message[3], 
+        raw_message[5], 
+        raw_message[7], 
+        raw_message[9], 
+        raw_message[11], 
+        raw_message[13], 
+        raw_message[15]
+    ]
     units = ["", "", "", "", "", "", "", ""]
     return [message, labels, values, units]
 
 def parse_ID_MC_MOTOR_POSITION_INFORMATION(raw_message):
     message = "MC_motor_position_information"
     labels = ["motor_angle", "motor_speed", "elec_output_freq", "delta_resolver_filtered"]
-    values = [hex_to_decimal(raw_message[0:4], 16, True) / 10.0, hex_to_decimal(raw_message[4:8], 16, True), hex_to_decimal(raw_message[8:12], 16, True) / 10.0, hex_to_decimal(raw_message[12:16], 16, True)]
+    values = [
+        hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.MC_MOTOR_POSITION_INFORMATION_MOTOR_ANGLE.value,
+        hex_to_decimal(raw_message[4:8], 16, True), 
+        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.MC_MOTOR_POSITION_INFORMATION_ELEC_OUTPUT_FREQ.value, 
+        hex_to_decimal(raw_message[12:16], 16, True)
+    ]
     units = ["", "RPM", "", ""]
     return [message, labels, values, units]
 
 def parse_ID_MC_CURRENT_INFORMATION(raw_message):
     message = "MC_current_information"
     labels = ["phase_a_current", "phase_b_current", "phase_c_current", "dc_bus_current"]
-    values = [hex_to_decimal(raw_message[0:4], 16, True) / 10.0, hex_to_decimal(raw_message[4:8], 16, True) / 10.0, hex_to_decimal(raw_message[8:12], 16, True) / 10.0, hex_to_decimal(raw_message[12:16], 16, True) / 10.0]
+    values = [
+        hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.MC_CURRENT_INFORMATION_PHASE_A_CURRENT.value, 
+        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.MC_CURRENT_INFORMATION_PHASE_B_CURRENT.value, 
+        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.MC_CURRENT_INFORMATION_PHASE_C_CURRENT.value, 
+        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.MC_CURRENT_INFORMATION_DC_BUS_CURRENT.value
+    ]
     units = ["A", "A", "A", "A"]
     return [message, labels, values, units]
 
 def parse_ID_MC_VOLTAGE_INFORMATION(raw_message):
     message = "MC_voltage_information"
     labels = ["dc_bus_voltage", "output_voltage", "phase_ab_voltage", "phase_bc_voltage"]
-    values = [hex_to_decimal(raw_message[0:4], 16, True) / 10.0, hex_to_decimal(raw_message[4:8], 16, True) / 10.0, hex_to_decimal(raw_message[8:12], 16, True) / 10.0, hex_to_decimal(raw_message[12:16], 16, True) / 10.0]
+    values = [
+        hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.MC_VOLTAGE_INFORMATION_DC_BUS_VOLTAGE.value,
+        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.MC_VOLTAGE_INFORMATION_OUTPUT_VOLTAGE.value,
+        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.MC_VOLTAGE_INFORMATION_PHASE_AB_VOLTAGE.value,
+        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.MC_VOLTAGE_INFORMATION_PHASE_BC_VOLTAGE.value
+    ]
     units = ["V", "V", "V", "V"]
     return [message, labels, values, units]
 
@@ -115,7 +167,22 @@ def parse_ID_MC_INTERNAL_VOLTAGES(raw_message):
 
 def parse_ID_MC_INTERNAL_STATES(raw_message):
     message = "MC_internal_states"
-    labels = ["vsm_state", "inverter_state", "relay_active_1", "relay_active_2", "relay_active_3", "relay_active_4", "relay_active_5", "relay_active_6", "inverter_run_mode", "inverter_active_discharge_state", "inverter_command_mode", "inverter_enable_state", "inverter_enable_lockout", "direction_command"]
+    labels = [
+        "vsm_state",
+        "inverter_state", 
+        "relay_active_1", 
+        "relay_active_2", 
+        "relay_active_3", 
+        "relay_active_4", 
+        "relay_active_5", 
+        "relay_active_6", 
+        "inverter_run_mode", 
+        "inverter_active_discharge_state", 
+        "inverter_command_mode", 
+        "inverter_enable_state", 
+        "inverter_enable_lockout", 
+        "direction_command"
+    ]
     
     relay_state = hex_to_decimal(raw_message[6:8], 8, False)
     relay_state_1 = str(relay_state & 0x01)
@@ -131,7 +198,22 @@ def parse_ID_MC_INTERNAL_STATES(raw_message):
     inverter_enable_state = str(inverter_enable & 1)
     inverter_enable_lockout = str((inverter_enable & 0x80) >> 7)
 
-    values = ["0x" + raw_message[0:4], "0x" + raw_message[4:6], relay_state_1, relay_state_2, relay_state_3, relay_state_4, relay_state_5, relay_state_6, inverter_run_mode, inverter_active_discharge_status, "0x" + raw_message[10:12], inverter_enable_state, inverter_enable_lockout, "0x" + raw_message[14:16]]
+    values = [
+        "0x" + raw_message[0:4],
+        "0x" + raw_message[4:6], 
+        relay_state_1, 
+        relay_state_2,
+        relay_state_3, 
+        relay_state_4, 
+        relay_state_5, 
+        relay_state_6, 
+        inverter_run_mode, 
+        inverter_active_discharge_status, 
+        "0x" + raw_message[10:12], 
+        inverter_enable_state, 
+        inverter_enable_lockout, 
+        "0x" + raw_message[14:16]
+    ]
     units = ["", "", "", "", "", "", "", "", "", "", "", "", "", ""]
     return [message, labels, values, units]
 
@@ -293,21 +375,35 @@ def parse_ID_MC_FAULT_CODES(raw_message):
 def parse_ID_MC_TORQUE_TIMER_INFORMATION(raw_message):
     message = "MC_torque_timer_information"
     labels = ["commanded_torque", "torque_feedback", "rms_uptime"]
-    values = [hex_to_decimal(raw_message[0:4], 16, True) / 10.0, hex_to_decimal(raw_message[4:8], 16, True) / 10.0, hex_to_decimal(raw_message[8:16], 32, False)]
+    values = [
+        hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.MC_TORQUE_TIMER_INFORMATION_COMMANDED_TORQUE.value,
+        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.MC_TORQUE_TIMER_INFORMATION_TORQUE_FEEDBACK.value, 
+        hex_to_decimal(raw_message[8:16], 32, False)
+    ]
     units = ["C", "C", "s"]
     return [message, labels, values, units]
 
 def parse_ID_MC_FLUX_WEAKENING_OUTPUT(raw_message):
     message = "MC_flux_weakening_output"
     labels = ["modulation_index", "flux_weakening_output", "id_command", "iq_command"]
-    values = ["0x" + raw_message[2:4] + raw_message[0:2], "0x" + raw_message[6:8] + raw_message[4:6], hex_to_decimal(raw_message[8:12], 16, True), hex_to_decimal(raw_message[12:16], 16, True)]
+    values = [
+        "0x" + raw_message[2:4] + raw_message[0:2], 
+        "0x" + raw_message[6:8] + raw_message[4:6], 
+        hex_to_decimal(raw_message[8:12], 16, True), 
+        hex_to_decimal(raw_message[12:16], 16, True)
+    ]
     units = ["", "", "", ""]
     return [message, labels, values, units]
 
 def parse_ID_MC_FIRMWARE_INFORMATION(raw_message):
     message = "MC_firmware_information"
     labels = ["eeprom_version_project_code", "software_version", "date_code_mmdd", "date_code_yyyy"]
-    values = [hex_to_decimal(raw_message[0:4], 16, False), hex_to_decimal(raw_message[4:8], 16, False), hex_to_decimal(raw_message[8:12], 16, False), hex_to_decimal(raw_message[12:16], 16, False)]
+    values = [
+        hex_to_decimal(raw_message[0:4], 16, False),
+        hex_to_decimal(raw_message[4:8], 16, False),
+        hex_to_decimal(raw_message[8:12], 16, False),
+        hex_to_decimal(raw_message[12:16], 16, False)
+    ]
     units = ["", "", "", ""]
     return [message, labels, values, units]
 
@@ -318,24 +414,40 @@ def parse_ID_MC_DIAGNOSTIC_DATA(raw_message):
 def parse_ID_MC_COMMAND_MESSAGE(raw_message):
     message = "MC_command_message"
     labels = ["requested_torque", "angular_velocity", "direction", "inverter_enable", "discharge_enable", "command_torque_limit"]
-    values = [hex_to_decimal(raw_message[0:4], 16, True) / 10.0, hex_to_decimal(raw_message[4:8], 16, True), "0x" + raw_message[9], hex_to_decimal(raw_message[10], 4, False), hex_to_decimal(raw_message[11], 4, False), hex_to_decimal(raw_message[12:16], 16, True)]
+    values = [
+        hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.MC_COMMAND_MESSAGE_REQUESTED_TORQUE.value,
+        hex_to_decimal(raw_message[4:8], 16, True), 
+        "0x" + raw_message[9],
+        hex_to_decimal(raw_message[10], 4, False), 
+        hex_to_decimal(raw_message[11], 4, False), 
+        hex_to_decimal(raw_message[12:16], 16, True)
+    ]
     units = []
     for i in range(len(labels)):
         units.append("")
     return [message, labels, values, units]
 
-
 def parse_ID_MC_READ_WRITE_PARAMETER_COMMAND(raw_message):
     message = "MC_read_write_parameter_command"
     labels = ["parameter_address", "rw_command", "reserved1", "data"]
-    values = [hex(int(hex_to_decimal(raw_message[0:4], 16, False))), hex(int(raw_message[5])), hex_to_decimal(raw_message[6:8], 8, False), hex(int(hex_to_decimal(raw_message[8:16], 32, False)))]
+    values = [
+        hex(int(hex_to_decimal(raw_message[0:4], 16, False))),
+        hex(int(raw_message[5])),
+        hex_to_decimal(raw_message[6:8], 8, False),
+        hex(int(hex_to_decimal(raw_message[8:16], 32, False)))
+    ]
     units = ["", "", "", ""]
     return [message, labels, values, units]
 
 def parse_ID_MC_READ_WRITE_PARAMETER_RESPONSE(raw_message):
     message = "MC_read_write_parameter_response"
     labels = ["parameter_address", "write_success", "reserved1", "data"]
-    values = [hex(int(hex_to_decimal(raw_message[0:4], 16, False))), hex(int(raw_message[5])), hex_to_decimal(raw_message[6:8], 8, False), hex(int(hex_to_decimal(raw_message[8:16], 32, False)))]
+    values = [
+        hex(int(hex_to_decimal(raw_message[0:4], 16, False))),
+        hex(int(raw_message[5])),
+        hex_to_decimal(raw_message[6:8], 8, False),
+        hex(int(hex_to_decimal(raw_message[8:16], 32, False)))
+    ]
     units = ["", "", "", ""]
     return [message, labels, values, units]
 
@@ -401,7 +513,7 @@ def parse_ID_MCU_STATUS(raw_message):
             values.append(bin_rep[i])
     values.append(hex_to_decimal(raw_message[8:10], 8, False))
     values.append(hex_to_decimal(raw_message[10:12], 8, False))
-    values.append(hex_to_decimal(raw_message[12:16], 16, False) / 100.0)
+    values.append(hex_to_decimal(raw_message[12:16], 16, False) / Multipliers.MCU_STATUS_DISTANCE_TRAVELLED.value)
 
     units = []
     for i in range(len(labels) - 3):
@@ -415,21 +527,35 @@ def parse_ID_MCU_STATUS(raw_message):
 def parse_ID_MCU_PEDAL_READINGS(raw_message):
     message = "MCU_pedal_readings"
     labels = ["accelerator_pedal_1", "accelerator_pedal_2", "brake_transducer_1", "brake_transducer_2"]
-    values = [hex_to_decimal(raw_message[0:4], 16, False), hex_to_decimal(raw_message[4:8], 16, False), hex_to_decimal(raw_message[8:12], 16, False), hex_to_decimal(raw_message[12:16], 16, False)]
+    values = [
+        hex_to_decimal(raw_message[0:4], 16, False), 
+        hex_to_decimal(raw_message[4:8], 16, False), 
+        hex_to_decimal(raw_message[8:12], 16, False), 
+        hex_to_decimal(raw_message[12:16], 16, False)
+    ]
     units = ["", "", "", ""]
     return [message, labels, values, units]
 
 def parse_ID_MCU_ANALOG_READINGS(raw_message):
     message = "MCU_analog_readings"
     labels = ["ecu_current", "cooling_current", "temperature", "glv_battery_voltage"]
-    values = [hex_to_decimal(raw_message[0:4], 16, False) / 5000.0, hex_to_decimal(raw_message[4:8], 16, False) / 5000.0, hex_to_decimal(raw_message[8:12], 16, True) / 100.0, hex_to_decimal(raw_message[12:16], 16, False) / 2500.0]
+    values = [
+        hex_to_decimal(raw_message[0:4], 16, False) / Multipliers.MCU_ANALOG_READINGS_ECU_CURRENT.value, 
+        hex_to_decimal(raw_message[4:8], 16, False) / Multipliers.MCU_ANALOG_READINGS_COOLING_CURRENT.value,
+        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.MCU_ANALOG_READINGS_TEMPERATURE.value, 
+        hex_to_decimal(raw_message[12:16], 16, False) / Multipliers.MCU_ANALOG_READINGS_GLV_BATTERY_VOLTAGE.value
+    ]
     units = ["A", "A", "C", "V"]
     return [message, labels, values, units]
 
 def parse_ID_BMS_ONBOARD_TEMPERATURES(raw_message):
     message = "BMS_onboard_temperatures"
     labels = ["average_temperature", "low_temperature", "high_temperature"]
-    values = [hex_to_decimal(raw_message[4:8], 16, True) / 100.0, hex_to_decimal(raw_message[8:12], 16, True) / 100.0, hex_to_decimal(raw_message[12:16], 16, True) / 100.0]
+    values = [
+        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.BMS_ONBOARD_TEMPERATURES_AVERAGE_TEMPERATURE.value,
+        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.BMS_ONBOARD_TEMPERATURES_LOW_TEMPERATURE.value,
+        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.BMS_ONBOARD_TEMPERATURES_HIGH_TEMPERATURE.value
+    ]
     units = ["C", "C", "C"]
     return [message, labels, values, units]
 
@@ -437,14 +563,22 @@ def parse_ID_BMS_ONBOARD_DETAILED_TEMPERATURES(raw_message):
     message = "BMS_onboard_detailed_temperatures"
     ic_id = str(hex_to_decimal(raw_message[0:2], 8, False))
     labels = ["IC_" + ic_id + "_temperature_0", "IC_" + ic_id + "_temperature_1"]
-    values = [hex_to_decimal(raw_message[2:6], 16, True) / 100.0, hex_to_decimal(raw_message[6:10], 16, True) / 100.0]
+    values = [
+        hex_to_decimal(raw_message[2:6], 16, True) / Multipliers.BMS_ONBOARD_DETAILED_TEMPERATURES_TEMPERATURE_0.value,
+        hex_to_decimal(raw_message[6:10], 16, True) / Multipliers.BMS_ONBOARD_DETAILED_TEMPERATURES_TEMPERATURE_1.value
+    ]
     units = ["C", "C"]
     return [message, labels, values, units]
 
 def parse_ID_BMS_VOLTAGES(raw_message):
     message = "BMS_voltages"
     labels = ["BMS_voltage_average", "BMS_voltage_low", "BMS_voltage_high", "BMS_voltage_total"]
-    values = [hex_to_decimal(raw_message[0:4], 16, False) / 10000.0, hex_to_decimal(raw_message[4:8], 16, False) / 10000.0, hex_to_decimal(raw_message[8:12], 16, False) / 10000.0, hex_to_decimal(raw_message[12:16], 16, False) / 10000.0]
+    values = [
+        hex_to_decimal(raw_message[0:4], 16, False) / Multipliers.BMS_VOLTAGES_BMS_VOLTAGE_AVERAGE.value,
+        hex_to_decimal(raw_message[4:8], 16, False) / Multipliers.BMS_VOLTAGES_BMS_VOLTAGE_LOW.value,
+        hex_to_decimal(raw_message[8:12], 16, False) / Multipliers.BMS_VOLTAGES_BMS_VOLTAGE_HIGH.value,
+        hex_to_decimal(raw_message[12:16], 16, False) / Multipliers.BMS_VOLTAGES_BMS_VOLTAGE_TOTAL.value
+    ]
     units = ["V", "V", "V", "V"]
     return [message, labels, values, units]
 

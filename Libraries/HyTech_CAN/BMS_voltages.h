@@ -47,7 +47,7 @@ private:
     uint16_t average_voltage;   // @Parse @Scale(10000) @Unit(V) @Name(average) @Getter(get_average)
     uint16_t low_voltage;       // @Parse @Scale(10000) @Unit(V) @Name(low)     @Getter(get_low)
     uint16_t high_voltage;      // @Parse @Scale(10000) @Unit(V) @Name(high)    @Getter(get_high)
-    uint16_t total_voltage;     // @Parse @Scale(10000) @Unit(V) @Name(total)   @Getter(get_total)
+    uint16_t total_voltage;     // @Parse @Scale(100) @Unit(V) @Name(total)   @Getter(get_total)
 };
 
 #pragma pack(pop)
