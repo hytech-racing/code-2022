@@ -377,7 +377,7 @@ def parse_ID_MCU_STATUS(raw_message):
     def binary_to_MCU_STATE(bin_rep):
         # Back to Big Endian
         bin_rep = bin_rep[2] + bin_rep[1] + bin_rep[0]
-        
+
         if bin_rep == "000": return "STARTUP"
         if bin_rep == "001": return "TRACTIVE_SYSTEM_NOT_ACTIVE"
         if bin_rep == "010": return "TRACTIVE_SYSTEM_ACTIVE"
@@ -385,7 +385,7 @@ def parse_ID_MCU_STATUS(raw_message):
         if bin_rep == "100": return "WAITING_READY_TO_DRIVE_SOUND"
         if bin_rep == "101": return "READY_TO_DRIVE"
         # Should never get here
-        if True: print("ERROR: Unrecognized MCU state: " + bin_rep)
+        if DEBUG: print("ERROR: Unrecognized MCU state: " + bin_rep)
         return "UNRECOGNIZED_STATE"
 
     values = []
@@ -412,13 +412,34 @@ def parse_ID_MCU_STATUS(raw_message):
     return [message, labels, values, units]
 
 def parse_ID_MCU_PEDAL_READINGS(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    message = "MCU_pedal_readings"
+    labels = ["accelerator_pedal_1", "accelerator_pedal_2", "brake_transducer_1", "brake_transducer_2"]
+    values = [hex_to_decimal(raw_message[0:4], 16, False), hex_to_decimal(raw_message[4:8], 16, False), hex_to_decimal(raw_message[8:12], 16, False), hex_to_decimal(raw_message[12:16], 16, False)]
+    units = ["", "", "", ""]
+    return [message, labels, values, units]
+
 def parse_ID_MCU_ANALOG_READINGS(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    message = "MCU_analog_readings"
+    labels = ["ecu_current", "cooling_current", "temperature", "glv_battery_voltage"]
+    values = [hex_to_decimal(raw_message[0:4], 16, False) / 5000.0, hex_to_decimal(raw_message[4:8], 16, False) / 5000.0, hex_to_decimal(raw_message[8:12], 16, True) / 100.0, hex_to_decimal(raw_message[12:16], 16, False) / 2500.0]
+    units = ["A", "A", "C", "V"]
+    return [message, labels, values, units]
+
 def parse_ID_BMS_ONBOARD_TEMPERATURES(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    message = "BMS_onboard_temperatures"
+    labels = ["average_temperature", "low_temperature", "high_temperature"]
+    values = [hex_to_decimal(raw_message[4:8], 16, True) / 100.0, hex_to_decimal(raw_message[8:12], 16, True) / 100.0, hex_to_decimal(raw_message[12:16], 16, True) / 100.0]
+    units = ["C", "C", "C"]
+    return [message, labels, values, units]
+
 def parse_ID_BMS_ONBOARD_DETAILED_TEMPERATURES(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    message = "BMS_onboard_detailed_temperatures"
+    ic_id = str(hex_to_decimal(raw_message[0:2], 8, False))
+    labels = ["IC_" + ic_id + "_temperature_0", "IC_" + ic_id + "_temperature_1"]
+    values = [hex_to_decimal(raw_message[2:6], 16, True) / 100.0, hex_to_decimal(raw_message[6:10], 16, True) / 100.0]
+    units = ["C", "C"]
+    return [message, labels, values, units]
+
 def parse_ID_BMS_VOLTAGES(raw_message):
     return ["N/A", ["N/A"], ["N/A"], [""]]
 def parse_ID_BMS_DETAILED_VOLTAGES(raw_message):
@@ -529,10 +550,11 @@ def parse_time(raw_time):
     @brief: Converts raw time into human-readable time.
     @input: The raw time given by the raw data CSV.
     @return: A string representing the human-readable time.
-    @TODO: add millisecond support
     '''
+    ms = int(raw_time) % 1000
     raw_time = int(raw_time) / 1000
-    time = str(datetime.utcfromtimestamp(raw_time).strftime('%Y-%m-%d %H:%M:%S'))
+    time = str(datetime.utcfromtimestamp(raw_time).strftime('%Y-%m-%dT%H:%M:%S'))
+    time = time + "." + str(ms).zfill(3) + "Z"
     return time
 
 def parse_file(filename):
