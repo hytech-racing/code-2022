@@ -315,13 +315,102 @@ def parse_ID_MC_DIAGNOSTIC_DATA(raw_message):
     return ["MC_flux_information", ["UNPARSEABLE"], ["UNPARSEABLE"], ["UNPARSEABLE"]]
 
 def parse_ID_MC_COMMAND_MESSAGE(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    message = "MC_command_message"
+    labels = ["requested_torque", "angular_velocity", "direction", "inverter_enable", "discharge_enable", "command_torque_limit"]
+    values = [hex_to_decimal(raw_message[0:4], 16, True) / 10.0, hex_to_decimal(raw_message[4:8], 16, True), "0x" + raw_message[9], hex_to_decimal(raw_message[10], 4, False), hex_to_decimal(raw_message[11], 4, False), hex_to_decimal(raw_message[12:16], 16, True)]
+    units = []
+    for i in range(len(labels)):
+        units.append("")
+    return [message, labels, values, units]
+
+
 def parse_ID_MC_READ_WRITE_PARAMETER_COMMAND(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    message = "MC_read_write_parameter_command"
+    labels = ["parameter_address", "rw_command", "reserved1", "data"]
+    values = [hex(int(hex_to_decimal(raw_message[0:4], 16, False))), hex(int(raw_message[5])), hex_to_decimal(raw_message[6:8], 8, False), hex(int(hex_to_decimal(raw_message[8:16], 32, False)))]
+    units = ["", "", "", ""]
+    return [message, labels, values, units]
+
 def parse_ID_MC_READ_WRITE_PARAMETER_RESPONSE(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    message = "MC_read_write_parameter_response"
+    labels = ["parameter_address", "write_success", "reserved1", "data"]
+    values = [hex(int(hex_to_decimal(raw_message[0:4], 16, False))), hex(int(raw_message[5])), hex_to_decimal(raw_message[6:8], 8, False), hex(int(hex_to_decimal(raw_message[8:16], 32, False)))]
+    units = ["", "", "", ""]
+    return [message, labels, values, units]
+
 def parse_ID_MCU_STATUS(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    message = "MCU_status"
+    labels = [
+        "imd_ok_high",
+        "shutdown_b_above_threshold",
+        "bms_ok_high",
+        "shutdown_c_above_threshold",
+        "bspd_ok_high",
+        "shutdown_d_above_threshold",
+        "software_ok_high",
+        "shutdown_e_above_threshold",
+        "no_accel_implausability",
+        "no_brake_implausability",
+        "brake_pedal_active",
+        "bspd_current_high",
+        "bspd_brake_high",
+        "no_accel_brake_implausability",
+        "mcu_state",
+        "inverter_powered",
+        "energy_meter_present",
+        "activate_buzzer",
+        "software_is_ok",
+        "launch_ctrl_active",
+        "max_torque",
+        "torque_mode",
+        "distance_travelled"
+    ]
+
+    temp_bin_rep = bin(hex_to_decimal(raw_message[2:4], 8, False))[2:].zfill(8) + bin(hex_to_decimal(raw_message[4:6], 8, False))[2:].zfill(8) + bin(hex_to_decimal(raw_message[6:8], 8, False))[2:].zfill(8)
+    
+    # Change bin rep to small endian
+    bin_rep = ""
+    for i in range(len(temp_bin_rep)):
+        if i % 8 == 0:
+            bin_rep = bin_rep + temp_bin_rep[i+7] + temp_bin_rep[i+6] + temp_bin_rep[i+5] + temp_bin_rep[4] + temp_bin_rep[i+3] + temp_bin_rep[i+2] + temp_bin_rep[i+1] + temp_bin_rep[i]
+
+    def binary_to_MCU_STATE(bin_rep):
+        # Back to Big Endian
+        bin_rep = bin_rep[2] + bin_rep[1] + bin_rep[0]
+        
+        if bin_rep == "000": return "STARTUP"
+        if bin_rep == "001": return "TRACTIVE_SYSTEM_NOT_ACTIVE"
+        if bin_rep == "010": return "TRACTIVE_SYSTEM_ACTIVE"
+        if bin_rep == "011": return "ENABLING_INVERTER"
+        if bin_rep == "100": return "WAITING_READY_TO_DRIVE_SOUND"
+        if bin_rep == "101": return "READY_TO_DRIVE"
+        # Should never get here
+        if True: print("ERROR: Unrecognized MCU state: " + bin_rep)
+        return "UNRECOGNIZED_STATE"
+
+    values = []
+    for i in range(24):
+        if i == 8 or i == 9: # torque_mode 2-bits are never used
+            continue
+        elif i == 16: # convert binary to MCU state
+            values.append(binary_to_MCU_STATE(bin_rep[16:19]))
+        elif i == 17 or i == 18: # no need to do anything here because i == 16 takes care of them
+            continue
+        else:
+            values.append(bin_rep[i])
+    values.append(hex_to_decimal(raw_message[8:10], 8, False))
+    values.append(hex_to_decimal(raw_message[10:12], 8, False))
+    values.append(hex_to_decimal(raw_message[12:16], 16, False) / 100.0)
+
+    units = []
+    for i in range(len(labels) - 3):
+        units.append("")
+    units.append("Nm")
+    units.append("")
+    units.append("m")
+
+    return [message, labels, values, units]
+
 def parse_ID_MCU_PEDAL_READINGS(raw_message):
     return ["N/A", ["N/A"], ["N/A"], [""]]
 def parse_ID_MCU_ANALOG_READINGS(raw_message):
@@ -478,6 +567,8 @@ def parse_file(filename):
             
             # Call helper functions
             time = parse_time(raw_time)
+            raw_message = raw_message[:(int(length) * 2)] # Strip trailing end of line/file characters that may cause bad parsing
+            raw_message = raw_message.zfill(16) # Sometimes messages come truncated if 0s on the left. Append 0s so field-width is 16.
             table = parse_message(raw_id, raw_message)
             if table == "INVALID_ID":
                 continue
