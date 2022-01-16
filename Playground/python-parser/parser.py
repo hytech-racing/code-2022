@@ -9,9 +9,10 @@ parse_folder --> parse_file --> parse_time
 """
 
 # Imports
-from optparse import Values
 import os
 import sys
+import importlib
+importlib.import_module("multipliers")
 from datetime import datetime
 
 DEBUG = False # Set True for option error print statements
@@ -441,7 +442,12 @@ def parse_ID_BMS_ONBOARD_DETAILED_TEMPERATURES(raw_message):
     return [message, labels, values, units]
 
 def parse_ID_BMS_VOLTAGES(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    message = "BMS_voltages"
+    labels = ["BMS_voltage_average", "BMS_voltage_low", "BMS_voltage_high", "BMS_voltage_total"]
+    values = [hex_to_decimal(raw_message[0:4], 16, False) / 10000.0, hex_to_decimal(raw_message[4:8], 16, False) / 10000.0, hex_to_decimal(raw_message[8:12], 16, False) / 10000.0, hex_to_decimal(raw_message[12:16], 16, False) / 10000.0]
+    units = ["V", "V", "V", "V"]
+    return [message, labels, values, units]
+
 def parse_ID_BMS_DETAILED_VOLTAGES(raw_message):
     return ["N/A", ["N/A"], ["N/A"], [""]]
 def parse_ID_BMS_TEMPERATURES(raw_message):
