@@ -158,12 +158,12 @@ def parse_ID_MC_VOLTAGE_INFORMATION(raw_message):
     return [message, labels, values, units]
 
 def parse_ID_MC_FLUX_INFORMATION(raw_message):
-    if DEBUG: print("ERROR: Do not know how to parse CAN ID 0xA8. This CAN ID does not exist in the HyTech CAN Library.")
-    return ["MC_flux_information", ["UNPARSEABLE"], ["UNPARSEABLE"], ["UNPARSEABLE"]]
+    if DEBUG: print("ERROR: Do not know how to parse CAN ID 0xA8.")
+    return "UNPARSEABLE"
     
 def parse_ID_MC_INTERNAL_VOLTAGES(raw_message):
-    if DEBUG: print("ERROR: Do not know how to parse CAN ID 0xA9. This CAN ID does not exist in the HyTech CAN Library.")
-    return ["MC_flux_information", ["UNPARSEABLE"], ["UNPARSEABLE"], ["UNPARSEABLE"]]
+    if DEBUG: print("ERROR: Do not know how to parse CAN ID 0xA9.")
+    return "UNPARSEABLE"
 
 def parse_ID_MC_INTERNAL_STATES(raw_message):
     message = "MC_internal_states"
@@ -199,8 +199,8 @@ def parse_ID_MC_INTERNAL_STATES(raw_message):
     inverter_enable_lockout = str((inverter_enable & 0x80) >> 7)
 
     values = [
-        "0x" + raw_message[0:4],
-        "0x" + raw_message[4:6], 
+        hex(hex_to_decimal(raw_message[0:4], 16, False)),
+        hex(int(raw_message[4:6], 16)), 
         relay_state_1, 
         relay_state_2,
         relay_state_3, 
@@ -209,10 +209,10 @@ def parse_ID_MC_INTERNAL_STATES(raw_message):
         relay_state_6, 
         inverter_run_mode, 
         inverter_active_discharge_status, 
-        "0x" + raw_message[10:12], 
+        hex(int(raw_message[10:12], 16)), 
         inverter_enable_state, 
         inverter_enable_lockout, 
-        "0x" + raw_message[14:16]
+        hex(hex_to_decimal(raw_message[14:16], 16, False))
     ]
     units = ["", "", "", "", "", "", "", "", "", "", "", "", "", ""]
     return [message, labels, values, units]
@@ -296,7 +296,7 @@ def parse_ID_MC_FAULT_CODES(raw_message):
     run_fault_hi = hex_to_decimal(raw_message[12:16], 16, False)
 
     values = [
-        "0x" + raw_message[0:4],
+        hex(hex_to_decimal(raw_message[0:4], 16, False)),
         str(post_fault_lo & 0x0001),
         str((post_fault_lo & 0x0002) >> 1),
         str((post_fault_lo & 0x0004) >> 2),
@@ -313,7 +313,7 @@ def parse_ID_MC_FAULT_CODES(raw_message):
         str((post_fault_lo & 0x2000) >> 13),
         str((post_fault_lo & 0x4000) >> 14),
         str((post_fault_lo & 0x8000) >> 15),
-        "0x" + raw_message[4:8],
+        hex(hex_to_decimal(raw_message[4:8], 16, False)),
         str(post_fault_hi & 0x0001),
         str((post_fault_hi & 0x0002) >> 1),
         str((post_fault_hi & 0x0004) >> 2),
@@ -330,7 +330,7 @@ def parse_ID_MC_FAULT_CODES(raw_message):
         str((post_fault_hi & 0x2000) >> 13),
         str((post_fault_hi & 0x4000) >> 14),
         str((post_fault_hi & 0x8000) >> 15),
-        "0x" + raw_message[8:12],
+        hex(hex_to_decimal(raw_message[8:12], 16, False)),
         str(run_fault_lo & 0x0001),
         str((run_fault_lo & 0x0002) >> 1),
         str((run_fault_lo & 0x0004) >> 2),
@@ -347,7 +347,7 @@ def parse_ID_MC_FAULT_CODES(raw_message):
         str((run_fault_lo & 0x2000) >> 13),
         str((run_fault_lo & 0x4000) >> 14),
         str((run_fault_lo & 0x8000) >> 15),
-        "0x" + raw_message[12:16],
+        hex(hex_to_decimal(raw_message[12:16], 16, False)),
         str(run_fault_hi & 0x0001),
         str((run_fault_hi & 0x0002) >> 1),
         str((run_fault_hi & 0x0004) >> 2),
@@ -387,8 +387,8 @@ def parse_ID_MC_FLUX_WEAKENING_OUTPUT(raw_message):
     message = "MC_flux_weakening_output"
     labels = ["modulation_index", "flux_weakening_output", "id_command", "iq_command"]
     values = [
-        "0x" + raw_message[2:4] + raw_message[0:2], 
-        "0x" + raw_message[6:8] + raw_message[4:6], 
+        hex(hex_to_decimal(raw_message[0:4], 16, False)),
+        hex(hex_to_decimal(raw_message[4:8], 16, False)),
         hex_to_decimal(raw_message[8:12], 16, True), 
         hex_to_decimal(raw_message[12:16], 16, True)
     ]
@@ -408,8 +408,8 @@ def parse_ID_MC_FIRMWARE_INFORMATION(raw_message):
     return [message, labels, values, units]
 
 def parse_ID_MC_DIAGNOSTIC_DATA(raw_message):
-    if DEBUG: print("ERROR: Do not know how to parse CAN ID 0xAF. This CAN ID does not exist in the HyTech CAN Library.")
-    return ["MC_flux_information", ["UNPARSEABLE"], ["UNPARSEABLE"], ["UNPARSEABLE"]]
+    if DEBUG: print("ERROR: Do not know how to parse CAN ID 0xAF.")
+    return "UNPARSEABLE"
 
 def parse_ID_MC_COMMAND_MESSAGE(raw_message):
     message = "MC_command_message"
@@ -417,7 +417,7 @@ def parse_ID_MC_COMMAND_MESSAGE(raw_message):
     values = [
         hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.MC_COMMAND_MESSAGE_REQUESTED_TORQUE.value,
         hex_to_decimal(raw_message[4:8], 16, True), 
-        "0x" + raw_message[9],
+        hex(int(raw_message[9], 16)),
         hex_to_decimal(raw_message[10], 4, False), 
         hex_to_decimal(raw_message[11], 4, False), 
         hex_to_decimal(raw_message[12:16], 16, True)
@@ -583,19 +583,114 @@ def parse_ID_BMS_VOLTAGES(raw_message):
     return [message, labels, values, units]
 
 def parse_ID_BMS_DETAILED_VOLTAGES(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    message = "BMS_detailed_voltages"
+    ic_id = raw_message[1]
+    group_id = int(raw_message[0])
+    labels = ""
+    if group_id == 0:
+        labels = ["IC_" + ic_id + "_CELL_0", "IC_" + ic_id + "_CELL_1", "IC_" + ic_id + "_CELL_2"]
+    elif group_id == 1:
+        labels = ["IC_" + ic_id + "_CELL_3", "IC_" + ic_id + "_CELL_4", "IC_" + ic_id + "_CELL_5"]
+    elif group_id == 2:
+        labels = ["IC_" + ic_id + "_CELL_6", "IC_" + ic_id + "_CELL_7", "IC_" + ic_id + "_CELL_8"]
+    else:
+        if DEBUG: print("ERROR: BMS detailed voltage group " + str(group_id) + " is invalid.")
+        return "UNPARSEABLE"
+    values = [
+        hex_to_decimal(raw_message[2:6], 16, False) / Multipliers.BMS_DETAILED_VOLTAGES_VOLTAGE_0.value,
+        hex_to_decimal(raw_message[6:10], 16, False) / Multipliers.BMS_DETAILED_VOLTAGES_VOLTAGE_1.value,
+        hex_to_decimal(raw_message[10:14], 16, False) / Multipliers.BMS_DETAILED_VOLTAGES_VOLTAGE_2.value
+    ]
+    units = ["V", "V", "V"]
+    return [message, labels, values, units]
+
 def parse_ID_BMS_TEMPERATURES(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    message = "BMS_temperatures"
+    labels = ["BMS_average_temperature", "BMS_low_temperature", "BMS_high_temperature"]
+    values = [
+        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.BMS_TEMPERATURES_BMS_AVERAGE_TEMPERATURE.value,
+        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.BMS_TEMPERATURES_BMS_LOW_TEMPERATURE.value,
+        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.BMS_TEMPERATURES_BMS_HIGH_TEMPERATURE.value
+    ]
+    units = ["C", "C", "C"]
+    return [message, labels, values, units]
+
 def parse_ID_BMS_DETAILED_TEMPERATURES(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    message = "BMS_detailed_temperatures"
+    ic_id = str(hex_to_decimal(raw_message[0:2], 8, False))
+    labels = ["IC_" + ic_id + "_therm_0", "IC_" + ic_id + "_therm_1", "IC_" + ic_id + "_therm_2"]
+    values = [
+        hex_to_decimal(raw_message[2:6], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_0.value,
+        hex_to_decimal(raw_message[6:10], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_1.value,
+        hex_to_decimal(raw_message[10:14], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_2.value
+    ]
+    units = ["C", "C", "C"]
+    return [message, labels, values, units]
+    
 def parse_ID_BMS_STATUS(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    message = "BMS_status"
+    labels = [
+        "BMS_state",
+        "BMS_error_flags",
+        "BMS_overvoltage",
+        "BMS_undervoltage",
+        "BMS_total_voltage_high",
+        "BMS_discharge_overcurrent",
+        "BMS_charge_overcurrent",
+        "BMS_discharge_overtemp",
+        "BMS_charge_overtemp",
+        "BMS_undertemp",
+        "BMS_onboard_overtemp",
+        "BMS_current",
+        "BMS_flags",
+        "BMS_shutdown_g_above_threshold",
+        "BMS_shutdown_h_above_threshold"
+    ]
+
+    error_flags = hex_to_decimal(raw_message[6:10], 16, False)
+    flags = hex_to_decimal(raw_message[14:16], 8, False)
+    values = [
+        hex(int(raw_message[4:6], 16)),
+        hex(error_flags),
+        error_flags & 0x1,
+        (error_flags & 0x2) >> 1,
+        (error_flags & 0x4) >> 2,
+        (error_flags & 0x8) >> 3,
+        (error_flags & 0x10) >> 4,
+        (error_flags & 0x20) >> 5,
+        (error_flags & 0x40) >> 6,
+        (error_flags & 0x80) >> 7,
+        (error_flags & 0x100) >> 8,
+        hex_to_decimal(raw_message[10:14], 16, True) / Multipliers.BMS_STATUS_BMS_CURRENT.value,
+        hex(int(raw_message[14:16], 16)),
+        flags & 0x1,
+        (flags & 0x2) >> 1
+    ]
+
+    units = []
+    for i in range(len(labels)):
+        if i == len(labels) - 4:
+            units.append("A")
+        else:
+            units.append("")
+
+    return [message, labels, values, units]
+
 def parse_ID_FH_WATCHDOG_TEST(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    if DEBUG: print("ERROR: Do not know how to parse CAN ID 0xDC.")
+    return "UNPARSEABLE"
+
 def parse_ID_CCU_STATUS(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    message = "CCU_status"
+    labels = ["charger_enabled"]
+    values = [int(raw_message[14:16], 16)]
+    units = [""]
+    return [message, labels, values, units]
+
 def parse_ID_BMS_BALANCING_STATUS(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    if DEBUG: print("ERROR: Do not know how to parse CAN ID 0xDC.")
+    return "UNPARSEABLE"
+
 def parse_ID_BMS_READ_WRITE_PARAMETER_COMMAND(raw_message):
     return ["N/A", ["N/A"], ["N/A"], [""]]
 def parse_ID_BMS_PARAMETER_RESPONSE(raw_message):
@@ -608,18 +703,87 @@ def parse_ID_MCU_WHEEL_SPEED(raw_message):
     return ["N/A", ["N/A"], ["N/A"], [""]]
 def parse_ID_DASHBOARD_STATUS(raw_message):
     return ["N/A", ["N/A"], ["N/A"], [""]]
+
+
 def parse_ID_SAB_READINGS_FRONT(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    message = "SAB_readings_front"
+    labels = ["fl_susp_lin_pot", "fr_susp_lin_pot", "steer_wheel_sensor", "amb_air_hum"]
+    values = [
+        hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.SAB_READINGS_ALL.value,
+        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.SAB_READINGS_ALL.value,
+        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.SAB_READINGS_ALL.value,
+        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.SAB_READINGS_ALL.value
+    ]
+    units = ["mm", "mm", "", "%"]
+    return [message, labels, values, units]
+
 def parse_ID_SAB_READINGS_REAR(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    message = "SAB_readings_rear"
+    labels = ["bl_susp_lin_pot", "br_susp_lin_pot", "amb_air_temp", "mc_cool_fluid_temp"]
+    values = [
+        hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.SAB_READINGS_ALL.value,
+        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.SAB_READINGS_ALL.value,
+        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.SAB_READINGS_ALL.value,
+        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.SAB_READINGS_ALL.value
+    ]
+    units = ["mm", "mm", "C", "C"]
+    return [message, labels, values, units]
+
 def parse_ID_EM_STATUS(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    '''
+    message = "EM_status"
+    labels = ["voltage_gain", "current_gain", "overvoltage", "overpower", "logging"]
+    
+    gain = hex_to_decimal(raw_message[0:2], 8, False)
+    flags = hex_to_decimal(raw_message[2:4], 8, False)
+    voltage_gain = gain & 0xF
+    current_gain = gain >> 4
+    overvoltage = flags & 0x1
+    overcurrent = (flags & 0x2) >> 1
+    logging = (flags & 0x4) >> 2
+    values = [voltage_gain, current_gain, overvoltage, overcurrent, logging]
+
+    units = ["", "", "", "", ""]
+    return [message, labels, values, units]
+    '''
+    if DEBUG: print("ERROR: Do not know how to parse CAN ID 0x100. Need info on the energy meter status to be sure for parsing.")
+    return "UNPARSEABLE"
+
 def parse_ID_EM_MEASUREMENT(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    '''
+    message = "EM_measurement"
+    labels = ["voltage", "current"]
+    values = [
+        ((int(raw_message[8], 16) << 24) | (int(raw_message[9], 16) << 16) | (int(raw_message[10], 16) << 8) | int(raw_message[11], 16)) / Multipliers.EM_MEASUREMENTS_ALL.value,
+        ((int(raw_message[12], 16) << 24) | (int(raw_message[13], 16) << 16) | (int(raw_message[14], 16) << 8) | int(raw_message[15], 16)) / Multipliers.EM_MEASUREMENTS_ALL.value
+    ]
+    units = ["V", "A"]
+    return [message, labels, values, units]
+    '''
+    if DEBUG: print("ERROR: Do not know how to parse CAN ID 0x400. Need info on the energy meter measurements to be sure for parsing.")
+    return "UNPARSEABLE"
+
 def parse_ID_IMU_ACCELEROMETER(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    message = "IMU_accelerometer"
+    labels = ["lat_accel", "long_accel", "vert_accel"]
+    values = [
+        hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.IMU_ACCELEROMETER_ALL.value,
+        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.IMU_ACCELEROMETER_ALL.value,
+        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.IMU_ACCELEROMETER_ALL.value
+    ]
+    units = ["m/s/s", "m/s/s", "m/s/s"]
+    return [message, labels, values, units]
+
 def parse_ID_IMU_GYROSCOPE(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    message = "IMU_gyroscope"
+    labels = ["yaw", "pitch", "roll"]
+    values = [
+        hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.IMU_GYROSCOPE_ALL.value,
+        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.IMU_GYROSCOPE_ALL.value,
+        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.IMU_GYROSCOPE_ALL.value
+    ]
+    units = ["deg/s", "deg/s", "deg/s"]
+    return [message, labels, values, units]
 
 
 ########################################################################
@@ -732,7 +896,7 @@ def parse_file(filename):
             raw_message = raw_message[:(int(length) * 2)] # Strip trailing end of line/file characters that may cause bad parsing
             raw_message = raw_message.zfill(16) # Sometimes messages come truncated if 0s on the left. Append 0s so field-width is 16.
             table = parse_message(raw_id, raw_message)
-            if table == "INVALID_ID":
+            if table == "INVALID_ID" or table == "UNPARSEABLE":
                 continue
 
             # Assertions that check for parser failure. Notifies user on where parser broke.
