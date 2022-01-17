@@ -38,6 +38,26 @@ def hex_to_decimal(hex, bits, is_signed):
 
     return value
 
+def bin_to_bool(bin):
+    """
+    @brief: Helper function to convert a single-digit binary to the string "true" or "false".
+    @input: 0, 1, "0", or "1"
+    @return: true if input is 1 or "1", false if 0 or "0", UNRECOGNIZED_BIN if neither
+    """
+    try:
+        bin = int(bin)
+    except:
+        if DEBUG: print("UNFATAL ERROR: Binary conversion to boolean failed, received " + str(bin))
+        return "UNRECOGNIZED_BIN"
+
+    if bin == 0:
+        return "false"
+    elif bin == 1:
+        return "true"
+    else:
+        if DEBUG: print("UNFATAL ERROR: Binary conversion to boolean failed, received " + str(bin))
+        return "UNRECOGNIZED_BIN"
+
 
 ########################################################################
 # Custom Parsing Functions Begin
@@ -186,18 +206,18 @@ def parse_ID_MC_INTERNAL_STATES(raw_message):
     ]
     
     relay_state = hex_to_decimal(raw_message[6:8], 8, False)
-    relay_state_1 = str(relay_state & 0x01)
-    relay_state_2 = str((relay_state & 0x02) >> 1)
-    relay_state_3 = str((relay_state & 0x04) >> 2)
-    relay_state_4 = str((relay_state & 0x08) >> 3)
-    relay_state_5 = str((relay_state & 0x10) >> 4)
-    relay_state_6 = str((relay_state & 0x20) >> 5)
+    relay_state_1 = bin_to_bool(str(relay_state & 0x01))
+    relay_state_2 = bin_to_bool(str((relay_state & 0x02) >> 1))
+    relay_state_3 = bin_to_bool(str((relay_state & 0x04) >> 2))
+    relay_state_4 = bin_to_bool(str((relay_state & 0x08) >> 3))
+    relay_state_5 = bin_to_bool(str((relay_state & 0x10) >> 4))
+    relay_state_6 = bin_to_bool(str((relay_state & 0x20) >> 5))
     inverter_run_mode_discharge_state = hex_to_decimal(raw_message[8:10], 8, False)
-    inverter_run_mode = str(inverter_run_mode_discharge_state & 1)
-    inverter_active_discharge_status = str(inverter_run_mode_discharge_state >> 5)
+    inverter_run_mode = bin_to_bool(str(inverter_run_mode_discharge_state & 1))
+    inverter_active_discharge_status = bin_to_bool(str(inverter_run_mode_discharge_state >> 5))
     inverter_enable = hex_to_decimal(raw_message[12:14], 8, False)
-    inverter_enable_state = str(inverter_enable & 1)
-    inverter_enable_lockout = str((inverter_enable & 0x80) >> 7)
+    inverter_enable_state = bin_to_bool(str(inverter_enable & 1))
+    inverter_enable_lockout = bin_to_bool(str((inverter_enable & 0x80) >> 7))
 
     values = [
         hex(hex_to_decimal(raw_message[0:4], 16, False)),
@@ -298,73 +318,73 @@ def parse_ID_MC_FAULT_CODES(raw_message):
 
     values = [
         hex(hex_to_decimal(raw_message[0:4], 16, False)),
-        str(post_fault_lo & 0x0001),
-        str((post_fault_lo & 0x0002) >> 1),
-        str((post_fault_lo & 0x0004) >> 2),
-        str((post_fault_lo & 0x0008) >> 3),
-        str((post_fault_lo & 0x0010) >> 4),
-        str((post_fault_lo & 0x0020) >> 5),
-        str((post_fault_lo & 0x0040) >> 6),
-        str((post_fault_lo & 0x0080) >> 7),
-        str((post_fault_lo & 0x0100) >> 8),
-        str((post_fault_lo & 0x0200) >> 9),
-        str((post_fault_lo & 0x0400) >> 10),
-        str((post_fault_lo & 0x0800) >> 11),
-        str((post_fault_lo & 0x1000) >> 12),
-        str((post_fault_lo & 0x2000) >> 13),
-        str((post_fault_lo & 0x4000) >> 14),
-        str((post_fault_lo & 0x8000) >> 15),
+        bin_to_bool(str(post_fault_lo & 0x0001)),
+        bin_to_bool(str((post_fault_lo & 0x0002) >> 1)),
+        bin_to_bool(str((post_fault_lo & 0x0004) >> 2)),
+        bin_to_bool(str((post_fault_lo & 0x0008) >> 3)),
+        bin_to_bool(str((post_fault_lo & 0x0010) >> 4)),
+        bin_to_bool(str((post_fault_lo & 0x0020) >> 5)),
+        bin_to_bool(str((post_fault_lo & 0x0040) >> 6)),
+        bin_to_bool(str((post_fault_lo & 0x0080) >> 7)),
+        bin_to_bool(str((post_fault_lo & 0x0100) >> 8)),
+        bin_to_bool(str((post_fault_lo & 0x0200) >> 9)),
+        bin_to_bool(str((post_fault_lo & 0x0400) >> 10)),
+        bin_to_bool(str((post_fault_lo & 0x0800) >> 11)),
+        bin_to_bool(str((post_fault_lo & 0x1000) >> 12)),
+        bin_to_bool(str((post_fault_lo & 0x2000) >> 13)),
+        bin_to_bool(str((post_fault_lo & 0x4000) >> 14)),
+        bin_to_bool(str((post_fault_lo & 0x8000) >> 15)),
         hex(hex_to_decimal(raw_message[4:8], 16, False)),
-        str(post_fault_hi & 0x0001),
-        str((post_fault_hi & 0x0002) >> 1),
-        str((post_fault_hi & 0x0004) >> 2),
-        str((post_fault_hi & 0x0008) >> 3),
-        str((post_fault_hi & 0x0010) >> 4),
-        str((post_fault_hi & 0x0020) >> 5),
-        str((post_fault_hi & 0x0040) >> 6),
-        str((post_fault_hi & 0x0080) >> 7),
-        str((post_fault_hi & 0x0100) >> 8),
-        str((post_fault_hi & 0x0200) >> 9),
-        str((post_fault_hi & 0x0400) >> 10),
-        str((post_fault_hi & 0x0800) >> 11),
-        str((post_fault_hi & 0x1000) >> 12),
-        str((post_fault_hi & 0x2000) >> 13),
-        str((post_fault_hi & 0x4000) >> 14),
-        str((post_fault_hi & 0x8000) >> 15),
+        bin_to_bool(str(post_fault_hi & 0x0001)),
+        bin_to_bool(str((post_fault_hi & 0x0002) >> 1)),
+        bin_to_bool(str((post_fault_hi & 0x0004) >> 2)),
+        bin_to_bool(str((post_fault_hi & 0x0008) >> 3)),
+        bin_to_bool(str((post_fault_hi & 0x0010) >> 4)),
+        bin_to_bool(str((post_fault_hi & 0x0020) >> 5)),
+        bin_to_bool(str((post_fault_hi & 0x0040) >> 6)),
+        bin_to_bool(str((post_fault_hi & 0x0080) >> 7)),
+        bin_to_bool(str((post_fault_hi & 0x0100) >> 8)),
+        bin_to_bool(str((post_fault_hi & 0x0200) >> 9)),
+        bin_to_bool(str((post_fault_hi & 0x0400) >> 10)),
+        bin_to_bool(str((post_fault_hi & 0x0800) >> 11)),
+        bin_to_bool(str((post_fault_hi & 0x1000) >> 12)),
+        bin_to_bool(str((post_fault_hi & 0x2000) >> 13)),
+        bin_to_bool(str((post_fault_hi & 0x4000) >> 14)),
+        bin_to_bool(str((post_fault_hi & 0x8000) >> 15)),
         hex(hex_to_decimal(raw_message[8:12], 16, False)),
         str(run_fault_lo & 0x0001),
-        str((run_fault_lo & 0x0002) >> 1),
-        str((run_fault_lo & 0x0004) >> 2),
-        str((run_fault_lo & 0x0008) >> 3),
-        str((run_fault_lo & 0x0010) >> 4),
-        str((run_fault_lo & 0x0020) >> 5),
-        str((run_fault_lo & 0x0040) >> 6),
-        str((run_fault_lo & 0x0080) >> 7),
-        str((run_fault_lo & 0x0100) >> 8),
-        str((run_fault_lo & 0x0200) >> 9),
-        str((run_fault_lo & 0x0400) >> 10),
-        str((run_fault_lo & 0x0800) >> 11),
-        str((run_fault_lo & 0x1000) >> 12),
-        str((run_fault_lo & 0x2000) >> 13),
-        str((run_fault_lo & 0x4000) >> 14),
-        str((run_fault_lo & 0x8000) >> 15),
+        bin_to_bool(str((run_fault_lo & 0x0002) >> 1)),
+        bin_to_bool(str((run_fault_lo & 0x0004) >> 2)),
+        bin_to_bool(str((run_fault_lo & 0x0008) >> 3)),
+        bin_to_bool(str((run_fault_lo & 0x0010) >> 4)),
+        bin_to_bool(str((run_fault_lo & 0x0020) >> 5)),
+        bin_to_bool(str((run_fault_lo & 0x0040) >> 6)),
+        bin_to_bool(str((run_fault_lo & 0x0080) >> 7)),
+        bin_to_bool(str((run_fault_lo & 0x0100) >> 8)),
+        bin_to_bool(str((run_fault_lo & 0x0200) >> 9)),
+        bin_to_bool(str((run_fault_lo & 0x0400) >> 10)),
+        bin_to_bool(str((run_fault_lo & 0x0800) >> 11)),
+        bin_to_bool(str((run_fault_lo & 0x1000) >> 12)),
+        bin_to_bool(str((run_fault_lo & 0x2000) >> 13)),
+        bin_to_bool(str((run_fault_lo & 0x4000) >> 14)),
+        bin_to_bool(str((run_fault_lo & 0x8000) >> 15)),
         hex(hex_to_decimal(raw_message[12:16], 16, False)),
-        str(run_fault_hi & 0x0001),
-        str((run_fault_hi & 0x0002) >> 1),
-        str((run_fault_hi & 0x0004) >> 2),
-        str((run_fault_hi & 0x0008) >> 3),
-        str((run_fault_hi & 0x0010) >> 4),
-        str((run_fault_hi & 0x0020) >> 5),
-        str((run_fault_hi & 0x0040) >> 6),
-        str((run_fault_hi & 0x0080) >> 7),
-        str((run_fault_hi & 0x0100) >> 8),
-        str((run_fault_hi & 0x0200) >> 9),
-        str((run_fault_hi & 0x0400) >> 10),
-        str((run_fault_hi & 0x0800) >> 11),
-        str((run_fault_hi & 0x1000) >> 12),
-        str((run_fault_hi & 0x2000) >> 13),
-        str((run_fault_hi & 0x4000) >> 14),
-        str((run_fault_hi & 0x8000) >> 15)
+        bin_to_bool(str(run_fault_hi & 0x0001)),
+        bin_to_bool(str((run_fault_hi & 0x0002) >> 1)),
+        bin_to_bool(str((run_fault_hi & 0x0004) >> 2)),
+        bin_to_bool(str((run_fault_hi & 0x0008) >> 3)),
+        bin_to_bool(str((run_fault_hi & 0x0010) >> 4)),
+        bin_to_bool(str((run_fault_hi & 0x0020) >> 5)),
+        bin_to_bool(str((run_fault_hi & 0x0040) >> 6)),
+        bin_to_bool(str((run_fault_hi & 0x0080) >> 7)),
+        bin_to_bool(str((run_fault_hi & 0x0100) >> 8)),
+        bin_to_bool(str((run_fault_hi & 0x0200) >> 9)),
+        bin_to_bool(str((run_fault_hi & 0x0400) >> 10)),
+        bin_to_bool(str((run_fault_hi & 0x0800) >> 11)),
+        bin_to_bool(str((run_fault_hi & 0x1000) >> 12)),
+        bin_to_bool(str((run_fault_hi & 0x2000) >> 13)),
+        bin_to_bool(str((run_fault_hi & 0x4000) >> 14)),
+        bin_to_bool(str((run_fault_hi & 0x8000) >> 15))
     ]
 
     units = []
@@ -511,7 +531,7 @@ def parse_ID_MCU_STATUS(raw_message):
         elif i == 17 or i == 18: # no need to do anything here because i == 16 takes care of them
             continue
         else:
-            values.append(bin_rep[i])
+            values.append(bin_to_bool(bin_rep[i]))
     values.append(hex_to_decimal(raw_message[8:10], 8, False))
     values.append(hex_to_decimal(raw_message[10:12], 8, False))
     values.append(hex_to_decimal(raw_message[12:16], 16, False) / Multipliers.MCU_STATUS_DISTANCE_TRAVELLED.value)
@@ -653,19 +673,19 @@ def parse_ID_BMS_STATUS(raw_message):
     values = [
         hex(int(raw_message[4:6], 16)),
         hex(error_flags),
-        error_flags & 0x1,
-        (error_flags & 0x2) >> 1,
-        (error_flags & 0x4) >> 2,
-        (error_flags & 0x8) >> 3,
-        (error_flags & 0x10) >> 4,
-        (error_flags & 0x20) >> 5,
-        (error_flags & 0x40) >> 6,
-        (error_flags & 0x80) >> 7,
-        (error_flags & 0x100) >> 8,
+        bin_to_bool(error_flags & 0x1),
+        bin_to_bool((error_flags & 0x2) >> 1),
+        bin_to_bool((error_flags & 0x4) >> 2),
+        bin_to_bool((error_flags & 0x8) >> 3),
+        bin_to_bool((error_flags & 0x10) >> 4),
+        bin_to_bool((error_flags & 0x20) >> 5),
+        bin_to_bool((error_flags & 0x40) >> 6),
+        bin_to_bool((error_flags & 0x80) >> 7),
+        bin_to_bool((error_flags & 0x100) >> 8),
         hex_to_decimal(raw_message[10:14], 16, True) / Multipliers.BMS_STATUS_BMS_CURRENT.value,
         hex(int(raw_message[14:16], 16)),
-        flags & 0x1,
-        (flags & 0x2) >> 1
+        bin_to_bool(flags & 0x1),
+        bin_to_bool((flags & 0x2) >> 1)
     ]
 
     units = []
@@ -689,7 +709,7 @@ def parse_ID_CCU_STATUS(raw_message):
     return [message, labels, values, units]
 
 def parse_ID_BMS_BALANCING_STATUS(raw_message):
-    if DEBUG: print("UNFATAL ERROR: Do not know how to parse CAN ID 0xDC.")
+    if DEBUG: print("UNFATAL ERROR: Do not know how to parse CAN ID 0xDE.")
     return "UNPARSEABLE"
 
 def parse_ID_BMS_READ_WRITE_PARAMETER_COMMAND(raw_message):
@@ -766,14 +786,14 @@ def parse_ID_DASHBOARD_STATUS(raw_message):
 
     led_flags = (bin_rep[30:32] + bin_rep[28:30] + bin_rep[26:28] + bin_rep[24:26])[::-1] + (bin_rep[22:24] + bin_rep[20:22] + bin_rep[18:20] + bin_rep[16:18])[::-1]
     values = [
-        bin_rep[7], # Endianness changed
-        bin_rep[6],
-        bin_rep[5],
-        bin_rep[4],
-        bin_rep[15],
-        bin_rep[14],
-        bin_rep[13],
-        bin_rep[12],
+        bin_to_bool(bin_rep[7]), # Endianness changed
+        bin_to_bool(bin_rep[6]),
+        bin_to_bool(bin_rep[5]),
+        bin_to_bool(bin_rep[4]),
+        bin_to_bool(bin_rep[15]),
+        bin_to_bool(bin_rep[14]),
+        bin_to_bool(bin_rep[13]),
+        bin_to_bool(bin_rep[12]),
         blink_modes(int(led_flags, 2) & 0x0003),
         blink_modes((int(led_flags, 2) & 0x000C) >> 2),
         blink_modes((int(led_flags, 2) & 0x0030) >> 4),
@@ -873,9 +893,9 @@ def parse_ID_EM_STATUS(raw_message):
     values = [
         voltage_gain,
         current_gain,
-        bin_rep[8],
-        bin_rep[9],
-        bin_rep[10]
+        bin_to_bool(bin_rep[8]),
+        bin_to_bool(bin_rep[9]),
+        bin_to_bool(bin_rep[10])
     ]
 
     units = ["", "", "", "", ""]
