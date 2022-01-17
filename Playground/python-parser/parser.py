@@ -3,6 +3,7 @@
 @Date: 1/15/2022
 @Description: HyTech custom python parser. Reads CSVs from Raw_Data, parses them, and writes to Parsed_Data. Uses multiplier.py for multipliers.
 @TODO: Also output to MATLAB struct
+@TODO: Dashboard_status is not correct. Need more data to validate bit ordering.
 
 parse_folder --> parse_file --> parse_time
                             --> parse_message --> parse_ID_XXXXXXXXX
@@ -158,11 +159,11 @@ def parse_ID_MC_VOLTAGE_INFORMATION(raw_message):
     return [message, labels, values, units]
 
 def parse_ID_MC_FLUX_INFORMATION(raw_message):
-    if DEBUG: print("ERROR: Do not know how to parse CAN ID 0xA8.")
+    if DEBUG: print("UNFATAL ERROR: Do not know how to parse CAN ID 0xA8.")
     return "UNPARSEABLE"
     
 def parse_ID_MC_INTERNAL_VOLTAGES(raw_message):
-    if DEBUG: print("ERROR: Do not know how to parse CAN ID 0xA9.")
+    if DEBUG: print("UNFATAL ERROR: Do not know how to parse CAN ID 0xA9.")
     return "UNPARSEABLE"
 
 def parse_ID_MC_INTERNAL_STATES(raw_message):
@@ -408,7 +409,7 @@ def parse_ID_MC_FIRMWARE_INFORMATION(raw_message):
     return [message, labels, values, units]
 
 def parse_ID_MC_DIAGNOSTIC_DATA(raw_message):
-    if DEBUG: print("ERROR: Do not know how to parse CAN ID 0xAF.")
+    if DEBUG: print("UNFATAL ERROR: Do not know how to parse CAN ID 0xAF.")
     return "UNPARSEABLE"
 
 def parse_ID_MC_COMMAND_MESSAGE(raw_message):
@@ -498,7 +499,7 @@ def parse_ID_MCU_STATUS(raw_message):
         if bin_rep == "100": return "WAITING_READY_TO_DRIVE_SOUND"
         if bin_rep == "101": return "READY_TO_DRIVE"
         # Should never get here
-        if DEBUG: print("ERROR: Unrecognized MCU state: " + bin_rep)
+        if DEBUG: print("UNFATAL ERROR: Unrecognized MCU state: " + bin_rep)
         return "UNRECOGNIZED_STATE"
 
     values = []
@@ -594,7 +595,7 @@ def parse_ID_BMS_DETAILED_VOLTAGES(raw_message):
     elif group_id == 2:
         labels = ["IC_" + ic_id + "_CELL_6", "IC_" + ic_id + "_CELL_7", "IC_" + ic_id + "_CELL_8"]
     else:
-        if DEBUG: print("ERROR: BMS detailed voltage group " + str(group_id) + " is invalid.")
+        if DEBUG: print("UNFATAL ERROR: BMS detailed voltage group " + str(group_id) + " is invalid.")
         return "UNPARSEABLE"
     values = [
         hex_to_decimal(raw_message[2:6], 16, False) / Multipliers.BMS_DETAILED_VOLTAGES_VOLTAGE_0.value,
@@ -677,7 +678,7 @@ def parse_ID_BMS_STATUS(raw_message):
     return [message, labels, values, units]
 
 def parse_ID_FH_WATCHDOG_TEST(raw_message):
-    if DEBUG: print("ERROR: Do not know how to parse CAN ID 0xDC.")
+    if DEBUG: print("UNFATAL ERROR: Do not know how to parse CAN ID 0xDC.")
     return "UNPARSEABLE"
 
 def parse_ID_CCU_STATUS(raw_message):
@@ -688,22 +689,103 @@ def parse_ID_CCU_STATUS(raw_message):
     return [message, labels, values, units]
 
 def parse_ID_BMS_BALANCING_STATUS(raw_message):
-    if DEBUG: print("ERROR: Do not know how to parse CAN ID 0xDC.")
+    if DEBUG: print("UNFATAL ERROR: Do not know how to parse CAN ID 0xDC.")
     return "UNPARSEABLE"
 
 def parse_ID_BMS_READ_WRITE_PARAMETER_COMMAND(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
-def parse_ID_BMS_PARAMETER_RESPONSE(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
-def parse_ID_BMS_COULOMB_COUNTS(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
-def parse_ID_MCU_GPS_READINGS(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
-def parse_ID_MCU_WHEEL_SPEED(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
-def parse_ID_DASHBOARD_STATUS(raw_message):
-    return ["N/A", ["N/A"], ["N/A"], [""]]
+    if DEBUG: print("UNFATAL ERROR: Do not know how to parse CAN ID 0xE0.")
+    return "UNPARSEABLE"
 
+def parse_ID_BMS_PARAMETER_RESPONSE(raw_message):
+    if DEBUG: print("UNFATAL ERROR: Do not know how to parse CAN ID 0xE1.")
+    return "UNPARSEABLE"
+
+def parse_ID_BMS_COULOMB_COUNTS(raw_message):
+    message = "BMS_coulomb_counts"
+    labels = ["BMS_total_charge", "BMS_total_discharge"]
+    values = [
+        hex_to_decimal(raw_message[0:8], 32, False) / Multipliers.BMS_COULOMB_COUNTS_BMS_TOTAL_CHARGE.value,
+        hex_to_decimal(raw_message[8:16], 32, False) / Multipliers.BMS_COULOMB_COUNTS_BMS_TOTAL_DISCHARGE.value
+    ]
+    units = ["C", "C"]
+    return [message, labels, values, units]
+
+def parse_ID_MCU_GPS_READINGS(raw_message):
+    message = "MCU_GPS_readings"
+    labels = ["latitude", "longitude"]
+    values = [
+        hex_to_decimal(raw_message[0:8], 32, True) / Multipliers.MCU_GPS_READINGS_LATITUDE.value,
+        hex_to_decimal(raw_message[8:16], 32, True) / Multipliers.MCU_GPS_READINGS_LONGITUDE.value
+    ]
+    units = ["deg", "deg"]
+    return [message, labels, values, units]
+
+def parse_ID_MCU_WHEEL_SPEED(raw_message):
+    message = "MCU_wheel_speed"
+    labels = ["rpm_front_left", "rpm_front_right", "rpm_back_left", "rpm_back_right"]
+    values = [
+        hex_to_decimal(raw_message[0:4], 16, False) / Multipliers.MCU_WHEEL_SPEED_RPM_FRONT_LEFT.value,
+        hex_to_decimal(raw_message[4:8], 16, False) / Multipliers.MCU_WHEEL_SPEED_RPM_FRONT_RIGHT.value,
+        hex_to_decimal(raw_message[8:12], 16, False) / Multipliers.MCU_WHEEL_SPEED_RPM_BACK_LEFT.value,
+        hex_to_decimal(raw_message[12:16], 16, False) / Multipliers.MCU_WHEEL_SPEED_RPM_BACK_RIGHT.value
+    ]
+    units = ["rpm", "rpm", "rpm", "rpm"]
+    return [message, labels, values, units]
+
+# @TODO: FIX THIS with more data
+def parse_ID_DASHBOARD_STATUS(raw_message):
+    message = "Dashboard_status"
+    labels = [
+        "start_btn",
+        "buzzer_active",
+        "ssok_above_threshold",
+        "shutdown_h_above_threshold",
+        "mark_btn",
+        "mode_btn",
+        "mc_cycle_btn",
+        "launch_ctrl_btn",
+        "ams_led",
+        "imd_led",
+        "mode_led",
+        "mc_error_led",
+        "start_led",
+        "launch_control_led"
+    ]
+    
+    raw_message = raw_message[8:] # Strip first 8 padded zeros
+    bin_rep = bin(int(raw_message, 16))[2:].zfill(32)
+    def blink_modes(bin_rep):
+        bin_rep = int(bin(bin_rep)[2:].zfill(2)[1] + bin(bin_rep)[2:].zfill(2)[0], 2) # Back to big-endian
+        if bin_rep == 0: return "off"
+        elif bin_rep == 1: return "on"
+        elif bin_rep == 2: return "fast"
+        elif bin_rep == 3: return "slow"
+        else:
+            if DEBUG: print("UNFATAL ERROR: Unrecognizable blink mode " + str(bin_rep))
+            return "UNRECOGNIZED_BLINK"
+
+    led_flags = (bin_rep[30:32] + bin_rep[28:30] + bin_rep[26:28] + bin_rep[24:26])[::-1] + (bin_rep[22:24] + bin_rep[20:22] + bin_rep[18:20] + bin_rep[16:18])[::-1]
+    values = [
+        bin_rep[7], # Endianness changed
+        bin_rep[6],
+        bin_rep[5],
+        bin_rep[4],
+        bin_rep[15],
+        bin_rep[14],
+        bin_rep[13],
+        bin_rep[12],
+        blink_modes(int(led_flags, 2) & 0x0003),
+        blink_modes((int(led_flags, 2) & 0x000C) >> 2),
+        blink_modes((int(led_flags, 2) & 0x0030) >> 4),
+        blink_modes((int(led_flags, 2) & 0x00C0) >> 6),
+        blink_modes((int(led_flags, 2) & 0x0300) >> 8),
+        blink_modes((int(led_flags, 2) & 0x0C00) >> 10)
+    ]
+
+    units = []
+    for i in range(len(labels)):
+        units.append("")
+    return [message, labels, values, units]
 
 def parse_ID_SAB_READINGS_FRONT(raw_message):
     message = "SAB_readings_front"
@@ -740,8 +822,8 @@ def parse_ID_EM_MEASUREMENT(raw_message):
         return value
     bin_rep = bin(int(raw_message, 16))
     bin_rep = bin_rep[2:].zfill(64)
-    voltage = twos_comp(int(bin_rep[7:39], 2)) / Multipliers.EM_MEASUREMENTS_ALL.value
-    current = twos_comp(int(bin_rep[39:71], 2)) / Multipliers.EM_MEASUREMENTS_ALL.value
+    voltage = twos_comp(int(bin_rep[7:39], 2)) / Multipliers.EM_MEASUREMENTS_VOLTAGE.value
+    current = twos_comp(int(bin_rep[39:71], 2)) / Multipliers.EM_MEASUREMENTS_CURRENT.value
     values = [voltage, current]
 
     units = ["A", "V"]
@@ -754,8 +836,6 @@ def parse_ID_EM_STATUS(raw_message):
     raw_message = raw_message[8:]
     bin_rep = bin(int(raw_message, 16))
     bin_rep = bin_rep[2:].zfill(32)
-
-    # For some reason we need to reverse the bits here
     voltage_gain = int(bin_rep[0:4], 2)
     current_gain = int(bin_rep[4:8], 2)
     if voltage_gain == 0:
@@ -771,7 +851,7 @@ def parse_ID_EM_STATUS(raw_message):
     elif voltage_gain == 5:
         voltage_gain = "x32"
     else:
-        if DEBUG: print("ERROR: Unknown Energy Meter voltage gain: " + str(voltage_gain))
+        if DEBUG: print("UNFATAL ERROR: Unknown Energy Meter voltage gain: " + str(voltage_gain))
         voltage_gain = "N/A"
     
     if current_gain == 0:
@@ -787,7 +867,7 @@ def parse_ID_EM_STATUS(raw_message):
     elif current_gain == 5:
         current_gain = "x32"
     else:
-        if DEBUG: print("ERROR: Unknown Energy Meter current gain: " + str(current_gain))
+        if DEBUG: print("UNFATAL ERROR: Unknown Energy Meter current gain: " + str(current_gain))
         current_gain = "N/A"
 
     values = [
@@ -884,7 +964,7 @@ def parse_message(raw_id, raw_message):
     if raw_id == "471": return parse_ID_IMU_GYROSCOPE(raw_message)
 
     # Should not come to here if CAN ID was valid
-    if DEBUG: print("ERROR: Invalid CAN ID: 0x" + raw_message)
+    if DEBUG: print("UNFATAL ERROR: Invalid CAN ID: 0x" + raw_message)
     return "INVALID_ID"
 
 def parse_time(raw_time):
@@ -938,8 +1018,8 @@ def parse_file(filename):
                 continue
 
             # Assertions that check for parser failure. Notifies user on where parser broke.
-            assert len(table) == 4, "ERROR: Parser expected 4 arguments from parse_message at ID: 0x" + table[0] + ", got: " + str(len(table))
-            assert len(table[1]) == len (table[2]) and len(table[1]) == len(table[3]), "ERROR: Label, Data, or Unit numbers mismatch for ID: 0x" + raw_id
+            assert len(table) == 4, "FATAL ERROR: Parser expected 4 arguments from parse_message at ID: 0x" + table[0] + ", got: " + str(len(table))
+            assert len(table[1]) == len (table[2]) and len(table[1]) == len(table[3]), "FATAL ERROR: Label, Data, or Unit numbers mismatch for ID: 0x" + raw_id
             
             # Harvest parsed datafields and write to outfile.
             message = table[0].strip()
@@ -966,7 +1046,7 @@ def parse_folder():
     try:
         directory = os.fsencode("Raw_Data")
     except:
-        print("ERROR: Raw_Data folder does not exist. Please move parser.py or create Raw_Data folder.")
+        print("FATAL ERROR: Raw_Data folder does not exist. Please move parser.py or create Raw_Data folder.")
         sys.exit(0)
 
     # Creates Parsed_Data folder if not there.
