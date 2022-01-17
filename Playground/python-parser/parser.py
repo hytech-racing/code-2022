@@ -381,7 +381,7 @@ def parse_ID_MC_TORQUE_TIMER_INFORMATION(raw_message):
         hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.MC_TORQUE_TIMER_INFORMATION_TORQUE_FEEDBACK.value, 
         hex_to_decimal(raw_message[8:16], 32, False)
     ]
-    units = ["C", "C", "s"]
+    units = ["C", "C", "ms"]
     return [message, labels, values, units]
 
 def parse_ID_MC_FLUX_WEAKENING_OUTPUT(raw_message):
