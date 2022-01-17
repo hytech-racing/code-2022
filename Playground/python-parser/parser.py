@@ -729,39 +729,77 @@ def parse_ID_SAB_READINGS_REAR(raw_message):
     units = ["mm", "mm", "C", "C"]
     return [message, labels, values, units]
 
+def parse_ID_EM_MEASUREMENT(raw_message):
+    message = "EM_measurement"
+    labels = ["current", "voltage"]
+
+    def twos_comp(value):
+        bits = 32
+        if value & (1 << (bits - 1)):
+            value -= 1 << bits
+        return value
+    bin_rep = bin(int(raw_message, 16))
+    bin_rep = bin_rep[2:].zfill(64)
+    voltage = twos_comp(int(bin_rep[7:39], 2)) / Multipliers.EM_MEASUREMENTS_ALL.value
+    current = twos_comp(int(bin_rep[39:71], 2)) / Multipliers.EM_MEASUREMENTS_ALL.value
+    values = [voltage, current]
+
+    units = ["A", "V"]
+    return [message, labels, values, units]
+
 def parse_ID_EM_STATUS(raw_message):
-    '''
     message = "EM_status"
     labels = ["voltage_gain", "current_gain", "overvoltage", "overpower", "logging"]
+
+    raw_message = raw_message[8:]
+    bin_rep = bin(int(raw_message, 16))
+    bin_rep = bin_rep[2:].zfill(32)
+
+    # For some reason we need to reverse the bits here
+    voltage_gain = int(bin_rep[0:4], 2)
+    current_gain = int(bin_rep[4:8], 2)
+    if voltage_gain == 0:
+        voltage_gain = "x1"
+    elif voltage_gain == 1:
+        voltage_gain = "x2"
+    elif voltage_gain == 2:
+        voltage_gain = "x4"
+    elif voltage_gain == 3:
+        voltage_gain = "x8"
+    elif voltage_gain == 4:
+        voltage_gain = "x16"
+    elif voltage_gain == 5:
+        voltage_gain = "x32"
+    else:
+        if DEBUG: print("ERROR: Unknown Energy Meter voltage gain: " + str(voltage_gain))
+        voltage_gain = "N/A"
     
-    gain = hex_to_decimal(raw_message[0:2], 8, False)
-    flags = hex_to_decimal(raw_message[2:4], 8, False)
-    voltage_gain = gain & 0xF
-    current_gain = gain >> 4
-    overvoltage = flags & 0x1
-    overcurrent = (flags & 0x2) >> 1
-    logging = (flags & 0x4) >> 2
-    values = [voltage_gain, current_gain, overvoltage, overcurrent, logging]
+    if current_gain == 0:
+        current_gain = "x1"
+    elif current_gain == 1:
+        current_gain = "x2"
+    elif current_gain == 2:
+        current_gain = "x4"
+    elif current_gain == 3:
+        current_gain = "x8"
+    elif current_gain == 4:
+        current_gain = "x16"
+    elif current_gain == 5:
+        current_gain = "x32"
+    else:
+        if DEBUG: print("ERROR: Unknown Energy Meter current gain: " + str(current_gain))
+        current_gain = "N/A"
+
+    values = [
+        voltage_gain,
+        current_gain,
+        bin_rep[8],
+        bin_rep[9],
+        bin_rep[10]
+    ]
 
     units = ["", "", "", "", ""]
     return [message, labels, values, units]
-    '''
-    if DEBUG: print("ERROR: Do not know how to parse CAN ID 0x100. Need info on the energy meter status to be sure for parsing.")
-    return "UNPARSEABLE"
-
-def parse_ID_EM_MEASUREMENT(raw_message):
-    '''
-    message = "EM_measurement"
-    labels = ["voltage", "current"]
-    values = [
-        ((int(raw_message[8], 16) << 24) | (int(raw_message[9], 16) << 16) | (int(raw_message[10], 16) << 8) | int(raw_message[11], 16)) / Multipliers.EM_MEASUREMENTS_ALL.value,
-        ((int(raw_message[12], 16) << 24) | (int(raw_message[13], 16) << 16) | (int(raw_message[14], 16) << 8) | int(raw_message[15], 16)) / Multipliers.EM_MEASUREMENTS_ALL.value
-    ]
-    units = ["V", "A"]
-    return [message, labels, values, units]
-    '''
-    if DEBUG: print("ERROR: Do not know how to parse CAN ID 0x400. Need info on the energy meter measurements to be sure for parsing.")
-    return "UNPARSEABLE"
 
 def parse_ID_IMU_ACCELEROMETER(raw_message):
     message = "IMU_accelerometer"
@@ -840,8 +878,8 @@ def parse_message(raw_id, raw_message):
     if raw_id == "EC": return parse_ID_SAB_READINGS_FRONT(raw_message)
     if raw_id == "ED": return parse_ID_SAB_READINGS_REAR(raw_message)
 
-    if raw_id == "100": return parse_ID_EM_STATUS(raw_message)
-    if raw_id == "400": return parse_ID_EM_MEASUREMENT(raw_message)
+    if raw_id == "100": return parse_ID_EM_MEASUREMENT(raw_message)
+    if raw_id == "400": return parse_ID_EM_STATUS(raw_message)
     if raw_id == "470": return parse_ID_IMU_ACCELEROMETER(raw_message)
     if raw_id == "471": return parse_ID_IMU_GYROSCOPE(raw_message)
 
