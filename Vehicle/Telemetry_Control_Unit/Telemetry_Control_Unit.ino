@@ -1,3 +1,4 @@
+
 /*
  * Teensy 3.5 Telemetry Control Unit code
  * Written by Soohyun Kim, with assistance by Ryan Gallaway and Nathan Cheek. 
@@ -66,7 +67,7 @@ Metro timer_status_send = Metro(100);
 Metro timer_status_send_xbee = Metro(2000);
 Metro timer_gps = Metro(100);
 Metro timer_debug_RTC = Metro(1000);
-Metro timer_flush = Metro(1000);
+Metro timer_flush = Metro(100);
 Metro timer_total_discharge = Metro(1000);
 Metro timer_em_status = Metro(1000);
 Metro timer_em_measurement = Metro(1000);
@@ -154,7 +155,7 @@ void setup() {
     /* Set up SD card */
     Serial.println("Initializing SD card...");
     SdFile::dateTimeCallback(sd_date_time); // Set date/time callback function
-    if (!SD.begin(BUILTIN_SDCARD)) { // Begin Arduino SD API (Teensy 3.5)
+   if (!SD.begin(BUILTIN_SDCARD)) { // Begin Arduino SD API (Teensy 3.5)
         Serial.println("SD card failed or not present");
     }
     char filename[] = "data0000.CSV";
