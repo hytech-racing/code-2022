@@ -84,7 +84,7 @@ class MCP23S08 {
     MCP23S08(uint8_t, uint8_t);              // Constructor to instantiate a discrete IC as an object, address 0-7, chipSelect any valid pin
     MCP23S08(uint8_t, uint8_t, unsigned int);
     void begin();                            // Start the SPI Bus and write default values to all registers
-    void wordWrite(uint8_t, uint8_t);        // Typically only used internally, but allows the user to write any register pair if needed, so it's public
+    //void wordWrite(uint8_t, uint8_t);        // Typically only used internally, but allows the user to write any register pair if needed, so it's public
     void byteWrite(uint8_t, uint8_t);        // Typically only used internally, but allows the user to write any register if needed, so it's public
     void pinMode(uint8_t, uint8_t);          // Sets the mode (input or output) of a single I/O pin
     void pinMode(uint8_t);                   // Sets the mode (input or output) of all I/O pins at once

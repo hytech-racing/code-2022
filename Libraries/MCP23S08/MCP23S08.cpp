@@ -144,79 +144,73 @@ void MCP23S08::pinMode(uint8_t pin, uint8_t mode) {
 
 void MCP23S08::pinMode(uint8_t mode) {
     _modeCache = mode;                               // Update the mode cache
-    byteWrite(IODIR,  _modeCache);         // Write the the mode cache to IODIR
+    byteWrite(IODIR, _modeCache);         // Write the the mode cache to IODIR
 }
 
 // Configure the internal pull-up of a pin
 // Arguments: pin number (0-15; 0 = pin 0 of the register A, 15 = pin 7 of the register B), mode (1 = Enable pull-up, 0 = Disable pull-up)
 
 void MCP23S08::pullupMode(uint8_t pin, uint8_t mode) {
-    if (pin < 0 || pin > 15) return;
+    if (pin < 0 || pin > 7) return;
 
     if (mode == OFF)
-        _pullupCache &= (uint8_t) ~(1 << pin);
+        _pullupCache &= ~(1 << pin);
     else
-        _pullupCache |= (uint8_t) (1 << pin);
+        _pullupCache |= (1 << pin);
 
-    byteWrite(GPPUA,  _pullupCache);
-    byteWrite(GPPUB, (_pullupCache >> 8));
+    byteWrite(GPPU,  _pullupCache);
 }
 
 // Configure the internal pull-ups of all pins
 // Arguments: mode (16 bit word; the lowest bit of the word is pin 0 of the register A, the highest bit of the word is pin 7 of the register B; 1 = Enable, 0 = Disable)
 
-void MCP23S08::pullupMode(unsigned int mode) {
+void MCP23S08::pullupMode(uint8_t mode) {
     _pullupCache = mode;
-    byteWrite(GPPUA, (uint8_t) _pullupCache);
-    byteWrite(GPPUB, (uint8_t) (_pullupCache >> 8));
+    byteWrite(GPPU, (uint8_t) _pullupCache);
 }
 
 // Configure the inversion of a pin
 // Arguments: pin (0-15; 0 = pin 0 of the register A, 15 = pin 7 of the register B), mode (1 = Enable inversion, 0 = Disable inversion)
 
 void MCP23S08::inputInvert(uint8_t pin, uint8_t mode) {
-    if (pin < 0 || pin > 15) return;
+    if (pin < 0 || pin > 7) return;
 
     if (mode == OFF)
         _invertCache &= ~(1 << pin);
     else
         _invertCache |= (1 << pin);
 
-    byteWrite(IPOLA, (uint8_t) _invertCache);
-    byteWrite(IPOLB, (uint8_t) (_invertCache >> 8));
+    byteWrite(IPOL, _invertCache);
 }
 
 // Connfigure the inversion of all pins
 // Arguments: mode (16 bit word; the lowest bit of the word is pin 0 of the register A, the highest bit of the word is pin 7 of the register B; 1 = Enable, 0 = Disable)
 
-void MCP23S08::inputInvert(unsigned int mode) {
+void MCP23S08::inputInvert(uint8_t mode) {
     _invertCache = mode;
-    byteWrite(IPOLA, (uint8_t) _invertCache);
-    byteWrite(IPOLB, (uint8_t) (_invertCache >> 8));
+    byteWrite(IPOL, _invertCache);
 }
 
 // Write to a pin
 // Arguments: pin (0-15; 0 = pin 0 of the register A, 15 = pin 7 of the register B), value
 
 void MCP23S08::digitalWrite(uint8_t pin, uint8_t value) {
-    if (pin < 0 || pin > 15) return;
+    if (pin < 0 || pin > 7) return;
 
     if (value == LOW)
         _outputCache &= ~(1 << pin);
     else
         _outputCache |= (1 << pin);
 
-    byteWrite(OLATA, (uint8_t) _outputCache);
-    byteWrite(OLATB, (uint8_t) (_outputCache >> 8));
+    byteWrite(OLAT, _outputCache);
 }
 
 // Write to all pins (pins that are not set as outputs are ignored)
 // Arguments: value (16 bit word; the lowest bit of the word is pin 0 of the register A, the highest bit of the word is pin 7 of the register B; 1 = Enable, 0 = Disable)
 
-void MCP23S08::digitalWrite(unsigned int value) {
+void MCP23S08::digitalWrite(uint8_t value) {
     _outputCache = value;
-    byteWrite(OLATA, (uint8_t) _outputCache);
-    byteWrite(OLATB, (uint8_t) (_outputCache >> 8));
+    byteWrite(OLAT, (uint8_t) _outputCache);
 }
 
 // Read all pins (pins that are not set as inputs are ignored)
@@ -226,8 +220,7 @@ void MCP23S08::digitalWrite(unsigned int value) {
 unsigned int MCP23S08::digitalRead(void) {
     unsigned int reading;               // Initialize a variable to hold the read values to be returned
 
-    reading = byteRead(GPIOA);          // Read the register A pins and store as the LSB of the reading variable
-    reading |= (byteRead(GPIOB) << 8);  // Read the register B pins and store as the MSB of the reading variable
+    reading = byteRead(GPIO);          // Read the register A pins and store as the LSB of the reading variable
 
     return reading;                     // Return the reading
 }
@@ -255,7 +248,7 @@ uint8_t MCP23S08::byteRead(uint8_t reg) {
 // Return: the value of the pin
 
 uint8_t MCP23S08::digitalRead(uint8_t pin) {
-    if (pin < 0 || pin > 15) return 0;               // Check if the pin value is between 0 and 15; the function returns 0 if the pin value is outside the range
+    if (pin < 0 || pin > 7) return 0;               // Check if the pin value is between 0 and 15; the function returns 0 if the pin value is outside the range
 
     return digitalRead() & (1 << pin) ? HIGH : LOW;
 }
