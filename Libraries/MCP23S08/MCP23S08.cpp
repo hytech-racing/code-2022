@@ -30,8 +30,8 @@
 
 
     USAGE:  All Read/Write functions except wordWrite are implemented in two different ways.
-            Individual pin values are set by referencing "pin #" and On/Off, Input/Output or High/Low where
-            portA represents pins 0-7 and portB 8-15. So to set the most significant bit of portB, set pin # 15.
+            Individual pin values are set by referencing "pin #" and On/Off, Input/Output or High/Low. So to set the most significant bit, set pin # 7.
+
             To Read/Write the values for the entire chip at once, a word mode is supported buy passing a
             single argument to the function as 0x(portB)(portA). I/O mode Output is represented by 0.
             The wordWrite function was to be used internally, but was made public for advanced users to have
@@ -79,10 +79,10 @@ void MCP23S08::init(uint8_t address, uint8_t cs, unsigned int SPIspeed) {
     _cs          = cs;
     _SPIspeed    = SPIspeed;
 
-    _modeCache   = 0xFFFF;              // Default I/O mode is all input, 0xFFFF
-    _pullupCache = 0x0000;              // Default output state is all off, 0x0000
-    _outputCache = 0x0000;              // Default pull-up state is all off, 0x0000
-    _invertCache = 0x0000;              // Default input inversion state is not inverted, 0x0000
+    _modeCache   = 0xFF;              // Default I/O mode is all input, 0xFF
+    _pullupCache = 0x00;              // Default output state is all off, 0x00
+    _outputCache = 0x00;              // Default pull-up state is all off, 0x00
+    _invertCache = 0x00;              // Default input inversion state is not inverted, 0x00
 
 }
 
@@ -94,10 +94,9 @@ void MCP23S08::begin() {
 
     SPI.begin();                          // Start the SPI bus
 
-    byteWrite(IODIRA, 0xFF);              // Write the default value (0xFF) in IODIRA register
-    byteWrite(IODIRB, 0xFF);              // Write the default value (0xFF) in IODIRB register
+    byteWrite(IODIR, 0xFF);              // Write the default value (0xFF) in IODIR register
 
-    for (int i = 2; i < 22; i++) {        // This loop writes default values (0x00) to the rest of the registers
+    for (int i = 1; i < 11; i++) {        // This loop writes default values (0x00) to the rest of the registers
         byteWrite(i, 0x00);
         ::delay(10);
     }
@@ -109,7 +108,7 @@ void MCP23S08::begin() {
 // Arguments: register address, the value to write
 
 void MCP23S08::byteWrite(uint8_t reg, uint8_t value) {
-    SPI.beginTransaction(SPISettings (_SPIspeed, MSBFIRST, SPI_MODE0));  // Begin the SPI transaction (default settings from the SPI library)
+    SPI.beginTransaction(SPISettings (_SPIspeed, MSBFIRST, SPI_MODE0));       // Begin the SPI transaction (default settings from the SPI library)
     ::digitalWrite(_cs, LOW);                                                 // Bring the chip select pin LOW
     SPI.transfer(OPCODE_WRITE | _address << 1);                               // Send the MCP23S08 opcode, chip address, and the write bit
     SPI.transfer(reg);                                                        // Send the register addreess
@@ -118,36 +117,34 @@ void MCP23S08::byteWrite(uint8_t reg, uint8_t value) {
     SPI.endTransaction();                                                     // End the SPI transaction
 }
 
-// Write a word to a register pair, LSB to first register, MSB to next higher value register
-// Arguments: address of the first register,  and the word
+// // Write a word to a register pair, LSB to first register, MSB to next higher value register
+// // Arguments: address of the first register,  and the word
 
-void MCP23S08::wordWrite(uint8_t reg, unsigned int word) {
-    byteWrite(reg, (uint8_t) word);             // Write the LSB to the fisrt register
-    byteWrite(reg + 1, (uint8_t) (word >> 8));  // Write the MSB to the register with the next higher value register
-}
+// void MCP23S08::wordWrite(uint8_t reg, unsigned int word) {
+//     byteWrite(reg, (uint8_t) word);             // Write the LSB to the fisrt register
+//     byteWrite(reg + 1, (uint8_t) (word >> 8));  // Write the MSB to the register with the next higher value register
+// }
 
 // Configure the mode of a pin (input or output)
-// Arguments: pin number (0-15; 0 = pin 0 of the register A, 15 = pin 7 of the register B), mode (1 = Input, 0 = Output)
+// Arguments: pin number, mode (1 = Input, 0 = Output)
 
 void MCP23S08::pinMode(uint8_t pin, uint8_t mode) {
-    if (pin < 0 || pin > 15) return;  // Check if the pin value is between 0 and 15; the function does nothing if the pin value is outside the range
+    if (pin < 0 || pin > 7) return;  // Check if the pin value is between 0 and 15; the function does nothing if the pin value is outside the range
 
     if (mode == OUTPUT)               // Determine the mode
         _modeCache &= ~(1 << pin);    // If mode is OUTPUT, write 0 in the appropriate place of the mode cache
     else
         _modeCache |= (1 << pin);     // If mode value is anything other than 0, write 1 in the appropriate place of the mode cache
 
-    byteWrite(IODIRA, (uint8_t) _modeCache);         // Write the LSB of the mode cache to IODIRA
-    byteWrite(IODIRB, (uint8_t) (_modeCache >> 8));  // Write the MSB of the mode cache to IODIRB
+    byteWrite(IODIR,  _modeCache);         // Write the mode cache to IODIR
 }
 
-// Configure the mode of all 16  pins
-// Arguments: mode (16 bit word; the lowest bit of the word is pin 0 of the register A, the highest bit of the word is pin 7 of the register B; 1 = input, 0 = output)
+// Configure the mode of all 8 pins
+// Arguments: mode (1 byte; LSB = pin 0; 1 = input, 0 = output)
 
-void MCP23S08::pinMode(unsigned int mode) {
+void MCP23S08::pinMode(uint8_t mode) {
     _modeCache = mode;                               // Update the mode cache
-    byteWrite(IODIRA, (uint8_t) _modeCache);         // Write the LSB of the mode cache to IODIRA
-    byteWrite(IODIRB, (uint8_t) (_modeCache >> 8));  // Write the MSB of the mode cache to IODIRB
+    byteWrite(IODIR,  _modeCache);         // Write the the mode cache to IODIR
 }
 
 // Configure the internal pull-up of a pin
@@ -157,12 +154,12 @@ void MCP23S08::pullupMode(uint8_t pin, uint8_t mode) {
     if (pin < 0 || pin > 15) return;
 
     if (mode == OFF)
-        _pullupCache &= ~(1 << pin);
+        _pullupCache &= (uint8_t) ~(1 << pin);
     else
-        _pullupCache |= (1 << pin);
+        _pullupCache |= (uint8_t) (1 << pin);
 
-    byteWrite(GPPUA, (uint8_t) _pullupCache);
-    byteWrite(GPPUB, (uint8_t) (_pullupCache >> 8));
+    byteWrite(GPPUA,  _pullupCache);
+    byteWrite(GPPUB, (_pullupCache >> 8));
 }
 
 // Configure the internal pull-ups of all pins
