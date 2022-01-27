@@ -37,5 +37,6 @@ void setup() {
 }
 
 void loop() {
+  expander.digitalWrite(0, LOW);
   //expander.digitalWrite(0, value);     // output the reading from pin 7 on pin 0
 }
