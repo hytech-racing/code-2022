@@ -101,11 +101,11 @@ class MCP23S08 {
     void init(uint8_t, uint8_t, unsigned int);
     uint8_t _address;                        // Address of the MCP23S08 in use
 	uint8_t _cs;                             // chip select pin
-    uint8_t int _modeCache;                 // Caches the mode (input/output) configuration of I/O pins
-    uint8_t int _pullupCache;               // Caches the internal pull-up configuration of input pins (values persist across mode changes)
-    uint8_t int _invertCache;               // Caches the input pin inversion selection (values persist across mode changes)
-    uint8_t int _outputCache;               // Caches the output pin state of pins
-    uint8_t int _SPIspeed;
+    uint8_t _modeCache;                 // Caches the mode (input/output) configuration of I/O pins
+    uint8_t _pullupCache;               // Caches the internal pull-up configuration of input pins (values persist across mode changes)
+    uint8_t _invertCache;               // Caches the input pin inversion selection (values persist across mode changes)
+    uint8_t _outputCache;               // Caches the output pin state of pins
+    uint8_t _SPIspeed;
  };
 
 #endif //MCP23S08
