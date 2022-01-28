@@ -37,21 +37,28 @@ MCP23S08 expander(ADDR, CS);  // MCP23S17 object for the chip with the specified
 
 void setup() {
   
-  delay(1000);
-  //Begin SPI communication with IO Expander
-  expander.begin(); 
-  // Assign all pins on expander as outputs and write all high to start
-  for (int i = 0; i < 8; i++) {
-    expander.pinMode(i, OUTPUT);
-    expander.digitalWrite(i, HIGH);
-  }
+//  delay(1000);
+//  //Begin SPI communication with IO Expander
+//  expander.begin(); 
+//  // Assign all pins on expander as outputs and write all high to start
+//  for (int i = 0; i < 8; i++) {
+//    expander.pinMode(i, OUTPUT);
+//    expander.digitalWrite(i, HIGH);
+//  }
+  pinMode(A1, INPUT);
+  pinMode(1, OUTPUT);
 }
 
 void loop() {
-  //cycle through number encodings to display each on the 7-segment using the expander
-  for (int i = 0; i < 10; i++) {
-    expander.digitalWrite(number_pins[i]);
-    delay(1000);
+//  //cycle through number encodings to display each on the 7-segment using the expander
+//  for (int i = 0; i < 10; i++) {
+//    expander.digitalWrite(number_pins[i]);
+//    delay(1000);
+//  }
+
+  //Test Inertia
+  int val = digitalRead(A1);
+  if (val == HIGH) {
+    digitalWrite(1, HIGH);
   }
-  
 }

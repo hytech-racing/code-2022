@@ -4,7 +4,7 @@
 #define BTN_MARK 6
 #define BTN_MODE 7
 #define BTN_START A2
-#define BTN_LAUNCH A3
+#define BTN_LC A3
 #define BTN_MC_CYCLE 9
 
 // LED and buzzer pin definition

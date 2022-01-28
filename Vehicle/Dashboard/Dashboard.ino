@@ -29,7 +29,7 @@ DebouncedButton btn_lc;
 
 // CAN Variables
 Metro timer_can_update = Metro(100);
-MCP_CAN CAN(SPI_CS);
+MCP_CAN CAN(CAN_CS);
 
 // CAN Messages
 Dashboard_status dashboard_status{};
@@ -58,7 +58,7 @@ void setup() {
     pinMode(LED_MC_ERR, OUTPUT);
     pinMode(LED_START,  OUTPUT);
 
-    //Initiallizes CAN
+    //Initializes CAN
     while (CAN_OK != CAN.begin(CAN_500KBPS))              // init can bus : baudrate = 250K
     {
         delay(200);
