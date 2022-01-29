@@ -94,6 +94,16 @@ void LTC6811_2::generate_pec(const uint8_t *value, uint8_t *pec, int num_bytes) 
         }
     }
 }
+// Set the ADC mode per datasheet page 22; NOTE: ADCOPT is updated every time rdcfga is called
+void LTC6811_2::set_adc_mode(ADC_MODE mode) {
+    // NOTE: FAST, NORMAL, and FILTERED not well defined for ADCOPT; see datasheet page 61
+    adc_mode = static_cast<uint8_t>(mode);
+}
+
+// Set the discharge permission during cell measurement, see datasheet page 73
+void LTC6811_2::set_dischage_permit(DISCHARGE permit) {
+    discharge_permitted = static_cast<uint8_t>(permit);
+}
 
 // Write register commands
 // General write register group handler
@@ -170,11 +180,109 @@ Reg_Group_Config LTC6811_2::rdcfga() {
         return {};
     }
 }
+// Read Cell Voltage Register Group A
+Reg_Group_Cell_A LTC6811_2::rdcva() {
+    uint8_t buffer[6];
+    try {
+        read_register_group(0x4, buffer);
+        return {buffer};
+    } catch (int error) {
+        return {};
+    }
+}
+// Read Cell Voltage Register Group B
+Reg_Group_Cell_B LTC6811_2::rdcvb() {
+    uint8_t buffer[6];
+    try {
+        read_register_group(0x6, buffer);
+        return {buffer};
+    } catch (int error) {
+        return {};
+    }
+}
+// Read Cell Voltage Register Group C
+Reg_Group_Cell_C LTC6811_2::rdcvc() {
+    uint8_t buffer[6];
+    try {
+        read_register_group(0x8, buffer);
+        return {buffer};
+    } catch (int error) {
+        return {};
+    }
+}
+// Read Cell Voltage Register Group D
+Reg_Group_Cell_D LTC6811_2::rdcvd() {
+    uint8_t buffer[6];
+    try {
+        read_register_group(0xA, buffer);
+        return {buffer};
+    } catch (int error) {
+        return {};
+    }
+}
+// Read Auxiliary Register Group A
+Reg_Group_Aux_A LTC6811_2::rdauxa() {
+    uint8_t buffer[6];
+    try {
+        read_register_group(0xC, buffer);
+        return {buffer};
+    } catch (int error) {
+        return {};
+    }
+}
+// Read Status Register Group A
+Reg_Group_Status_A LTC6811_2::rdstata() {
+    uint8_t buffer[6];
+    try {
+        read_register_group(0x10, buffer);
+        return {buffer};
+    } catch (int error) {
+        return {};
+    }
+}
+// Read Status Register Group B
+Reg_Group_Status_B LTC6811_2::rdstatb() {
+    uint8_t buffer[6];
+    try {
+        read_register_group(0x12, buffer);
+        return {buffer};
+    } catch (int error) {
+        return {};
+    }
+}
+// Read S Control Register Group
+Reg_Group_S_Ctrl LTC6811_2::rdsctrl() {
+    uint8_t buffer[6];
+    try {
+        read_register_group(0x16, buffer);
+        return {buffer};
+    } catch (int error) {
+        return {};
+    }
+}
+// Read PWM Register Group
+Reg_Group_PWM LTC6811_2::rdpwm() {
+    uint8_t buffer[6];
+    try {
+        read_register_group(0x22, buffer);
+        return {buffer};
+    } catch (int error) {
+        return {};
+    }
+}
+// Read COMM Register Group
+Reg_Group_COMM LTC6811_2::rdcomm() {
+    uint8_t buffer[6];
+    try {
+        read_register_group(0x722, buffer);
+        return {buffer};
+    } catch (int error) {
+        return {};
+    }
+}
 
-// Command register command - starts or clears register group - maybe rename
-
-// General command register group handler
-void LTC6811_2::cmd_register_group(uint16_t cmd_code) {
+// General non-register command handler
+void LTC6811_2::non_register_cmd(uint16_t cmd_code) {
     auto *cmd_code_bytes = reinterpret_cast<uint8_t *>(cmd_code);
     uint8_t cmd[2] = {static_cast<uint8_t>(get_cmd_address() | cmd_code_bytes[0]), cmd_code_bytes[1]};
     uint8_t cmd_pec[2];
@@ -184,67 +292,66 @@ void LTC6811_2::cmd_register_group(uint16_t cmd_code) {
     spi_cmd(cmd, cmd_pec);
 }
 
-//
+// Start -action- commands
+// Start S Control Pulsing and Poll Status
 void LTC6811_2::stsctrl() {
-    cmd_register_group(0x19);
+    non_register_cmd(0x19);
+}
+// Start Cell Voltage ADC Conversion and Poll Status
+void LTC6811_2::adcv(CELL_SELECT cell_select) {
+    uint16_t adc_cmd = 0x260 | (adc_mode << 7) | (discharge_permitted << 4) | static_cast<uint8_t>(cell_select);
+    non_register_cmd(adc_cmd);
+}
+// Start GPIOs ADC Conversion and Poll Status
+void LTC6811_2::adax(GPIO_SELECT gpio_select) {
+    uint16_t adc_cmd = 0x460 | (adc_mode << 7) | static_cast<uint8_t>(gpio_select);
+    non_register_cmd(adc_cmd);
+}
+// Start Combined Cell Voltage and GPIO1, GPIO2 Conversion and Poll Status
+void LTC6811_2::adcvax() {
+    uint16_t adc_cmd = 0x46F | (adc_mode << 7) | (discharge_permitted << 4);
+    non_register_cmd(adc_cmd);
+}
+// Start Combined Cell Voltage and SC Conversion and Poll Status
+void LTC6811_2::adcvsc() {
+    uint16_t adc_cmd = 0x467 | (adc_mode << 7) | (discharge_permitted << 4);
+    non_register_cmd(adc_cmd);
 }
 
-void adcv(ADC_MODE adc_mode, DISCHARGE discharge, CELL_SELECT cell_select) {
-    uint16_t adc_cmd = 0x260 | (adc_mode << 7) | (discharge << 4) | cell_select;
-    cmd_register_group(adc_cmd);
+// Clear register commands
+// Clear Cell Voltage Register Groups
+void LTC6811_2::clrsctrl() {
+    non_register_cmd(0x18);
+}
+// Clear Auxiliary Register Group
+void LTC6811_2::clraux() {
+    non_register_cmd(0x712);
+}
+// Clear Status Register Groups
+void LTC6811_2::clrstat() {
+    non_register_cmd(0x713);
+}
+// Poll ADC Conversion Status
+void LTC6811_2::pladc() {
+    // NOTE: in parallel isoSPI mode, this command is not necessarily needed; see datasheet page 55
+    non_register_cmd(0x714);
+}
+// Diagnose MUX and Poll Status: sets MUXFAIL bit to 1 in Status Register Group B if any channel decoder fails; see datasheet pg. 32
+void LTC6811_2::diagn() {
+    non_register_cmd(0x715);
+}
+// Start I2C/SPI Communication to a slave device when the LTC6811-2 acts as the master
+void LTC6811_2::stcomm() {
+    non_register_cmd(0x723);
 }
 
-void adax(ADC_MODE adc_mode, GPIO_SELECT gpio_select) {
-    uint16_t adc_cmd = 0x460 | (adc_mode << 7) | gpio_select;
-    cmd_register_group(adc_cmd);
-}
-
-void adcvax(ADC_MODE adc_mode, DISCHARGE discharge) {
-    uint16_t adc_cmd = 0x46F | (adc_mode << 7) | (discharge << 4);
-    cmd_register_group(adc_cmd);
-}
-
-void adcvsc(ADC_MODE adc_mode, DISCHARGE discharge) {
-    uint16_t adc_cmd = 0x467 | (adc_mode << 7) | (discharge << 4);
-    cmd_register_group(adc_cmd);
-}
-
-void clrsctrl() {
-    cmd_register_group(0x18);
-}
-void clraux() {
-    cmd_register_group(0x712);
-}
-void clrstat() {
-    cmd_register_group(0x713);
-}
-
-//Sure this shouldn't return something?
-//SDO line goes low if conversion in progress
-void pladc() {
-    cmd_register_group(0x714);
-}
-void diagn() {
-    cmd_register_group(0x715);
-}
-void stcomm() {
-    cmd_register_group(0x723);
-}
-
-//These receive the same wakeup signal? Why are they separate?
-// Activity on the CSB
-// or SCK pin will wake up the SPI interface.
-// The differential signal |
-// SCK(IPA) – CSB(IMA)|, must be at least VWAKE = 200mV
-// for a minimum duration of tDWELL = 240ns to qualify as a
-// wake-up signal that powers up the serial interface.
-
-void wakeup_sleep() {
+/* Wakeup functions
+ * The LTC6811 wakes up after receiving a differential pulse on the isoSPI port.
+ * This can be achieved by toggling the chip select signal; see LTC6820 datasheet page 11.
+ */
+// Wakeup LTC6811 from core SLEEP state and/ or isoSPI IDLE state to ready for ADC measurements or isoSPI comms
+void LTC6811_2::wakeup() {
     digitalWrite(SS, low);
-    delay(1);
+    delay(1); // t_wake is up to 400 microseconds; wait one millisecond here for convenience.
     digitalWrite(SS, high);
-    // does this work? Is CSB eq to CSB in this case to produce our differential signal?
-}
-void wakeup_idle() {
-    //cmd_register_group(0x714);
 }
