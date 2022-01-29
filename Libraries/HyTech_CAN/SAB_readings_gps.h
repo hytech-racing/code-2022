@@ -15,8 +15,8 @@ public:
     inline void write(uint8_t buf[8]) const { memcpy(buf, this, sizeof(*this)); }
 
     // Getters
-    inline uint16_t get_gps_latitude() const { return gps_latitude; }
-    inline uint16_t get_gps_longitude() const { return gps_longitude; }
+    inline int32_t get_gps_latitude() const { return gps_latitude; }
+    inline int32_t get_gps_longitude() const { return gps_longitude; }
 
     // Setters
     inline void set_gps_latitude(int32_t reading) { gps_latitude = reading; }
