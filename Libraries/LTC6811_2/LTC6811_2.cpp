@@ -50,6 +50,17 @@ void LTC6811_2::spi_read(uint8_t *cmd, uint8_t* cmd_pec, uint8_t *data_in) {
     SPI.endTransaction();
 }
 
+// SPI command
+void LTC6811_2::spi_cmd(uint8_t *cmd, uint8_t* cmd_pec) {
+    SPI.beginTransaction(SPISettings(SPI_SPEED,SPI_BIT_ORDER, SPI_MODE));
+    digitalWrite(SS, low);
+    SPI.transfer(cmd[0]);
+    SPI.transfer(cmd[1]);
+    SPI.transfer(cmd_pec[0]);
+    SPI.transfer(cmd_pec[1]);
+    digitalWrite(SS, high);
+    SPI.endTransaction();
+}
 
 // returns the address of the specific LTC6811-2 chip to send command to
 uint8_t LTC6811_2::get_cmd_address() {
@@ -159,105 +170,81 @@ Reg_Group_Config LTC6811_2::rdcfga() {
         return {};
     }
 }
-// Read Cell Voltage Register Group A
-Reg_Group_Cell_A LTC6811_2::rdcva() {
-    uint8_t buffer[6];
-    try {
-        read_register_group(0x4, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
-}
-// Read Cell Voltage Register Group B
-Reg_Group_Cell_B LTC6811_2::rdcvb() {
-    uint8_t buffer[6];
-    try {
-        read_register_group(0x6, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
-}
-// Read Cell Voltage Register Group C
-Reg_Group_Cell_C LTC6811_2::rdcvc() {
-    uint8_t buffer[6];
-    try {
-        read_register_group(0x8, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
-}
-// Read Cell Voltage Register Group D
-Reg_Group_Cell_D LTC6811_2::rdcvd() {
-    uint8_t buffer[6];
-    try {
-        read_register_group(0xA, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
-}
-// Read Auxiliary Register Group A
-Reg_Group_Aux_A LTC6811_2::rdauxa() {
-    uint8_t buffer[6];
-    try {
-        read_register_group(0xC, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
-}
-// Read Status Register Group A
-Reg_Group_Status_A LTC6811_2::rdstata() {
-    uint8_t buffer[6];
-    try {
-        read_register_group(0x10, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
-}
-// Read Status Register Group B
-Reg_Group_Status_B LTC6811_2::rdstatb() {
-    uint8_t buffer[6];
-    try {
-        read_register_group(0x12, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
-}
-// Read S Control Register Group
-Reg_Group_S_Ctrl LTC6811_2::rdsctrl() {
-    uint8_t buffer[6];
-    try {
-        read_register_group(0x16, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
-}
-// Read PWM Register Group
-Reg_Group_PWM LTC6811_2::rdpwm() {
-    uint8_t buffer[6];
-    try {
-        read_register_group(0x22, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
-}
-// Read COMM Register Group
-Reg_Group_COMM LTC6811_2::rdcomm() {
-    uint8_t buffer[6];
-    try {
-        read_register_group(0x722, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
+
+// Command register command - starts or clears register group - maybe rename
+
+// General command register group handler
+void LTC6811_2::cmd_register_group(uint16_t cmd_code) {
+    auto *cmd_code_bytes = reinterpret_cast<uint8_t *>(cmd_code);
+    uint8_t cmd[2] = {static_cast<uint8_t>(get_cmd_address() | cmd_code_bytes[0]), cmd_code_bytes[1]};
+    uint8_t cmd_pec[2];
+    // generate PEC from command bytes
+    generate_pec(cmd, cmd_pec, 2);
+    // write out via SPI
+    spi_cmd(cmd, cmd_pec);
 }
 
-// Start commands
+//
+void LTC6811_2::stsctrl() {
+    cmd_register_group(0x19);
+}
+
+void adcv(ADC_MODE adc_mode, DISCHARGE discharge, CELL_SELECT cell_select) {
+    uint16_t adc_cmd = 0x260 | (adc_mode << 7) | (discharge << 4) | cell_select;
+    cmd_register_group(adc_cmd);
+}
+
+void adax(ADC_MODE adc_mode, GPIO_SELECT gpio_select) {
+    uint16_t adc_cmd = 0x460 | (adc_mode << 7) | gpio_select;
+    cmd_register_group(adc_cmd);
+}
+
+void adcvax(ADC_MODE adc_mode, DISCHARGE discharge) {
+    uint16_t adc_cmd = 0x46F | (adc_mode << 7) | (discharge << 4);
+    cmd_register_group(adc_cmd);
+}
+
+void adcvsc(ADC_MODE adc_mode, DISCHARGE discharge) {
+    uint16_t adc_cmd = 0x467 | (adc_mode << 7) | (discharge << 4);
+    cmd_register_group(adc_cmd);
+}
+
+void clrsctrl() {
+    cmd_register_group(0x18);
+}
+void clraux() {
+    cmd_register_group(0x712);
+}
+void clrstat() {
+    cmd_register_group(0x713);
+}
+
+//Sure this shouldn't return something?
+//SDO line goes low if conversion in progress
+void pladc() {
+    cmd_register_group(0x714);
+}
+void diagn() {
+    cmd_register_group(0x715);
+}
+void stcomm() {
+    cmd_register_group(0x723);
+}
+
+//These receive the same wakeup signal? Why are they separate?
+// Activity on the CSB
+// or SCK pin will wake up the SPI interface.
+// The differential signal |
+// SCK(IPA) – CSB(IMA)|, must be at least VWAKE = 200mV
+// for a minimum duration of tDWELL = 240ns to qualify as a
+// wake-up signal that powers up the serial interface.
+
+void wakeup_sleep() {
+    digitalWrite(SS, low);
+    delay(1);
+    digitalWrite(SS, high);
+    // does this work? Is CSB eq to CSB in this case to produce our differential signal?
+}
+void wakeup_idle() {
+    //cmd_register_group(0x714);
+}
