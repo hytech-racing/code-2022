@@ -27,14 +27,10 @@ public:
     inline void set_sensor_4(uint16_t reading) { sensor_4 = reading; }
 
 private:
-    // @Parse @Name(Front-Left_Suspension_Linear_Potentiometer) @Unit(mm) @Scale(1000)
+    // @Parse @Name(fl_susp_lin_pot) @Unit(mm) @Scale(1000)
     uint16_t sensor_1;
-    // @Parse @Name(Front-Right_Suspension_Linear_Potentiometer) @Unit(mm) @Scale(1000)
+    // @Parse @Name(fr_susp_lin_pot) @Unit(mm) @Scale(1000)
     uint16_t sensor_2;
-    // @Parse @Name(Steering_Wheel_Sensor) @Scale(1000)
-    uint16_t sensor_3;
-    // @Parse @Name(Ambient_Air_Humidity) @Unit(percent) @Scale(1000)
-    uint16_t sensor_4;
 };
 
 #pragma pack(pop)
