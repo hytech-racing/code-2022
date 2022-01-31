@@ -37,16 +37,18 @@ MCP23S08 expander(ADDR, CS);  // MCP23S17 object for the chip with the specified
 
 void setup() {
   
-//  delay(1000);
+  delay(1000);
 //  //Begin SPI communication with IO Expander
-//  expander.begin(); 
+  expander.begin(); 
 //  // Assign all pins on expander as outputs and write all high to start
-//  for (int i = 0; i < 8; i++) {
-//    expander.pinMode(i, OUTPUT);
-//    expander.digitalWrite(i, HIGH);
-//  }
-  pinMode(A1, INPUT);
-  pinMode(1, OUTPUT);
+  for (int i = 0; i < 8; i++) {
+    expander.pinMode(i, OUTPUT);
+    expander.digitalWrite(i, HIGH);
+  }
+  pinMode(A1, INPUT);//INERTIA
+  pinMode(1, OUTPUT);//IMD LED
+  pinMode(A6,INPUT);//SSOK
+  pinMode(A7, INPUT);//SHUTDOWNH
 }
 
 void loop() {
@@ -56,9 +58,73 @@ void loop() {
 //    delay(1000);
 //  }
 
+
+  
+  int testIMDLED = 0;
+  int testAMSLED = 0;
+
+  bool codeList[10] = {};
+  int displayList[10] = {};
+
+  int INERTIA = digitalRead(A1);
+  int SSOK = digitalRead(A6);
+  int SHUTDOWN_H = digitalRead(A7);
+  
+  if(SSOK && !(INERTIA))
+  {
+    codeList[1] = true;
+  }
+  if (INERTIA && !(SHUTDOWN_H))
+  {
+    codeList[2] = true ;
+  }
+  if(testIMDLED)
+  {
+    codeList[3] = true;
+  }
+  if(testAMSLED)
+  {
+    codeList[4] = true;
+  }
+
+  
+codeList[1] = true;
+codeList[3] = true;
+
+
+//convert codes to displays
+  int count = 0;
+  for (int i = 0; i < 10; i++)
+  {
+    if(codeList[i])
+    {
+      displayList[count] = i;
+    }
+    count++;
+  }
+
+//debug
+
+//display codes
+  for (int i = 0; i < 10; i++)
+  {
+    if(displayList[i] != 0)
+    {
+      expander.digitalWrite(number_pins[displayList[i]]);
+      delay(1000);
+    }
+    else
+    {
+      
+    }
+  }
   //Test Inertia
+  /*
   int val = digitalRead(A1);
   if (val == HIGH) {
     digitalWrite(1, HIGH);
   }
+  */
+
+  delay(100);
 }
