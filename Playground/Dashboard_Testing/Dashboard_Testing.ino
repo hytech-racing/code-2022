@@ -87,7 +87,7 @@ void loop() {
     codeList[4] = true;
   }
 
-  
+// DEBUG CODE TO DISPLAY 1 and 3, REMOVE WHEN ACTUAL SIGNALS EXIST
 codeList[1] = true;
 codeList[3] = true;
 
