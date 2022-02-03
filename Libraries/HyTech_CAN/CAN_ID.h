@@ -33,7 +33,7 @@
 #define ID_CCU_STATUS												0xDD
 #define ID_BMS_BALANCING_STATUS										0xDE // TODO rename to bms_balancing_cells when we're not in the middle of a development cycle
 
-#define ID_BMS_READ_WRITE_PARAMETER_COMMAND							0xE0 // TODO define this message
+#define ID_CHARGER_STATUS							                0xE0 // TODO define this message
 #define ID_BMS_PARAMETER_RESPONSE									0xE1 // TODO define this message
 #define ID_BMS_COULOMB_COUNTS										0xE2
 #define ID_MCU_GPS_READINGS											0xE7
@@ -41,6 +41,8 @@
 #define ID_DASHBOARD_STATUS                                         0xEB
 #define ID_SAB_READINGS_FRONT                                       0xEC
 #define ID_SAB_READINGS_REAR                                        0xED
+
+#define ID_CHARGER_CONTROL                                          0xF4
 
 #define ID_EM_STATUS                                                0x100
 #define ID_EM_MEASUREMENT                                           0x400
