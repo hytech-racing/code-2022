@@ -13,7 +13,6 @@
 //9 : 0 1 2 5 6
 
 
-#include <SPI.h>
 #include <MCP23S08.h>
 
 const uint8_t ADDR = 0; // address of the chip when  all address pins are grounded
@@ -33,7 +32,7 @@ const uint8_t number_pins[10] =
                       0b00011001, 0b00010010, 0b00000010, 0b01111000,
                       0b10000000, 0b00011000};
 
-MCP23S08 expander(ADDR, CS);  // MCP23S17 object for the chip with the specified address and chip select pin
+MCP23S08 expander(ADDR, CS);  // MCP23S08 object for the chip with the specified address and chip select pin
 
 void setup() {
   
