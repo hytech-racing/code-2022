@@ -37,36 +37,36 @@ void setup() {
 }
 
 void loop() {
-    if (ERROR_TEST) {
-        if (timer_can.check()) {
-            switch()
-            msg.id = ID_MC_FAULT_CODES;
-            msg.len = sizeof(uint64_t);
-            //run_fault_high
-            buf[0] = 0x1;
-
-            mc_fault_codes.load(buf);
-            
-        }
-    }
-    if (timer_can.check()) { // Send a message on CAN
-        msg.id = 0x1;
-        msg.len = sizeof(uint32_t);
-
-        memcpy(msg.buf, &t, sizeof(uint32_t));
-        CAN.write(msg);
-        Serial.print("Sent 0x");
-        Serial.print(msg.id, HEX);
-        Serial.print(": ");
-        for (unsigned int i = 0; i < msg.len; i++) {
-            Serial.print(msg.buf[i]);
-            Serial.print(" ");
-        }
-        Serial.println();
-        digitalWrite(22, HIGH);
-    }
-    
-    if (timer_light.check()) { // Turn off LED
-        digitalWrite(2, LOW);
-    }
+//    if (ERROR_TEST) {
+//        if (timer_can.check()) {
+//            //switch()
+//            msg.id = ID_MC_FAULT_CODES;
+//            msg.len = sizeof(uint64_t);
+//            //run_fault_high
+//            buf[0] = 0x1;
+//
+//            mc_fault_codes.load(buf);
+//            
+//        }
+//    }
+//    if (timer_can.check()) { // Send a message on CAN
+//        msg.id = 0x1;
+//        msg.len = sizeof(uint32_t);
+//
+//        memcpy(msg.buf, &t, sizeof(uint32_t));
+//        CAN.write(msg);
+//        Serial.print("Sent 0x");
+//        Serial.print(msg.id, HEX);
+//        Serial.print(": ");
+//        for (unsigned int i = 0; i < msg.len; i++) {
+//            Serial.print(msg.buf[i]);
+//            Serial.print(" ");
+//        }
+//        Serial.println();
+//        digitalWrite(22, HIGH);
+//    }
+//    
+//    if (timer_light.check()) { // Turn off LED
+//        digitalWrite(2, LOW);
+//    }
 }
