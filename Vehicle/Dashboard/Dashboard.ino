@@ -40,7 +40,6 @@ MCU_status mcu_status{};
 
 // IO Expander Variables
 MCP23S08 expander(IO_ADDR, IO_CS);
-displayList[11] = 1;
 
 Metro timer_mcu_heartbeat(0, 1);
 
@@ -134,8 +133,8 @@ inline void led_update(){
     led_mode.update();
     // checks display list for first available flag
     // if no flags set, display turns off (writes 11th entry; sets all IO exp pins high)
-    for (for int i = 0; i < 11; i++) {
-        if (displayList[i]) {
+    for (int i = 0; i < 11; i++) {
+        if (display_list[i]) {
             expander.digitalWrite(i);
             break;
         } 
@@ -187,7 +186,7 @@ inline void mcu_status_received(){
     if (!mcu_status.get_bms_ok_high()){
         led_ams.setMode(BLINK_MODES::ON);
         dashboard_status.set_ams_led(static_cast<uint8_t>(BLINK_MODES::ON));
-        displayList[4] = 1;
+        display_list[4] = 1;
         timer_led_ams.reset();
     }
     // else if (init_ams){
@@ -198,14 +197,14 @@ inline void mcu_status_received(){
     else if (led_ams.getMode() != BLINK_MODES::OFF && timer_led_ams.check()){
         led_ams.setMode(BLINK_MODES::SLOW);
         dashboard_status.set_ams_led(static_cast<uint8_t>(BLINK_MODES::SLOW));
-        displayList[4] = 0;
+        display_list[4] = 0;
     }
 
     //IMD LED
     if (!mcu_status.get_imd_ok_high()){
         led_imd.setMode(BLINK_MODES::ON);
         dashboard_status.set_imd_led(static_cast<uint8_t>(BLINK_MODES::ON));
-        displayList[3] = 1;
+        display_list[3] = 1;
         timer_led_imd.reset();
     }
     // else if (init_imd){
@@ -216,7 +215,7 @@ inline void mcu_status_received(){
     else if (led_imd.getMode() != BLINK_MODES::OFF && timer_led_imd.check()){
         led_imd.setMode(BLINK_MODES::SLOW);
         dashboard_status.set_imd_led(static_cast<uint8_t>(BLINK_MODES::SLOW));
-        displayList[3] = 0;
+        display_list[3] = 0;
     }
 
     //Start LED
@@ -281,13 +280,13 @@ inline void mc_fault_codes_received(){
     if (is_mc_err){
         led_mc_err.setMode(BLINK_MODES::ON);
         dashboard_status.set_mc_error_led(static_cast<uint8_t>(BLINK_MODES::ON));
-        displayList[2] = 1;
+        display_list[2] = 1;
         timer_led_mc_err.reset();   
     // display fault for 1 second and then it clears
     } else if (led_mc_err.getMode() != BLINK_MODES::OFF && timer_led_mc_err.check()){
         led_mc_err.setMode(BLINK_MODES::OFF);
         dashboard_status.set_mc_error_led(static_cast<uint8_t>(BLINK_MODES::OFF));
-        displayList[2] = 0;
+        display_list[2] = 0;
     }
 
     /*if (is_mc_err){
@@ -304,9 +303,11 @@ inline void mc_fault_codes_received(){
 inline void inertia_status() {
     if (INERTIA_READ && !SHUTDOWN_H_READ) {
         led_inertia.setMode(BLINK_MODES::ON);
-        displayList[1] = 1;
+        dashboard_status.set_inertia_led(static_cast<uint8_t>(BLINK_MODES::ON));
+        display_list[1] = 1;
     } else {
         led_inertia.setMode(BLINK_MODES::OFF);
-        displayList[1] = 0;
+        dashboard_status.set_inertia_led(static_cast<uint8_t>(BLINK_MODES::ON));
+        display_list[1] = 0;
     }
 }

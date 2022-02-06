@@ -31,7 +31,7 @@
 // IO Expander Number Encodings
 // 1 = Inertia, 2 = MC Err, 3 = Inertia, 4 = IMD
 uint8_t number_encodings[11] = {0b01000000, 0b01111001, 0b00100100, 0b00110000, 0b00011001, 0b00010010, 0b00000010, 0b01111000, 0b10000000, 0b00011000, 0b11111111};
-uint8_t displayList[11] = {};
+uint8_t display_list[11] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
 
 #define SHUTDOWN_THERSHOLD 223 // 5V on the line
 
