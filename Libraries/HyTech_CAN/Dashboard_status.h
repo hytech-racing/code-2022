@@ -70,7 +70,8 @@ public:
     inline void set_mode_led(uint8_t mode_led)               { led_flags = (led_flags & 0xFFCF) | ((mode_led     & 0x3) << 4);  }
     inline void set_mc_error_led(uint8_t mc_error_led)       { led_flags = (led_flags & 0xFF3F) | ((mc_error_led & 0x3) << 6);  }
     inline void set_start_led(uint8_t start_led)             { led_flags = (led_flags & 0xFCFF) | ((start_led    & 0x3) << 8);  }
-    inline void set_launch_ctrl_led(uint8_t launch_ctrl_led) { led_flags = (led_flags & 0xF3FF) | ((led_flags    & 0x3) << 10); }
+    inline void set_inertia_led(uint8_t inertia_led)         { led_flags = (led_flags & 0xF3FF) | ((inertia_led    & 0x3) << 10); }
+
 private:
     // (4 bits) unused
     /* @Parse @Flaglist(
