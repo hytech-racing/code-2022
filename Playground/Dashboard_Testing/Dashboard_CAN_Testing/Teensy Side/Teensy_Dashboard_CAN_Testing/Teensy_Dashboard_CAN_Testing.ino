@@ -18,6 +18,8 @@ MCU_status mcu_status;
 // Test each can error code (including inertia read)
 #define ERROR_TEST 1
 int error = 0;
+// Test inertia switch CAN message flag
+#define INERTIA_TEST
 // Test non error codes
 #define NON_ERROR_TEST 0
 // Test priority on 7-seg
@@ -42,7 +44,13 @@ void setup() {
 void loop() {
   if (ERROR_TEST) {
     if (timer_can.check()) {
-      msg.id = 0x1;
+      // Error test performs each error test sequentially (mc err, BMS, IMD)
+      // An error signal is sent via mc_fault_code for mc err
+      // An error signal is sent via mcu_status for BMS and IMD
+      // After signal is sent, a slight delay is added and the dash_status is then read
+      // Error signal and received dash status are printed to console
+      // Specific LED err flag also printed to console
+      
       switch(error) {
         // mc err send
         case 0: 
@@ -51,6 +59,7 @@ void loop() {
           send_msg(ID_MC_FAULT_CODES, 8);
           delay(100);
           read_msg();
+          Serial.print(dashboard_status.get_mc_error_led());
           break;
         // BMS/AMS err send
         case 1:
@@ -59,6 +68,7 @@ void loop() {
           send_msg(ID_MCU_STATUS, 7);
           delay(100);
           read_msg();
+          Serial.println(dashboard_status.get_ams_led());
           break;
         // IMD err send
         case 2:
@@ -67,16 +77,20 @@ void loop() {
           send_msg(ID_MCU_STATUS, 7);
           delay(100);
           read_msg();
-          break;
-        // Inertia err receive
-        case 3:
-          
-          read_msg();
+          Serial.println(dashboard_status.get_imd_led());
           break;
         default:
           break;
       }
     }
+  } else if (INERTIA_TEST) {
+    
+  } else if (NON_ERROR_TEST) {
+    
+  } else if (PRIORITY_TEST) {
+    
+  } else if (BUTTON_TEST) {
+    
   }
   //     if (timer_can.check()) { // Send a message on CAN
   //         msg.id = 0x1;
@@ -114,6 +128,7 @@ inline void read_msg() {
     delay(10);
   }
   CAN.read(msg);
+  dashboard_status.load(msg.buf);
   msg_print();
 }
 
