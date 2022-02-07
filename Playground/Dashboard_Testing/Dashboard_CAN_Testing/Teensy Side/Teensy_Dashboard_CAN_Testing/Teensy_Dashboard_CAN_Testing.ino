@@ -37,18 +37,18 @@ void setup() {
 }
 
 void loop() {
-//  if (ERROR_TEST) {
-//    if (timer_can.check()) {
-//      //switch()
-//      msg.id = ID_MC_FAULT_CODES;
-//      msg.len = sizeof(uint64_t);
-//      //run_fault_high
-//      buf[0] = 0x1;
-//
-//      mc_fault_codes.load(buf);
-//
-//    }
-//  }
+  if (ERROR_TEST) {
+    if (timer_can.check()) {
+      //switch()
+      msg.id = ID_MC_FAULT_CODES;
+      msg.len = sizeof(uint64_t);
+      //run_fault_high
+      buf[0] = 0x1;
+
+      mc_fault_codes.load(buf);
+
+    }
+  }
   //     if (timer_can.check()) { // Send a message on CAN
   //         msg.id = 0x1;
   //         msg.len = sizeof(uint32_t);
