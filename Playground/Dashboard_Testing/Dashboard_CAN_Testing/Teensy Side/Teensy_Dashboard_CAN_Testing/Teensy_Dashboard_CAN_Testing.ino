@@ -10,7 +10,6 @@ Metro timer_light = Metro(3);
 // CAN Messages
 Dashboard_status dashboard_status;
 MC_fault_codes mc_fault_codes;
-uint8_t buf[8];
 MCU_status mcu_status;
 
 // Error LED stays on for one second on dash after receiving error code
@@ -26,6 +25,10 @@ int error = 0;
 // Test button inputs
 #define BUTTON_TEST 0
 
+inline void send_msg(int id, int len);
+inline void read_msg();
+inline void msg_print();
+
 void setup() {
   Serial.begin(115200); // Initialize serial for PC communication
   CAN.begin();
@@ -39,14 +42,40 @@ void setup() {
 void loop() {
   if (ERROR_TEST) {
     if (timer_can.check()) {
-      //switch()
-      msg.id = ID_MC_FAULT_CODES;
-      msg.len = sizeof(uint64_t);
-      //run_fault_high
-      buf[0] = 0x1;
-
-      mc_fault_codes.load(buf);
-
+      msg.id = 0x1;
+      switch(error) {
+        // mc err send
+        case 0: 
+          mc_fault_codes.set_post_fault_lo(0x1);
+          memcpy(msg.buf, &mc_fault_codes, sizeof(uint64_t));
+          send_msg(ID_MC_FAULT_CODES, 8);
+          delay(100);
+          read_msg();
+          break;
+        // BMS/AMS err send
+        case 1:
+          mcu_status.set_bms_ok_high(false);
+          memcpy(msg.buf, &mcu_status, 7);
+          send_msg(ID_MCU_STATUS, 7);
+          delay(100);
+          read_msg();
+          break;
+        // IMD err send
+        case 2:
+          mcu_status.set_imd_ok_high(false);
+          memcpy(msg.buf, &mcu_status, 7);
+          send_msg(ID_MCU_STATUS, 7);
+          delay(100);
+          read_msg();
+          break;
+        // Inertia err receive
+        case 3:
+          
+          read_msg();
+          break;
+        default:
+          break;
+      }
     }
   }
   //     if (timer_can.check()) { // Send a message on CAN
@@ -69,4 +98,32 @@ void loop() {
   //     if (timer_light.check()) { // Turn off LED
   //         digitalWrite(2, LOW);
   //     }
+}
+
+inline void send_msg(int id, int len) {
+  msg.id = id;
+  msg.len = len;
+  msg_print();
+  CAN.write(msg);
+}
+
+inline void read_msg() {
+  //does this need an availability check?
+  //
+  while(!CAN.available()) {
+    delay(10);
+  }
+  CAN.read(msg);
+  msg_print();
+}
+
+inline void msg_print() {
+  Serial.print("Sent 0x");
+  Serial.print(msg.id, HEX);
+  Serial.print(": ");
+  for (unsigned int i = 0; i < msg.len; i++) {
+      Serial.print(msg.buf[i]);
+      Serial.print(" ");
+  }
+  Serial.println();
 }
