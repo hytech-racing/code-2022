@@ -5,7 +5,7 @@
 FlexCAN CAN(500000);
 CAN_message_t msg;
 Metro timer_can = Metro(1500);
-Metro timer_light = Metro(3);
+Metro timer_can_inertia = Metro(200);
 
 // CAN Messages
 Dashboard_status dashboard_status;
@@ -59,6 +59,7 @@ void loop() {
           send_msg(ID_MC_FAULT_CODES, 8);
           delay(100);
           read_msg();
+          dashboard_status.load(msg.buf);
           Serial.print(dashboard_status.get_mc_error_led());
           break;
         // BMS/AMS err send
@@ -68,6 +69,7 @@ void loop() {
           send_msg(ID_MCU_STATUS, 7);
           delay(100);
           read_msg();
+          dashboard_status.load(msg.buf);
           Serial.println(dashboard_status.get_ams_led());
           break;
         // IMD err send
@@ -77,13 +79,22 @@ void loop() {
           send_msg(ID_MCU_STATUS, 7);
           delay(100);
           read_msg();
+          dashboard_status.load(msg.buf);
           Serial.println(dashboard_status.get_imd_led());
           break;
         default:
           break;
       }
     }
+  // Wait 1/5 of a second, read CAN, check if inertia led flag set
   } else if (INERTIA_TEST) {
+    if (timer_can_inertia.check()) {
+      while (CAN.available) {
+        CAN.read(msg);
+        dashboard_status.load(msg.buf);
+        Serial.println(dashboard_status.get_inertia_led());
+      }
+    }
     
   } else if (NON_ERROR_TEST) {
     
@@ -128,7 +139,6 @@ inline void read_msg() {
     delay(10);
   }
   CAN.read(msg);
-  dashboard_status.load(msg.buf);
   msg_print();
 }
 
