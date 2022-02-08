@@ -25,7 +25,7 @@ public:
     LTC6811_2(int addr_) :
             address(addr_),
             pec_error(false),
-            adc_mode(0x2),
+            adc_mode(0x3),
             discharge_permitted(0x0) { };
     void init();
 

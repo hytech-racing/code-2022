@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 
-// SPI slave select pin, as required for Teensy 3.2
+// SPI slave select pin, as required for Teensy 4.0
 #define SS 10
 // SPI alternate pin definitions (not needed unless using Teensy 3.2 alternate SPI pins)
 #define MOSI 7 // pin 11 by default
@@ -20,7 +20,7 @@
  * the spi_read function sends dummy values in order to read in values from the slave device. */
 // SPI write
 void LTC6811_2::spi_write(uint8_t *cmd, uint8_t *cmd_pec, uint8_t *data, uint8_t *data_pec) {
-    SPI.beginTransaction(SPISettings(SPI_SPEED,SPI_BIT_ORDER, SPI_MODE));
+    SPI.beginTransaction(SPISettings(SPI_SPEED, SPI_BIT_ORDER, SPI_MODE));
     digitalWrite(SS, LOW);
     SPI.transfer(cmd[0]);
     SPI.transfer(cmd[1]);
@@ -185,19 +185,19 @@ Reg_Group_Config LTC6811_2::rdcfga() {
     uint8_t buffer[6];
     // If PECs do not match, return empty buffer
     read_register_group(0x2, buffer);
-    return buffer;
+    return {buffer};
 }
 // Read Cell Voltage Register Group A
 Reg_Group_Cell_A LTC6811_2::rdcva() {
     uint8_t buffer[6];
     read_register_group(0x4, buffer);
-    return buffer;
+    return {buffer};
 }
 // Read Cell Voltage Register Group B
 Reg_Group_Cell_B LTC6811_2::rdcvb() {
     uint8_t buffer[6];
     read_register_group(0x6, buffer);
-        return buffer;
+    return {buffer};
 }
 // Read Cell Voltage Register Group C
 Reg_Group_Cell_C LTC6811_2::rdcvc() {
@@ -320,6 +320,7 @@ void LTC6811_2::stcomm() {
 // Wakeup LTC6811 from core SLEEP state and/ or isoSPI IDLE state to ready for ADC measurements or isoSPI comms
 void LTC6811_2::wakeup() {
     digitalWrite(SS, LOW);
-    delay(1); // t_wake is up to 400 microseconds; wait one millisecond here for convenience.
+    delayMicroseconds(1); // a pulse at least 240nS is required; the CS pulse is 300nS, so wait 1uS for convenience.
     digitalWrite(SS, HIGH);
+    delayMicroseconds(400); //t_wake is 400 milliseconds; wait that long to ensure device has turned on.
 }

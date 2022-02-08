@@ -24,16 +24,10 @@
 // VARIABLE DECLARATIONS
 uint16_t vuv = 1874; // 3V           // Minimum voltage value following datasheet formula: Comparison Voltage = (VUV + 1) • 16 • 100μV
 uint16_t vov = 2625; // 4.2V         // Maximum voltage value following datasheet formula: Comparison Voltage = VOV • 16 • 100μV 
+uint16_t cell_voltages[TOTAL_IC][12]; // 2D Array to hold cell voltages being read in;
 
 // LTC6811_2 OBJECT DECLARATIONS
-LTC6811_2 ic_0 = LTC6811_2(0);
-LTC6811_2 ic_1 = LTC6811_2(1);
-LTC6811_2 ic_2 = LTC6811_2(2);
-LTC6811_2 ic_3 = LTC6811_2(3);
-LTC6811_2 ic_4 = LTC6811_2(4);
-LTC6811_2 ic_5 = LTC6811_2(5);
-LTC6811_2 ic_6 = LTC6811_2(6);
-LTC6811_2 ic_7 = LTC6811_2(7);
+LTC6811_2 ic[8]; 
 Reg_Group_Config configuration_register = Reg_Group_Config((uint8_t) 0x0, false, false, vuv, vov, (uint8_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
 
 // CAN OBJECT AND VARIABLE DECLARATIONS
@@ -46,12 +40,19 @@ BMS_status bms_status; //Message class that contains flags for AMS errors as wel
 
 void setup() {
   // put your setup code here, to run once:
-  digitalWrite(6, HIGH) //write Teensy_OK pin high
+  pinMode(6, OUTPUT);
+  pinMode(5, OUTPUT);
+  digitalWrite(6, HIGH); //write Teensy_OK pin high
   Serial.begin(115200);
   CAN.setBaudRate(500000);
   CAN.begin();
   for (int i = 0; i < 64; i++) { // Fill all filter slots with Charger Control Unit message filter (CAN controller requires filling all slots)
-        CAN.setMBFilter(static_cast<FLEXCAN_MAILBOX>(i), ID_CCU_STATUS); // Set CAN mailbox filtering to only watch for charger controller status CAN messages
+    CAN.setMBFilter(static_cast<FLEXCAN_MAILBOX>(i), ID_CCU_STATUS); // Set CAN mailbox filtering to only watch for charger controller status CAN messages
+  }
+
+   // add 8 instances of LTC6811_2 to the object array, each addressed appropriately
+   for (int i = 0; i < 8; i++) {
+    ic[i] = LTC6811_2(i);  
    }
 
    /* Initialize ACU state machine
@@ -67,7 +68,32 @@ void loop() {
 }
 
 void read_voltages() {
-  Reg_Group_Config configuration_register = Reg_Group_Config((uint8_t) 0x0, false, false, vuv, vov, (uint8_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
+  Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x0, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
+  for (int i = 0; i < 8; i++) {
+    ic[i].wakeup();
+    ic[i].wrcfga(configuration.buf());
+    ic[i].adcv(static_cast<CELL_SELECT>(0));
+    delay(202); // delay 202 milliseconds to wait for ADC conversion to finish for 26Hz mode
+    Reg_Group_Cell_A reg_group_a = ic[i].rdcva();
+    Reg_Group_Cell_B reg_group_b = ic[i].rdcvb();
+    Reg_Group_Cell_C reg_group_c = ic[i].rdcvc();
+    Reg_Group_Cell_D reg_group_d = ic[i].rdcvd();
+    for (int j = 0; j < 12; j+= 3) {
+      uint8_t *buf;
+      if (j == 0) {
+        buf = reg_group_a.buf();
+      } else if (j == 3) {
+        buf = reg_group_b.buf();
+      } else if (j ==6) {
+        buf = reg_group_c.buf();
+      } else if (j == 9) {
+        buf = reg_group_d.buf();
+      }
+      for (int k = 0; k < 3; k++) {
+        cell_voltages[i][j + k] = buf[2*k+1] << 8 | buf[2*k];
+      }
+    }
+  }
 }
 
 // parse incoming CAN messages for CCU status message
