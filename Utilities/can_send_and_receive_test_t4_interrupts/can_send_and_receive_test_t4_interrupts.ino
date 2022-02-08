@@ -3,7 +3,7 @@
  * Created by Nathan Cheek, December 20, 2017
  */
 // #include <HyTech_FlexCAN.h>
-#include <FlexCAN_T4.h>
+#include <HyTech_FlexCAN_T4>
 #include <Metro.h>
 
 // FlexCAN CAN(500000);
@@ -12,7 +12,7 @@ CAN_message_t msg;
 Metro timer_can = Metro(1000);
 Metro timer_light = Metro(3);
 
-void receive(const CAN_message_t &msg) {
+void receive(CAN_message_t &msg) {
     // while (CAN.read(msg)) {
         Serial.print("Received 0x");
         Serial.print(msg.id, HEX);

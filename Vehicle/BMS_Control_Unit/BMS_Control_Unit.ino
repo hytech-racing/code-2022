@@ -29,12 +29,11 @@
  * When sending any other command (such as reading or writing registers), wake up the isoSPI circuit by calling wakeup_idle().
  */
 
-#include <Mcp320x.h>
 #include <Arduino.h>
 // #include <EEPROM.h> TODO add EEPROM functionality so we can configure parameters over CAN
 #include <HyTech_FlexCAN.h>
 #include <HyTech_CAN.h>
-#include <kinetis_flexcan.h>
+
 #include <LT_SPI.h>
 #include <LTC68042.h>
 #include <Metro.h>
@@ -118,8 +117,8 @@
 /*
  * Current Sensor ADC definitions
  */
-#define CH_CUR_SENSE MCP3204::Channel::SINGLE_2
-#define CH_CUR_REF   MCP3204::Channel::SINGLE_3
+//#define CH_CUR_SENSE MCP3204::Channel::SINGLE_2
+//#define CH_CUR_REF   MCP3204::Channel::SINGLE_3
 #define ADC_VREF     5000     // 5.0V Vref
 
 /*
@@ -205,7 +204,7 @@ static CAN_message_t tx_msg;
 /**
  * ADC Declaration
  */
-MCP3204 ADC(ADC_VREF, ADC_CS);
+//MCP3204 ADC(ADC_VREF, ADC_CS);
 
 /**
  * BMS State Variables
@@ -415,8 +414,6 @@ void loop() {
         }
     }
 
-    tx_msg.timeout = 4; // Use blocking mode, wait up to 4ms to send each message instead of immediately failing (keep in mind this is slower)
-
     bms_status.write(tx_msg.buf);
     tx_msg.id = ID_BMS_STATUS;
     tx_msg.len = sizeof(bms_status);
@@ -466,8 +463,6 @@ void loop() {
         bms_balancing_status[i].write(tx_msg.buf);
         CAN.write(tx_msg);
     }
-
-    tx_msg.timeout = 0;
 
     if (timer_watchdog_timer.check() && !fh_watchdog_test) { // Send alternating keepalive signal to watchdog timer
         watchdog_high = !watchdog_high;
@@ -1134,22 +1129,22 @@ void parse_can_message() {
     }
 }
 
-int16_t get_current() {
-    /*
-     * Current sensor: ISB-100-A-604
-     * Maximum positive current (100A) corresponds to 4.5V signal
-     * Maximum negative current (-100A) corresponds to 0.5V signal
-     * 0A current corresponds to 2.5V signal
-     *
-     * voltage = read_adc() * 5 / 4095
-     * current = (voltage - 2.5) * 100 / 2
-     */
-    double voltage = read_adc(CH_CUR_SENSE) / (double) 819;
-    double ref_voltage = read_adc(CH_CUR_REF) / (double) 819;
-    double current = (voltage - ref_voltage) * (double) 50;
-
-    return (int16_t) (current * 100); // Current in Amps x 100
-}
+//int16_t get_current() {
+//    /*
+//     * Current sensor: ISB-100-A-604
+//     * Maximum positive current (100A) corresponds to 4.5V signal
+//     * Maximum negative current (-100A) corresponds to 0.5V signal
+//     * 0A current corresponds to 2.5V signal
+//     *
+//     * voltage = read_adc() * 5 / 4095
+//     * current = (voltage - 2.5) * 100 / 2
+//     */
+//    double voltage = read_adc(CH_CUR_SENSE) / (double) 819;
+//    double ref_voltage = read_adc(CH_CUR_REF) / (double) 819;
+//    double current = (voltage - ref_voltage) * (double) 50;
+//
+//    return (int16_t) (current * 100); // Current in Amps x 100
+//}
 
 void integrate_current() {
     int delta = get_current();
@@ -1178,10 +1173,10 @@ void process_coulombs() {
 /*
  * Helper function reads from ADC then sets SPI settings such that isoSPI will continue to work
  */
-uint16_t read_adc(MCP3204::Channel channel) {
-    noInterrupts(); // Since timer interrupt triggers SPI communication, we don't want it to interrupt other SPI communication
-    uint16_t retval = ADC.read(channel) / 2;
-    interrupts();
-    spi_enable(SPI_CLOCK_DIV16); // Reconfigure 1MHz SPI clock speed after ADC reading so LTC communication is successful
-    return retval;
-}
+//uint16_t read_adc(MCP3204::Channel channel) {
+//    noInterrupts(); // Since timer interrupt triggers SPI communication, we don't want it to interrupt other SPI communication
+//    uint16_t retval = ADC.read(channel) / 2;
+//    interrupts();
+//    spi_enable(SPI_CLOCK_DIV16); // Reconfigure 1MHz SPI clock speed after ADC reading so LTC communication is successful
+//    return retval;
+//}

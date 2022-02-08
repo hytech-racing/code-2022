@@ -1,7 +1,7 @@
 /*
  * Teensy 3.2 Main Control Unit code
  * Written by Ethan Weinstock with assistance from Shaan Dhawan
- * 
+ *
  * Rev 10 - 6/16/2021
  * FSAE Nevada
  */
@@ -13,7 +13,6 @@
 #include "ADC_SPI.h"
 #include "HyTech_FlexCAN.h"
 #include "HyTech_CAN.h"
-#include "kinetis_flexcan.h"
 #include "Metro.h"
 
 #include "drivers.h"
@@ -174,9 +173,7 @@ void setup() {
 
     /* Configure CAN rx interrupt */
     interrupts();
-    NVIC_ENABLE_IRQ(IRQ_CAN_MESSAGE);
-    attachInterruptVector(IRQ_CAN_MESSAGE,parse_can_message);
-    FLEXCAN0_IMASK1 = FLEXCAN_IMASK1_BUF5M;
+    CAN.onReceive(parse_can_message);
     /* Configure CAN rx interrupt */
 
     delay(500);
@@ -548,7 +545,6 @@ inline void software_shutdown() {
         }
     }
     else {
-      /*
         // if the software ok based signals are high, software ok is false
         if ((mcu_status.get_shutdown_inputs() & 0xC0) != 0) { //need to do testing with this line
             mcu_status.set_software_is_ok(false);
@@ -605,83 +601,80 @@ inline void software_shutdown() {
 }
 
 /* Parse incoming CAN messages */
-void parse_can_message() {
-    static CAN_message_t rx_msg;
-    while (CAN.read(rx_msg)) {
-        switch (rx_msg.id) {
-            case ID_MC_VOLTAGE_INFORMATION:        mc_voltage_information.load(rx_msg.buf);        break;
-            case ID_MC_INTERNAL_STATES:            mc_internal_states.load(rx_msg.buf);            break;
-            case ID_MC_CURRENT_INFORMATION:       
-                mc_current_information.load(rx_msg.buf);
-                process_total_discharge();
-                break;
-            case ID_MC_MOTOR_POSITION_INFORMATION: mc_motor_position_information.load(rx_msg.buf); break;
-            case ID_BMS_TEMPERATURES:              bms_temperatures.load(rx_msg.buf);              break;
-            case ID_BMS_VOLTAGES:                  bms_voltages.load(rx_msg.buf);                  break;
-            case ID_BMS_COULOMB_COUNTS:            bms_coulomb_counts.load(rx_msg.buf);            break;
-            case ID_BMS_STATUS:
-                bms_status.load(rx_msg.buf);
-                // BMS heartbeat timer
-                timer_bms_heartbeat.reset();
-                timer_bms_heartbeat.interval(BMS_HEARTBEAT_TIMEOUT);
-                break;
-            case ID_DASHBOARD_STATUS:
-                dashboard_status.load(rx_msg.buf);
+void parse_can_message(CAN_message_t &rx_msg) {
+    switch (rx_msg.id) {
+        case ID_MC_VOLTAGE_INFORMATION:        mc_voltage_information.load(rx_msg.buf);        break;
+        case ID_MC_INTERNAL_STATES:            mc_internal_states.load(rx_msg.buf);            break;
+        case ID_MC_CURRENT_INFORMATION:
+            mc_current_information.load(rx_msg.buf);
+            process_total_discharge();
+            break;
+        case ID_MC_MOTOR_POSITION_INFORMATION: mc_motor_position_information.load(rx_msg.buf); break;
+        case ID_BMS_TEMPERATURES:              bms_temperatures.load(rx_msg.buf);              break;
+        case ID_BMS_VOLTAGES:                  bms_voltages.load(rx_msg.buf);                  break;
+        case ID_BMS_COULOMB_COUNTS:            bms_coulomb_counts.load(rx_msg.buf);            break;
+        case ID_BMS_STATUS:
+            bms_status.load(rx_msg.buf);
+            // BMS heartbeat timer
+            timer_bms_heartbeat.reset();
+            timer_bms_heartbeat.interval(BMS_HEARTBEAT_TIMEOUT);
+            break;
+        case ID_DASHBOARD_STATUS:
+            dashboard_status.load(rx_msg.buf);
 
-                // timer_dashboard_heartbeat.reset();
-                // timer_dashboard_heartbeat.interval(DASH_HEARTBEAT_TIMEOUT);
-                /* process dashboard buttons */
-                if (dashboard_status.get_mode_btn()){
-                    switch (mcu_status.get_torque_mode()){
-                        case 1:
-                            mcu_status.set_max_torque(TORQUE_2);
-                            mcu_status.set_torque_mode(2); break;
-                        case 2:
-                            mcu_status.set_max_torque(TORQUE_3);
-                            mcu_status.set_torque_mode(3); break;
-                        case 3:
-                            mcu_status.set_max_torque(TORQUE_1);
-                            mcu_status.set_torque_mode(1); break;
-                    }
+            // timer_dashboard_heartbeat.reset();
+            // timer_dashboard_heartbeat.interval(DASH_HEARTBEAT_TIMEOUT);
+            /* process dashboard buttons */
+            if (dashboard_status.get_mode_btn()){
+                switch (mcu_status.get_torque_mode()){
+                    case 1:
+                        mcu_status.set_max_torque(TORQUE_2);
+                        mcu_status.set_torque_mode(2); break;
+                    case 2:
+                        mcu_status.set_max_torque(TORQUE_3);
+                        mcu_status.set_torque_mode(3); break;
+                    case 3:
+                        mcu_status.set_max_torque(TORQUE_1);
+                        mcu_status.set_torque_mode(1); break;
                 }
-                if (dashboard_status.get_launch_ctrl_btn()){
-                    mcu_status.toggle_launch_ctrl_active();
-                }
-                if (dashboard_status.get_mc_cycle_btn()){
-                    reset_inverter();
-                }
-                // eliminate all action buttons to not process twice
-                dashboard_status.set_button_flags(0);
-                break;
-            #if BMS_DEBUG_ENABLE
-            case ID_BMS_DETAILED_TEMPERATURES: {
-                BMS_detailed_temperatures temp_det_temp = BMS_detailed_temperatures(rx_msg.buf);
-                bms_detailed_temperatures[temp_det_temp.get_ic_id()].load(rx_msg.buf);
-                break;
             }
-            case ID_BMS_DETAILED_VOLTAGES: {
-                BMS_detailed_voltages temp_det_volt = BMS_detailed_voltages(rx_msg.buf);
-                bms_detailed_voltages[temp_det_volt.get_ic_id()][temp_det_volt.get_group_id()].load(rx_msg.buf);
-                break;
+            if (dashboard_status.get_launch_ctrl_btn()){
+                mcu_status.toggle_launch_ctrl_active();
             }
-            case ID_BMS_ONBOARD_TEMPERATURES:
-                bms_onboard_temperatures.load(rx_msg.buf);
-                break;
-            case ID_BMS_ONBOARD_DETAILED_TEMPERATURES: {
-                BMS_onboard_detailed_temperatures temp_onboard_det_temp = BMS_onboard_detailed_temperatures(rx_msg.buf);
-                bms_onboard_detailed_temperatures[temp_onboard_det_temp.get_ic_id()].load(rx_msg.buf);
-                break;
+            if (dashboard_status.get_mc_cycle_btn()){
+                reset_inverter();
             }
-            case ID_BMS_BALANCING_STATUS: {
-                BMS_balancing_status temp = BMS_balancing_status(rx_msg.buf);
-                bms_balancing_status[temp.get_group_id()].load(rx_msg.buf);
-                break;
-            }
-            case ID_MCU_ANALOG_READINGS:
-                mcu_analog_readings.load(rx_msg.buf);
-                break;
-            #endif
+            // eliminate all action buttons to not process twice
+            dashboard_status.set_button_flags(0);
+            break;
+        #if BMS_DEBUG_ENABLE
+        case ID_BMS_DETAILED_TEMPERATURES: {
+            BMS_detailed_temperatures temp_det_temp = BMS_detailed_temperatures(rx_msg.buf);
+            bms_detailed_temperatures[temp_det_temp.get_ic_id()].load(rx_msg.buf);
+            break;
         }
+        case ID_BMS_DETAILED_VOLTAGES: {
+            BMS_detailed_voltages temp_det_volt = BMS_detailed_voltages(rx_msg.buf);
+            bms_detailed_voltages[temp_det_volt.get_ic_id()][temp_det_volt.get_group_id()].load(rx_msg.buf);
+            break;
+        }
+        case ID_BMS_ONBOARD_TEMPERATURES:
+            bms_onboard_temperatures.load(rx_msg.buf);
+            break;
+        case ID_BMS_ONBOARD_DETAILED_TEMPERATURES: {
+            BMS_onboard_detailed_temperatures temp_onboard_det_temp = BMS_onboard_detailed_temperatures(rx_msg.buf);
+            bms_onboard_detailed_temperatures[temp_onboard_det_temp.get_ic_id()].load(rx_msg.buf);
+            break;
+        }
+        case ID_BMS_BALANCING_STATUS: {
+            BMS_balancing_status temp = BMS_balancing_status(rx_msg.buf);
+            bms_balancing_status[temp.get_group_id()].load(rx_msg.buf);
+            break;
+        }
+        case ID_MCU_ANALOG_READINGS:
+            mcu_analog_readings.load(rx_msg.buf);
+            break;
+        #endif
     }
 }
 

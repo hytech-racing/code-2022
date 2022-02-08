@@ -1,6 +1,6 @@
 #pragma once
 #include "Arduino.h"
-#include <Metro.h>
+#include <Metro_AVR.h>
 
 class DebouncedButton {
 public:
@@ -36,5 +36,3 @@ private:
     int pin;
     Metro metro;
 };
-
-

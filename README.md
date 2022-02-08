@@ -20,13 +20,10 @@ Repository for all of the code for the 2021-2022 car.
 
 ## Github Software Guidelines and Electrical Designs Rules Review Process
 Follow HyTech's [Github Software Guidelines](https://gtvault.sharepoint.com/:w:/r/sites/HyTechRacing2/Shared%20Documents/Electrical%20-%20All/HT06/Guidelines%20Rules%20and%20Procedures/Github%20Software%20Guidelines.docx?d=w7e0d7e36afeb47b5a935bd7a4851bceb&csf=1&web=1&e=sudzjV) to understand our development flow and pull request procedure.
-Follow HyTech's [Electrical Designs Rules Review Process](https://gtvault.sharepoint.com/:w:/r/sites/HyTechRacing2/Shared%20Documents/Electrical%20-%20All/HT06/Guidelines%20Rules%20and%20Procedures/Electrical%20Designs%20Rules%20Review%20Process.docx?d=w0277498dfb4b4b9fbfad0e5db8a187c8&csf=1&web=1&e=LDFCNz) to understand circuit design flow. 
+Follow HyTech's [Electrical Designs Rules Review Process](https://gtvault.sharepoint.com/:w:/r/sites/HyTechRacing2/Shared%20Documents/Electrical%20-%20All/HT06/Guidelines%20Rules%20and%20Procedures/Electrical%20Designs%20Rules%20Review%20Process.docx?d=w0277498dfb4b4b9fbfad0e5db8a187c8&csf=1&web=1&e=LDFCNz) to understand circuit design flow.
 
 ## Organization
-* `CellTesting/`  Code related to battery cell testing
 * `Libraries/`    Library files that are needed to compile our code (you can create a symlink from your Arduino libraries folder to this)
-* `Playground/`   Location for testing and proof of concept code
-* `Resources/`    Files that might help you as you work on HyTech software projects
 * `Telemetry/`    Telemetry visualization and logging software
 * `Utilities/`    Software utilities for testing and programming various systems
 * `Vehicle/`      Code for the vehicle's onboard systems

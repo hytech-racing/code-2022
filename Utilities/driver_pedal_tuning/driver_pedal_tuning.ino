@@ -3,7 +3,6 @@
 #include "ADC_SPI.h"
 #include "HyTech_FlexCAN.h"
 #include "HyTech_CAN.h"
-#include "kinetis_flexcan.h"
 #include "Metro.h"
 
 float filtered_accel1_reading{};
@@ -57,10 +56,10 @@ void loop() {
       Serial.print("ACCEL 2: "); Serial.println(filtered_accel2_reading);
       Serial.print("BRAKE 1: "); Serial.println(filtered_brake1_reading);
       Serial.print("BRAKE 2: "); Serial.println(filtered_brake2_reading);
-  
+
       if (filtered_brake1_reading > BRAKE_ACTIVE)
           Serial.println("Brake pedal active");
-  
+
       Serial.println("----------------------------\nAccel 1 Check");
       if (filtered_accel1_reading < MIN_ACCELERATOR_PEDAL_1) {
           Serial.print("Accel 1 is below minimum threshold of  "); Serial.print(MIN_ACCELERATOR_PEDAL_1); Serial.println(". Fault.");
@@ -72,7 +71,7 @@ void loop() {
       if (filtered_accel1_reading > MAX_ACCELERATOR_PEDAL_1) {
           Serial.print("Accel 1 is above maximum threshold of "); Serial.print(MAX_ACCELERATOR_PEDAL_1); Serial.println(". Fault.");
       }
-  
+
       Serial.println("----------------------------\nAccel 2 Check");
       if (filtered_accel2_reading > MIN_ACCELERATOR_PEDAL_2) {
           Serial.print("Accel 2 is below minimum threshold of "); Serial.print(MIN_ACCELERATOR_PEDAL_2); Serial.println(". Fault.");

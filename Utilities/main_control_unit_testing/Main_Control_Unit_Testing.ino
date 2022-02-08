@@ -2,7 +2,7 @@
 #include <ADC_SPI.h>
 #include <HyTech_FlexCAN.h>
 #include <HyTech_CAN.h>
-#include <kinetis_flexcan.h>
+
 #include <Metro.h>
 #include <Wire.h>
 #include <MCP23S17.h>

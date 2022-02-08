@@ -8,7 +8,7 @@
 
 #include <HyTech_FlexCAN.h>
 #include <HyTech_CAN.h>
-#include <kinetis_flexcan.h>
+
 
 #define TOTAL_IC 8                      // Number of ICs in the system
 #define CELLS_PER_IC 9                  // Number of cells per IC

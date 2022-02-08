@@ -1,12 +1,11 @@
 #include "HyTech_FlexCAN.h"
 
 #include "MockCAN.h"
-#include "kinetis_flexcan.h"
 #include "Interrupts.h"
 
 inline void setBase(uint32_t& packed, int tx, int rx) { packed = tx << 16 | rx; }
 
-inline void getBase(uint32_t packed, int& tx, int& rx) { 
+inline void getBase(uint32_t packed, int& tx, int& rx) {
 	tx = packed >> 16;
 	rx = packed & 0xFFFF;
 }
@@ -55,7 +54,7 @@ void FlexCAN::setFilter(const CAN_filter_t &filter, uint8_t n) {
 	if (valid) defaultMask = filter;
 	else defaultMask.id = ~0u;
 }
-void FlexCAN::end(void) { 
+void FlexCAN::end(void) {
 	int txPin, rxPin;
 	getBase(flexcanBase, txPin, rxPin);
 	pinMode(txPin, UNUSED); pinMode(rxPin, UNUSED);
@@ -69,8 +68,8 @@ void FlexCAN::end(void) {
 
 int FlexCAN::available(void) { return true; }
 
-int FlexCAN::write(const CAN_message_t &msg) { 
-	if (defaultMask.id == ~0u) 
+int FlexCAN::write(const CAN_message_t &msg) {
+	if (defaultMask.id == ~0u)
 		throw CANException("CAN configuration not valid");
 	MockCAN::vehicle_write(msg);
 
@@ -83,11 +82,11 @@ int FlexCAN::write(const CAN_message_t &msg) {
 }
 
 int FlexCAN::read(CAN_message_t &msg) {
-	if (defaultMask.id == ~0u) 
+	if (defaultMask.id == ~0u)
 		throw CANException("CAN configuration not valid");
 	do {
 		if (!MockCAN::vehicle_read(msg))
-			return false; 
+			return false;
 	} while (msg.rtr == defaultMask.rtr && msg.id == defaultMask.id && msg.ext == defaultMask.ext);
 	return true;
 }

@@ -6,11 +6,9 @@
  */
 #define GPS_EN false
 #include <SD.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_ADXL345_U.h>
 #include <HyTech_FlexCAN.h>
 #include <HyTech_CAN.h>
-#include <kinetis_flexcan.h>
+
 #include <Wire.h>
 #include <TimeLib.h>
 #include <Metro.h>

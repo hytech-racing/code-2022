@@ -1,8 +1,8 @@
 #include "Dashboard.h"
 #include "DebouncedButton.h"
 #include "HyTech_CAN.h"
-#include "mcp_can.h"
-#include "Metro.h"
+#include "HyTech_MCP_CAN.h"
+#include "metro_AVR.h"
 #include "VariableLED.h"
 
 // only send if receiving mcu status messages
@@ -36,7 +36,7 @@ Dashboard_status dashboard_status{};
 MC_fault_codes mc_fault_codes{};
 MCU_status mcu_status{};
 
-Metro timer_mcu_heartbeat(0, 1);
+Metro timer_mcu_heartbeat(0);
 
 inline void led_update();
 inline void read_can();
@@ -59,7 +59,7 @@ void setup() {
     pinMode(LED_START,  OUTPUT);
 
     //Initiallizes CAN
-    while (CAN_OK != CAN.begin(CAN_500KBPS))              // init can bus : baudrate = 250K
+    while (CAN_OK != CAN.begin(CAN_500KBPS))              // init can bus : baudrate = 500K
     {
         delay(200);
     }

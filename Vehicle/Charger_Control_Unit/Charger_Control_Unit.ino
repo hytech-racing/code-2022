@@ -7,7 +7,7 @@
 
 #include <HyTech_FlexCAN.h>
 #include <HyTech_CAN.h>
-#include <kinetis_flexcan.h>
+
 #include <Metro.h>
 
 #define TOTAL_IC 8                      // Number of ICs in the system
