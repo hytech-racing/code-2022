@@ -20,6 +20,7 @@ MCU_status mcu_status;
 int error = 0;
 // Test inertia switch CAN message flag
 #define INERTIA_TEST
+int status = 0;
 // Test non error codes
 #define NON_ERROR_TEST 0
 // Test priority on 7-seg
@@ -27,7 +28,8 @@ int error = 0;
 // Test button inputs
 #define BUTTON_TEST 0
 
-inline void send_msg(int id, int len);
+inline void mc_fault_test();
+inline void mcu_status_test();
 inline void read_msg();
 inline void msg_print();
 
@@ -55,32 +57,26 @@ void loop() {
         // mc err send
         case 0: 
           mc_fault_codes.set_post_fault_lo(0x1);
-          memcpy(msg.buf, &mc_fault_codes, sizeof(uint64_t));
-          send_msg(ID_MC_FAULT_CODES, 8);
-          delay(100);
-          read_msg();
-          dashboard_status.load(msg.buf);
+          mc_fault_test();
           Serial.print(dashboard_status.get_mc_error_led());
+          error++;
+          mc_fault_codes = new MC_fault_codes();
           break;
         // BMS/AMS err send
         case 1:
           mcu_status.set_bms_ok_high(false);
-          memcpy(msg.buf, &mcu_status, 7);
-          send_msg(ID_MCU_STATUS, 7);
-          delay(100);
-          read_msg();
-          dashboard_status.load(msg.buf);
+          mcu_status_test();
           Serial.println(dashboard_status.get_ams_led());
+          error++;
+          mcu_status = new MCU_status();
           break;
         // IMD err send
         case 2:
           mcu_status.set_imd_ok_high(false);
-          memcpy(msg.buf, &mcu_status, 7);
-          send_msg(ID_MCU_STATUS, 7);
-          delay(100);
-          read_msg();
-          dashboard_status.load(msg.buf);
+          mcu_status_test();
           Serial.println(dashboard_status.get_imd_led());
+          error++;
+          mcu_status = new MCU_status();
           break;
         default:
           break;
@@ -97,47 +93,126 @@ void loop() {
     }
     
   } else if (NON_ERROR_TEST) {
-    
+    if (timer_can_inertia.check()) {
+      switch(status) {
+        // Start LED - startup
+        case 0:
+          mcu_status.set_state(MCU_STATE::STARTUP);
+          mcu_status_test();
+          Serial.println(dashboard_status.get_start_led());
+          status++;
+          mcu_status = new MCU_status();
+          break;
+        // Start LED - Tractive Not Active
+        case 1:
+          mcu_status.set_state(MCU_STATE::TRACTIVE_SYSTEM_NOT_ACTIVE);
+          mcu_status_test();
+          Serial.println(dashboard_status.get_start_led());
+          status++;
+          mcu_status = new MCU_status();
+          break;
+        // Start LED - Tractive Active
+        case 2:
+          mcu_status.set_state(MCU_STATE::TRACTIVE_SYSTEM_ACTIVE);
+          mcu_status_test();
+          Serial.println(dashboard_status.get_start_led());
+          status++;
+          mcu_status = new MCU_status();
+          break;
+        // Start LED - Ready to Drive
+        case 3:
+          mcu_status.set_state(MCU_STATE::READY_TO_DRIVE);
+          mcu_status_test();
+          Serial.println(dashboard_status.get_start_led());
+          status++;
+          mcu_status = new MCU_status();
+          break;
+        // Mode LED - Off
+        case 4:
+          mcu_status.set_torque_mode(0);
+          mcu_status_test();
+          Serial.println(dashboard_status.get_mode_led());
+          status++;
+          mcu_status = new MCU_status();
+          break;
+        // Mode LED - Fast
+        case 4:
+          mcu_status.set_torque_mode(1);
+          mcu_status_test();
+          Serial.println(dashboard_status.get_mode_led());
+          status++;
+          mcu_status = new MCU_status();
+          break;
+        // Mode LED - On
+        case 4:
+          mcu_status.set_torque_mode(2);
+          mcu_status_test();
+          Serial.println(dashboard_status.get_mode_led());
+          status++;
+          mcu_status = new MCU_status();
+          break;
+        default:
+          break;
+      }
+    } 
   } else if (PRIORITY_TEST) {
     
   } else if (BUTTON_TEST) {
     
   }
-  //     if (timer_can.check()) { // Send a message on CAN
-  //         msg.id = 0x1;
-  //         msg.len = sizeof(uint32_t);
-
-  //         memcpy(msg.buf, &t, sizeof(uint32_t));
-  //         CAN.write(msg);
-  //         Serial.print("Sent 0x");
-  //         Serial.print(msg.id, HEX);
-  //         Serial.print(": ");
-  //         for (unsigned int i = 0; i < msg.len; i++) {
-  //             Serial.print(msg.buf[i]);
-  //             Serial.print(" ");
-  //         }
-  //         Serial.println();
-  //         digitalWrite(22, HIGH);
-  //     }
-
-  //     if (timer_light.check()) { // Turn off LED
-  //         digitalWrite(2, LOW);
-  //     }
 }
 
-inline void send_msg(int id, int len) {
-  msg.id = id;
-  msg.len = len;
+// Set mcu_status buffer before calling this method
+inline void mcu_status_test() {
+  // Construct and print mcu_status message
+  memcpy(msg.buf, &mcu_status, 7);
+  msg.id = ID_MCU_STATUS;
+  msg.len = 7;
   msg_print();
+
+  // Write to CAN
   CAN.write(msg);
+
+  // Delay and then read return message
+  delay(100);
+  read_msg();
+
+  // Load return message buffer into dash
+  dashboard_status.load(msg.buf);
+
+  // Print desired status flag after returning from this method
+  // Serial.println(dashboard_status.get_ams_led());
+}
+
+// Set mc_fault_codes buffer before calling this method
+inline void mc_fault_test() {
+  // Construct and print mc_fault_codes message
+  memcpy(msg.buf, &mc_fault_codes, 8);
+  msg.id = ID_MC_FAULT_CODES;
+  msg.len = 8;
+  msg_print();
+
+  // Write to CAN
+  CAN.write(msg);
+
+  // Delay and then read return message
+  delay(100);
+  read_msg();
+
+  // Load return message buffer into dash
+  dashboard_status.load(msg.buf);
+
+  // Print desired status flag after returning from this method
+  // Serial.println(dashboard_status.get_ams_led());
 }
 
 inline void read_msg() {
-  //does this need an availability check?
-  //
+  // Can return message availability check
   while(!CAN.available()) {
     delay(10);
   }
+
+  // Read in return message and print to console
   CAN.read(msg);
   msg_print();
 }
