@@ -85,7 +85,7 @@ myCan.enableMBInterrupt(FIFO); // enables FIFO to be interrupt enabled
 
 A general callback printout for CAN2.0 and CANFD is the following (remove the FD from CANFD for the message structure if using CAN2.0 mode):
 ```
-void canSniff(const CANFD_message_t &msg) {
+void canSniff(CANFD_message_t &msg) {
   Serial.print("MB "); Serial.print(msg.mb);
   Serial.print("  OVERRUN: "); Serial.print(msg.flags.overrun);
   Serial.print("  LEN: "); Serial.print(msg.len);
@@ -179,9 +179,9 @@ In the background, the library has 3 weak functions used for interrupt driven fr
 An example of this is TeensyCAN, which uses one of the 3 weak functions, leaving 2 available for other libraries, if needed.
 
 ```
-extern void ext_outputFD1(const CANFD_message_t &msg); // Interrupt data output, not filtered, for external libraries, FD
-extern void ext_outputFD2(const CANFD_message_t &msg);
-extern void ext_outputFD3(const CANFD_message_t &msg); // TeensyCAN uses this one.
+extern void ext_outputFD1(CANFD_message_t &msg); // Interrupt data output, not filtered, for external libraries, FD
+extern void ext_outputFD2(CANFD_message_t &msg);
+extern void ext_outputFD3(CANFD_message_t &msg); // TeensyCAN uses this one.
 extern void ext_output1(CAN_message_t &msg); // Interrupt data output, not filtered, for external libraries, CAN2.0
 extern void ext_output2(CAN_message_t &msg);
 extern void ext_output3(CAN_message_t &msg); // TeensyCAN uses this one.

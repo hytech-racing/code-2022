@@ -10,14 +10,9 @@
 # UserInterface
 # xbee-micropython
 
-# Adafruit ADXL345
-add_library 				( ADXL345 SHARED ${LIB}/Adafruit_ADXL345/Adafruit_ADXL345_U.cpp )
-target_include_directories	( ADXL345 PUBLIC ${LIB}/Adafruit_ADXL345 )
-target_link_libraries		( ADXL345 PUBLIC ADAFRUIT_SENSOR CORE WIRE )
-
 # Adafruit GPS
-add_library					( ADAFRUIT_GPS SHARED ${LIB}/Adafruit_GPS-master/Adafruit_GPS.cpp )
-target_include_directories	( ADAFRUIT_GPS PUBLIC ${LIB}/Adafruit_GPS-master )
+add_library					( ADAFRUIT_GPS SHARED ${LIB}/Adafruit_GPS/Adafruit_GPS.cpp )
+target_include_directories	( ADAFRUIT_GPS PUBLIC ${LIB}/Adafruit_GPS )
 target_link_libraries		( ADAFRUIT_GPS PUBLIC CORE )
 
 # Adafruit Sensor
@@ -55,8 +50,8 @@ target_include_directories	( MCP23S17 PUBLIC ${LIB}/MCP23S17 )
 target_link_libraries		( MCP23S17 PUBLIC SPI )
 
 # Metro
-add_library					( METRO SHARED ${LIB}/Metro/Metro.cpp )
-target_include_directories	( METRO PUBLIC ${LIB}/Metro )
+add_library					( METRO SHARED ${LIB}/Metro_AVR/Metro_AVR.cpp )
+target_include_directories	( METRO PUBLIC ${LIB}/Metro_AVR )
 target_link_libraries		( METRO PUBLIC CORE )
 
 # VehicleUtilities
@@ -64,6 +59,6 @@ add_library					( VEHICLE_UTILITIES INTERFACE )
 target_include_directories	( VEHICLE_UTILITIES INTERFACE ${LIB}/VehicleUtilities )
 target_link_libraries		( VEHICLE_UTILITIES INTERFACE CORE METRO )
 
-# XBTools
-add_library					( XBTOOLS SHARED ${LIB}/XBTools/XBTools.c )
-target_include_directories	( METRO PUBLIC ${LIB}/XBTools )
+# xbee_tools
+add_library					( xbee_tools SHARED ${LIB}/xbee_tools/xbee_tools.c )
+target_include_directories	( METRO PUBLIC ${LIB}/xbee_tools )

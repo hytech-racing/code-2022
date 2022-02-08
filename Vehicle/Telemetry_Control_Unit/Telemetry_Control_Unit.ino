@@ -12,7 +12,7 @@
 #include <Wire.h>
 #include <TimeLib.h>
 #include <Metro.h>
-#include <XBTools.h>
+#include <xbee_tools.h>
 #include <Adafruit_GPS.h>
 #include <ADC_SPI.h>
 #define XB Serial2

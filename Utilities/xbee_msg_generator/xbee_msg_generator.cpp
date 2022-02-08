@@ -5,7 +5,7 @@
  * -Ryan Gallaway, 10/21/2018
  */
 #include "../../Libraries/HyTech_CAN/HyTech_CAN.h"
-#include "../../Libraries/XBTools/XBTools.h"
+#include "../../Libraries/xbee_tools/xbee_tools.h"
 #include <iostream>
 #include <fstream>
 #include <iomanip>

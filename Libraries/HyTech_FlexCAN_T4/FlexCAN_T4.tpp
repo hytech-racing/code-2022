@@ -1344,7 +1344,7 @@ FCTP_FUNC bool FCTP_OPT::error(CAN_error_t &error, bool printDetails) {
   return 1;
 }
 
-FCTP_FUNC void FCTP_OPT::printErrors(const CAN_error_t &error) {
+FCTP_FUNC void FCTP_OPT::printErrors(CAN_error_t &error) {
   Serial.print("FlexCAN State: "); Serial.print((char*)error.state);
   if ( error.BIT1_ERR ) Serial.print(", BIT1_ERR");
   if ( error.BIT0_ERR ) Serial.print(", BIT0_ERR");

@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "../Libraries/HyTech_CAN/HyTech_CAN.h"
-#include "../Libraries/XBTools/XBTools.h"
+#include "../Libraries/xbee_tools/xbee_tools.h"
 #include <MQTTClient.h>
 
 typedef struct Telem_message {

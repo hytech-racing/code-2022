@@ -227,7 +227,7 @@ FCTPFD_FUNC uint8_t FCTPFD_OPT::max_mailboxes() {
   return mb_count;
 }
 
-FCTPFD_FUNC int FCTPFD_OPT::write(FLEXCAN_MAILBOX mb_num, const CANFD_message_t &msg) {
+FCTPFD_FUNC int FCTPFD_OPT::write(FLEXCAN_MAILBOX mb_num, CANFD_message_t &msg) {
   uint8_t mbsize = 0;
   volatile uint32_t *mbxAddr = &(*(volatile uint32_t*)(mailbox_offset(mb_num, mbsize)));
 
@@ -241,7 +241,7 @@ FCTPFD_FUNC int FCTPFD_OPT::write(FLEXCAN_MAILBOX mb_num, const CANFD_message_t 
   return 1; // transmit entry accepted //
 }
 
-FCTPFD_FUNC void FCTPFD_OPT::writeTxMailbox(uint8_t mb_num, const CANFD_message_t &frame) {
+FCTPFD_FUNC void FCTPFD_OPT::writeTxMailbox(uint8_t mb_num, CANFD_message_t &frame) {
   CANFD_message_t msg = frame;
   writeIFLAGBit(mb_num);
   uint8_t mbsize = 0;
@@ -432,7 +432,7 @@ FCTPFD_FUNC void FCTPFD_OPT::onReceive(_MBFD_ptr handler) {
   _mainHandler = handler;
 }
 
-FCTPFD_FUNC void FCTPFD_OPT::mbCallbacks(const FLEXCAN_MAILBOX &mb_num, const CANFD_message_t &msg) {
+FCTPFD_FUNC void FCTPFD_OPT::mbCallbacks(const FLEXCAN_MAILBOX &mb_num, CANFD_message_t &msg) {
   if ( mb_num == FIFO ) {
     if ( _mbHandlers[0] ) _mbHandlers[0](msg);
     return;
@@ -475,19 +475,19 @@ FCTPFD_FUNC void FCTPFD_OPT::flexcan_interrupt() {
   FLEXCANb_ESR1(_bus) = FLEXCANb_ESR1(_bus);
 }
 
-FCTPFD_FUNC void FCTPFD_OPT::struct2queueRx(const CANFD_message_t &msg) {
+FCTPFD_FUNC void FCTPFD_OPT::struct2queueRx(CANFD_message_t &msg) {
   uint8_t buf[sizeof(CANFD_message_t)];
   memmove(buf, &msg, sizeof(msg));
   rxBuffer.push_back(buf, sizeof(CANFD_message_t));
 }
 
-FCTPFD_FUNC void FCTPFD_OPT::struct2queueTx(const CANFD_message_t &msg) {
+FCTPFD_FUNC void FCTPFD_OPT::struct2queueTx(CANFD_message_t &msg) {
   uint8_t buf[sizeof(CANFD_message_t)];
   memmove(buf, &msg, sizeof(msg));
   txBuffer.push_back(buf, sizeof(CANFD_message_t));
 }
 
-FCTPFD_FUNC int FCTPFD_OPT::write(const CANFD_message_t &msg) {
+FCTPFD_FUNC int FCTPFD_OPT::write(CANFD_message_t &msg) {
   if ( msg.seq ) {
     if ( !write((FLEXCAN_MAILBOX)getFirstTxBox(), msg) ) struct2queueTx(msg);
     return 1;
@@ -822,6 +822,6 @@ FCTPFD_FUNC void FCTPFD_OPT::mailboxStatus() {
   } // for loop
 }
 
-extern void __attribute__((weak)) ext_outputFD1(const CANFD_message_t &msg);
-extern void __attribute__((weak)) ext_outputFD2(const CANFD_message_t &msg);
-extern void __attribute__((weak)) ext_outputFD3(const CANFD_message_t &msg);
+extern void __attribute__((weak)) ext_outputFD1(CANFD_message_t &msg);
+extern void __attribute__((weak)) ext_outputFD2(CANFD_message_t &msg);
+extern void __attribute__((weak)) ext_outputFD3(CANFD_message_t &msg);

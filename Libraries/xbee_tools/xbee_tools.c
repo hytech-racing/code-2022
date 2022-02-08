@@ -1,4 +1,4 @@
-#include "XBTools.h"
+#include "xbee_tools.h"
 
 /*
  * Calculates a 16-bit checksum of the given data using Fletcher's algorithm

@@ -1,5 +1,5 @@
-#ifndef __XBTOOLS_H__
-#define __XBTOOLS_H__
+#ifndef __xbee_tools_H__
+#define __xbee_tools_H__
 
 #include <stdint.h>
 #include <stddef.h>
