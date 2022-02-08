@@ -29,7 +29,7 @@
 #define INERTIA_READ A1
 
 // IO Expander Number Encodings
-// 1 = Inertia, 2 = MC Err, 3 = Inertia, 4 = IMD
+// 1 = Inertia, 2 = MC Err, 3 = Inertia, 4 = IMD, ..., 10 = default off state
 uint8_t number_encodings[11] = {0b01000000, 0b01111001, 0b00100100, 0b00110000, 0b00011001, 0b00010010, 0b00000010, 0b01111000, 0b10000000, 0b00011000, 0b11111111};
 uint8_t display_list[11] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
 

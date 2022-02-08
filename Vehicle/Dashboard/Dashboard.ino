@@ -132,7 +132,7 @@ inline void led_update(){
     led_start.update();
     led_mode.update();
     // checks display list for first available flag
-    // if no flags set, display turns off (writes 11th entry; sets all IO exp pins high)
+    // if no flags set, display turns off (writes 10th entry; sets all IO exp pins high)
     for (int i = 0; i < 11; i++) {
         if (display_list[i]) {
             expander.digitalWrite(i);

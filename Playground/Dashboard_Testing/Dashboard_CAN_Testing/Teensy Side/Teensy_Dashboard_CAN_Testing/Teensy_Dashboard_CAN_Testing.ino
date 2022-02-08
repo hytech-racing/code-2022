@@ -25,6 +25,8 @@ int status = 0;
 #define NON_ERROR_TEST 0
 // Test priority on 7-seg
 #define PRIORITY_TEST 0
+// Test buzzer control from CAN
+#define BUZZER_TEST 0
 // Test button inputs
 #define BUTTON_TEST 0
 
@@ -44,15 +46,10 @@ void setup() {
 }
 
 void loop() {
+  // Test for different CAN transmitted error signals
+  // Output relevant flag, read dash status, print dash status and relevant flag to console, pause, continue to next flag
   if (ERROR_TEST) {
     if (timer_can.check()) {
-      // Error test performs each error test sequentially (mc err, BMS, IMD)
-      // An error signal is sent via mc_fault_code for mc err
-      // An error signal is sent via mcu_status for BMS and IMD
-      // After signal is sent, a slight delay is added and the dash_status is then read
-      // Error signal and received dash status are printed to console
-      // Specific LED err flag also printed to console
-      
       switch(error) {
         // Mc err send
         case 0: 
@@ -82,7 +79,8 @@ void loop() {
           break;
       }
     }
-  // Wait 1/5 of a second, read CAN, check if inertia led flag set
+  // Test for seeing Inertia switch trip in CAN message from dash
+  // Wait for available CAN message, print dash status and inertia LED flag to console
   } else if (INERTIA_TEST) {
     if (timer_can_inertia.check()) {
       while (CAN.available()) {
@@ -91,7 +89,8 @@ void loop() {
         Serial.println(dashboard_status.get_inertia_led());
       }
     }
-    
+  // Test for different START and MODE LED settings
+  // Output relevant flag, read dash status, print dash status and relevant flag to console, pause, continue to next flag
   } else if (NON_ERROR_TEST) {
     if (timer_can_inertia.check()) {
       switch(status) {
@@ -155,6 +154,8 @@ void loop() {
           break;
       }
     } 
+  // Test priority of different error signals on 7 - segment display
+  // e.g. If MC error is sent to dash followed by a BMS error, BMS error takes precedent and is displayed
   } else if (PRIORITY_TEST) {
     
   } else if (BUTTON_TEST) {
