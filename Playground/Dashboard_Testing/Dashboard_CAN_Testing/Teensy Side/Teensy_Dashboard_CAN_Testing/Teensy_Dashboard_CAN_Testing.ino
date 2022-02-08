@@ -19,7 +19,7 @@ MCU_status mcu_status;
 #define ERROR_TEST 1
 int error = 0;
 // Test inertia switch CAN message flag
-#define INERTIA_TEST
+#define INERTIA_TEST 0
 int status = 0;
 // Test non error codes
 #define NON_ERROR_TEST 0
@@ -54,13 +54,13 @@ void loop() {
       // Specific LED err flag also printed to console
       
       switch(error) {
-        // mc err send
+        // Mc err send
         case 0: 
           mc_fault_codes.set_post_fault_lo(0x1);
           mc_fault_test();
           Serial.print(dashboard_status.get_mc_error_led());
           error++;
-          mc_fault_codes = new MC_fault_codes();
+          mc_fault_codes.load(0);
           break;
         // BMS/AMS err send
         case 1:
@@ -68,7 +68,7 @@ void loop() {
           mcu_status_test();
           Serial.println(dashboard_status.get_ams_led());
           error++;
-          mcu_status = new MCU_status();
+          mcu_status.load(0);
           break;
         // IMD err send
         case 2:
@@ -76,7 +76,7 @@ void loop() {
           mcu_status_test();
           Serial.println(dashboard_status.get_imd_led());
           error++;
-          mcu_status = new MCU_status();
+          mcu_status.load(0);
           break;
         default:
           break;
@@ -85,7 +85,7 @@ void loop() {
   // Wait 1/5 of a second, read CAN, check if inertia led flag set
   } else if (INERTIA_TEST) {
     if (timer_can_inertia.check()) {
-      while (CAN.available) {
+      while (CAN.available()) {
         CAN.read(msg);
         dashboard_status.load(msg.buf);
         Serial.println(dashboard_status.get_inertia_led());
@@ -101,7 +101,7 @@ void loop() {
           mcu_status_test();
           Serial.println(dashboard_status.get_start_led());
           status++;
-          mcu_status = new MCU_status();
+          mcu_status.load(0);
           break;
         // Start LED - Tractive Not Active
         case 1:
@@ -109,7 +109,7 @@ void loop() {
           mcu_status_test();
           Serial.println(dashboard_status.get_start_led());
           status++;
-          mcu_status = new MCU_status();
+          mcu_status.load(0);
           break;
         // Start LED - Tractive Active
         case 2:
@@ -117,7 +117,7 @@ void loop() {
           mcu_status_test();
           Serial.println(dashboard_status.get_start_led());
           status++;
-          mcu_status = new MCU_status();
+          mcu_status.load(0);
           break;
         // Start LED - Ready to Drive
         case 3:
@@ -125,7 +125,7 @@ void loop() {
           mcu_status_test();
           Serial.println(dashboard_status.get_start_led());
           status++;
-          mcu_status = new MCU_status();
+          mcu_status.load(0);
           break;
         // Mode LED - Off
         case 4:
@@ -133,23 +133,23 @@ void loop() {
           mcu_status_test();
           Serial.println(dashboard_status.get_mode_led());
           status++;
-          mcu_status = new MCU_status();
+          mcu_status.load(0);
           break;
         // Mode LED - Fast
-        case 4:
+        case 5:
           mcu_status.set_torque_mode(1);
           mcu_status_test();
           Serial.println(dashboard_status.get_mode_led());
           status++;
-          mcu_status = new MCU_status();
+          mcu_status.load(0);
           break;
         // Mode LED - On
-        case 4:
+        case 6:
           mcu_status.set_torque_mode(2);
           mcu_status_test();
           Serial.println(dashboard_status.get_mode_led());
           status++;
-          mcu_status = new MCU_status();
+          mcu_status.load(0);
           break;
         default:
           break;
