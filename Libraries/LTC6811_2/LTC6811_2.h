@@ -22,9 +22,11 @@
 class LTC6811_2 {
 public:
     LTC6811_2() = default;
-    LTC6811_2(int addr_, int cs_) :
+    LTC6811_2(int addr_) :
             address(addr_),
-            cs(cs_) { };
+            pec_error(false),
+            adc_mode(0x2),
+            discharge_permitted(0x0) { };
     void init();
 
     //write register commands
@@ -89,11 +91,14 @@ public:
     void non_register_cmd(uint16_t cmd_code);
     uint8_t get_cmd_address();
     void generate_pec(const uint8_t *value, uint8_t *pec, int num_bytes);
+    void set_pec_error(bool flag);
+    bool get_pec_error();
     void set_adc_mode(ADC_MODE mode);
-    void set_dischage_permit(DISCHARGE permit);
+    void set_discharge_permit(DISCHARGE permit);
 
 private:
-    uint8_t address = 0x0;
-    uint8_t  adc_mode = 0x2;
-    uint8_t discharge_permitted = 0x0;
+    uint8_t address;
+    bool pec_error;
+    uint8_t  adc_mode;
+    uint8_t discharge_permitted;
 };

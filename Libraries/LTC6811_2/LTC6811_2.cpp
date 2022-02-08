@@ -21,7 +21,7 @@
 // SPI write
 void LTC6811_2::spi_write(uint8_t *cmd, uint8_t *cmd_pec, uint8_t *data, uint8_t *data_pec) {
     SPI.beginTransaction(SPISettings(SPI_SPEED,SPI_BIT_ORDER, SPI_MODE));
-    digitalWrite(SS, low);
+    digitalWrite(SS, LOW);
     SPI.transfer(cmd[0]);
     SPI.transfer(cmd[1]);
     SPI.transfer(cmd_pec[0]);
@@ -31,13 +31,13 @@ void LTC6811_2::spi_write(uint8_t *cmd, uint8_t *cmd_pec, uint8_t *data, uint8_t
     }
     SPI.transfer(data_pec[0]);
     SPI.transfer(data_pec[1]);
-    digitalWrite(SS, high);
+    digitalWrite(SS, HIGH);
     SPI.endTransaction();
 }
 // SPI read; IF CODE DOES NOT WORK, THIS IS A GOOD PLACE TO START DEBUGGING
 void LTC6811_2::spi_read(uint8_t *cmd, uint8_t* cmd_pec, uint8_t *data_in) {
     SPI.beginTransaction(SPISettings(SPI_SPEED, SPI_BIT_ORDER, SPI_MODE));
-    digitalWrite(SS, low);
+    digitalWrite(SS, LOW);
     SPI.transfer(cmd[0]);
     SPI.transfer(cmd[1]);
     SPI.transfer(cmd_pec[0]);
@@ -46,19 +46,19 @@ void LTC6811_2::spi_read(uint8_t *cmd, uint8_t* cmd_pec, uint8_t *data_in) {
     for (int i = 0; i < 8; i++) {
         data_in[i] = SPI.transfer(0); // transfer dummy value over SPI in order to read bytes into data
     }
-    digitalWrite(SS, high);
+    digitalWrite(SS, HIGH);
     SPI.endTransaction();
 }
 
 // SPI command
 void LTC6811_2::spi_cmd(uint8_t *cmd, uint8_t* cmd_pec) {
     SPI.beginTransaction(SPISettings(SPI_SPEED,SPI_BIT_ORDER, SPI_MODE));
-    digitalWrite(SS, low);
+    digitalWrite(SS, LOW);
     SPI.transfer(cmd[0]);
     SPI.transfer(cmd[1]);
     SPI.transfer(cmd_pec[0]);
     SPI.transfer(cmd_pec[1]);
-    digitalWrite(SS, high);
+    digitalWrite(SS, HIGH);
     SPI.endTransaction();
 }
 
@@ -94,6 +94,14 @@ void LTC6811_2::generate_pec(const uint8_t *value, uint8_t *pec, int num_bytes) 
         }
     }
 }
+// setter for PEC error flag
+void LTC6811_2::set_pec_error(bool flag) {
+    pec_error = flag;
+}
+// getter for PEC error flag
+bool LTC6811_2::get_pec_error() {
+    return pec_error;
+}
 // Set the ADC mode per datasheet page 22; NOTE: ADCOPT is updated every time rdcfga is called
 void LTC6811_2::set_adc_mode(ADC_MODE mode) {
     // NOTE: FAST, NORMAL, and FILTERED not well defined for ADCOPT; see datasheet page 61
@@ -101,7 +109,7 @@ void LTC6811_2::set_adc_mode(ADC_MODE mode) {
 }
 
 // Set the discharge permission during cell measurement, see datasheet page 73
-void LTC6811_2::set_dischage_permit(DISCHARGE permit) {
+void LTC6811_2::set_discharge_permit(DISCHARGE permit) {
     discharge_permitted = static_cast<uint8_t>(permit);
 }
 
@@ -162,123 +170,83 @@ void LTC6811_2::read_register_group(uint16_t cmd_code, uint8_t *data) {
     generate_pec(data_in, data_pec, 6);
     // Check if the PEC locally generated on the data that is read in matches the PEC that is read in
     if (data_pec[0] != data_in[6] || data_pec[1] != data_in[7]) {
-        throw 1; // should throw actual exception derived from std::exception but I'm tired and don't wanna learn how
+        // set flag indicating there is a PEC error
+        pec_error = true;
+    } else {
+        // After confirming matching PECs, add the data that was read in to the array that was passed into the function
+        for (int i = 0; i < 6; i++) {
+            data[i] = data_in[i];
+        }
     }
-    // After confirming matching PECs, add the data that was read in to the array that was passed into the function
-    for (int i = 0; i < 6; i++) {
-        data[i] = data_in[i];
-    }
+
 }
 // Read Configuration Register Group A
 Reg_Group_Config LTC6811_2::rdcfga() {
     uint8_t buffer[6];
-    // If PECs do not match, then construct default object
-    try {
-        read_register_group(0x2, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
+    // If PECs do not match, return empty buffer
+    read_register_group(0x2, buffer);
+    return buffer;
 }
 // Read Cell Voltage Register Group A
 Reg_Group_Cell_A LTC6811_2::rdcva() {
     uint8_t buffer[6];
-    try {
-        read_register_group(0x4, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
+    read_register_group(0x4, buffer);
+    return buffer;
 }
 // Read Cell Voltage Register Group B
 Reg_Group_Cell_B LTC6811_2::rdcvb() {
     uint8_t buffer[6];
-    try {
-        read_register_group(0x6, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
+    read_register_group(0x6, buffer);
+        return buffer;
 }
 // Read Cell Voltage Register Group C
 Reg_Group_Cell_C LTC6811_2::rdcvc() {
     uint8_t buffer[6];
-    try {
-        read_register_group(0x8, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
+    read_register_group(0x8, buffer);
+    return {buffer};
 }
 // Read Cell Voltage Register Group D
 Reg_Group_Cell_D LTC6811_2::rdcvd() {
     uint8_t buffer[6];
-    try {
-        read_register_group(0xA, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
+    read_register_group(0xA, buffer);
+    return {buffer};
 }
 // Read Auxiliary Register Group A
 Reg_Group_Aux_A LTC6811_2::rdauxa() {
     uint8_t buffer[6];
-    try {
-        read_register_group(0xC, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
+    read_register_group(0xC, buffer);
+    return {buffer};
+
 }
 // Read Status Register Group A
 Reg_Group_Status_A LTC6811_2::rdstata() {
     uint8_t buffer[6];
-    try {
-        read_register_group(0x10, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
+    read_register_group(0x10, buffer);
+    return {buffer};
 }
 // Read Status Register Group B
 Reg_Group_Status_B LTC6811_2::rdstatb() {
     uint8_t buffer[6];
-    try {
-        read_register_group(0x12, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
+    read_register_group(0x12, buffer);
+    return {buffer};
 }
 // Read S Control Register Group
 Reg_Group_S_Ctrl LTC6811_2::rdsctrl() {
     uint8_t buffer[6];
-    try {
-        read_register_group(0x16, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
+    read_register_group(0x16, buffer);
+    return {buffer};
 }
 // Read PWM Register Group
 Reg_Group_PWM LTC6811_2::rdpwm() {
     uint8_t buffer[6];
-    try {
-        read_register_group(0x22, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
+    read_register_group(0x22, buffer);
+    return {buffer};
 }
 // Read COMM Register Group
 Reg_Group_COMM LTC6811_2::rdcomm() {
     uint8_t buffer[6];
-    try {
-        read_register_group(0x722, buffer);
-        return {buffer};
-    } catch (int error) {
-        return {};
-    }
+    read_register_group(0x722, buffer);
+    return {buffer};
 }
 
 // General non-register command handler
@@ -351,7 +319,7 @@ void LTC6811_2::stcomm() {
  */
 // Wakeup LTC6811 from core SLEEP state and/ or isoSPI IDLE state to ready for ADC measurements or isoSPI comms
 void LTC6811_2::wakeup() {
-    digitalWrite(SS, low);
+    digitalWrite(SS, LOW);
     delay(1); // t_wake is up to 400 microseconds; wait one millisecond here for convenience.
-    digitalWrite(SS, high);
+    digitalWrite(SS, HIGH);
 }
