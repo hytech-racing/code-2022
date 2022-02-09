@@ -51,6 +51,13 @@ inline void mc_fault_codes_received();
 inline void inertia_status();
 
 void setup() {
+    expander.begin();
+
+    for (int i = 0; i < 8; i++) {
+      expander.pinMode(i, OUTPUT);
+      expander.digitalWrite(i, HIGH);
+    }
+  
     btn_mark.begin(BTN_MARK, 100);
     btn_mode.begin(BTN_MODE, 100);
     btn_mc_cycle.begin(BTN_MC_CYCLE, 100);
@@ -65,6 +72,7 @@ void setup() {
     pinMode(LED_START,  OUTPUT);
     pinMode(LED_INERTIA, OUTPUT);
 
+    pinMode(SSOK_READ, INPUT);
     pinMode(INERTIA_READ, INPUT);
     pinMode(SHUTDOWN_H_READ, INPUT);
 
@@ -134,8 +142,8 @@ inline void led_update(){
     // checks display list for first available flag
     // if no flags set, display turns off (writes 10th entry; sets all IO exp pins high)
     for (int i = 0; i < 11; i++) {
-        if (display_list[i]) {
-            expander.digitalWrite(i);
+        if (display_list[i] == 1) {
+            expander.digitalWrite(number_encodings[i]);
             break;
         } 
     }

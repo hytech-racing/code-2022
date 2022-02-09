@@ -11,6 +11,8 @@ Metro timer_can_inertia = Metro(200);
 Dashboard_status dashboard_status;
 MC_fault_codes mc_fault_codes;
 MCU_status mcu_status;
+//buffer to 0 out mcu_status
+uint8_t buf[8] = {0};
 
 // Error LED stays on for one second on dash after receiving error code
 //mcu_status 8 bytes
@@ -33,7 +35,7 @@ int status = 0;
 inline void mc_fault_test();
 inline void mcu_status_test();
 inline void read_msg();
-inline void msg_print();
+inline void msg_print(bool Sent);
 
 void setup() {
   Serial.begin(115200); // Initialize serial for PC communication
@@ -46,38 +48,41 @@ void setup() {
 }
 
 void loop() {
+  delay(1000);
   // Test for different CAN transmitted error signals
   // Output relevant flag, read dash status, print dash status and relevant flag to console, pause, continue to next flag
   if (ERROR_TEST) {
-    if (timer_can.check()) {
-      switch(error) {
-        // Mc err send
-        case 0: 
+    switch(error) {
+      // Mc err send
+      case 0: 
           mc_fault_codes.set_post_fault_lo(0x1);
           mc_fault_test();
-          Serial.print(dashboard_status.get_mc_error_led());
+          Serial.println(dashboard_status.get_mc_error_led());
           error++;
-          mc_fault_codes.load(0);
+          mc_fault_codes.load(buf);
           break;
-        // BMS/AMS err send
-        case 1:
-          mcu_status.set_bms_ok_high(false);
-          mcu_status_test();
-          Serial.println(dashboard_status.get_ams_led());
-          error++;
-          mcu_status.load(0);
-          break;
-        // IMD err send
-        case 2:
-          mcu_status.set_imd_ok_high(false);
-          mcu_status_test();
-          Serial.println(dashboard_status.get_imd_led());
-          error++;
-          mcu_status.load(0);
-          break;
-        default:
-          break;
-      }
+      // BMS/AMS err send
+      case 1:
+        mcu_status.set_bms_ok_high(false);
+        mcu_status.set_imd_ok_high(true);
+        mcu_status_test();
+        Serial.println(dashboard_status.get_ams_led());
+        error++;
+        //Serial.println("Here");
+        mcu_status.load(buf); 
+        
+        break;
+      // IMD err send
+      case 2:
+        mcu_status.set_bms_ok_high(true);
+        mcu_status.set_imd_ok_high(false);
+        mcu_status_test();
+        Serial.println(dashboard_status.get_imd_led());
+        error++;
+        mcu_status.load(buf);
+        break;
+      default:
+        break;
     }
   // Test for seeing Inertia switch trip in CAN message from dash
   // Wait for available CAN message, print dash status and inertia LED flag to console
@@ -92,6 +97,9 @@ void loop() {
   // Test for different START and MODE LED settings
   // Output relevant flag, read dash status, print dash status and relevant flag to console, pause, continue to next flag
   } else if (NON_ERROR_TEST) {
+    //Serial.println("NON_ERROR_TEST");
+    mcu_status.set_bms_ok_high(true);
+    mcu_status.set_imd_ok_high(true);
     if (timer_can_inertia.check()) {
       switch(status) {
         // Start LED - startup
@@ -100,7 +108,7 @@ void loop() {
           mcu_status_test();
           Serial.println(dashboard_status.get_start_led());
           status++;
-          mcu_status.load(0);
+          mcu_status.load(buf);
           break;
         // Start LED - Tractive Not Active
         case 1:
@@ -108,7 +116,7 @@ void loop() {
           mcu_status_test();
           Serial.println(dashboard_status.get_start_led());
           status++;
-          mcu_status.load(0);
+          mcu_status.load(buf);
           break;
         // Start LED - Tractive Active
         case 2:
@@ -116,7 +124,7 @@ void loop() {
           mcu_status_test();
           Serial.println(dashboard_status.get_start_led());
           status++;
-          mcu_status.load(0);
+          mcu_status.load(buf);
           break;
         // Start LED - Ready to Drive
         case 3:
@@ -124,31 +132,31 @@ void loop() {
           mcu_status_test();
           Serial.println(dashboard_status.get_start_led());
           status++;
-          mcu_status.load(0);
+          mcu_status.load(buf);
           break;
         // Mode LED - Off
         case 4:
-          mcu_status.set_torque_mode(0);
-          mcu_status_test();
-          Serial.println(dashboard_status.get_mode_led());
-          status++;
-          mcu_status.load(0);
-          break;
-        // Mode LED - Fast
-        case 5:
           mcu_status.set_torque_mode(1);
           mcu_status_test();
           Serial.println(dashboard_status.get_mode_led());
           status++;
-          mcu_status.load(0);
+          mcu_status.load(buf);
           break;
-        // Mode LED - On
-        case 6:
+        // Mode LED - Fast
+        case 5:
           mcu_status.set_torque_mode(2);
           mcu_status_test();
           Serial.println(dashboard_status.get_mode_led());
           status++;
-          mcu_status.load(0);
+          mcu_status.load(buf);
+          break;
+        // Mode LED - On
+        case 6:
+          mcu_status.set_torque_mode(3);
+          mcu_status_test();
+          Serial.println(dashboard_status.get_mode_led());
+          status++;
+          mcu_status.load(buf);
           break;
         default:
           break;
@@ -169,7 +177,7 @@ inline void mcu_status_test() {
   memcpy(msg.buf, &mcu_status, 7);
   msg.id = ID_MCU_STATUS;
   msg.len = 7;
-  msg_print();
+  msg_print(true);
 
   // Write to CAN
   CAN.write(msg);
@@ -191,14 +199,14 @@ inline void mc_fault_test() {
   memcpy(msg.buf, &mc_fault_codes, 8);
   msg.id = ID_MC_FAULT_CODES;
   msg.len = 8;
-  msg_print();
+  msg_print(true);
 
   // Write to CAN
   CAN.write(msg);
 
   // Delay and then read return message
   delay(100);
-  read_msg();
+  //read_msg();
 
   // Load return message buffer into dash
   dashboard_status.load(msg.buf);
@@ -210,16 +218,15 @@ inline void mc_fault_test() {
 inline void read_msg() {
   // Can return message availability check
   while(!CAN.available()) {
-    delay(10);
-  }
-
+    delay(5);
+  }  
   // Read in return message and print to console
   CAN.read(msg);
-  msg_print();
+  msg_print(false);
 }
 
-inline void msg_print() {
-  Serial.print("Sent 0x");
+inline void msg_print(bool Sent) {
+  Serial.print(Sent ? "Sent 0x" : "Received 0x");
   Serial.print(msg.id, HEX);
   Serial.print(": ");
   for (unsigned int i = 0; i < msg.len; i++) {
