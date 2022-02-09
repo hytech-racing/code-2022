@@ -16,6 +16,10 @@
 // SPI bit ordering. LTC6811 requires big endian ordering
 #define SPI_BIT_ORDER MSBFIRST
 
+//Variables for the PEC function
+int16 pec15Table[256];
+int16 CRC15_POLY = 0x4599;
+
 /* Note; SPI transfer is a simultaneous send/receive; the spi_write function disregards the received data, and
  * the spi_read function sends dummy values in order to read in values from the slave device. */
 // SPI write
@@ -72,27 +76,33 @@ uint8_t LTC6811_2::get_cmd_address() {
  * pec[0] = bits 14 downto 7 of PEC
  * pec[1] = bits 6 downto 0 of PEC; LSB of pec[1] is a padded zero as per datasheet
  */
-void LTC6811_2::generate_pec(const uint8_t *value, uint8_t *pec, int num_bytes) {
-    pec[0] = 0b00000000;
-    pec[1] = 0b00100000;
-    uint8_t din, in0, in3, in4, in7, in8, in10, in14;
-    for (int i = 0; i < num_bytes; i++) {
-        for (int j = 7; j >= 0; j--) {
-            //isolate current din bit
-            din = value[i] >> j & 0x1;
-            //generate in bits for next PEC
-            in0 = (din ^ (pec[0] >> 7 & 0x1)) << 1;
-            in3 = (in0 >> 1 ^ (pec[1] >> 3 & 0x1)) << 4;
-            in4 = (in0 >> 1 ^ (pec[1] >> 4 & 0x1)) << 5;
-            in7 = (in0 >> 1 ^ (pec[1] >> 7 & 0x1));
-            in8 = (in0 >> 1 ^ (pec[0] & 0x1)) << 1;
-            in10 = (in0 >> 1 ^ (pec[0] >> 2 & 0x1)) << 3;
-            in14 = (in0 >> 1 ^ (pec[0] >> 6 & 0x1)) << 7;
-            //generate new PEC bit strings for next iteration
-            pec[0] = in14 | in10 | in8 | in7 | (pec[0] << 1 & 0b01110100);
-            pec[1] = in4 | in3 | in0 | (pec[1] << 1 & 0b11001100);
+void init_PEC15_Table() {
+    for (int i = 0; i < 256; i++) {
+        remainder   = i << 7;
+        for (int bit = 8; bit > 0; --bit) {
+            if(remainder & 0x4000) {
+                remainder = ((remainder << 1));
+                remainder = (remainder ^ CRC15_POLY)
+            } else {
+                remainder = ((remainder << 1));
+            }
         }
+        pec15Table[i] = remainder&0xFFFF;
     }
+}
+
+//PEC lookup function
+void generate_pec (uint8_t *data, uint8_t pec, int num_bytes) {
+    uint16_t remainder;
+    uint16_t address;
+    remainder = 16; //PEC seed
+    for (int i = 0; i < num_bytes; i++) {
+        address = ((remainder >> 7) ^ data[i]) & 0xff; //calculate PEC table address
+        remainder = (remainder << 8 ) ^ pec15Table[address];
+    }
+    remainder = remainder * 2; //The CRC15 has a 0 in the LSB so the final value must be multiplied by 2
+    pec[0] = (uint8_t) ((remainder >> 8) & 0xFF);
+    pec[1] = (uint8_t) (remainder & 0xFF);
 }
 // setter for PEC error flag
 void LTC6811_2::set_pec_error(bool flag) {

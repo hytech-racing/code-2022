@@ -90,7 +90,8 @@ public:
     void read_register_group(uint16_t cmd_code, uint8_t *data);
     void non_register_cmd(uint16_t cmd_code);
     uint8_t get_cmd_address();
-    void generate_pec(const uint8_t *value, uint8_t *pec, int num_bytes);
+    void init_PEC15_Table();
+    void generate_pec(uint8_t *data, uint8_t *pec, int num_bytes);
     void set_pec_error(bool flag);
     bool get_pec_error();
     void set_adc_mode(ADC_MODE mode);

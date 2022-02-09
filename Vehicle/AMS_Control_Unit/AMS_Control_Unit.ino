@@ -60,16 +60,19 @@ void setup() {
     *  The state machine initializes to the DISCHARGING state
     */
    bms_status.set_state(BMS_STATE_DISCHARGING);
-   
 }
-
+int i = 0;
 void loop() {
+  
   // put your main code here, to run repeatedly:
   if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
     Serial.println("BMS state: Discharging\n");
   }
+  Serial.println(i, DEC);
+  Serial.println();
   read_voltages();
   print_cells();
+  i++;
 }
 
 void read_voltages() {
