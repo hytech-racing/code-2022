@@ -60,40 +60,60 @@ void setup() {
     *  The state machine initializes to the DISCHARGING state
     */
    bms_status.set_state(BMS_STATE_DISCHARGING);
+   
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  
+  if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
+    Serial.println("BMS state: Discharging\n");
+  }
+  read_voltages();
+  print_cells();
 }
 
 void read_voltages() {
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x0, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
-    ic[i].wrcfga(configuration.buf());
-    ic[i].adcv(static_cast<CELL_SELECT>(0));
-    delay(202); // delay 202 milliseconds to wait for ADC conversion to finish for 26Hz mode
-    Reg_Group_Cell_A reg_group_a = ic[i].rdcva();
-    Reg_Group_Cell_B reg_group_b = ic[i].rdcvb();
-    Reg_Group_Cell_C reg_group_c = ic[i].rdcvc();
-    Reg_Group_Cell_D reg_group_d = ic[i].rdcvd();
-    for (int j = 0; j < 12; j+= 3) {
-      uint8_t *buf;
-      if (j == 0) {
-        buf = reg_group_a.buf();
-      } else if (j == 3) {
-        buf = reg_group_b.buf();
-      } else if (j ==6) {
-        buf = reg_group_c.buf();
-      } else if (j == 9) {
-        buf = reg_group_d.buf();
-      }
-      for (int k = 0; k < 3; k++) {
-        cell_voltages[i][j + k] = buf[2*k+1] << 8 | buf[2*k];
-      }
-    }
+    Serial.println("starting wrcfga");
+    ic[i].wrcfga(configuration);
+//    ic[i].adcv(static_cast<CELL_SELECT>(0));
+//    delay(202); // delay 202 milliseconds to wait for ADC conversion to finish for 26Hz mode
+//    Reg_Group_Cell_A reg_group_a = ic[i].rdcva();
+//    Reg_Group_Cell_B reg_group_b = ic[i].rdcvb();
+//    Reg_Group_Cell_C reg_group_c = ic[i].rdcvc();
+//    Reg_Group_Cell_D reg_group_d = ic[i].rdcvd();
+//    for (int j = 0; j < 12; j+= 3) {
+//      uint8_t *buf;
+//      if (j == 0) {
+//        buf = reg_group_a.buf();
+//      } else if (j == 3) {
+//        buf = reg_group_b.buf();
+//      } else if (j ==6) {
+//        buf = reg_group_c.buf();
+//      } else if (j == 9) {
+//        buf = reg_group_d.buf();
+//      }
+//      for (int k = 0; k < 3; k++) {
+//        cell_voltages[i][j + k] = buf[2*k+1] << 8 | buf[2*k];
+//      }
+//    }
   }
+}
+
+void print_cells() {
+    Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
+    Serial.println("\t\t\t\tRaw Cell Voltages\t\t\t\t\t\t\tCell Status (Ignoring or Balancing)");
+    Serial.println("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\t\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8");
+    for (int ic = 0; ic < TOTAL_IC; ic++) {
+        Serial.print("IC"); Serial.print(ic); Serial.print("\t");
+        for (int cell = 0; cell < EVEN_IC_CELLS; cell++) {
+            Serial.print(cell_voltages[ic][cell], 4); Serial.print("V\t");
+        }
+        Serial.print("\t");
+        Serial.println();
+    }
 }
 
 // parse incoming CAN messages for CCU status message

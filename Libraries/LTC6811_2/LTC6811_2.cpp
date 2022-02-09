@@ -127,13 +127,14 @@ void LTC6811_2::write_register_group(uint16_t cmd_code, const uint8_t *buffer) {
     uint8_t data_pec[2];
     // generate PEC from command bytes
     generate_pec(cmd, cmd_pec, 2);
-    for (int i = 0; i < 6; i++) {
-        data[i] = buffer[i];
-    }
-    // generate PEC from data bytes
-    generate_pec(data, data_pec, 6);
+//    for (int i = 0; i < 6; i++) {
+//        data[i] = buffer[i];
+//    }
+//    // generate PEC from data bytes
+//    generate_pec(data, data_pec, 6);
     // write out via SPI
-    spi_write(cmd, cmd_pec, data, data_pec);
+    Serial.println("Prepare to spi_write");
+    //spi_write(cmd, cmd_pec, data, data_pec);
 }
 // Write Configuration Register Group A
 void LTC6811_2::wrcfga(Reg_Group_Config reg_group) {
