@@ -18,15 +18,13 @@ uint8_t buf[8] = {0};
 //mcu_status 8 bytes
 
 // Test each can error code (including inertia read)
-#define ERROR_TEST 1
+#define ERROR_TEST 0
 int error = 0;
 // Test inertia switch CAN message flag
 #define INERTIA_TEST 0
 int status = 0;
 // Test non error codes
-#define NON_ERROR_TEST 0
-// Test priority on 7-seg
-#define PRIORITY_TEST 0
+#define NON_ERROR_TEST 1
 // Test buzzer control from CAN
 #define BUZZER_TEST 0
 // Test button inputs
@@ -161,13 +159,16 @@ void loop() {
         default:
           break;
       }
-    } 
-  // Test priority of different error signals on 7 - segment display
-  // e.g. If MC error is sent to dash followed by a BMS error, BMS error takes precedent and is displayed
-  } else if (PRIORITY_TEST) {
-    
+    }
   } else if (BUTTON_TEST) {
-    
+
+  } else if (BUZZER_TEST) {
+    delay(5000);
+    mcu_status.set_activate_buzzer(true);
+    mcu_status_test();
+    delay(1000);
+    mcu_status.set_activate_buzzer(false);
+    mcu_status_test();
   }
 }
 
