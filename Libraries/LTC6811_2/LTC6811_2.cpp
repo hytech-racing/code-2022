@@ -17,25 +17,25 @@
 #define SPI_BIT_ORDER MSBFIRST
 
 //Variables for the PEC function
-int16 pec15Table[256];
-int16 CRC15_POLY = 0x4599;
+uint16_t pec15Table[256];
+uint16_t CRC15_POLY = 0x4599;
 
 /* Note; SPI transfer is a simultaneous send/receive; the spi_write function disregards the received data, and
  * the spi_read function sends dummy values in order to read in values from the slave device. */
 // SPI write
 void LTC6811_2::spi_write(uint8_t *cmd, uint8_t *cmd_pec, uint8_t *data, uint8_t *data_pec) {
     SPI.beginTransaction(SPISettings(SPI_SPEED, SPI_BIT_ORDER, SPI_MODE));
-    digitalWrite(SS, LOW);
-    SPI.transfer(cmd[0]);
-    SPI.transfer(cmd[1]);
-    SPI.transfer(cmd_pec[0]);
-    SPI.transfer(cmd_pec[1]);
-    for (int i = 0; i < 6; i++) {
-        SPI.transfer(data[i]);
-    }
-    SPI.transfer(data_pec[0]);
-    SPI.transfer(data_pec[1]);
-    digitalWrite(SS, HIGH);
+//    digitalWrite(SS, LOW);
+//    SPI.transfer(cmd[0]);
+//    SPI.transfer(cmd[1]);
+//    SPI.transfer(cmd_pec[0]);
+//    SPI.transfer(cmd_pec[1]);
+//    for (int i = 0; i < 6; i++) {
+//        SPI.transfer(data[i]);
+//    }
+//    SPI.transfer(data_pec[0]);
+//    SPI.transfer(data_pec[1]);
+//    digitalWrite(SS, HIGH);
     SPI.endTransaction();
 }
 // SPI read; IF CODE DOES NOT WORK, THIS IS A GOOD PLACE TO START DEBUGGING
@@ -76,7 +76,7 @@ uint8_t LTC6811_2::get_cmd_address() {
  * pec[0] = bits 14 downto 7 of PEC
  * pec[1] = bits 6 downto 0 of PEC; LSB of pec[1] is a padded zero as per datasheet
  */
- void init_PEC15_Table() {
+ void LTC6811_2::init_PEC15_Table() {
      for (int i = 0; i < 256; i++) {
          uint16_t remainder   = i << 7;
          for (int bit = 8; bit > 0; --bit) {
@@ -92,7 +92,7 @@ uint8_t LTC6811_2::get_cmd_address() {
  }
 
 //PEC lookup function
-void generate_pec (uint8_t *data, uint8_t *pec, int num_bytes) {
+void LTC6811_2::generate_pec(uint8_t *data, uint8_t *pec, int num_bytes) {
     uint16_t remainder;
     uint16_t address;
     remainder = 16; //PEC seed
@@ -137,14 +137,14 @@ void LTC6811_2::write_register_group(uint16_t cmd_code, const uint8_t *buffer) {
     uint8_t data_pec[2];
     // generate PEC from command bytes
     generate_pec(cmd, cmd_pec, 2);
-//    for (int i = 0; i < 6; i++) {
-//        data[i] = buffer[i];
-//    }
-//    // generate PEC from data bytes
-//    generate_pec(data, data_pec, 6);
+    for (int i = 0; i < 6; i++) {
+        data[i] = buffer[i];
+    }
+    // generate PEC from data bytes
+    generate_pec(data, data_pec, 6);
     // write out via SPI
     Serial.println("Prepare to spi_write");
-    //spi_write(cmd, cmd_pec, data, data_pec);
+    spi_write(cmd, cmd_pec, data, data_pec);
 }
 // Write Configuration Register Group A
 void LTC6811_2::wrcfga(Reg_Group_Config reg_group) {

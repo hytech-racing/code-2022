@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdint.h>
 #ifdef HT_DEBUG_EN
-#include "Arduino.h"
+#include <Arduino.h>
 #endif
 
 #include "Register Groups/Reg_Group_Aux_A.h"

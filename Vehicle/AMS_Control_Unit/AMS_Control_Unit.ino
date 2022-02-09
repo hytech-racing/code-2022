@@ -44,6 +44,7 @@ void setup() {
   pinMode(5, OUTPUT);
   digitalWrite(6, HIGH); //write Teensy_OK pin high
   Serial.begin(115200);
+  SPI.begin();
   CAN.setBaudRate(500000);
   CAN.begin();
   for (int i = 0; i < 64; i++) { // Fill all filter slots with Charger Control Unit message filter (CAN controller requires filling all slots)
