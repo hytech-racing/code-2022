@@ -146,6 +146,10 @@ int write_xbee_data();
 void send_xbee();
 void sd_date_time(uint16_t* date, uint16_t* time);
 void setup() {
+    /* Set up Serial, XBee and CAN */
+    Serial.begin(115200);
+    XB.begin(115200);
+
     /* Set up real-time clock */
     //Teensy3Clock.set(9999999999); // set time (epoch) at powerup  (COMMENT OUT THIS LINE AND PUSH ONCE RTC HAS BEEN SET!!!!)
     setSyncProvider(getTeensy3Time); // registers Teensy RTC as system time
@@ -154,11 +158,8 @@ void setup() {
     } else {
         Serial.println("System time set to RTC");
     }
-    last_sec_epoch = static_cast<uint64_t> (Teensy3Clock.get());
+    last_sec_epoch = Teensy3Clock.get();
     
-    /* Set up Serial, XBee and CAN */
-    Serial.begin(115200);
-    XB.begin(115200);
     FLEXCAN0_MCR &= 0xFFFDFFFF; // Enables CAN message self-reception
     CAN.begin();
     
@@ -203,7 +204,7 @@ void setup() {
 void loop() {
     /* Process and log incoming CAN messages */
     parse_can_message();
-  read_analog_values();
+    read_analog_values();
     /* Send messages over XBee */
     send_xbee();
     /* Flush data to SD card occasionally */
@@ -301,13 +302,13 @@ void parse_can_message() {
 }
 void write_to_SD(CAN_message_t *msg) { // Note: This function does not flush data to disk! It will happen when the buffer fills or when the above flush timer fires
     // Calculate Time
-    uint64_t sec_epoch = static_cast<uint64_t> (Teensy3Clock.get());
+    //This block is verified to loop through
+    uint64_t sec_epoch = Teensy3Clock.get();
     if (sec_epoch != last_sec_epoch) {
         global_ms_offset = millis() % 1000;
         last_sec_epoch = sec_epoch;
     }
-    uint64_t current_time = sec_epoch * 1000 + millis() % 1000 - global_ms_offset;
-    Serial.println("Current Time: " + current_time);
+    uint64_t current_time = sec_epoch * 1000 + (millis() - global_ms_offset) % 1000;
 
     // Log to SD
     logger.print(current_time);
