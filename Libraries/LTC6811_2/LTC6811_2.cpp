@@ -1,8 +1,9 @@
 #include "LTC6811_2.h"
-#include <SPI.h>
 #include <string.h>
 #include <stdio.h>
 
+// debug mode
+#define DEBUG true
 // SPI slave select pin, as required for Teensy 4.0
 #define SS 10
 // SPI alternate pin definitions (not needed unless using Teensy 3.2 alternate SPI pins)
@@ -25,18 +26,21 @@ uint16_t CRC15_POLY = 0x4599;
 // SPI write
 void LTC6811_2::spi_write(uint8_t *cmd, uint8_t *cmd_pec, uint8_t *data, uint8_t *data_pec) {
     SPI.beginTransaction(SPISettings(SPI_SPEED, SPI_BIT_ORDER, SPI_MODE));
-//    digitalWrite(SS, LOW);
-//    SPI.transfer(cmd[0]);
-//    SPI.transfer(cmd[1]);
-//    SPI.transfer(cmd_pec[0]);
-//    SPI.transfer(cmd_pec[1]);
-//    for (int i = 0; i < 6; i++) {
-//        SPI.transfer(data[i]);
-//    }
-//    SPI.transfer(data_pec[0]);
-//    SPI.transfer(data_pec[1]);
-//    digitalWrite(SS, HIGH);
+    digitalWrite(SS, LOW);
+    SPI.transfer(cmd[0]);
+    SPI.transfer(cmd[1]);
+    SPI.transfer(cmd_pec[0]);
+    SPI.transfer(cmd_pec[1]);
+    for (int i = 0; i < 6; i++) {
+        SPI.transfer(data[i]);
+    }
+    SPI.transfer(data_pec[0]);
+    SPI.transfer(data_pec[1]);
+    digitalWrite(SS, HIGH);
     SPI.endTransaction();
+#if DEBUG
+    Serial.println("SPI write complete.");
+#endif
 }
 // SPI read; IF CODE DOES NOT WORK, THIS IS A GOOD PLACE TO START DEBUGGING
 void LTC6811_2::spi_read(uint8_t *cmd, uint8_t* cmd_pec, uint8_t *data_in) {
@@ -130,8 +134,14 @@ void LTC6811_2::write_register_group(uint16_t cmd_code, const uint8_t *buffer) {
      * cmd[0] = CMD0;
      * cmd[1] = CMD1;
      */
-    auto *cmd_code_bytes = reinterpret_cast<uint8_t *>(cmd_code);
-    uint8_t cmd[2] = {static_cast<uint8_t>(get_cmd_address() | cmd_code_bytes[0]), cmd_code_bytes[1]};
+    uint8_t cmd[2] = {(uint8_t) (get_cmd_address() | cmd_code >> 8), (uint8_t) cmd_code};
+#if DEBUG
+    uint16_t dec_cmd_code = cmd[0] << 8 | cmd[1];
+    Serial.print("Raw Command Code: ");
+    Serial.println(cmd_code, BIN);
+    Serial.print("Addressed Command Code: ");
+    Serial.println(dec_cmd_code, BIN);
+#endif
     uint8_t cmd_pec[2];
     uint8_t data[6];
     uint8_t data_pec[2];
@@ -142,8 +152,13 @@ void LTC6811_2::write_register_group(uint16_t cmd_code, const uint8_t *buffer) {
     }
     // generate PEC from data bytes
     generate_pec(data, data_pec, 6);
-    // write out via SPI
+#if DEBUG
+    uint16_t dec_pec = cmd_pec[0] << 8 | cmd_pec[1];
+    Serial.print("Command PEC: ");
+    Serial.println(dec_pec, BIN);
     Serial.println("Prepare to spi_write");
+#endif
+    // write out via SPI
     spi_write(cmd, cmd_pec, data, data_pec);
 }
 // Write Configuration Register Group A
@@ -169,8 +184,7 @@ void LTC6811_2::wrcomm(Reg_Group_COMM reg_group) {
 void LTC6811_2::read_register_group(uint16_t cmd_code, uint8_t *data) {
     // bytes 0 to 5 data bytes; bytes 6 to 7 PEC bytes
     uint8_t data_in[8];
-    auto *cmd_code_bytes = reinterpret_cast<uint8_t *>(cmd_code);
-    uint8_t cmd[2] = {static_cast<uint8_t>(get_cmd_address() | cmd_code_bytes[0]), cmd_code_bytes[1]};
+    uint8_t cmd[2] = {(uint8_t) (get_cmd_address() | cmd_code >> 8), (uint8_t) cmd_code};
     uint8_t cmd_pec[2];
     uint8_t data_pec[2];
     // Generate PEC from command bytes
@@ -262,8 +276,7 @@ Reg_Group_COMM LTC6811_2::rdcomm() {
 
 // General non-register command handler
 void LTC6811_2::non_register_cmd(uint16_t cmd_code) {
-    auto *cmd_code_bytes = reinterpret_cast<uint8_t *>(cmd_code);
-    uint8_t cmd[2] = {static_cast<uint8_t>(get_cmd_address() | cmd_code_bytes[0]), cmd_code_bytes[1]};
+    uint8_t cmd[2] = {(uint8_t) (get_cmd_address() | cmd_code >> 8), (uint8_t) cmd_code};
     uint8_t cmd_pec[2];
     // generate PEC from command bytes
     generate_pec(cmd, cmd_pec, 2);

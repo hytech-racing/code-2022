@@ -54,6 +54,7 @@ void setup() {
    // add 8 instances of LTC6811_2 to the object array, each addressed appropriately
    for (int i = 0; i < 8; i++) {
     ic[i] = LTC6811_2(i);  
+    ic[i].init_PEC15_Table();
    }
 
    /* Initialize ACU state machine
@@ -66,13 +67,15 @@ int i = 0;
 void loop() {
   
   // put your main code here, to run repeatedly:
-  if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
-    Serial.println("BMS state: Discharging\n");
+  
+  if (i < 1) {
+    if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
+      Serial.println("BMS state: Discharging\n");
+    }
+    Serial.println(i, DEC);
+    read_voltages();
+    print_cells();
   }
-  Serial.println(i, DEC);
-  Serial.println();
-  read_voltages();
-  print_cells();
   i++;
 }
 
@@ -82,27 +85,28 @@ void read_voltages() {
     ic[i].wakeup();
     Serial.println("starting wrcfga");
     ic[i].wrcfga(configuration);
-//    ic[i].adcv(static_cast<CELL_SELECT>(0));
-//    delay(202); // delay 202 milliseconds to wait for ADC conversion to finish for 26Hz mode
-//    Reg_Group_Cell_A reg_group_a = ic[i].rdcva();
-//    Reg_Group_Cell_B reg_group_b = ic[i].rdcvb();
-//    Reg_Group_Cell_C reg_group_c = ic[i].rdcvc();
-//    Reg_Group_Cell_D reg_group_d = ic[i].rdcvd();
-//    for (int j = 0; j < 12; j+= 3) {
-//      uint8_t *buf;
-//      if (j == 0) {
-//        buf = reg_group_a.buf();
-//      } else if (j == 3) {
-//        buf = reg_group_b.buf();
-//      } else if (j ==6) {
-//        buf = reg_group_c.buf();
-//      } else if (j == 9) {
-//        buf = reg_group_d.buf();
-//      }
-//      for (int k = 0; k < 3; k++) {
-//        cell_voltages[i][j + k] = buf[2*k+1] << 8 | buf[2*k];
-//      }
-//    }
+    Serial.println("starting adcv");
+    ic[i].adcv(static_cast<CELL_SELECT>(0));
+    delay(202); // delay 202 milliseconds to wait for ADC conversion to finish for 26Hz mode
+    Reg_Group_Cell_A reg_group_a = ic[i].rdcva();
+    Reg_Group_Cell_B reg_group_b = ic[i].rdcvb();
+    Reg_Group_Cell_C reg_group_c = ic[i].rdcvc();
+    Reg_Group_Cell_D reg_group_d = ic[i].rdcvd();
+    for (int j = 0; j < 12; j+= 3) {
+      uint8_t *buf;
+      if (j == 0) {
+        buf = reg_group_a.buf();
+      } else if (j == 3) {
+        buf = reg_group_b.buf();
+      } else if (j ==6) {
+        buf = reg_group_c.buf();
+      } else if (j == 9) {
+        buf = reg_group_d.buf();
+      }
+      for (int k = 0; k < 3; k++) {
+        cell_voltages[i][j + k] = buf[2*k+1] << 8 | buf[2*k];
+      }
+    }
   }
 }
 
@@ -113,7 +117,7 @@ void print_cells() {
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         Serial.print("IC"); Serial.print(ic); Serial.print("\t");
         for (int cell = 0; cell < EVEN_IC_CELLS; cell++) {
-            Serial.print(cell_voltages[ic][cell], 4); Serial.print("V\t");
+            Serial.print(cell_voltages[ic][cell] / 10000.0, 4); Serial.print("V\t");
         }
         Serial.print("\t");
         Serial.println();

@@ -1,8 +1,9 @@
 #pragma once
 #include <string.h>
 #include <stdint.h>
-#ifdef HT_DEBUG_EN
+#include <SPI.h>
 #include <Arduino.h>
+#ifdef HT_DEBUG_EN
 #endif
 
 #include "Register Groups/Reg_Group_Aux_A.h"
