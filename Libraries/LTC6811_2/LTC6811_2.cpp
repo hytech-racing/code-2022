@@ -17,10 +17,6 @@
 // SPI bit ordering. LTC6811 requires big endian ordering
 #define SPI_BIT_ORDER MSBFIRST
 
-//Variables for the PEC function
-uint16_t pec15Table[256];
-uint16_t CRC15_POLY = 0x4599;
-
 /* Note; SPI transfer is a simultaneous send/receive; the spi_write function disregards the received data, and
  * the spi_read function sends dummy values in order to read in values from the slave device. */
 // SPI write
@@ -91,7 +87,7 @@ uint8_t LTC6811_2::get_cmd_address() {
                  remainder = ((remainder << 1));
              }
          }
-         pec15Table[i] = remainder&0xFFFF;
+         pec15Table_pointer[i] = remainder&0xFFFF;
      }
  }
 
@@ -102,7 +98,7 @@ void LTC6811_2::generate_pec(uint8_t *data, uint8_t *pec, int num_bytes) {
     remainder = 16; //PEC seed
     for (int i = 0; i < num_bytes; i++) {
         address = ((remainder >> 7) ^ data[i]) & 0xff; //calculate PEC table address
-        remainder = (remainder << 8 ) ^ pec15Table[address];
+        remainder = (remainder << 8 ) ^ pec15Table_pointer[address];
     }
     remainder = remainder * 2; //The CRC15 has a 0 in the LSB so the final value must be multiplied by 2
     pec[0] = (uint8_t) ((remainder >> 8) & 0xFF);

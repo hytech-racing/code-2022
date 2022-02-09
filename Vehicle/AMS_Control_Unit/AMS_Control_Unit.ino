@@ -22,6 +22,8 @@
 #define MAX_SUCCESSIVE_FAULTS 20   // Number of successive faults permitted before AMS fault is broadcast over CAN 
 
 // VARIABLE DECLARATIONS
+uint16_t pec15Table[256];          // Array containing lookup table for PEC generator
+uint16_t* LTC6811_2::pec15Table_pointer = pec15Table;   // Pointer to the PEC lookup table
 uint16_t vuv = 1874; // 3V           // Minimum voltage value following datasheet formula: Comparison Voltage = (VUV + 1) • 16 • 100μV
 uint16_t vov = 2625; // 4.2V         // Maximum voltage value following datasheet formula: Comparison Voltage = VOV • 16 • 100μV 
 uint16_t cell_voltages[TOTAL_IC][12]; // 2D Array to hold cell voltages being read in;

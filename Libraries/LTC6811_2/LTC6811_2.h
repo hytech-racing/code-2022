@@ -22,6 +22,10 @@
 
 class LTC6811_2 {
 public:
+    //Variables for the PEC functions
+    static uint16_t* pec15Table_pointer;
+    static const uint16_t CRC15_POLY = 0x4599;
+
     LTC6811_2() = default;
     LTC6811_2(int addr_) :
             address(addr_),
@@ -91,7 +95,7 @@ public:
     void read_register_group(uint16_t cmd_code, uint8_t *data);
     void non_register_cmd(uint16_t cmd_code);
     uint8_t get_cmd_address();
-    void init_PEC15_Table();
+    static void init_PEC15_Table();
     void generate_pec(uint8_t *data, uint8_t *pec, int num_bytes);
     void set_pec_error(bool flag);
     bool get_pec_error();
