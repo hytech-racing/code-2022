@@ -76,23 +76,23 @@ uint8_t LTC6811_2::get_cmd_address() {
  * pec[0] = bits 14 downto 7 of PEC
  * pec[1] = bits 6 downto 0 of PEC; LSB of pec[1] is a padded zero as per datasheet
  */
-void init_PEC15_Table() {
-    for (int i = 0; i < 256; i++) {
-        remainder   = i << 7;
-        for (int bit = 8; bit > 0; --bit) {
-            if(remainder & 0x4000) {
-                remainder = ((remainder << 1));
-                remainder = (remainder ^ CRC15_POLY)
-            } else {
-                remainder = ((remainder << 1));
-            }
-        }
-        pec15Table[i] = remainder&0xFFFF;
-    }
-}
+ void init_PEC15_Table() {
+     for (int i = 0; i < 256; i++) {
+         uint16_t remainder   = i << 7;
+         for (int bit = 8; bit > 0; --bit) {
+             if(remainder & 0x4000) {
+                 remainder = ((remainder << 1));
+                 remainder = (remainder ^ CRC15_POLY);
+             } else {
+                 remainder = ((remainder << 1));
+             }
+         }
+         pec15Table[i] = remainder&0xFFFF;
+     }
+ }
 
 //PEC lookup function
-void generate_pec (uint8_t *data, uint8_t pec, int num_bytes) {
+void generate_pec (uint8_t *data, uint8_t *pec, int num_bytes) {
     uint16_t remainder;
     uint16_t address;
     remainder = 16; //PEC seed
