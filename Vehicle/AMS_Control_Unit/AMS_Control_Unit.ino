@@ -20,13 +20,21 @@
 #define ODD_IC_CELLS 9             // Number of cells monitored by ICS with odd addresses
 #define THERMISTORS_PER_IC 4       // Number of cell temperature monitoring thermistors connected to each IC 
 #define MAX_SUCCESSIVE_FAULTS 20   // Number of successive faults permitted before AMS fault is broadcast over CAN 
+#define MIN_VOLTAGE 30000          // Minimum allowable single cell voltage in units of 100μV
+#define MAX_VOLTAGE 42000          // Maxiumum allowable single cell voltage in units of 100μV
+#define MAX_TOTAL_VOLTAGE 3550000  // Maximum allowable pack total voltage in units of 100μV
 
 // VARIABLE DECLARATIONS
 uint16_t pec15Table[256];          // Array containing lookup table for PEC generator
 uint16_t* LTC6811_2::pec15Table_pointer = pec15Table;   // Pointer to the PEC lookup table
 uint16_t vuv = 1874; // 3V           // Minimum voltage value following datasheet formula: Comparison Voltage = (VUV + 1) • 16 • 100μV
 uint16_t vov = 2625; // 4.2V         // Maximum voltage value following datasheet formula: Comparison Voltage = VOV • 16 • 100μV 
-uint16_t cell_voltages[TOTAL_IC][12]; // 2D Array to hold cell voltages being read in;
+uint16_t cell_voltages[TOTAL_IC][12]; // 2D Array to hold cell voltages being read in; voltages are read in with the base unit as 100μV 
+
+// CONSECUTIVE FAULT COUNTERS: counts successive faults; resets to zero if normal reading breaks fault chain 
+int uv_fault_counter = 0;             // undervoltage fault counter
+int ov_fault_counter = 0;             // overvoltage fault counter
+int pack_ov_fault_counter = 0;        // total voltage overvoltage fault counter
 
 // LTC6811_2 OBJECT DECLARATIONS
 LTC6811_2 ic[8]; 
@@ -70,7 +78,7 @@ void loop() {
   
   // put your main code here, to run repeatedly:
   
-  if (i < 1) {
+  if (i < 50) {
     if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
       Serial.println("BMS state: Discharging\n");
     }
@@ -81,7 +89,14 @@ void loop() {
   i++;
 }
 
+// read voltages from all eight LTC6811-2; voltages are read in with units of 100μV 
 void read_voltages() {
+  uint32_t total_voltage = 0;
+  uint16_t min_voltage = 65535;
+  int min_voltage_location[2]; // [0]: IC#; [1]: Cell#
+  uint16_t max_voltage = 0;
+  int max_voltage_location[2]; // [0]: IC#; [1]: Cell#
+  
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x0, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
@@ -107,8 +122,51 @@ void read_voltages() {
       }
       for (int k = 0; k < 3; k++) {
         cell_voltages[i][j + k] = buf[2*k+1] << 8 | buf[2*k];
+        total_voltage += cell_voltages[i][j + k];
+        if (cell_voltages[i][j + k] < min_voltage) {
+          min_voltage = cell_voltages[i][j + k];
+          min_voltage_location[0] = i;
+          min_voltage_location[1] = j + k;
+        }
+        if (cell_voltages[i][j + k] > max_voltage) {
+          max_voltage = cell_voltages[i][j + k];
+          max_voltage_location[0] = i;
+          max_voltage_location[1] = j + k;
+        }
       }
     }
+  }
+  // detect any uv fault conditions, set appropriate error flags, and print relevant message to console
+  if (min_voltage < MIN_VOLTAGE) { 
+    uv_fault_counter++;
+    Serial.print("UNDERVOLTAGE FAULT: ");
+    Serial.print("IC #: ");
+    Serial.print(min_voltage_location[0]);
+    Serial.print("\tCell #: ");
+    Serial.print(min_voltage_location[1]);
+    Serial.print("\tConsecutive fault #: ");
+    Serial.println(uv_fault_counter);
+    if (uv_fault_counter > MAX_SUCCESSIVE_FAULTS) {
+      bms_status.set_undervoltage(true);
+    }
+  } else {
+    uv_fault_counter = 0;
+  }
+  // detect any ov fault conditions, set appropriate error flags, and print relevant message to console
+  if (max_voltage > MAX_VOLTAGE) { 
+    ov_fault_counter++;
+    Serial.print("OVERVOLTAGE FAULT: ");
+    Serial.print("IC #: ");
+    Serial.print(max_voltage_location[0]);
+    Serial.print("\tCell #: ");
+    Serial.print(max_voltage_location[1]);
+    Serial.print("\tConsecutive fault #: ");
+    Serial.println(ov_fault_counter);
+    if (uv_fault_counter > MAX_SUCCESSIVE_FAULTS) {
+      bms_status.set_overvoltage(true);
+    }
+  } else {
+    ov_fault_counter = 0;
   }
 }
 
