@@ -30,6 +30,7 @@ uint16_t* LTC6811_2::pec15Table_pointer = pec15Table;   // Pointer to the PEC lo
 uint16_t vuv = 1874; // 3V           // Minimum voltage value following datasheet formula: Comparison Voltage = (VUV + 1) • 16 • 100μV
 uint16_t vov = 2625; // 4.2V         // Maximum voltage value following datasheet formula: Comparison Voltage = VOV • 16 • 100μV 
 uint16_t cell_voltages[TOTAL_IC][12]; // 2D Array to hold cell voltages being read in; voltages are read in with the base unit as 100μV 
+uint32_t total_voltage;             // the total voltage of the pack
 
 // CONSECUTIVE FAULT COUNTERS: counts successive faults; resets to zero if normal reading breaks fault chain 
 int uv_fault_counter = 0;             // undervoltage fault counter
@@ -78,20 +79,20 @@ void loop() {
   
   // put your main code here, to run repeatedly:
   
-  if (i < 50) {
+  if (i < 2) {
     if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
       Serial.println("BMS state: Discharging\n");
     }
     Serial.println(i, DEC);
     read_voltages();
     print_cells();
+    i++;
   }
-  i++;
 }
 
 // read voltages from all eight LTC6811-2; voltages are read in with units of 100μV 
 void read_voltages() {
-  uint32_t total_voltage = 0;
+  total_voltage = 0;
   uint16_t min_voltage = 65535;
   int min_voltage_location[2]; // [0]: IC#; [1]: Cell#
   uint16_t max_voltage = 0;
@@ -139,49 +140,52 @@ void read_voltages() {
   // detect any uv fault conditions, set appropriate error flags, and print relevant message to console
   if (min_voltage < MIN_VOLTAGE) { 
     uv_fault_counter++;
-    Serial.print("UNDERVOLTAGE FAULT: ");
-    Serial.print("IC #: ");
-    Serial.print(min_voltage_location[0]);
-    Serial.print("\tCell #: ");
-    Serial.print(min_voltage_location[1]);
-    Serial.print("\tConsecutive fault #: ");
-    Serial.println(uv_fault_counter);
+    Serial.print("UNDERVOLTAGE FAULT: "); Serial.print("IC #: "); Serial.print(min_voltage_location[0]); Serial.print("\tCell #: "); Serial.print(min_voltage_location[1]); Serial.print("\tConsecutive fault #: "); Serial.println(uv_fault_counter);
     if (uv_fault_counter > MAX_SUCCESSIVE_FAULTS) {
       bms_status.set_undervoltage(true);
     }
   } else {
     uv_fault_counter = 0;
+    bms_status.set_undervoltage(false);
   }
   // detect any ov fault conditions, set appropriate error flags, and print relevant message to console
   if (max_voltage > MAX_VOLTAGE) { 
     ov_fault_counter++;
-    Serial.print("OVERVOLTAGE FAULT: ");
-    Serial.print("IC #: ");
-    Serial.print(max_voltage_location[0]);
-    Serial.print("\tCell #: ");
-    Serial.print(max_voltage_location[1]);
-    Serial.print("\tConsecutive fault #: ");
-    Serial.println(ov_fault_counter);
+    Serial.print("OVERVOLTAGE FAULT: "); Serial.print("IC #: "); Serial.print(max_voltage_location[0]); Serial.print("\tCell #: "); Serial.print(max_voltage_location[1]); Serial.print("\tConsecutive fault #: "); Serial.println(ov_fault_counter);
     if (uv_fault_counter > MAX_SUCCESSIVE_FAULTS) {
       bms_status.set_overvoltage(true);
     }
   } else {
     ov_fault_counter = 0;
+    bms_status.set_overvoltage(false);
+    
+  }
+  // detect any pack ov fault conditions, set appropriate error flags, and print relevant message to console
+  if (total_voltage > MAX_TOTAL_VOLTAGE) {
+    pack_ov_fault_counter++;
+    Serial.print("PACK OVERVOLTAGE FAULT: "); Serial.print("\tConsecutive fault #: "); Serial.println(pack_ov_fault_counter);
+    if (pack_ov_fault_counter > MAX_SUCCESSIVE_FAULTS) {
+      bms_status.set_total_voltage_high(true);
+    }
+  } else {
+    pack_ov_fault_counter = 0;
+    bms_status.set_total_voltage_high(false);
   }
 }
 
 void print_cells() {
-    Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
-    Serial.println("\t\t\t\tRaw Cell Voltages\t\t\t\t\t\t\tCell Status (Ignoring or Balancing)");
-    Serial.println("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\t\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8");
-    for (int ic = 0; ic < TOTAL_IC; ic++) {
-        Serial.print("IC"); Serial.print(ic); Serial.print("\t");
-        for (int cell = 0; cell < EVEN_IC_CELLS; cell++) {
-            Serial.print(cell_voltages[ic][cell] / 10000.0, 4); Serial.print("V\t");
-        }
-        Serial.print("\t");
-        Serial.println();
-    }
+  Serial.print("Total pack voltage: "); Serial.print(total_voltage / 10000.0, 4); Serial.println("V");
+  Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
+  Serial.println("Raw Cell Voltages\t\t\t\t\t\t\tCell Status (Ignoring or Balancing)");
+  Serial.println("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\tC9\tC10\tC11");
+  for (int ic = 0; ic < TOTAL_IC; ic++) {
+      Serial.print("IC"); Serial.print(ic); Serial.print("\t");
+      for (int cell = 0; cell < EVEN_IC_CELLS; cell++) {
+          Serial.print(cell_voltages[ic][cell] / 10000.0, 4); Serial.print("V\t");
+      }
+      Serial.print("\t");
+      Serial.println();
+  }
 }
 
 // parse incoming CAN messages for CCU status message
