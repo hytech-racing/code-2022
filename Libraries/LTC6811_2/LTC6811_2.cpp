@@ -117,7 +117,23 @@ void LTC6811_2::set_adc_mode(ADC_MODE mode) {
     // NOTE: FAST, NORMAL, and FILTERED not well defined for ADCOPT; see datasheet page 61
     adc_mode = static_cast<uint8_t>(mode);
 }
+/* Set the delay needed for ADC operations to complete. NOTE: delays for the longer of the two possible times to
+ * accommodate either ADCOPT = 0 or ADCOPT = 1 */
+const void LTC6811_2::adc_delay() {
+     switch(adc_mode) {
+         case 0:
+             delay(13);
+             break;
+         case 1:
+             delayMicroseconds(1300);
+             break;
+         case 2:
+             delayMicroseconds(3100);
+         case 3:
+             delay(203);
+     }
 
+ }
 // Set the discharge permission during cell measurement, see datasheet page 73
 void LTC6811_2::set_discharge_permit(DISCHARGE permit) {
     discharge_permitted = static_cast<uint8_t>(permit);
@@ -239,6 +255,12 @@ Reg_Group_Aux_A LTC6811_2::rdauxa() {
     return {buffer};
 
 }
+// Read Auxiliary Register Group B
+Reg_Group_Aux_B LTC6811_2::rdauxb() {
+    uint8_t buffer[6];
+    read_register_group(0xE, buffer);
+    return {buffer};
+}
 // Read Status Register Group A
 Reg_Group_Status_A LTC6811_2::rdstata() {
     uint8_t buffer[6];
@@ -289,21 +311,25 @@ void LTC6811_2::stsctrl() {
 void LTC6811_2::adcv(CELL_SELECT cell_select) {
     uint16_t adc_cmd = 0x260 | (adc_mode << 7) | (discharge_permitted << 4) | static_cast<uint8_t>(cell_select);
     non_register_cmd(adc_cmd);
+    adc_delay();
 }
 // Start GPIOs ADC Conversion and Poll Status
 void LTC6811_2::adax(GPIO_SELECT gpio_select) {
     uint16_t adc_cmd = 0x460 | (adc_mode << 7) | static_cast<uint8_t>(gpio_select);
     non_register_cmd(adc_cmd);
+    adc_delay();
 }
 // Start Combined Cell Voltage and GPIO1, GPIO2 Conversion and Poll Status
 void LTC6811_2::adcvax() {
     uint16_t adc_cmd = 0x46F | (adc_mode << 7) | (discharge_permitted << 4);
     non_register_cmd(adc_cmd);
+    adc_delay();
 }
 // Start Combined Cell Voltage and SC Conversion and Poll Status
 void LTC6811_2::adcvsc() {
     uint16_t adc_cmd = 0x467 | (adc_mode << 7) | (discharge_permitted << 4);
     non_register_cmd(adc_cmd);
+    adc_delay();
 }
 
 // Clear register commands

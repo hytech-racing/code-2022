@@ -31,6 +31,7 @@ uint16_t vuv = 1874; // 3V           // Minimum voltage value following datashee
 uint16_t vov = 2625; // 4.2V         // Maximum voltage value following datasheet formula: Comparison Voltage = VOV • 16 • 100μV 
 uint16_t cell_voltages[TOTAL_IC][12]; // 2D Array to hold cell voltages being read in; voltages are read in with the base unit as 100μV 
 uint32_t total_voltage;             // the total voltage of the pack
+uint16_t gpio_voltages[TOTAL_IC][6];  // 2D Array to hold GPIO voltages being read in; voltages are read in with the base unit as 100μV
 
 // CONSECUTIVE FAULT COUNTERS: counts successive faults; resets to zero if normal reading breaks fault chain 
 int uv_fault_counter = 0;             // undervoltage fault counter
@@ -98,14 +99,13 @@ void read_voltages() {
   uint16_t max_voltage = 0;
   int max_voltage_location[2]; // [0]: IC#; [1]: Cell#
   
-  Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x0, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
+  Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
     Serial.println("starting wrcfga");
     ic[i].wrcfga(configuration);
     Serial.println("starting adcv");
     ic[i].adcv(static_cast<CELL_SELECT>(0));
-    delay(202); // delay 202 milliseconds to wait for ADC conversion to finish for 26Hz mode
     Reg_Group_Cell_A reg_group_a = ic[i].rdcva();
     Reg_Group_Cell_B reg_group_b = ic[i].rdcvb();
     Reg_Group_Cell_C reg_group_c = ic[i].rdcvc();
@@ -173,6 +173,42 @@ void read_voltages() {
   }
 }
 
+// Read GPIO registers from LTC6811-2; Process temperature and humidity data from relevant GPIO registers
+void read_gpio() {
+  Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
+  for (int i = 0; i < 8; i++) {
+    ic[i].wakeup();
+    Serial.println("starting wrcfga");
+    ic[i].wrcfga(configuration);
+    Serial.println("starting adax");
+    ic[i].adax(static_cast<GPIO_SELECT>(0));
+    Reg_Group_Aux_A reg_group_a = ic[i].rdauxa();
+    Reg_Group_Aux_B reg_group_b = ic[i].rdauxb();
+    for (int j = 0; j < 6; j += 3) {
+      uint8_t *buf;
+      if (j == 0) {
+        buf = reg_group_a.buf();
+      } else if (j == 3) {
+        buf = reg_group_b.buf();
+      }
+      for (int k = 0; k < 3; k++) {
+        gpio_voltages[i][j + k] = buf[2*k+1] << 8 | buf[2*k];
+      }
+    }
+  }
+}
+
+// parse incoming CAN messages for CCU status message
+void parse_can_message() {
+  while (CAN.read(msg)) {
+    if (msg.id == ID_CCU_STATUS) {
+      if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
+        bms_status.set_state(BMS_STATE_CHARGING);
+      }
+    }
+  }
+}
+
 void print_cells() {
   Serial.print("Total pack voltage: "); Serial.print(total_voltage / 10000.0, 4); Serial.println("V");
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
@@ -185,16 +221,5 @@ void print_cells() {
       }
       Serial.print("\t");
       Serial.println();
-  }
-}
-
-// parse incoming CAN messages for CCU status message
-void parse_can_message() {
-  while (CAN.read(msg)) {
-    if (msg.id == ID_CCU_STATUS) {
-      if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
-        bms_status.set_state(BMS_STATE_CHARGING);
-      }
-    }
   }
 }

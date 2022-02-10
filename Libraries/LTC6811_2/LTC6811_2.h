@@ -50,6 +50,7 @@ public:
     Reg_Group_Cell_D rdcvd();
 
     Reg_Group_Aux_A rdauxa();
+    Reg_Group_Aux_B rdauxb();
 
     Reg_Group_Status_A rdstata();
     Reg_Group_Status_B rdstatb();
@@ -100,6 +101,7 @@ public:
     void set_pec_error(bool flag);
     bool get_pec_error();
     void set_adc_mode(ADC_MODE mode);
+    const void adc_delay();
     void set_discharge_permit(DISCHARGE permit);
 
 private:
