@@ -80,7 +80,7 @@ void loop() {
   
   // put your main code here, to run repeatedly:
   
-  if (i < 2) {
+  if (i < 20) {
     if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
       Serial.println("BMS state: Discharging\n");
     }
@@ -99,14 +99,30 @@ void read_voltages() {
   uint16_t max_voltage = 0;
   int max_voltage_location[2]; // [0]: IC#; [1]: Cell#
   
-  Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
+  Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, true, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x9); // base configuration for the configuration register group
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
-    Serial.println("starting wrcfga");
+//    Serial.println("starting wrcfga");
+//    Serial.println("wrfcga configuration");
+//    uint8_t *wrfcga_buf = configuration.buf();
+//    Serial.println(wrfcga_buf[0], BIN);
+//    Serial.println(wrfcga_buf[1], BIN);
+//    Serial.println(wrfcga_buf[2], BIN);
+//    Serial.println(wrfcga_buf[3], BIN);
+//    Serial.println(wrfcga_buf[4], BIN);
+//    Serial.println(wrfcga_buf[5], BIN);
     ic[i].wrcfga(configuration);
-    Serial.println("starting adcv");
+//    Serial.println("starting adcv");
     ic[i].adcv(static_cast<CELL_SELECT>(0));
     Reg_Group_Cell_A reg_group_a = ic[i].rdcva();
+//    Reg_Group_Config reg_group_config = ic[i].rdcfga();
+//    Serial.println("wrfcga readback: ");
+//    Serial.println(reg_group_config.buf()[0], BIN);
+//    Serial.println(reg_group_config.buf()[1], BIN);
+//    Serial.println(reg_group_config.buf()[2], BIN);
+//    Serial.println(reg_group_config.buf()[3], BIN);
+//    Serial.println(reg_group_config.buf()[4], BIN);
+//    Serial.println(reg_group_config.buf()[5], BIN);
     Reg_Group_Cell_B reg_group_b = ic[i].rdcvb();
     Reg_Group_Cell_C reg_group_c = ic[i].rdcvc();
     Reg_Group_Cell_D reg_group_d = ic[i].rdcvd();
@@ -116,7 +132,7 @@ void read_voltages() {
         buf = reg_group_a.buf();
       } else if (j == 3) {
         buf = reg_group_b.buf();
-      } else if (j ==6) {
+      } else if (j == 6) {
         buf = reg_group_c.buf();
       } else if (j == 9) {
         buf = reg_group_d.buf();

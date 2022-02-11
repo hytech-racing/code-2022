@@ -1,4 +1,5 @@
 #include "LTC6811_2.h"
+#include "LT_SPI.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -10,19 +11,14 @@
 #define MOSI 7 // pin 11 by default
 #define MISO 8 // pin 12 by default
 #define SCLK 14 // pin 13 by default
-// SPI mode; see LTC6811 datasheet page 44
-#define SPI_MODE SPI_MODE3
-// SPI speed in Hz. LTC6811 max data transfer rate is 1 Mbps, which requires a speed of 1 MHz
-#define SPI_SPEED 1000000
-// SPI bit ordering. LTC6811 requires big endian ordering
-#define SPI_BIT_ORDER MSBFIRST
 
 /* Note; SPI transfer is a simultaneous send/receive; the spi_write function disregards the received data, and
  * the spi_read function sends dummy values in order to read in values from the slave device. */
 // SPI write
 void LTC6811_2::spi_write(uint8_t *cmd, uint8_t *cmd_pec, uint8_t *data, uint8_t *data_pec) {
-    SPI.beginTransaction(SPISettings(SPI_SPEED, SPI_BIT_ORDER, SPI_MODE));
+    SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE3));
     digitalWrite(SS, LOW);
+    delayMicroseconds(1);
     SPI.transfer(cmd[0]);
     SPI.transfer(cmd[1]);
     SPI.transfer(cmd_pec[0]);
@@ -35,12 +31,12 @@ void LTC6811_2::spi_write(uint8_t *cmd, uint8_t *cmd_pec, uint8_t *data, uint8_t
     digitalWrite(SS, HIGH);
     SPI.endTransaction();
 #if DEBUG
-    Serial.println("SPI write complete.");
+    //Serial.println("SPI write complete.");
 #endif
 }
 // SPI read; IF CODE DOES NOT WORK, THIS IS A GOOD PLACE TO START DEBUGGING
 void LTC6811_2::spi_read(uint8_t *cmd, uint8_t* cmd_pec, uint8_t *data_in) {
-    SPI.beginTransaction(SPISettings(SPI_SPEED, SPI_BIT_ORDER, SPI_MODE));
+    SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE3));
     digitalWrite(SS, LOW);
     SPI.transfer(cmd[0]);
     SPI.transfer(cmd[1]);
@@ -48,7 +44,7 @@ void LTC6811_2::spi_read(uint8_t *cmd, uint8_t* cmd_pec, uint8_t *data_in) {
     SPI.transfer(cmd_pec[1]);
     // read in data and PEC; bytes 0 to 5 data bytes; bytes 6 to 7 PEC bytes
     for (int i = 0; i < 8; i++) {
-        data_in[i] = SPI.transfer(0); // transfer dummy value over SPI in order to read bytes into data
+        data_in[i] = SPI.transfer(0xFF); // transfer dummy value over SPI in order to read bytes into data
     }
     digitalWrite(SS, HIGH);
     SPI.endTransaction();
@@ -56,7 +52,7 @@ void LTC6811_2::spi_read(uint8_t *cmd, uint8_t* cmd_pec, uint8_t *data_in) {
 
 // SPI command
 void LTC6811_2::spi_cmd(uint8_t *cmd, uint8_t* cmd_pec) {
-    SPI.beginTransaction(SPISettings(SPI_SPEED,SPI_BIT_ORDER, SPI_MODE));
+    SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE3));
     digitalWrite(SS, LOW);
     SPI.transfer(cmd[0]);
     SPI.transfer(cmd[1]);
@@ -64,6 +60,7 @@ void LTC6811_2::spi_cmd(uint8_t *cmd, uint8_t* cmd_pec) {
     SPI.transfer(cmd_pec[1]);
     digitalWrite(SS, HIGH);
     SPI.endTransaction();
+    adc_delay();
 }
 
 // returns the address of the specific LTC6811-2 chip to send command to
@@ -130,7 +127,9 @@ const void LTC6811_2::adc_delay() {
          case 2:
              delayMicroseconds(3100);
          case 3:
+             //Serial.println("begin delay 203 ms");
              delay(203);
+             //Serial.println("end delay 203 ms");
      }
 
  }
@@ -149,10 +148,10 @@ void LTC6811_2::write_register_group(uint16_t cmd_code, const uint8_t *buffer) {
     uint8_t cmd[2] = {(uint8_t) (get_cmd_address() | cmd_code >> 8), (uint8_t) cmd_code};
 #if DEBUG
     uint16_t dec_cmd_code = cmd[0] << 8 | cmd[1];
-    Serial.print("Raw Command Code: ");
-    Serial.println(cmd_code, BIN);
-    Serial.print("Addressed Command Code: ");
-    Serial.println(dec_cmd_code, BIN);
+//    Serial.print("Raw Command Code: ");
+//    Serial.println(cmd_code, BIN);
+//    Serial.print("Addressed Command Code: ");
+//    Serial.println(dec_cmd_code, BIN);
 #endif
     uint8_t cmd_pec[2];
     uint8_t data[6];
@@ -166,9 +165,9 @@ void LTC6811_2::write_register_group(uint16_t cmd_code, const uint8_t *buffer) {
     generate_pec(data, data_pec, 6);
 #if DEBUG
     uint16_t dec_pec = cmd_pec[0] << 8 | cmd_pec[1];
-    Serial.print("Command PEC: ");
-    Serial.println(dec_pec, BIN);
-    Serial.println("Prepare to spi_write");
+//    Serial.print("Command PEC: ");
+//    Serial.println(dec_pec, BIN);
+//    Serial.println("Prepare to spi_write");
 #endif
     // write out via SPI
     spi_write(cmd, cmd_pec, data, data_pec);
@@ -214,8 +213,8 @@ void LTC6811_2::read_register_group(uint16_t cmd_code, uint8_t *data) {
         for (int i = 0; i < 6; i++) {
             data[i] = data_in[i];
         }
+        pec_error = false;
     }
-
 }
 // Read Configuration Register Group A
 Reg_Group_Config LTC6811_2::rdcfga() {
@@ -311,25 +310,21 @@ void LTC6811_2::stsctrl() {
 void LTC6811_2::adcv(CELL_SELECT cell_select) {
     uint16_t adc_cmd = 0x260 | (adc_mode << 7) | (discharge_permitted << 4) | static_cast<uint8_t>(cell_select);
     non_register_cmd(adc_cmd);
-    adc_delay();
 }
 // Start GPIOs ADC Conversion and Poll Status
 void LTC6811_2::adax(GPIO_SELECT gpio_select) {
     uint16_t adc_cmd = 0x460 | (adc_mode << 7) | static_cast<uint8_t>(gpio_select);
     non_register_cmd(adc_cmd);
-    adc_delay();
 }
 // Start Combined Cell Voltage and GPIO1, GPIO2 Conversion and Poll Status
 void LTC6811_2::adcvax() {
     uint16_t adc_cmd = 0x46F | (adc_mode << 7) | (discharge_permitted << 4);
     non_register_cmd(adc_cmd);
-    adc_delay();
 }
 // Start Combined Cell Voltage and SC Conversion and Poll Status
 void LTC6811_2::adcvsc() {
     uint16_t adc_cmd = 0x467 | (adc_mode << 7) | (discharge_permitted << 4);
     non_register_cmd(adc_cmd);
-    adc_delay();
 }
 
 // Clear register commands
@@ -366,7 +361,7 @@ void LTC6811_2::stcomm() {
 // Wakeup LTC6811 from core SLEEP state and/ or isoSPI IDLE state to ready for ADC measurements or isoSPI comms
 void LTC6811_2::wakeup() {
     digitalWrite(SS, LOW);
-    delayMicroseconds(1); // a pulse at least 240nS is required; the CS pulse is 300nS, so wait 1uS for convenience.
+    SPI.transfer(0xFF);
     digitalWrite(SS, HIGH);
-    delayMicroseconds(400); //t_wake is 400 milliseconds; wait that long to ensure device has turned on.
+    delayMicroseconds(400); //t_wake is 400 microseconds; wait that long to ensure device has turned on.
 }
