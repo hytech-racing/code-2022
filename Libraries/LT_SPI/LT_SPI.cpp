@@ -277,7 +277,6 @@ int8_t spi_read(int8_t  data) //!The data byte to be written
 // void quikeval_SPI_init(void)  // Initializes SPI
 // {
 //   spi_enable(SPI_CLOCK_DIV32);  //! 2) Configure the spi port for 4MHz SCK
-// }
 //
 // // Setup the processor for hardware SPI communication.
 // // Must be called before using the other SPI routines.

@@ -1,5 +1,4 @@
 #include "LTC6811_2.h"
-#include "LT_SPI.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -29,6 +28,7 @@ void LTC6811_2::spi_write_reg(uint8_t *cmd, uint8_t *cmd_pec, uint8_t *data, uin
     SPI.transfer(data_pec[0]);
     SPI.transfer(data_pec[1]);
     digitalWrite(SS, HIGH);
+    delayMicroseconds(1);
     SPI.endTransaction();
 #if DEBUG
     //Serial.println("SPI write complete.");
@@ -38,15 +38,18 @@ void LTC6811_2::spi_write_reg(uint8_t *cmd, uint8_t *cmd_pec, uint8_t *data, uin
 void LTC6811_2::spi_read_reg(uint8_t *cmd, uint8_t* cmd_pec, uint8_t *data_in) {
     SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE3));
     digitalWrite(SS, LOW);
+    delayMicroseconds(1);
     SPI.transfer(cmd[0]);
     SPI.transfer(cmd[1]);
     SPI.transfer(cmd_pec[0]);
     SPI.transfer(cmd_pec[1]);
     // read in data and PEC; bytes 0 to 5 data bytes; bytes 6 to 7 PEC bytes
     for (int i = 0; i < 8; i++) {
-        data_in[i] = SPI.transfer(0xFF); // transfer dummy value over SPI in order to read bytes into data
+        data_in[i] = SPI.transfer(0); // transfer dummy value over SPI in order to read bytes into data
+        Serial.print("SPI in byte: "); Serial.println(data_in[i], BIN);
     }
     digitalWrite(SS, HIGH);
+    delayMicroseconds(1);
     SPI.endTransaction();
 }
 
@@ -54,11 +57,13 @@ void LTC6811_2::spi_read_reg(uint8_t *cmd, uint8_t* cmd_pec, uint8_t *data_in) {
 void LTC6811_2::spi_cmd(uint8_t *cmd, uint8_t* cmd_pec) {
     SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE3));
     digitalWrite(SS, LOW);
+    delayMicroseconds(1);
     SPI.transfer(cmd[0]);
     SPI.transfer(cmd[1]);
     SPI.transfer(cmd_pec[0]);
     SPI.transfer(cmd_pec[1]);
     digitalWrite(SS, HIGH);
+    delayMicroseconds(1);
     SPI.endTransaction();
     adc_delay();
 }
@@ -91,11 +96,11 @@ uint8_t LTC6811_2::get_cmd_address() {
 //PEC lookup function
 void LTC6811_2::generate_pec(uint8_t *data, uint8_t *pec, int num_bytes) {
     uint16_t remainder;
-    uint16_t address;
+    uint16_t addr;
     remainder = 16; //PEC seed
     for (int i = 0; i < num_bytes; i++) {
-        address = ((remainder >> 7) ^ data[i]) & 0xff; //calculate PEC table address
-        remainder = (remainder << 8 ) ^ pec15Table_pointer[address];
+        addr = ((remainder >> 7) ^ data[i]) & 0xff; //calculate PEC table address
+        remainder = (remainder << 8 ) ^ pec15Table_pointer[addr];
     }
     remainder = remainder * 2; //The CRC15 has a 0 in the LSB so the final value must be multiplied by 2
     pec[0] = (uint8_t) ((remainder >> 8) & 0xFF);
@@ -148,10 +153,10 @@ void LTC6811_2::write_register_group(uint16_t cmd_code, const uint8_t *buffer) {
     uint8_t cmd[2] = {(uint8_t) (get_cmd_address() | cmd_code >> 8), (uint8_t) cmd_code};
 #if DEBUG
     uint16_t dec_cmd_code = cmd[0] << 8 | cmd[1];
-//    Serial.print("Raw Command Code: ");
-//    Serial.println(cmd_code, BIN);
-//    Serial.print("Addressed Command Code: ");
-//    Serial.println(dec_cmd_code, BIN);
+    Serial.print("Raw Command Code: ");
+    Serial.println(cmd_code, BIN);
+    Serial.print("Addressed Command Code: ");
+    Serial.println(dec_cmd_code, BIN);
 #endif
     uint8_t cmd_pec[2];
     uint8_t data[6];
@@ -205,15 +210,22 @@ void LTC6811_2::read_register_group(uint16_t cmd_code, uint8_t *data) {
     // generate PEC from read-in data bytes
     generate_pec(data_in, data_pec, 6);
     // Check if the PEC locally generated on the data that is read in matches the PEC that is read in
-    if (data_pec[0] != data_in[6] || data_pec[1] != data_in[7]) {
-        // set flag indicating there is a PEC error
-        pec_error = true;
-    } else {
+    if ((data_pec[0] == data_in[6]) || (data_pec[1] == data_in[7])) {
         // After confirming matching PECs, add the data that was read in to the array that was passed into the function
         for (int i = 0; i < 6; i++) {
             data[i] = data_in[i];
         }
         pec_error = false;
+        Serial.println("PEC OK");
+    } else {
+        // set flag indicating there is a PEC error
+        for (int i = 0; i < 6; i++) {
+            data[i] = data_in[i];
+        }
+        pec_error = true;
+        Serial.println("PEC Error");
+        Serial.print("LTC PEC: "); Serial.print(data_in[6], BIN); Serial.println(data_in[7], BIN);
+        Serial.print("Calculated PEC: "); Serial.print(data_pec[0], BIN); Serial.println(data_pec[1], BIN);
     }
 }
 // Read Configuration Register Group A
@@ -361,7 +373,8 @@ void LTC6811_2::stcomm() {
 // Wakeup LTC6811 from core SLEEP state and/ or isoSPI IDLE state to ready for ADC measurements or isoSPI comms
 void LTC6811_2::wakeup() {
     digitalWrite(SS, LOW);
-    SPI.transfer(0xFF);
+    delayMicroseconds(1);
+    SPI.transfer(0);
     digitalWrite(SS, HIGH);
     delayMicroseconds(400); //t_wake is 400 microseconds; wait that long to ensure device has turned on.
 }
