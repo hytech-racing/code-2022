@@ -7,12 +7,12 @@ close all
 %% Torque, Vehicle Speed, Current
 figure
 
-requested_torque = S.requested_torque;
-commanded_torque = S.commanded_torque;
-feedback_torque = S.torque_feedback;
-busCurrent = S.dc_bus_current;
-busVoltage = S.dc_bus_voltage;
-motor_speed = S.motor_speed;
+requested_torque = S.requested_torque; % ok
+commanded_torque = S.commanded_torque; % commanded_torque = S.command_torque_limit;
+feedback_torque = S.torque_feedback; % torque_mode?
+busCurrent = S.dc_bus_current; % no dc bus current
+busVoltage = S.dc_bus_voltage; % no dc bus voltage
+motor_speed = S.motor_speed; % no motor speed
 vehicle_speed_mph = motor_speed;
 vehicle_speed_mph(:,2) = -motor_speed(:,2).*0.225.*0.000284091.*pi.*60;
 hold on
@@ -28,11 +28,11 @@ title('Torque, Speed, Current')
 %% Pedal Input Traces
 figure
 
-front_brakes_data = S.MCU_pedal_brake(:, 2);
-front_brakes_time = S.MCU_pedal_brake(:, 1);
+front_brakes_data = S.MCU_pedal_brake(:, 2); % no mcu pedal brake
+front_brakes_time = S.MCU_pedal_brake(:, 1); % no mcu pedal brake - mcu_state?
 
-pedal_data = S.MCU_pedal_accel_1(:, 2);
-pedal_time = S.MCU_pedal_accel_1(:, 1);
+pedal_data = S.MCU_pedal_accel_1(:, 2); % no mcu pedal accel 1
+pedal_time = S.MCU_pedal_accel_1(:, 1); % no mcu pedal accel 1
 
 % Normalizing and cleaning pedal traces
 front_brakes_data = front_brakes_data - mode(front_brakes_data);
@@ -55,8 +55,8 @@ legend({'Accelerator Pedal Position','Brake Pressure'})
 
 %% DC Bus Current, DC Bus Voltage, and Calculated DC Power Output
 figure
-voltage = S.dc_bus_voltage;
-current = S.dc_bus_current;
+voltage = S.dc_bus_voltage; % no dc bus voltage
+current = S.dc_bus_current; % no dc bus current
 
 % Data uniqueness
 for i = 1:length(voltage(:,1))
@@ -72,8 +72,8 @@ voltage_adj = interp1(voltage(:,1),voltage(:,2),time);
 power = current_adj.*voltage_adj./1000;
 
 hold on
-plot(S.dc_bus_current(:,1), S.dc_bus_current(:,2), '.-');
-plot(S.dc_bus_voltage(:,1), S.dc_bus_voltage(:,2), '.-');
+plot(S.dc_bus_current(:,1), S.dc_bus_current(:,2), '.-'); % no dc bus current
+plot(S.dc_bus_voltage(:,1), S.dc_bus_voltage(:,2), '.-'); % no dc bus voltage
 plot(time, power, '.-')
 grid on
 
@@ -86,13 +86,13 @@ legend({'Current','Voltage','Power'})
 figure
 
 hold on
-plot(S.gate_driver_board_temperature(:,1),S.gate_driver_board_temperature(:,2))
-plot(S.control_board_temperature(:,1),S.control_board_temperature(:,2))
-plot(S.module_a_temperature(:,1),S.module_a_temperature(:,2))
-plot(S.module_b_temperature(:,1),S.module_b_temperature(:,2))
-plot(S.module_c_temperature(:,1),S.module_c_temperature(:,2))
-plot(S.motor_temperature(:,1),S.motor_temperature(:,2))
-plot(S.dc_bus_current(:,1),S.dc_bus_current(:,2)./10)
+plot(S.gate_driver_board_temperature(:,1),S.gate_driver_board_temperature(:,2)) % no gate driver board temperature
+plot(S.control_board_temperature(:,1),S.control_board_temperature(:,2)) % no control board temperature
+plot(S.module_a_temperature(:,1),S.module_a_temperature(:,2)) % no module a temperature
+plot(S.module_b_temperature(:,1),S.module_b_temperature(:,2)) % no module b temperature
+plot(S.module_c_temperature(:,1),S.module_c_temperature(:,2)) % no module c temperature
+plot(S.motor_temperature(:,1),S.motor_temperature(:,2)) % no motor temperature
+plot(S.dc_bus_current(:,1),S.dc_bus_current(:,2)./10) % no dc bus current
 grid on
 
 legend({'MCU Gate Driver Board Temperature','MCU Control Board Temperature','MCU Module A Temperature','MCU Module B Temperature','MCU Module C Temperature','Motor Temperature','Current/10 (A)'})
@@ -103,11 +103,11 @@ title('Cooling Loop Temperature Plots')
 %% Accumulator Cell Temperatures
 figure
 hold on
-plot(S.dc_bus_current(:,1),S.dc_bus_current(:,2)./10)
-plot(S.BMS_average_temperature(:,1),S.BMS_average_temperature(:,2),'.')
-plot(S.BMS_high_temperature(:,1),S.BMS_high_temperature(:,2),'.')
-plot(S.BMS_low_temperature(:,1),S.BMS_low_temperature(:,2),'.')
-ylim([0,50])
+plot(S.dc_bus_current(:,1),S.dc_bus_current(:,2)./10) % no dc bus current
+plot(S.BMS_average_temperature(:,1),S.BMS_average_temperature(:,2),'.') % no bms average temperature
+plot(S.BMS_high_temperature(:,1),S.BMS_high_temperature(:,2),'.') % no bms high temperature
+plot(S.BMS_low_temperature(:,1),S.BMS_low_temperature(:,2),'.') % no bms low temperature 
+ylim([0,50]) % only BMS_state, BMS_total_discharge, BMS_total_charge
 ylabel('Temperature (C)')
 xlabel('Time (s)')
 title('Accumulator Cell Temperatures')
@@ -116,57 +116,57 @@ legend({'Current/10 (A)','BMS Average Temperature','BMS High Temperature','BMS L
 figure
 subplot(2,2,1)
 hold on
-plot(S.IC_0_therm_0(:,1),S.IC_0_therm_0(:,2),'.')
-plot(S.IC_0_therm_1(:,1),S.IC_0_therm_1(:,2),'.')
-plot(S.IC_0_therm_2(:,1),S.IC_0_therm_2(:,2),'.')
-plot(S.IC_1_therm_0(:,1),S.IC_1_therm_0(:,2),'.')
-plot(S.IC_1_therm_1(:,1),S.IC_1_therm_1(:,2),'.')
-plot(S.IC_1_therm_2(:,1),S.IC_1_therm_2(:,2),'.')
+plot(S.IC_0_therm_0(:,1),S.IC_0_therm_0(:,2),'.') % no IC
+plot(S.IC_0_therm_1(:,1),S.IC_0_therm_1(:,2),'.') % no IC
+plot(S.IC_0_therm_2(:,1),S.IC_0_therm_2(:,2),'.') % no IC
+plot(S.IC_1_therm_0(:,1),S.IC_1_therm_0(:,2),'.') % no IC
+plot(S.IC_1_therm_1(:,1),S.IC_1_therm_1(:,2),'.') % no IC
+plot(S.IC_1_therm_2(:,1),S.IC_1_therm_2(:,2),'.') % no IC
 ylabel('Temperature (C)')
 xlabel('Time (s)')
 title('Accumulator Cell Temperatures: Segment 1 Detailed View')
 legend({'Temp1','Temp2','Temp3','Temp4','Temp5','Temp6'},'Location','southeast')
 subplot(2,2,2)
 hold on
-plot(S.IC_2_therm_0(:,1),S.IC_2_therm_0(:,2),'.')
-plot(S.IC_2_therm_1(:,1),S.IC_2_therm_1(:,2),'.')
-plot(S.IC_2_therm_2(:,1),S.IC_2_therm_2(:,2),'.')
-plot(S.IC_3_therm_0(:,1),S.IC_3_therm_0(:,2),'.')
-plot(S.IC_3_therm_1(:,1),S.IC_3_therm_1(:,2),'.')
-plot(S.IC_3_therm_2(:,1),S.IC_3_therm_2(:,2),'.')
+plot(S.IC_2_therm_0(:,1),S.IC_2_therm_0(:,2),'.') % no IC
+plot(S.IC_2_therm_1(:,1),S.IC_2_therm_1(:,2),'.') % no IC
+plot(S.IC_2_therm_2(:,1),S.IC_2_therm_2(:,2),'.') % no IC
+plot(S.IC_3_therm_0(:,1),S.IC_3_therm_0(:,2),'.') % no IC
+plot(S.IC_3_therm_1(:,1),S.IC_3_therm_1(:,2),'.') % no IC
+plot(S.IC_3_therm_2(:,1),S.IC_3_therm_2(:,2),'.') % no IC
 ylabel('Temperature (C)')
 xlabel('Time (s)')
 title('Accumulator Cell Temperatures: Segment 2 Detailed View')
 legend({'Temp1','Temp2','Temp3','Temp4','Temp5','Temp6'},'Location','southeast')
 subplot(2,2,3)
 hold on
-plot(S.IC_4_therm_0(:,1),S.IC_4_therm_0(:,2),'.')
-plot(S.IC_4_therm_1(:,1),S.IC_4_therm_1(:,2),'.')
-plot(S.IC_4_therm_2(:,1),S.IC_4_therm_2(:,2),'.')
-plot(S.IC_5_therm_0(:,1),S.IC_5_therm_0(:,2),'.')
-plot(S.IC_5_therm_1(:,1),S.IC_5_therm_1(:,2),'.')
-plot(S.IC_5_therm_2(:,1),S.IC_5_therm_2(:,2),'.')
+plot(S.IC_4_therm_0(:,1),S.IC_4_therm_0(:,2),'.') % no IC
+plot(S.IC_4_therm_1(:,1),S.IC_4_therm_1(:,2),'.') % no IC
+plot(S.IC_4_therm_2(:,1),S.IC_4_therm_2(:,2),'.') % no IC
+plot(S.IC_5_therm_0(:,1),S.IC_5_therm_0(:,2),'.') % no IC
+plot(S.IC_5_therm_1(:,1),S.IC_5_therm_1(:,2),'.') % no IC
+plot(S.IC_5_therm_2(:,1),S.IC_5_therm_2(:,2),'.') % no IC
 ylabel('Temperature (C)')
 xlabel('Time (s)')
 title('Accumulator Cell Temperatures: Segment 3 Detailed View')
 legend({'Temp1','Temp2','Temp3','Temp4','Temp5','Temp6'},'Location','southeast')
 subplot(2,2,4)
 hold on
-plot(S.IC_6_therm_0(:,1),S.IC_6_therm_0(:,2),'.')
-plot(S.IC_6_therm_1(:,1),S.IC_6_therm_1(:,2),'.')
-plot(S.IC_6_therm_2(:,1),S.IC_6_therm_2(:,2),'.')
-plot(S.IC_7_therm_0(:,1),S.IC_7_therm_0(:,2),'.')
-plot(S.IC_7_therm_1(:,1),S.IC_7_therm_1(:,2),'.')
-plot(S.IC_7_therm_2(:,1),S.IC_7_therm_2(:,2),'.')
+plot(S.IC_6_therm_0(:,1),S.IC_6_therm_0(:,2),'.') % no IC
+plot(S.IC_6_therm_1(:,1),S.IC_6_therm_1(:,2),'.') % no IC
+plot(S.IC_6_therm_2(:,1),S.IC_6_therm_2(:,2),'.') % no IC
+plot(S.IC_7_therm_0(:,1),S.IC_7_therm_0(:,2),'.') % no IC
+plot(S.IC_7_therm_1(:,1),S.IC_7_therm_1(:,2),'.') % no IC
+plot(S.IC_7_therm_2(:,1),S.IC_7_therm_2(:,2),'.') % no IC
 ylabel('Temperature (C)')
 xlabel('Time (s)')
 title('Accumulator Cell Temperatures: Segment 4 Detailed View')
 legend({'Temp1','Temp2','Temp3','Temp4','Temp5','Temp6'},'Location','southeast')
 
 %% Accumulator Capacity Analysis
-current = S.dc_bus_current; %Amps
-motorSpeed = S.motor_speed; %RPM
-voltage = S.dc_bus_voltage; %Volts
+current = S.dc_bus_current; %Amps % no dc bus current
+motorSpeed = S.motor_speed; %RPM % no motor speed
+voltage = S.dc_bus_voltage; %Volts % no dc bus voltage
 motorSpeed(:,2) = motorSpeed(:,2)./60; %Rotations per second
 consumption = cumtrapz(current(:,1),current(:,2));
 consumption = [current(:,1),consumption./3600];
