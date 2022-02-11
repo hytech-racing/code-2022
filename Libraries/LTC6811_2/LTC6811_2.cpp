@@ -12,10 +12,10 @@
 #define MISO 8 // pin 12 by default
 #define SCLK 14 // pin 13 by default
 
-/* Note; SPI transfer is a simultaneous send/receive; the spi_write function disregards the received data, and
- * the spi_read function sends dummy values in order to read in values from the slave device. */
+/* Note; SPI transfer is a simultaneous send/receive; the spi_write_reg function disregards the received data, and
+ * the spi_read_reg function sends dummy values in order to read in values from the slave device. */
 // SPI write
-void LTC6811_2::spi_write(uint8_t *cmd, uint8_t *cmd_pec, uint8_t *data, uint8_t *data_pec) {
+void LTC6811_2::spi_write_reg(uint8_t *cmd, uint8_t *cmd_pec, uint8_t *data, uint8_t *data_pec) {
     SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE3));
     digitalWrite(SS, LOW);
     delayMicroseconds(1);
@@ -35,7 +35,7 @@ void LTC6811_2::spi_write(uint8_t *cmd, uint8_t *cmd_pec, uint8_t *data, uint8_t
 #endif
 }
 // SPI read; IF CODE DOES NOT WORK, THIS IS A GOOD PLACE TO START DEBUGGING
-void LTC6811_2::spi_read(uint8_t *cmd, uint8_t* cmd_pec, uint8_t *data_in) {
+void LTC6811_2::spi_read_reg(uint8_t *cmd, uint8_t* cmd_pec, uint8_t *data_in) {
     SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE3));
     digitalWrite(SS, LOW);
     SPI.transfer(cmd[0]);
@@ -167,10 +167,10 @@ void LTC6811_2::write_register_group(uint16_t cmd_code, const uint8_t *buffer) {
     uint16_t dec_pec = cmd_pec[0] << 8 | cmd_pec[1];
 //    Serial.print("Command PEC: ");
 //    Serial.println(dec_pec, BIN);
-//    Serial.println("Prepare to spi_write");
+//    Serial.println("Prepare to spi_write_reg");
 #endif
     // write out via SPI
-    spi_write(cmd, cmd_pec, data, data_pec);
+    spi_write_reg(cmd, cmd_pec, data, data_pec);
 }
 // Write Configuration Register Group A
 void LTC6811_2::wrcfga(Reg_Group_Config reg_group) {
@@ -201,7 +201,7 @@ void LTC6811_2::read_register_group(uint16_t cmd_code, uint8_t *data) {
     // Generate PEC from command bytes
     generate_pec(cmd, cmd_pec, 2);
     // read in via SPI
-    spi_read(cmd, cmd_pec, data_in);
+    spi_read_reg(cmd, cmd_pec, data_in);
     // generate PEC from read-in data bytes
     generate_pec(data_in, data_pec, 6);
     // Check if the PEC locally generated on the data that is read in matches the PEC that is read in
