@@ -18,13 +18,24 @@ void setup() {
 
 void loop() {
   charger_configure.set_control(0);
-  charger_configure.set_max_charging_current(0);
-  charger_configure.set_max_charging_voltage(0);
+  charger_configure.set_max_charging_current(350);
+  charger_configure.set_max_charging_voltage(350);
   
   charger_configure.write(tx_msg.buf);
-  tx_msg.id = ID_CHARGER_CONTROL;
+  tx_msg.id = ID_CHARGER_CONTROL1;
   tx_msg.len = sizeof(Charger_configure);
   CAN.write(tx_msg);
 
   delay(1000);
+  charger_configure.set_control(1);
+  charger_configure.set_max_charging_current(0);
+  charger_configure.set_max_charging_voltage(0);
+  
+  charger_configure.write(tx_msg.buf);
+  tx_msg.id = ID_CHARGER_CONTROL1;
+  tx_msg.len = sizeof(Charger_configure);
+  CAN.write(tx_msg);
+  delay(1000);
+  
+
 }
