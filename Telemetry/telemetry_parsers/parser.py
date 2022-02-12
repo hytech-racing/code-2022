@@ -1,8 +1,14 @@
+########################################################################
+########################################################################
+# Raw Data CSV to Parsed Data CSV Code Section
+########################################################################
+########################################################################
+
+
 """
 @Author: Bo Han Zhu
 @Date: 1/15/2022
 @Description: HyTech custom python parser. Reads CSVs from Raw_Data, parses them, and writes to Parsed_Data. Uses multiplier.py for multipliers.
-@TODO: Also output to MATLAB struct
 @TODO: Dashboard_status is not correct. Need more data to validate bit ordering.
 
 parse_folder --> parse_file --> parse_time
@@ -1073,8 +1079,6 @@ def parse_folder():
     if not os.path.exists("Parsed_Data"):
         os.makedirs("Parsed_Data")
 
-    print("Currently parsing, please be patient...")
-
     # Loops through files and call parse_file on each raw CSV.
     for file in os.listdir(directory):
         filename = os.fsdecode(file)
@@ -1087,7 +1091,200 @@ def parse_folder():
     return 
 
 ########################################################################
+########################################################################
+# Parsed Data CSV to MAT struct Code Section
+########################################################################
+########################################################################
+
+"""
+@Author: Sophia Smith
+@Date: 2/11/2022
+@Description: Takes a Parse_Data folder of CSVs and outputs a .mat struct for plotting.
+
+create_mat():
+    read_files() --> create_dataframe(csv_files) --> get_time_elapsed(frames_list) --> create_struct(frames_list1) --> transpose_all(struct1)
+
+"""
+
+import os
+import re
+import pandas as pd
+import scipy.io
+import numpy as np
+import dateutil.parser as dp
+from os import listdir
+from os.path import isfile, join
+from datetime import datetime
+from scipy.io import savemat
+
+
+def read_files():
+    '''
+    @brief: Reads parsed data files from Parsed_Data folder and returns a 
+            list of file paths (as strings)
+    @input: None
+    @return: None
+    '''
+    try:
+        path_name = 'Parsed_Data'
+
+        file_path = []
+        file_count = 0
+        for root, dirs, files in os.walk(path_name, topdown=False):
+            for name in files:
+                if ".CSV" in name or ".csv" in name:
+                    fp = os.path.join(root, name)
+                    file_path.append(fp)
+                    file_count += 1
+    except:
+        print('FATAL ERROR: Process failed at step 1.')
+        return
+
+    print('Step 1: found ' + str(file_count) + ' files in the Parsed_Data folder')
+    return file_path
+
+def create_dataframe(files = []):
+    '''
+    @brief: Reads parsed data file and creates a pandas dataframe.
+            Each row is formatted to work with the Matlab parser. 
+    @input: A list of files
+    @return: A dataframe list
+    '''
+    try:
+        df_list = []
+        for f in files:
+            df = pd.read_csv(f)
+            df_list.append(df)
+    except:
+        print('FATAL ERROR: Process failed at step 2.')
+        return
+
+    print('Step 2: created dataframes')
+
+    return df_list
+
+def get_time_elapsed(frames = []):
+    '''
+    @brief: Calculated the elapsed time for each label based on a baseline
+    @input: A dataframe list
+    @ouput: An updated dataframe list with elapsed times
+    '''
+    skip = 0
+    df_list = []
+    try:
+        for df in frames:
+            skip += 1
+            timestamps = [dp.isoparse(x) for x in df['time']]
+            if(len(timestamps) != 0):
+                start_time = min(timestamps)
+                time_delta = [(x - start_time).total_seconds()
+                        for x in timestamps]
+
+                df['time_elapsed'] = pd.Series(time_delta)
+                df_list.append(df)
+            else:
+                if DEBUG: print("Frame " + skip + "was skipped in elapsed time calculation.")
+                continue
+    except:
+        print('FATAL ERROR: Process failed at step 3.')
+        return
+
+    print('Step 3: calculated elapsed time')
+    return df_list
+
+def create_struct(frames = []):
+    '''
+    @brief: Formats dataframe data to work with the Matlab parser. 
+    @input: A dataframe of the original CSV with elapsed times
+    @return: A dictionary of times and values for each label
+    '''
+
+    try:
+        struct = {}
+        struct_list = []
+        all_labels = []
+        for df in frames:
+            labels = df['label'].unique()
+            #temp = set(labels) - all_labels
+            #all_labels = all_labels + temp
+            #by_sheet = []
+            df = df[pd.to_numeric(df['value'], errors='coerce').notnull()]
+            for label in labels:
+                df_label = df[df['label'] == label]
+                df_new = df_label[['time_elapsed', 'value']].copy()
+                rows = df_new.values.tolist()
+                '''
+                by_label = np.array(rows)
+                if label in all_labels:
+                    for i in range(len(rows)):
+                    temp_arr = struct[label]
+                    temp_arr.append(by_label)
+                    struct[label] = temp_arr
+                else:
+                    struct[label] = [by_label]
+                    all_labels.append(label)
+                '''
+                    
+                for i in range(len(rows)):
+                    if label in all_labels:
+                        struct[label][0].append(float(rows[i][0]))
+                        struct[label][1].append(float(rows[i][1]))
+                    else:
+                        struct[label] = [[float(rows[i][0])], [float(rows[i][1])]]
+                        all_labels.append(label)
+
+    except:
+        print('FATAL ERROR: Process failed at step 4.')
+        return
+
+    print('Step 4: created struct')
+    return struct
+
+def transpose_all(struct):
+    '''
+    @brief: Helper function to transfer 2xN array into Nx2 array for dataPlots
+    @input: A dictionary of multiple 2xN arrays
+    @return: A dictionary of those 2xN arrays transposed as Nx2 arrays
+    '''
+    for label in struct:
+        struct[label] = np.array(struct[label]).T
+    return struct
+
+def create_mat():
+    '''
+    @brief: Entry point to the parser to create the .mat file
+    @input: N/A
+    @return: N/A
+    '''
+    print("Step 0: starting...")
+    csv_files = read_files()
+    frames_list = create_dataframe(csv_files)
+    frames_list1 = get_time_elapsed(frames_list)
+    struct1 = create_struct(frames_list1)
+    struct2 = transpose_all(struct1)
+
+    try:
+        savemat('output.mat', {'S': struct2}, long_field_names=True)
+        print('Saved struct in output.mat file.')
+    except:
+        print('FATAL ERROR: Failed to create .mat file')
+
+
+########################################################################
+########################################################################
 # Entry Point to Framework
 ########################################################################
+########################################################################
+print("Welcome to HyTech 2022 Parsing Framework")
+print("The process will be of two parts: CSV to CSV parsing, and then CSV to MAT parsing.")
+print("The entire process will take about 5 mins for a test session's worth of data.")
+print("----------------------------------------------------------------------------------")
+print("Beginning CSV to CSV parsing...")
 parse_folder()
+print("Finished CSV to CSV parsing.")
+print("----------------------------------------------------------------------------------")
+print("Beginning CSV to MAT parsing...")
+create_mat()
+print("Finished CSV to MAT parsing.")
+print("----------------------------------------------------------------------------------")
 print("SUCCESS: Parsing Complete.")
