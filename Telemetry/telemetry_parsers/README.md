@@ -1,3 +1,4 @@
+![HyTech Logo](https://hytechracing.gatech.edu/images/hytech_logo_small.png)
 # HyTech Custom Parsers
 ## Intro
 Welcome to the folder containing all the new updated parsers y'all ever need for HyTech parsing!
