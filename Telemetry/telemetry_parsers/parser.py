@@ -1069,9 +1069,7 @@ def parse_folder():
     '''
 
     # Stop attempting to parse if Raw_Data is not there.
-    try:
-        directory = os.fsencode("Raw_Data")
-    except:
+    if not os.path.exists("Raw_Data"):
         print("FATAL ERROR: Raw_Data folder does not exist. Please move parser.py or create Raw_Data folder.")
         sys.exit(0)
 
@@ -1080,7 +1078,7 @@ def parse_folder():
         os.makedirs("Parsed_Data")
 
     # Loops through files and call parse_file on each raw CSV.
-    for file in os.listdir(directory):
+    for file in os.listdir("Raw_Data"):
         filename = os.fsdecode(file)
         if filename.endswith(".CSV") or filename.endswith(".csv"):
             parse_file(filename)

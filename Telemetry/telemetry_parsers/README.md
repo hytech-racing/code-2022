@@ -13,7 +13,7 @@ Here's a description to each file located in this folder:
 
 ## Requirements
 The entire system is Python and MatLab based.
-- Python 3 is required, and may be installed here: https://www.python.org/downloads/.
+- Python 3 is required, and may be installed here: https://www.python.org/downloads/. Make sure it is added to PATH.
 - For MatLab, you will need an education/work license to get it for free. Follow GT's instructions here: https://www.matlab.gatech.edu/.
 
 The Python parts require some libraries to run. After downloading Python, issue the following pip commands:
@@ -29,7 +29,7 @@ pip install python-dateutil
 1. Get the raw data CSVs from the SD card on the vehicle.
 2. Place them in a folder called Raw_Data.
 3. Copy `parser.py`, `multipliers.py`, and `dataPlots.m` into the directory containing the Raw_Data folder
-4. Run `parser.py` by either using the Python Interpreter, or, better, by going into the directory and issuing: `py parser.py`
+4. Run `parser.py` by either using the Python Interpreter or by going into the directory and issuing: `py parser.py`
 5. Wait for a success message from `parser.py`
 6. Open `dataPlots.m` in MatLab
 7. In MatLab, first load `output.mat` by double clicking it on the sidebar. Then click run on `dataPlots.m`.
