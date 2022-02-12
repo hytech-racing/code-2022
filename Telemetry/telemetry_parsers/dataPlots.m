@@ -22,7 +22,7 @@ plot(commanded_torque(:,1),commanded_torque(:,2)./10);
 plot(feedback_torque(:,1),feedback_torque(:,2)./10);
 plot(requested_torque(:,1),requested_torque(:,2)./10);
 legend({'Motor Speed (RPM)*0.01','Current (A)*0.5','Commanded Torque*0.1 (Nm)','Feedback Torque*0.1 (Nm)','Requested Torque*0.1 (Nm)'})
-xlabel('Time (s)')
+xlabel('Time (ms)')
 title('Torque, Speed, Current')
 
 %% Pedal Input Traces
@@ -48,7 +48,7 @@ plot(pedal_time, pedal_data, '.-');
 plot(front_brakes_time, front_brakes_data, '.-');
 grid on
 
-xlabel('Time (s)')
+xlabel('Time (ms)')
 ylabel('Normalized Pedal Position and Brake Pressure')
 title('Brake and Pedal Traces')
 legend({'Accelerator Pedal Position','Brake Pressure'})
@@ -77,7 +77,7 @@ plot(S.dc_bus_voltage(:,1), S.dc_bus_voltage(:,2), '.-');
 plot(time, power, '.-')
 grid on
 
-xlabel('Time (s)')
+xlabel('Time (ms)')
 ylabel('Voltage (V), Current (A), Power (kW)')
 title('DC Bus Current, DC Bus Voltage, and Calculated DC Power Output')
 legend({'Current','Voltage','Power'})
@@ -96,7 +96,7 @@ plot(S.dc_bus_current(:,1),S.dc_bus_current(:,2)./10)
 grid on
 
 legend({'MCU Gate Driver Board Temperature','MCU Control Board Temperature','MCU Module A Temperature','MCU Module B Temperature','MCU Module C Temperature','Motor Temperature','Current/10 (A)'})
-xlabel('Time (s)')
+xlabel('Time (ms)')
 ylabel('Temperature (C)')
 title('Cooling Loop Temperature Plots')
 
@@ -109,7 +109,7 @@ plot(S.BMS_high_temperature(:,1),S.BMS_high_temperature(:,2),'.')
 plot(S.BMS_low_temperature(:,1),S.BMS_low_temperature(:,2),'.') 
 ylim([0,50]) % only BMS_state, BMS_total_discharge, BMS_total_charge
 ylabel('Temperature (C)')
-xlabel('Time (s)')
+xlabel('Time (ms)')
 title('Accumulator Cell Temperatures')
 legend({'Current/10 (A)','BMS Average Temperature','BMS High Temperature','BMS Low Temperature'})
 
@@ -123,7 +123,7 @@ plot(S.IC_1_therm_0(:,1),S.IC_1_therm_0(:,2),'.')
 plot(S.IC_1_therm_1(:,1),S.IC_1_therm_1(:,2),'.')
 plot(S.IC_1_therm_2(:,1),S.IC_1_therm_2(:,2),'.')
 ylabel('Temperature (C)')
-xlabel('Time (s)')
+xlabel('Time (ms)')
 title('Accumulator Cell Temperatures: Segment 1 Detailed View')
 legend({'Temp1','Temp2','Temp3','Temp4','Temp5','Temp6'},'Location','southeast')
 subplot(2,2,2)
@@ -135,7 +135,7 @@ plot(S.IC_3_therm_0(:,1),S.IC_3_therm_0(:,2),'.')
 plot(S.IC_3_therm_1(:,1),S.IC_3_therm_1(:,2),'.')
 plot(S.IC_3_therm_2(:,1),S.IC_3_therm_2(:,2),'.')
 ylabel('Temperature (C)')
-xlabel('Time (s)')
+xlabel('Time (ms)')
 title('Accumulator Cell Temperatures: Segment 2 Detailed View')
 legend({'Temp1','Temp2','Temp3','Temp4','Temp5','Temp6'},'Location','southeast')
 subplot(2,2,3)
@@ -147,7 +147,7 @@ plot(S.IC_5_therm_0(:,1),S.IC_5_therm_0(:,2),'.')
 plot(S.IC_5_therm_1(:,1),S.IC_5_therm_1(:,2),'.')
 plot(S.IC_5_therm_2(:,1),S.IC_5_therm_2(:,2),'.')
 ylabel('Temperature (C)')
-xlabel('Time (s)')
+xlabel('Time (ms)')
 title('Accumulator Cell Temperatures: Segment 3 Detailed View')
 legend({'Temp1','Temp2','Temp3','Temp4','Temp5','Temp6'},'Location','southeast')
 subplot(2,2,4)
@@ -159,7 +159,7 @@ plot(S.IC_7_therm_0(:,1),S.IC_7_therm_0(:,2),'.')
 plot(S.IC_7_therm_1(:,1),S.IC_7_therm_1(:,2),'.')
 plot(S.IC_7_therm_2(:,1),S.IC_7_therm_2(:,2),'.')
 ylabel('Temperature (C)')
-xlabel('Time (s)')
+xlabel('Time (ms)')
 title('Accumulator Cell Temperatures: Segment 4 Detailed View')
 legend({'Temp1','Temp2','Temp3','Temp4','Temp5','Temp6'},'Location','southeast')
 

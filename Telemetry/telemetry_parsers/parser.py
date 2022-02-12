@@ -1095,7 +1095,7 @@ def parse_folder():
 ########################################################################
 
 """
-@Author: Sophia Smith
+@Author: Sophia Smith + Bo Han Zhu
 @Date: 2/11/2022
 @Description: Takes a Parse_Data folder of CSVs and outputs a .mat struct for plotting.
 
@@ -1136,7 +1136,7 @@ def read_files():
                     file_count += 1
     except:
         print('FATAL ERROR: Process failed at step 1.')
-        return
+        sys.exit(0)
 
     print('Step 1: found ' + str(file_count) + ' files in the Parsed_Data folder')
     return file_path
@@ -1155,7 +1155,7 @@ def create_dataframe(files = []):
             df_list.append(df)
     except:
         print('FATAL ERROR: Process failed at step 2.')
-        return
+        sys.exit(0)
 
     print('Step 2: created dataframes')
 
@@ -1175,8 +1175,14 @@ def get_time_elapsed(frames = []):
             timestamps = [dp.isoparse(x) for x in df['time']]
             if(len(timestamps) != 0):
                 start_time = min(timestamps)
-                time_delta = [(x - start_time).total_seconds()
-                        for x in timestamps]
+                last_time = -1 # sometimes the Teensy has a slight ms miscue where it jumps back 1 sec on a second change, we must address it here
+                time_delta = []
+                for x in timestamps:
+                    current_time = (x - start_time).total_seconds() * 1000
+                    if current_time < last_time:
+                        current_time += 1000 # add one second on a second switch miscue
+                    time_delta.append(current_time)
+                    last_time = current_time
 
                 df['time_elapsed'] = pd.Series(time_delta)
                 df_list.append(df)
@@ -1185,7 +1191,7 @@ def get_time_elapsed(frames = []):
                 continue
     except:
         print('FATAL ERROR: Process failed at step 3.')
-        return
+        sys.exit(0)
 
     print('Step 3: calculated elapsed time')
     return df_list
@@ -1196,44 +1202,51 @@ def create_struct(frames = []):
     @input: A dataframe of the original CSV with elapsed times
     @return: A dictionary of times and values for each label
     '''
+    
+    struct = {}
+    all_labels = []
+
+    # Need to average out all values under one timestamp
+    last_time = {}
+    same_time_sum = {}
+    same_time_count = {}
 
     try:
-        struct = {}
-        struct_list = []
-        all_labels = []
         for df in frames:
             labels = df['label'].unique()
-            #temp = set(labels) - all_labels
-            #all_labels = all_labels + temp
-            #by_sheet = []
             df = df[pd.to_numeric(df['value'], errors='coerce').notnull()]
+
             for label in labels:
                 df_label = df[df['label'] == label]
                 df_new = df_label[['time_elapsed', 'value']].copy()
                 rows = df_new.values.tolist()
-                '''
-                by_label = np.array(rows)
-                if label in all_labels:
-                    for i in range(len(rows)):
-                    temp_arr = struct[label]
-                    temp_arr.append(by_label)
-                    struct[label] = temp_arr
-                else:
-                    struct[label] = [by_label]
-                    all_labels.append(label)
-                '''
-                    
+
                 for i in range(len(rows)):
                     if label in all_labels:
-                        struct[label][0].append(float(rows[i][0]))
-                        struct[label][1].append(float(rows[i][1]))
+                        # Do not add to struct if the time is the same, instead add to tracking dictionaries
+                        if last_time[label] == float(rows[i][0]):
+                            # Update tracking dictionaries
+                            same_time_sum[label] = same_time_sum[label] + float(rows[i][1])
+                            same_time_count[label] = same_time_count[label] + 1
+                        else:
+                            # Add tracking dictionaries' values to struct
+                            struct[label][0].append(last_time[label])
+                            struct[label][1].append(same_time_sum[label] / same_time_count[label])
+
+                            # Reset all tracking dictionaries
+                            last_time[label] = float(rows[i][0])
+                            same_time_sum[label] = float(rows[i][1])
+                            same_time_count[label] = 1
                     else:
                         struct[label] = [[float(rows[i][0])], [float(rows[i][1])]]
                         all_labels.append(label)
+                        last_time[label] = float(rows[i][0])
+                        same_time_sum[label] = float(rows[i][1])
+                        same_time_count[label] = 1
 
     except:
         print('FATAL ERROR: Process failed at step 4.')
-        return
+        sys.exit(0)
 
     print('Step 4: created struct')
     return struct
