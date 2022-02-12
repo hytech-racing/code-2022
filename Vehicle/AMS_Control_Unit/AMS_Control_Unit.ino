@@ -23,6 +23,7 @@
 #define MIN_VOLTAGE 30000          // Minimum allowable single cell voltage in units of 100μV
 #define MAX_VOLTAGE 42000          // Maxiumum allowable single cell voltage in units of 100μV
 #define MAX_TOTAL_VOLTAGE 3550000  // Maximum allowable pack total voltage in units of 100μV
+#define MAX_THERMISTOR_VOLTAGE 26225   // Maximum allowable pack temperature corresponding to 60C in units 100μV
 
 // VARIABLE DECLARATIONS
 uint16_t pec15Table[256];          // Array containing lookup table for PEC generator
@@ -36,7 +37,9 @@ uint16_t gpio_voltages[TOTAL_IC][6];  // 2D Array to hold GPIO voltages being re
 // CONSECUTIVE FAULT COUNTERS: counts successive faults; resets to zero if normal reading breaks fault chain
 int uv_fault_counter = 0;             // undervoltage fault counter
 int ov_fault_counter = 0;             // overvoltage fault counter
-int pack_ov_fault_counter = 0;        // total voltage overvoltage fault counter
+int pack_ov_fault_counter = 0;    // total voltage overvoltage fault counter
+int overtemp_fault_counter = 0;    //total overtemperature fault counter
+bool overtemp_total = false;
 
 // LTC6811_2 OBJECT DECLARATIONS
 LTC6811_2 ic[8];
@@ -85,6 +88,8 @@ void loop() {
     }
     Serial.println(i, DEC);
     read_voltages();
+    read_gpio();
+    print_gpios();
     print_cells();
     i++;
   }
@@ -97,6 +102,7 @@ void read_voltages() {
   int min_voltage_location[2]; // [0]: IC#; [1]: Cell#
   uint16_t max_voltage = 0;
   int max_voltage_location[2]; // [0]: IC#; [1]: Cell#
+  
 
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
   for (int i = 0; i < 8; i++) {
@@ -192,7 +198,10 @@ void read_voltages() {
 
 // Read GPIO registers from LTC6811-2; Process temperature and humidity data from relevant GPIO registers
 void read_gpio() {
+  uint16_t max_thermistor_voltage = 0;
+  int max_temp_location[2];
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
+  
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
     Serial.println("starting wrcfga");
@@ -210,7 +219,32 @@ void read_gpio() {
       }
       for (int k = 0; k < 3; k++) {
         gpio_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
+        if(gpio_voltages[i][j+k] > max_thermistor_voltage)
+        { 
+          max_thermistor_voltage = gpio_voltages[i][j+k];
+          max_temp_location[0] = i;
+          max_temp_location[1] = j+k;
+        }
       }
+      
+    }
+    if(overtemp_total)
+  {
+    Serial.println("OverTemp Fault");
+  }
+  Serial.print("Max Thermistor Voltage: "); Serial.print(gpio_voltages[max_temp_location[0]][max_temp_location[1]]);
+  }
+  if (max_thermistor_voltage > MAX_THERMISTOR_VOLTAGE)
+  {
+    overtemp_fault_counter++;
+    Serial.println("Over Temp Fault");
+    if(overtemp_fault_counter > MAX_SUCCESSIVE_FAULTS)
+    {
+      overtemp_total = true;
+    }
+    else
+    {
+      overtemp_fault_counter = 0;
     }
   }
 }
@@ -226,6 +260,19 @@ void parse_can_message() {
   }
 }
 
+void print_gpios(){
+  Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
+  Serial.println("Raw Segment Temperatures");
+  Serial.println("\tT0\tT1\tT2\tT3\tT4");
+  for (int ic = 0; ic < TOTAL_IC; ic++) {
+    Serial.print("TEMP"); Serial.print(ic); Serial.print("\t");
+    for (int cell = 0; cell < 4; cell++) {
+      Serial.print(gpio_voltages[ic][cell] / 10000.0, 4); Serial.print("C\t");
+    }
+    Serial.print("\t");
+    Serial.println();
+  }
+}
 void print_cells() {
   Serial.print("Total pack voltage: "); Serial.print(total_voltage / 10000.0, 4); Serial.println("V");
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
@@ -238,5 +285,9 @@ void print_cells() {
     }
     Serial.print("\t");
     Serial.println();
+    
+    
   }
+  
+  
 }
