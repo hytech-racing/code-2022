@@ -14,3 +14,7 @@
 	path = Libraries/External_Libs/Metro-Arduino-Wiring
 	url = https://github.com/thomasfredericks/Metro-Arduino-Wiring.git
 	branch = master
+[submodule "Libraries/External_Libs/xbee-micropython"]
+	path = Libraries/External_Libs/xbee-micropython
+	url = https://github.com/digidotcom/xbee-micropython.git
+	branch = master
