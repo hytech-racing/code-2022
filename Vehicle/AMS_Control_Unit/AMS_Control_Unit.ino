@@ -229,17 +229,13 @@ void read_gpio() {
       }
       for (int k = 0; k < 3; k++) {
         gpio_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
-        if(!(i%2) && j+k==5)
-        {
+        if((i%2) && j+k==4){
           gpio_temps[i][j+k] = -66.875 + 218.75*(gpio_voltages[i][j + k]/50000.0); // temperature in C
-        }
-        else
-        {
+        } else {
           float thermistor_resistance = (2740/(gpio_voltages[i][j+k]/ 50000.0))-2740;
-          gpio_temps[i][j+k] = 1/((1/298.15)+(1/3984.0)*log(thermistor_resistance/10000.0))-273.15; //calculates temperature in kelvins
+          gpio_temps[i][j+k] = 1/((1/298.15)+(1/3984.0)*log(thermistor_resistance/10000.0))-273.15; //calculates temperature in C
         }
-        if (gpio_voltages[i][j + k] > max_thermistor_voltage)
-        {
+        if (gpio_voltages[i][j + k] > max_thermistor_voltage) {
           max_thermistor_voltage = gpio_voltages[i][j + k];
           max_temp_location[0] = i;
           max_temp_location[1] = j + k;
@@ -247,22 +243,17 @@ void read_gpio() {
       }
 
     }
-    if (overtemp_total)
-    {
+    if (overtemp_total){
       Serial.println("OverTemp Fault");
     }
     Serial.print("Max Thermistor Temp: "); Serial.println(gpio_temps[max_temp_location[0]][max_temp_location[1]]);
   }
-  if (max_thermistor_voltage > MAX_THERMISTOR_VOLTAGE)
-  {
+  if (max_thermistor_voltage > MAX_THERMISTOR_VOLTAGE){
     overtemp_fault_counter++;
-    Serial.println("Over Temp Fault");
-    if (overtemp_fault_counter > MAX_SUCCESSIVE_FAULTS)
-    {
+    if (overtemp_fault_counter > MAX_SUCCESSIVE_FAULTS){
       overtemp_total = true;
-    }
-    else
-    {
+      BMS_status.set_discharge_overtemp(true);
+   }else {
       overtemp_fault_counter = 0;
     }
   }
@@ -331,6 +322,9 @@ void print_thermistor_gpios() {
     Serial.print("Cell Temperatures"); Serial.print(ic); Serial.print("\t");
     for (int cell = 0; cell < 4; cell++) {
       Serial.print(gpio_temps[ic][cell], 3); Serial.print("C\t");
+    }
+    if((ic%2)) {
+       Serial.print("PCB Temps: ");Serial.print(gpio_temps[ic][4], 3);Serial.print("C\t");
     }
     Serial.print("\t");
     Serial.println();
