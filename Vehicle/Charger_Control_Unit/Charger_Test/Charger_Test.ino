@@ -27,8 +27,6 @@ Metro update_CAN = Metro(100);
 Metro update_watchdog = Metro(2);
 
 int watchdog_state = 0;
-
-void check_shutdown_signals();
 void configure_charging();
 void parse_can_message();
 void print_data();
@@ -66,9 +64,11 @@ void setup() {
 void loop() {
   if (update_CAN.check()) {
       charger_configure.write(tx_msg.buf);
+      tx_msg.ext = 1;
       tx_msg.id = ID_CHARGER_CONTROL;
       tx_msg.len = sizeof(Charger_configure);
       CAN.write(tx_msg);
+      tx_msg.ext = 0;
 
       print_data();
   }
@@ -78,7 +78,6 @@ void loop() {
       digitalWrite(WATCHDOG_OUT, watchdog_state);
   }
 
-  check_shutdown_signals();
   configure_charging();
 }
 
@@ -96,9 +95,11 @@ void configure_charging(){
 
 void parse_can_message(){
     while (CAN.read(rx_msg)) {
+        rx_msg.ext = 1;
         if (rx_msg.id == ID_CHARGER_DATA) {
             charger_data.load(rx_msg.buf);
         }
+        rx_msg.ext = 0;
     }
 }
 
