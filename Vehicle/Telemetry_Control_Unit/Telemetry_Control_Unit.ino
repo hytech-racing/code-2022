@@ -135,7 +135,7 @@ static int flag_gps;
 static bool pending_gps_data;
 
 void setup() {
-    delay(10000);
+    delay(5000); // Prevents suprious text files when turning the car on and off rapidly
     /* Set up real-time clock */
     //Teensy3Clock.set(9999999999); // set time (epoch) at powerup  (COMMENT OUT THIS LINE AND PUSH ONCE RTC HAS BEEN SET!!!!)
     setSyncProvider(getTeensy3Time); // registers Teensy RTC as system time
