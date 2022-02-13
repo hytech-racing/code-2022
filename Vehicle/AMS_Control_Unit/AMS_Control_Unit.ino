@@ -12,7 +12,7 @@
 #include <FlexCAN_T4.h>
 #include <HyTech_CAN.h>
 #include <LTC6811_2.h>
-//#include <Metro.h>
+#include <Metro.h>
 
 // CONSTANT DEFINITIONS: define important values, such as IC count and cells per IC
 #define TOTAL_IC 8                 // Number of LTC6811-2 ICs that are used in the accumulator
@@ -24,6 +24,10 @@
 #define MAX_VOLTAGE 42000          // Maxiumum allowable single cell voltage in units of 100μV
 #define MAX_TOTAL_VOLTAGE 3550000  // Maximum allowable pack total voltage in units of 100μV
 #define MAX_THERMISTOR_VOLTAGE 26225   // Maximum allowable pack temperature corresponding to 60C in units 100μV
+#define BALANCE_COOL 3             // Sets balancing duty cycle as 20%
+#define BALANCE_STANDARD 8         // Sets balancing duty cycle as 53.3%
+#define BALANCE_HOT 12             // Sets balancing duty cycle as 80%
+#define BALANCE_CONTINUOUS 15      // Sets balancing duty cycle as 100% 
 
 // VARIABLE DECLARATIONS
 uint16_t pec15Table[256];          // Array containing lookup table for PEC generator
@@ -32,7 +36,9 @@ uint16_t vuv = 1874; // 3V           // Minimum voltage value following datashee
 uint16_t vov = 2625; // 4.2V         // Maximum voltage value following datasheet formula: Comparison Voltage = VOV • 16 • 100μV
 uint16_t cell_voltages[TOTAL_IC][12]; // 2D Array to hold cell voltages being read in; voltages are read in with the base unit as 100μV
 uint32_t total_voltage;             // the total voltage of the pack
+uint16_t balance_voltage = 65535;   // the voltage to balance toward with the base unit as 100μV; equal to the lowest voltage in the battery pack. Iniitalized to max 16 bit value in order to prevent balancing without having read in valid voltages first
 uint16_t gpio_voltages[TOTAL_IC][6];  // 2D Array to hold GPIO voltages being read in; voltages are read in with the base unit as 100μV
+Metro balance_timer = Metro(30000);                // Timer to determine balancing sequence
 
 // CONSECUTIVE FAULT COUNTERS: counts successive faults; resets to zero if normal reading breaks fault chain
 int uv_fault_counter = 0;             // undervoltage fault counter
@@ -89,20 +95,21 @@ void loop() {
     Serial.println(i, DEC);
     read_voltages();
     read_gpio();
-    print_gpios();
+    print_thermistor_gpios();
     print_cells();
     i++;
   }
 }
 
-// read voltages from all eight LTC6811-2; voltages are read in with units of 100μV
+// READ functions to collect and read data from the LTC6811-2
+// Read cell voltages from all eight LTC6811-2; voltages are read in with units of 100μV
 void read_voltages() {
   total_voltage = 0;
   uint16_t min_voltage = 65535;
   int min_voltage_location[2]; // [0]: IC#; [1]: Cell#
   uint16_t max_voltage = 0;
   int max_voltage_location[2]; // [0]: IC#; [1]: Cell#
-  
+
 
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
   for (int i = 0; i < 8; i++) {
@@ -160,6 +167,7 @@ void read_voltages() {
       }
     }
   }
+  balance_voltage = min_voltage;
   // detect any uv fault conditions, set appropriate error flags, and print relevant message to console
   if (min_voltage < MIN_VOLTAGE) {
     uv_fault_counter++;
@@ -201,13 +209,14 @@ void read_gpio() {
   uint16_t max_thermistor_voltage = 0;
   int max_temp_location[2];
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
-  
+
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
     Serial.println("starting wrcfga");
     ic[i].wrcfga(configuration);
     Serial.println("starting adax");
     ic[i].adax(static_cast<GPIO_SELECT>(0));
+    ic[i].wakeup();
     Reg_Group_Aux_A reg_group_a = ic[i].rdauxa();
     Reg_Group_Aux_B reg_group_b = ic[i].rdauxb();
     for (int j = 0; j < 6; j += 3) {
@@ -219,32 +228,57 @@ void read_gpio() {
       }
       for (int k = 0; k < 3; k++) {
         gpio_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
-        if(gpio_voltages[i][j+k] > max_thermistor_voltage)
-        { 
-          max_thermistor_voltage = gpio_voltages[i][j+k];
+        if (gpio_voltages[i][j + k] > max_thermistor_voltage)
+        {
+          max_thermistor_voltage = gpio_voltages[i][j + k];
           max_temp_location[0] = i;
-          max_temp_location[1] = j+k;
+          max_temp_location[1] = j + k;
         }
       }
-      
+
     }
-    if(overtemp_total)
-  {
-    Serial.println("OverTemp Fault");
-  }
-  Serial.print("Max Thermistor Voltage: "); Serial.print(gpio_voltages[max_temp_location[0]][max_temp_location[1]]);
+    if (overtemp_total)
+    {
+      Serial.println("OverTemp Fault");
+    }
+    Serial.print("Max Thermistor Voltage: "); Serial.print(gpio_voltages[max_temp_location[0]][max_temp_location[1]]);
   }
   if (max_thermistor_voltage > MAX_THERMISTOR_VOLTAGE)
   {
     overtemp_fault_counter++;
     Serial.println("Over Temp Fault");
-    if(overtemp_fault_counter > MAX_SUCCESSIVE_FAULTS)
+    if (overtemp_fault_counter > MAX_SUCCESSIVE_FAULTS)
     {
       overtemp_total = true;
     }
     else
     {
       overtemp_fault_counter = 0;
+    }
+  }
+}
+
+// Cell Balancing function. NOTE: Must call read_voltages() in order to obtain balancing voltage; 
+void balance_cells(uint8_t mode) {
+  if (balance_voltage < 30000 || balance_voltage > 42000) {
+    Serial.print("BALANCE HALT: BALANCE VOLTAGE SET AS "); Serial.print(balance_voltage / 10000.0, 4); Serial.println(", OUTSIDE OF SAFE BOUNDS.");
+    return;
+  }
+  Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0xC, (uint8_t) 0x1); // base configuration for the configuration register group
+  Reg_Group_PWM pwm_configuration = Reg_Group_PWM(mode); // base configuration for the PWM register group, which defines the duty cycle of the balancing 
+  int i = 0;
+  while (i < 8) {
+    Serial.print("Currently balancing cell #: "); Serial.println(i, DEC);
+    ic[i].wakeup();
+    ic[i].wrcfga(configuration);
+    ic[i].wrpwm(pwm_configuration);
+    if (balance_timer.check()) {
+      if (i == 7) {
+        i = 0;
+      } else {
+        i++;
+      }
+      balance_timer.reset();
     }
   }
 }
@@ -260,19 +294,9 @@ void parse_can_message() {
   }
 }
 
-void print_gpios(){
-  Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
-  Serial.println("Raw Segment Temperatures");
-  Serial.println("\tT0\tT1\tT2\tT3\tT4");
-  for (int ic = 0; ic < TOTAL_IC; ic++) {
-    Serial.print("TEMP"); Serial.print(ic); Serial.print("\t");
-    for (int cell = 0; cell < 4; cell++) {
-      Serial.print(gpio_voltages[ic][cell] / 10000.0, 4); Serial.print("C\t");
-    }
-    Serial.print("\t");
-    Serial.println();
-  }
-}
+
+// Data print functions
+// Print cell voltages
 void print_cells() {
   Serial.print("Total pack voltage: "); Serial.print(total_voltage / 10000.0, 4); Serial.println("V");
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
@@ -285,9 +309,20 @@ void print_cells() {
     }
     Serial.print("\t");
     Serial.println();
-    
-    
   }
-  
-  
+}
+
+// Print voltages on GPIOs 1-4 (Corresponding to cell temperatures)
+void print_thermistor_gpios() {
+  Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
+  Serial.println("Raw Segment Temperatures");
+  Serial.println("\tT0\tT1\tT2\tT3\tT4");
+  for (int ic = 0; ic < TOTAL_IC; ic++) {
+    Serial.print("Cell Temperature Voltages"); Serial.print(ic); Serial.print("\t");
+    for (int cell = 0; cell < 4; cell++) {
+      Serial.print(gpio_voltages[ic][cell] / 10000.0, 4); Serial.print("C\t");
+    }
+    Serial.print("\t");
+    Serial.println();
+  }
 }

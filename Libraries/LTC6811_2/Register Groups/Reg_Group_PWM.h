@@ -8,6 +8,14 @@
 class Reg_Group_PWM {
 public:
     Reg_Group_PWM() = default;
+    Reg_Group_PWM(uint8_t pwm_all) {
+        byte0 = pwm_all << 4 | pwm_all;
+        byte1 = pwm_all << 4 | pwm_all;
+        byte2 = pwm_all << 4 | pwm_all;
+        byte3 = pwm_all << 4 | pwm_all;
+        byte4 = pwm_all << 4 | pwm_all;
+        byte5 = pwm_all << 4 | pwm_all;
+    }
     Reg_Group_PWM(uint8_t pwm1_,
                     uint8_t pwm2_,
                     uint8_t pwm3_,
