@@ -244,7 +244,7 @@ void read_gpio() {
     {
       Serial.println("OverTemp Fault");
     }
-    Serial.print("Max Thermistor Voltage: "); Serial.print(gpio_voltages[max_temp_location[0]][max_temp_location[1]]);
+    Serial.print("Max Thermistor Temp: "); Serial.print(gpio_temps[max_temp_location[0]][max_temp_location[1]]);
   }
   if (max_thermistor_voltage > MAX_THERMISTOR_VOLTAGE)
   {
