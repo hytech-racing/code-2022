@@ -1,7 +1,7 @@
 #include "Dashboard.h"
 #include "DebouncedButton.h"
 #include "HyTech_CAN.h"
-#include "MCP_CAN.h"
+#include "mcp_can.h"
 #include "Metro.h"
 #include "VariableLED.h"
 
