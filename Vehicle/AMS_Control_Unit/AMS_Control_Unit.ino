@@ -38,6 +38,7 @@ uint16_t cell_voltages[TOTAL_IC][12]; // 2D Array to hold cell voltages being re
 uint32_t total_voltage;             // the total voltage of the pack
 uint16_t balance_voltage = 65535;   // the voltage to balance toward with the base unit as 100μV; equal to the lowest voltage in the battery pack. Iniitalized to max 16 bit value in order to prevent balancing without having read in valid voltages first
 uint16_t gpio_voltages[TOTAL_IC][6];  // 2D Array to hold GPIO voltages being read in; voltages are read in with the base unit as 100μV
+float gpio_temps[TOTAL_IC][6];      // 2D Array to hold GPIO temperatures being read in; temperatures are read in with the base unit as K
 Metro balance_timer = Metro(30000);                // Timer to determine balancing sequence
 
 // CONSECUTIVE FAULT COUNTERS: counts successive faults; resets to zero if normal reading breaks fault chain
@@ -228,6 +229,8 @@ void read_gpio() {
       }
       for (int k = 0; k < 3; k++) {
         gpio_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
+        float thermistor_resistance = (27400/(gpio_voltages[i][j+k]/ 50000.0))-27400;
+        gpio_temps[i][j+k] = 1/((1/298.15)+(1/3984.0)*log(thermistor_resistance/10.0)); //calculates temperature in kelvins
         if (gpio_voltages[i][j + k] > max_thermistor_voltage)
         {
           max_thermistor_voltage = gpio_voltages[i][j + k];
@@ -320,7 +323,7 @@ void print_thermistor_gpios() {
   for (int ic = 0; ic < TOTAL_IC; ic++) {
     Serial.print("Cell Temperature Voltages"); Serial.print(ic); Serial.print("\t");
     for (int cell = 0; cell < 4; cell++) {
-      Serial.print(gpio_voltages[ic][cell] / 10000.0, 4); Serial.print("C\t");
+      Serial.print(gpio_temps[ic][cell] -273.15, 3); Serial.print("C\t");
     }
     Serial.print("\t");
     Serial.println();
