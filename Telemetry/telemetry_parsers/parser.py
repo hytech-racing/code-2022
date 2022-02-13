@@ -620,6 +620,8 @@ def parse_ID_BMS_DETAILED_VOLTAGES(raw_message):
         labels = ["IC_" + ic_id + "_CELL_3", "IC_" + ic_id + "_CELL_4", "IC_" + ic_id + "_CELL_5"]
     elif group_id == 2:
         labels = ["IC_" + ic_id + "_CELL_6", "IC_" + ic_id + "_CELL_7", "IC_" + ic_id + "_CELL_8"]
+    elif group_id == 3 and int(ic_id) % 2 == 0:
+        labels = ["IC_" + ic_id + "_CELL_9", "IC_" + ic_id + "_CELL_10", "IC_" + ic_id + "_CELL_11"]
     else:
         if DEBUG: print("UNFATAL ERROR: BMS detailed voltage group " + str(group_id) + " is invalid.")
         return "UNPARSEABLE"
