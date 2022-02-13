@@ -20,6 +20,7 @@
 #include "BMS_voltages.h"
 #include "CCU_status.h"
 #include "Charger_configure.h"
+#include "Charger_data.h"
 #include "Dashboard_status.h"
 #include "MCU_GPS_readings.h"
 #include "MCU_pedal_readings.h"

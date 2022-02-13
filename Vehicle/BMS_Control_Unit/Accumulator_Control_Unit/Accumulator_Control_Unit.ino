@@ -108,7 +108,7 @@
 #define TOTAL_IC 8                      // Number of ICs in the system
 #define CELLS_PER_ODD_IC 9              // Number of cells per odd IC
 #define CELLS_PER_EVEN_IC 12            // Number of cells per even IC
-#define THERMISTORS_PER_IC 3            // Number of cell thermistors per IC
+#define THERMISTORS_PER_IC 4            // Number of cell thermistors per IC
 #define PCB_THERM_PER_IC 2              // Number of PCB thermistors per IC
 #define IGNORE_FAULT_THRESHOLD 20       // Number of fault-worthy values to read in succession before faulting
 #define CURRENT_FAULT_THRESHOLD 20      // Number of fault-worthy electrical current values to read in succession before faulting
@@ -126,7 +126,7 @@
 /*
  * Timers
  */
-Metro timer_watchdog_timer = Metro(500);
+Metro timer_watchdog_timer = Metro(3);
 Metro timer_charge_enable_limit = Metro(10000, 1); // Don't allow charger to re-enable more than once every 10 seconds
 Metro timer_charge_timeout = Metro(1000);
 
@@ -140,7 +140,7 @@ Metro timer_charge_timeout = Metro(1000);
  */
 uint16_t voltage_cutoff_low = 30000; // 3.0000V
 uint16_t voltage_cutoff_high = 42000; // 4.2000V
-uint16_t total_voltage_cutoff = 30000; // 300.00V
+uint16_t total_voltage_cutoff = 35200; // 352.00V
 uint16_t discharge_current_constant_high = 22000; // 220.00A
 int16_t  charge_current_constant_high = -11000; // 110.00A
 uint16_t charge_temp_cell_critical_high = 5500; // 55.00C
@@ -169,9 +169,9 @@ uint32_t total_discharge_copy;
 uint16_t cell_voltages[TOTAL_IC][12]; // contains 12 battery cell voltages. Numbers are stored in 0.1 mV units.
 uint16_t aux_voltages[TOTAL_IC][6]; // contains auxiliary pin voltages for each IC in this order: [Cell Term 1] [Cell Therm 2] [Cell Therm 3] [Onboard Therm 1] [Onboard Therm 2] [Voltage reference]
 
-int8_t ignore_cell[TOTAL_IC][CELLS_PER_IC]; // Cells to be ignored for under/overvoltage and balancing
-int8_t ignore_pcb_therm[TOTAL_IC][PCB_THERM_PER_IC]; // PCB thermistors to be ignored
-int8_t ignore_cell_therm[TOTAL_IC][THERMISTORS_PER_IC]; // Cell thermistors to be ignored
+//int8_t ignore_cell[TOTAL_IC][CELLS_PER_IC]; // Cells to be ignored for under/overvoltage and balancing
+//int8_t ignore_pcb_therm[TOTAL_IC][PCB_THERM_PER_IC]; // PCB thermistors to be ignored
+//int8_t ignore_cell_therm[TOTAL_IC][THERMISTORS_PER_IC]; // Cell thermistors to be ignored
 
 /*!<
   The tx_cfg[][6] store the LTC6811 configuration data that is going to be written
@@ -211,10 +211,10 @@ MCP3204 ADC(ADC_VREF, ADC_CS);
 /**
  * BMS State Variables
  */
-BMS_detailed_voltages bms_detailed_voltages[TOTAL_IC][3];
+BMS_detailed_voltages bms_detailed_voltages[TOTAL_IC][4];
 BMS_status bms_status;
 BMS_temperatures bms_temperatures;
-BMS_detailed_temperatures bms_detailed_temperatures[TOTAL_IC];
+BMS_detailed_temperatures bms_detailed_temperatures[TOTAL_IC][2];
 BMS_onboard_temperatures bms_onboard_temperatures;
 BMS_onboard_detailed_temperatures bms_onboard_detailed_temperatures[TOTAL_IC];
 BMS_voltages bms_voltages;
@@ -303,11 +303,21 @@ void setup() {
 
     /* Initialize the ic/group IDs for detailed voltage, temperature, and balancing CAN messages */
     for (int i = 0; i < TOTAL_IC; i++) {
-        for (int j = 0; j < 3; j++) {
-            bms_detailed_voltages[i][j].set_ic_id(i);
-            bms_detailed_voltages[i][j].set_group_id(j);
-        }
-        bms_detailed_temperatures[i].set_ic_id(i);
+        if (odd_ic(i)){
+          for (int j = 0; j < 3; j++) {
+              bms_detailed_voltages[i][j].set_ic_id(i);
+              bms_detailed_voltages[i][j].set_group_id(j);
+          }
+       } else {
+          for (int j = 0; j < 4; j++) {
+              bms_detailed_voltages[i][j].set_ic_id(i);
+              bms_detailed_voltages[i][j].set_group_id(j);
+          }
+       }
+       for (int j = 0; j < 3; j++) {
+          bms_detailed_temperatures[i][j].set_ic_id(i);
+          bms_detailed_temperatures[i][j].set_group_id(j);
+       }
     }
     for (int i = 0; i < ((TOTAL_IC + 3) / 4); i++) {
         bms_balancing_status[i].set_group_id(i);
@@ -329,45 +339,45 @@ void setup() {
     // total_count_pcb_thermistors--; // Decrement pcb thermistor count (used for calculating averages)
 
     /* Ignore cells or thermistors in 2019 accumulator */
-    #ifdef ACCUMULATOR_VERSION_HYTECH_2019_ACCUMULATOR
-    #endif
+    //#ifdef ACCUMULATOR_VERSION_HYTECH_2019_ACCUMULATOR
+    //#endif
 
     /* Ignore cells or thermistors in 2021 accumulator */
-    #ifdef ACCUMULATOR_VERSION_HYTECH_2021_ACCUMULATOR
-    #endif
+    //#ifdef ACCUMULATOR_VERSION_HYTECH_2021_ACCUMULATOR
+    //#endif
 
     /* Set up isoSPI */
     initialize(); // Call our modified initialize function instead of the default Linear function
     init_cfg(); // Initialize and write configuration registers to LTC6811 chips
 
     /* Bench test mode: check which ICs are online at startup and ignore cells from disconnected ICs */
-    if (MODE_BENCH_TEST) {
-        Serial.println("\nBench Test Mode: Ignoring all ICs which do not respond at startup");
-        LTC6804_rdcfg(TOTAL_IC, rx_cfg); // Read back configuration registers that we just initialized
-        for (int i=0; i < TOTAL_IC; i++) { // Check whether checksum is valid
-            int calculated_pec = pec15_calc(6, &rx_cfg[i][0]);
-            int received_pec = (rx_cfg[i][6] << 8) | rx_cfg[i][7];
-            if (calculated_pec != received_pec) { // IC did not respond properly - ignore cells and thermistors
-                Serial.print("Ignoring IC ");
-                Serial.println(i);
-                for (int j = 0; j < CELLS_PER_IC; j++) {
-                    ignore_cell[i][j] = true;
-                }
-                total_count_cells -= CELLS_PER_IC; // Adjust cell count (used for calculating averages)
-                for (int j = 0; j < THERMISTORS_PER_IC; j++) {
-                    ignore_cell_therm[i][j] = true;
-                }
-                total_count_cell_thermistors -= THERMISTORS_PER_IC; // Adjust cell thermistor count (used for calculating averages)
-                for (int j = 0; j < PCB_THERM_PER_IC; j++) {
-                    ignore_pcb_therm[i][j] = true;
-                }
-                total_count_pcb_thermistors -= PCB_THERM_PER_IC; // Adjust cell pcb thermistor count (used for calculating averages)
-            }
-        }
-        Serial.println();
-    }
+    //if (MODE_BENCH_TEST) {
+        //Serial.println("\nBench Test Mode: Ignoring all ICs which do not respond at startup");
+        //LTC6804_rdcfg(TOTAL_IC, rx_cfg); // Read back configuration registers that we just initialized
+       // for (int i=0; i < TOTAL_IC; i++) { // Check whether checksum is valid
+          //  int calculated_pec = pec15_calc(6, &rx_cfg[i][0]);
+         //   int received_pec = (rx_cfg[i][6] << 8) | rx_cfg[i][7];
+        //    if (calculated_pec != received_pec) { // IC did not respond properly - ignore cells and thermistors
+        //        Serial.print("Ignoring IC ");
+          //      Serial.println(i);
+         //       for (int j = 0; j < CELLS_PER_IC; j++) {
+         //           ignore_cell[i][j] = true;
+          //      }
+          //      total_count_cells -= CELLS_PER_IC; // Adjust cell count (used for calculating averages)
+            //    for (int j = 0; j < THERMISTORS_PER_IC; j++) {
+                //    ignore_cell_therm[i][j] = true;
+            //    }
+            //    total_count_cell_thermistors -= THERMISTORS_PER_IC; // Adjust cell thermistor count (used for calculating averages)
+           ///     for (int j = 0; j < PCB_THERM_PER_IC; j++) {
+           //         ignore_pcb_therm[i][j] = true;
+           //     }
+           //     total_count_pcb_thermistors -= PCB_THERM_PER_IC; // Adjust cell pcb thermistor count (used for calculating averages)
+           // }
+     //   }
+    //    Serial.println();
+  //  }
 
-    Serial.println("Setup Complete!");
+ //   Serial.println("Setup Complete!");
 }
 
 // TODO Implement Coulomb counting to track state of charge of battery.
@@ -442,17 +452,26 @@ void loop() {
     tx_msg.id = ID_BMS_DETAILED_VOLTAGES;
     tx_msg.len = sizeof(bms_detailed_voltages);
     for (int i = 0; i < TOTAL_IC; i++) {
-        for (int j = 0; j < 3; j++) {
-            bms_detailed_voltages[i][j].write(tx_msg.buf);
-            CAN.write(tx_msg);
+        if ( odd_ic(i) ) {
+            for (int j = 0; j < 3; j++) {
+                bms_detailed_voltages[i][j].write(tx_msg.buf);
+                CAN.write(tx_msg);
+            }
+        } else {
+            for (int j = 0; j < 4; j++) {
+                bms_detailed_voltages[i][j].write(tx_msg.buf);
+                CAN.write(tx_msg);
+            }
         }
     }
 
     tx_msg.id = ID_BMS_DETAILED_TEMPERATURES;
     tx_msg.len = sizeof(bms_detailed_temperatures);
     for (int i = 0; i < TOTAL_IC; i++) {
-        bms_detailed_temperatures[i].write(tx_msg.buf);
-        CAN.write(tx_msg);
+        for (int j = 0; i < TOTAL_IC; j++) {
+            bms_detailed_temperatures[i][j].write(tx_msg.buf);
+            CAN.write(tx_msg);
+        }
     }
 
     tx_msg.id = ID_BMS_ONBOARD_DETAILED_TEMPERATURES;
@@ -512,11 +531,8 @@ void init_cfg() {
 }
 
 void modify_discharge_config(int ic, int cell, bool setDischarge) { // TODO unify language about "balancing" vs "discharging"
-    if (ic < TOTAL_IC && cell < CELLS_PER_IC) {
+    if (ic < TOTAL_IC && cell < CELLS_PER_EVEN_IC) {
         bms_balancing_status[ic / 4].set_cell_balancing(ic % 4, cell, setDischarge);
-        if (cell > 4) {
-            cell++; // Increment cell, skipping the disconnected C5. This abstracts the missing cell from the rest of the program.
-        }
         if (cell < 8) {
             if(setDischarge) {
                 tx_cfg[ic][4] = tx_cfg[ic][4] | (0b1 << cell);
@@ -590,7 +606,7 @@ void balance_cells() {
             for (int ic = 0; ic < TOTAL_IC; ic++) { // Loop through ICs
               if (odd_ic(ic)){
                 for (int cell = 0; cell < CELLS_PER_ODD_IC; cell++) { // Loop through cells
-                    if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
+                    //if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
                         uint16_t cell_voltage = cell_voltages[ic][cell]; // current cell voltage in mV
                         if (cell_voltage < bms_voltages.get_low() + voltage_difference_threshold) {
                             modify_discharge_config(ic, cell, false); // Modify our local version of the discharge configuration
@@ -598,11 +614,11 @@ void balance_cells() {
                             modify_discharge_config(ic, cell, true); // Modify our local version of the discharge configuration
                             cells_balancing = true;
                         }
-                    }
+                    //}
                 }
               } else {
                 for (int cell = 0; cell < CELLS_PER_EVEN_IC; cell++) { // Loop through cells
-                    if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
+                    //if (!ignore_cell[ic][cell]) { // Ignore any cells specified in ignore_cell
                         uint16_t cell_voltage = cell_voltages[ic][cell]; // current cell voltage in mV
                         if (cell_voltage < bms_voltages.get_low() + voltage_difference_threshold) {
                             modify_discharge_config(ic, cell, false); // Modify our local version of the discharge configuration
@@ -610,7 +626,7 @@ void balance_cells() {
                             modify_discharge_config(ic, cell, true); // Modify our local version of the discharge configuration
                             cells_balancing = true;
                         }
-                    }
+                    //}
                 } 
               }
             }
@@ -640,11 +656,11 @@ void poll_cell_voltages() {
         Serial.println("A PEC error was detected in cell voltage data");
     }
     // Move C7-C10 down by one in the array, skipping C6. This abstracts the missing cell from the rest of the program.
-    for (int i=0; i<TOTAL_IC; i++) { // Loop through ICs
-        for (int j=6; j<10; j++) { // Loop through C7-C10
-            cell_voltages[i][j-1] = cell_voltages[i][j];
-        }
-    }
+    //for (int i=0; i<TOTAL_IC; i++) { // Loop through ICs
+        //for (int j=6; j<10; j++) { // Loop through C7-C10
+            //cell_voltages[i][j-1] = cell_voltages[i][j];
+        //}
+    //}
 }
 
 void process_voltages() {
@@ -658,9 +674,10 @@ void process_voltages() {
     int minIC = 0;
     int minCell = 0;
     for (int ic = 0; ic < TOTAL_IC; ic++) {
-        for (int cell = 0; cell < CELLS_PER_IC; cell++) {
-            bms_detailed_voltages[ic][cell / 3].set_voltage(cell % 3, cell_voltages[ic][cell]); // Populate CAN message struct
-            if (!ignore_cell[ic][cell]) {
+        if (odd_ic(ic)) {
+            for (int cell = 0; cell < CELLS_PER_ODD_IC; cell++) {
+                bms_detailed_voltages[ic][cell / 3].set_voltage(cell % 3, cell_voltages[ic][cell]); // Populate CAN message struct
+                //if (!ignore_cell[ic][cell]) {
                 uint16_t currentCell = cell_voltages[ic][cell];
                 if (currentCell > maxVolt) {
                     maxVolt = currentCell;
@@ -673,6 +690,25 @@ void process_voltages() {
                     minCell = cell;
                 }
                 totalVolts += currentCell;
+                //}
+            }
+        } else {
+            for (int cell = 0; cell < CELLS_PER_EVEN_IC; cell++) {
+                bms_detailed_voltages[ic][cell / 3].set_voltage(cell % 3, cell_voltages[ic][cell]); // Populate CAN message struct
+                //if (!ignore_cell[ic][cell]) {
+                uint16_t currentCell = cell_voltages[ic][cell];
+                if (currentCell > maxVolt) {
+                    maxVolt = currentCell;
+                    maxIC = ic;
+                    maxCell = cell;
+                }
+                if (currentCell < minVolt) {
+                    minVolt = currentCell;
+                    minIC = ic;
+                    minCell = cell;
+                }
+                totalVolts += currentCell;
+                //}
             }
         }
     }
@@ -753,20 +789,20 @@ void process_cell_temps() { // Note: For up-to-date information you must poll th
     highTemp = -9999;
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         for (int j = 0; j < THERMISTORS_PER_IC; j++) {
-            if (!ignore_cell_therm[ic][j]) {
-                thermTemp = calculate_cell_temp(aux_voltages[ic][j], aux_voltages[ic][5]); // aux_voltages[ic][5] stores the reference voltage
+            //if (!ignore_cell_therm[ic][j]) {
+            thermTemp = calculate_cell_temp(aux_voltages[ic][j], aux_voltages[ic][5]); // aux_voltages[ic][5] stores the reference voltage
 
-                if (thermTemp < lowTemp) {
-                    lowTemp = thermTemp;
-                }
-
-                if (thermTemp > highTemp) {
-                    highTemp = thermTemp;
-                }
-
-                bms_detailed_temperatures[ic].set_temperature(j, thermTemp); // Populate CAN message struct
-                totalTemp += thermTemp;
+            if (thermTemp < lowTemp) {
+                lowTemp = thermTemp;
             }
+
+            if (thermTemp > highTemp) {
+                highTemp = thermTemp;
+            }
+
+            bms_detailed_temperatures[ic][j / 2].set_temperature((j % 3), thermTemp); // Populate CAN message struct
+            totalTemp += thermTemp;
+            //}
         }
     }
     avgTemp = (int16_t) (totalTemp / total_count_cell_thermistors);
@@ -829,7 +865,7 @@ void process_onboard_temps() { // Note: For up-to-date information you must poll
 
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         for (int j = 0; j < PCB_THERM_PER_IC; j++) {
-            if (!ignore_pcb_therm[ic][j]) {
+            //if (!ignore_pcb_therm[ic][j]) {
                 thermTemp = calculate_onboard_temp(aux_voltages[ic][j+3], aux_voltages[ic][5]);
                 if (thermTemp < lowTemp) {
                     lowTemp = thermTemp;
@@ -841,7 +877,7 @@ void process_onboard_temps() { // Note: For up-to-date information you must poll
 
                 bms_onboard_detailed_temperatures[ic].set_temperature(j, thermTemp); // Populate CAN message struct
                 totalTemp += thermTemp;
-            }
+           // }
         }
     }
     avgTemp = (int16_t) (totalTemp / total_count_pcb_thermistors);
@@ -963,24 +999,26 @@ void print_temps() {
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         Serial.print("IC"); Serial.print(ic); Serial.print("\t");
         for (int therm = 0; therm < THERMISTORS_PER_IC; therm++) {
-            if (!ignore_cell_therm[ic][therm]) {
-                double temp = ((double) bms_detailed_temperatures[ic].get_temperature(therm)) / 100;
-                Serial.print(temp, 2);
-                Serial.print(" ºC");
-            } else {
-                Serial.print("IGN\t");
+            for (int j = 0; j < 2; j++){
+                //if (!ignore_cell_therm[ic][therm]) {
+                    double temp = ((double) bms_detailed_temperatures[ic][j].get_temperature(therm % 3)) / 100;
+                    Serial.print(temp, 2);
+                    Serial.print(" ºC");
+                //} else {
+                   // Serial.print("IGN\t");
+                //}
             }
             Serial.print("\t");
         }
         Serial.print("\t\t\t\t\t\t");
         for (int therm = 0; therm < PCB_THERM_PER_IC; therm++) {
-            if (!ignore_pcb_therm[ic][therm]) {
-                double temp = ((double) bms_onboard_detailed_temperatures[ic].get_temperature(therm)) / 100;
-                Serial.print(temp, 2);
-                Serial.print(" ºC");
-            } else {
-                Serial.print("IGN\t");
-            }
+        //if (!ignore_pcb_therm[ic][therm]) {
+            double temp = ((double) bms_onboard_detailed_temperatures[ic].get_temperature(therm)) / 100;
+            Serial.print(temp, 2);
+            Serial.print(" ºC");
+        //} else {
+        //    Serial.print("IGN\t");
+        //}
             Serial.print("\t");
         }
         Serial.println();
@@ -1011,24 +1049,24 @@ void print_cells() {
     Serial.println("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\t\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8");
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         Serial.print("IC"); Serial.print(ic); Serial.print("\t");
-        for (int cell = 0; cell < CELLS_PER_IC; cell++) {
-            int ignored = ignore_cell[ic][cell];
-            if (!MODE_BENCH_TEST || !ignored) { // Don't clutter test bench UI with ignored cells
+        for (int cell = 0; cell < CELLS_PER_EVEN_IC; cell++) {
+            //int ignored = ignore_cell[ic][cell];
+            // (!MODE_BENCH_TEST || !ignored) { // Don't clutter test bench UI with ignored cells
                 double voltage = cell_voltages[ic][cell] * 0.0001;
                 Serial.print(voltage, 4); Serial.print("V\t");
-            } else {
-                Serial.print("\t");
-            }
+            //} else {
+            //    Serial.print("\t");
+            //}
         }
         Serial.print("\t");
-        for (int cell = 0; cell < CELLS_PER_IC; cell++) {
+        for (int cell = 0; cell < CELLS_PER_EVEN_IC; cell++) {
             int balancing = bms_balancing_status[ic / 4].get_cell_balancing(ic % 4, cell);
-            int ignored = ignore_cell[ic][cell];
-            if (balancing) {
-                Serial.print("BAL");
-            } else if (ignored) {
-                Serial.print("IGN");
-            }
+            //int ignored = ignore_cell[ic][cell];
+            //if (balancing) {
+             if (balancing) {Serial.print("BAL");}
+            //} else if (ignored) {
+               // S//erial.print("IGN");
+          //  }
             Serial.print("\t");
         }
         Serial.println();
@@ -1038,12 +1076,12 @@ void print_cells() {
     Serial.println("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8");
     for (int ic = 0; ic < TOTAL_IC; ic++) {
         Serial.print("IC"); Serial.print(ic); Serial.print("\t");
-        for (int cell = 0; cell < CELLS_PER_IC; cell++) {
-            if (!ignore_cell[ic][cell]) {
-                double voltage = (cell_voltages[ic][cell]-bms_voltages.get_low()) * 0.0001;
-                Serial.print(voltage, 4);
-                Serial.print("V");
-            }
+        for (int cell = 0; cell < CELLS_PER_EVEN_IC; cell++) {
+            //if (!ignore_cell[ic][cell]) {
+            double voltage = (cell_voltages[ic][cell]-bms_voltages.get_low()) * 0.0001;
+            Serial.print(voltage, 4);
+            Serial.print("V");
+            //}
             Serial.print("\t");
         }
         Serial.println();
