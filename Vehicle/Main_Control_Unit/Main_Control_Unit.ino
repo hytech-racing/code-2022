@@ -173,7 +173,9 @@ void setup() {
 
     /* Configure CAN rx interrupt */
     interrupts();
-    CAN.onReceive(parse_can_message);
+    NVIC_ENABLE_IRQ(IRQ_CAN_MESSAGE);
+    attachInterruptVector(IRQ_CAN_MESSAGE,parse_can_message);
+    FLEXCAN0_IMASK1 = FLEXCAN_IMASK1_BUF5M;
     /* Configure CAN rx interrupt */
 
     delay(500);
