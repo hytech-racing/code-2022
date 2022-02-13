@@ -252,7 +252,7 @@ void read_gpio() {
     overtemp_fault_counter++;
     if (overtemp_fault_counter > MAX_SUCCESSIVE_FAULTS){
       overtemp_total = true;
-      BMS_status.set_discharge_overtemp(true);
+      bms_status.set_discharge_overtemp(true);
    }else {
       overtemp_fault_counter = 0;
     }
