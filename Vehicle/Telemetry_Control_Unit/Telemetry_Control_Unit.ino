@@ -662,6 +662,10 @@ void send_xbee() {
         xb_msg.id = ID_DASHBOARD_STATUS;
         write_xbee_data();
     }
+
+
+    // DISABLED EM, SAB, and IMU to XBee for Now
+    /*
     if (timer_em_status.check()) {
         em_status.write(xb_msg.buf);
         xb_msg.len = sizeof(em_status);
@@ -698,6 +702,7 @@ void send_xbee() {
         xb_msg.id = ID_SAB_READINGS_REAR;
         write_xbee_data();
     }
+    */
 }
 void sd_date_time(uint16_t* date, uint16_t* time) {
     // return date using FAT_DATE macro to format fields
