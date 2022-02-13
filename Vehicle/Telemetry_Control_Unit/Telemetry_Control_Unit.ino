@@ -1,8 +1,10 @@
+
 /*
  * Teensy 3.5 Telemetry Control Unit code
  * Written by Soohyun Kim, with assistance by Ryan Gallaway and Nathan Cheek. 
  * 
  * Rev 2 - 4/23/2019
+ * Last Modified: 2/8/2022
  */
 #define GPS_EN false
 #include <SD.h>
@@ -24,6 +26,7 @@
 #define SUPPLY_READ_CHANNEL 2
 #define COOLING_CURRENT_CHANNEL 3
 #define ALPHA 0.9772                     // parameter for the sowftware filter used on ADC pedal channels
+
 /*
  * Variables to store filtered values from ADC channels
  */
@@ -31,11 +34,23 @@ float filtered_temp_reading{};
 float filtered_ecu_current_reading{};
 float filtered_supply_reading{};
 float filtered_cooling_current_reading{};
+
+/*
+ * CAN Variables
+ */
 FlexCAN CAN(500000);
 static CAN_message_t msg_rx;
 static CAN_message_t msg_tx;
 static CAN_message_t xb_msg;
+
 File logger;
+
+/*
+ * Variables to help with time calculation
+ */
+uint64_t global_ms_offset = 0;
+uint64_t last_sec_epoch;
+
 #if GPS_EN
 Adafruit_GPS GPS(&Serial1);
 #endif
@@ -66,7 +81,7 @@ Metro timer_status_send = Metro(100);
 Metro timer_status_send_xbee = Metro(2000);
 Metro timer_gps = Metro(100);
 Metro timer_debug_RTC = Metro(1000);
-Metro timer_flush = Metro(1000);
+Metro timer_flush = Metro(100);
 Metro timer_total_discharge = Metro(1000);
 Metro timer_em_status = Metro(1000);
 Metro timer_em_measurement = Metro(1000);
@@ -131,6 +146,10 @@ int write_xbee_data();
 void send_xbee();
 void sd_date_time(uint16_t* date, uint16_t* time);
 void setup() {
+    /* Set up Serial, XBee and CAN */
+    Serial.begin(115200);
+    XB.begin(115200);
+
     /* Set up real-time clock */
     //Teensy3Clock.set(9999999999); // set time (epoch) at powerup  (COMMENT OUT THIS LINE AND PUSH ONCE RTC HAS BEEN SET!!!!)
     setSyncProvider(getTeensy3Time); // registers Teensy RTC as system time
@@ -139,11 +158,11 @@ void setup() {
     } else {
         Serial.println("System time set to RTC");
     }
-    /* Set up Serial, XBee and CAN */
-    Serial.begin(115200);
-    XB.begin(115200);
+    last_sec_epoch = Teensy3Clock.get();
+    
     FLEXCAN0_MCR &= 0xFFFDFFFF; // Enables CAN message self-reception
     CAN.begin();
+    
   #if GPS_EN
     /* Set up GPS */
     GPS.begin(9600);
@@ -151,6 +170,7 @@ void setup() {
     GPS.sendCommand(PMTK_SET_NMEA_UPDATE_10HZ); // set update rate (10Hz)
     GPS.sendCommand(PGCMD_ANTENNA); // report data about antenna
   #endif
+  
     /* Set up SD card */
     Serial.println("Initializing SD card...");
     SdFile::dateTimeCallback(sd_date_time); // Set date/time callback function
@@ -171,18 +191,20 @@ void setup() {
             Serial.println("All possible SD card log filenames are in use - please clean up the SD card");
         }
     }
+    
     if (logger) {
         Serial.println("Successfully opened SD file");
     } else {
         Serial.println("Failed to open SD file");
     }
+    
     logger.println("time,msg.id,msg.len,data"); // Print CSV heading to the logfile
     logger.flush();
 }
 void loop() {
     /* Process and log incoming CAN messages */
     parse_can_message();
-  read_analog_values();
+    read_analog_values();
     /* Send messages over XBee */
     send_xbee();
     /* Flush data to SD card occasionally */
@@ -279,8 +301,18 @@ void parse_can_message() {
     }
 }
 void write_to_SD(CAN_message_t *msg) { // Note: This function does not flush data to disk! It will happen when the buffer fills or when the above flush timer fires
-    logger.print(Teensy3Clock.get());
-    logger.print("000,");
+    // Calculate Time
+    //This block is verified to loop through
+    uint64_t sec_epoch = Teensy3Clock.get();
+    if (sec_epoch != last_sec_epoch) {
+        global_ms_offset = millis() % 1000;
+        last_sec_epoch = sec_epoch;
+    }
+    uint64_t current_time = sec_epoch * 1000 + (millis() - global_ms_offset) % 1000;
+
+    // Log to SD
+    logger.print(current_time);
+    logger.print(",");
     logger.print(msg->id, HEX);
     logger.print(",");
     logger.print(msg->len);

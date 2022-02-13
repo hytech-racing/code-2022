@@ -17,6 +17,7 @@ Follow HyTech's [Github Software Guidelines](https://gtvault.sharepoint.com/:w:/
 ## Checklist
 - [ ] Is this code linked to a new board or board rev?
 - - [ ] Is *there a PR* for that board in `circuits-2022`? If so, please pause until that PR is merged.
+- [ ] If you made a change or addition or deletion to the CAN library, did you inform the Data Aq lead?
 - [ ] Did you test the code in real-world conditions before submitting?
 - - [ ] Did you *use CPU Speed = 76 Mhz and Optimize = Faster* when testing?
 - [ ] Did you pull `main` into your branch?
