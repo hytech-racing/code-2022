@@ -89,15 +89,14 @@ void loop() {
 
   // put your main code here, to run repeatedly:
 
-  if (i < 20) {
+  if (true) {
     if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
       Serial.println("BMS state: Discharging\n");
     }
     Serial.println(i, DEC);
     read_voltages();
-    read_gpio();
-    print_thermistor_gpios();
     print_cells();
+    balance_cells(BALANCE_STANDARD);
     i++;
   }
 }
@@ -118,22 +117,8 @@ void read_voltages() {
     ic[i].wakeup();
     Serial.println("starting wrcfga");
     ic[i].wrcfga(configuration);
-    Serial.println("wrfcga configuration");
     uint8_t *wrfcga_buf = configuration.buf();
-    Serial.println(wrfcga_buf[0], BIN);
-    Serial.println(wrfcga_buf[1], BIN);
-    Serial.println(wrfcga_buf[2], BIN);
-    Serial.println(wrfcga_buf[3], BIN);
-    Serial.println(wrfcga_buf[4], BIN);
-    Serial.println(wrfcga_buf[5], BIN);
     Reg_Group_Config reg_group_config = ic[i].rdcfga();
-    Serial.println("wrfcga readback: ");
-    Serial.println(reg_group_config.buf()[0], BIN);
-    Serial.println(reg_group_config.buf()[1], BIN);
-    Serial.println(reg_group_config.buf()[2], BIN);
-    Serial.println(reg_group_config.buf()[3], BIN);
-    Serial.println(reg_group_config.buf()[4], BIN);
-    Serial.println(reg_group_config.buf()[5], BIN);
     Serial.println("starting adcv");
     ic[i].adcv(static_cast<CELL_SELECT>(0));
     ic[i].wakeup();
@@ -150,7 +135,11 @@ void read_voltages() {
       } else if (j == 6) {
         buf = reg_group_c.buf();
       } else if (j == 9) {
-        buf = reg_group_d.buf();
+        if (i % 2 == 0) {
+          buf = reg_group_d.buf();
+        } else {
+          break;
+        }
       }
       for (int k = 0; k < 3; k++) {
         cell_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
@@ -229,8 +218,8 @@ void read_gpio() {
       }
       for (int k = 0; k < 3; k++) {
         gpio_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
-        float thermistor_resistance = (27400/(gpio_voltages[i][j+k]/ 50000.0))-27400;
-        gpio_temps[i][j+k] = 1/((1/298.15)+(1/3984.0)*log(thermistor_resistance/10.0)); //calculates temperature in kelvins
+        float thermistor_resistance = (27400 / (gpio_voltages[i][j + k] / 50000.0)) - 27400;
+        gpio_temps[i][j + k] = 1 / ((1 / 298.15) + (1 / 3984.0) * log(thermistor_resistance / 10.0)); //calculates temperature in kelvins
         if (gpio_voltages[i][j + k] > max_thermistor_voltage)
         {
           max_thermistor_voltage = gpio_voltages[i][j + k];
@@ -261,28 +250,26 @@ void read_gpio() {
   }
 }
 
-// Cell Balancing function. NOTE: Must call read_voltages() in order to obtain balancing voltage; 
+// Cell Balancing function. NOTE: Must call read_voltages() in order to obtain balancing voltage;
 void balance_cells(uint8_t mode) {
+  static int i = 0; 
   if (balance_voltage < 30000 || balance_voltage > 42000) {
     Serial.print("BALANCE HALT: BALANCE VOLTAGE SET AS "); Serial.print(balance_voltage / 10000.0, 4); Serial.println(", OUTSIDE OF SAFE BOUNDS.");
     return;
   }
-  Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0xC, (uint8_t) 0x1); // base configuration for the configuration register group
-  Reg_Group_PWM pwm_configuration = Reg_Group_PWM(mode); // base configuration for the PWM register group, which defines the duty cycle of the balancing 
-  int i = 0;
-  while (i < 8) {
+  Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0xFFF, (uint8_t) 0x1); // base configuration for the configuration register group
+  Reg_Group_PWM pwm_configuration = Reg_Group_PWM(0xF); // base configuration for the PWM register group, which defines the duty cycle of the balancing
+  if (i < 8) {
     Serial.print("Currently balancing cell #: "); Serial.println(i, DEC);
     ic[i].wakeup();
     ic[i].wrcfga(configuration);
     ic[i].wrpwm(pwm_configuration);
-    if (balance_timer.check()) {
-      if (i == 7) {
-        i = 0;
-      } else {
-        i++;
-      }
-      balance_timer.reset();
+    if (i == 7) {
+      i = 0;
+    } else {
+      i++;
     }
+    delay(1);
   }
 }
 
@@ -323,7 +310,7 @@ void print_thermistor_gpios() {
   for (int ic = 0; ic < TOTAL_IC; ic++) {
     Serial.print("Cell Temperature Voltages"); Serial.print(ic); Serial.print("\t");
     for (int cell = 0; cell < 4; cell++) {
-      Serial.print(gpio_temps[ic][cell] -273.15, 3); Serial.print("C\t");
+      Serial.print(gpio_temps[ic][cell] - 273.15, 3); Serial.print("C\t");
     }
     Serial.print("\t");
     Serial.println();
