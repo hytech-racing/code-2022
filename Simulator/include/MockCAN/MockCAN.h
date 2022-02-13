@@ -6,7 +6,7 @@
 #ifdef HYTECH_ARDUINO_TEENSY_40
 #include "HyTech_FlexCAN_T4"
 #else
-#include "HyTech_FlexCAN.h"
+#include "IFCT.h"
 #endif
 
 class MockCAN {

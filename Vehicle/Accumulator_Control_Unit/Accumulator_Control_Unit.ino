@@ -29,10 +29,9 @@
  * When sending any other command (such as reading or writing registers), wake up the isoSPI circuit by calling wakeup_idle().
  */
 
-#include <Arduino.h>
 // #include <EEPROM.h> TODO add EEPROM functionality so we can configure parameters over CAN
-#include <HyTech_FlexCAN.h>
-#include <HyTech_CAN.h>
+//#include <External_Libs/IFCT/IFCT.h>
+#include <HyTech_Libs/HyTech_CAN.h>
 
 #include <LT_SPI.h>
 #include <LTC68042.h>

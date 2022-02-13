@@ -18,3 +18,7 @@
 	path = Libraries/External_Libs/xbee-micropython
 	url = https://github.com/digidotcom/xbee-micropython.git
 	branch = master
+[submodule "Libraries/External_Libs/Adafruit_GPS"]
+	path = Libraries/External_Libs/Adafruit_GPS
+	url = https://github.com/adafruit/Adafruit_GPS.git
+	branch = master

@@ -1,5 +1,5 @@
 #pragma once
-#include <Metro_AVR.h>
+#include <Metro.h>
 
 enum class BLINK_MODES { OFF = 0, ON = 1, FAST = 2, SLOW = 3};
 const int BLINK_RATES[4] = { 0, 0, 150, 400}; // OFF, ON, FAST, SLOW, FASTER

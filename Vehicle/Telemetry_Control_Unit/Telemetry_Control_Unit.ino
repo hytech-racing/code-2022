@@ -8,7 +8,7 @@
  */
 #define GPS_EN false
 #include <SD.h>
-#include <HyTech_FlexCAN.h>
+#include <IFCT.h>
 #include <HyTech_CAN.h>
 
 #include <Wire.h>

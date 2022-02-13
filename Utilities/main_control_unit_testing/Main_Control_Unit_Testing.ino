@@ -1,6 +1,6 @@
 
 #include <ADC_SPI.h>
-#include <HyTech_FlexCAN.h>
+#include <IFCT.h>
 #include <HyTech_CAN.h>
 
 #include <Metro.h>

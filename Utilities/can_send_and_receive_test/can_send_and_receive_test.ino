@@ -2,7 +2,7 @@
  * Test program that sends and receives CAN messages. Use this to test if CAN Bus is operational.
  * Created by Nathan Cheek, December 20, 2017
  */
-#include <HyTech_FlexCAN.h>
+#include <IFCT.h>
 #include <Metro.h>
 
 FlexCAN CAN(500000);

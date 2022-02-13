@@ -6,7 +6,7 @@
     Created March 2019
 */
 
-#include <HyTech_FlexCAN.h>
+#include <IFCT.h>
 #include <HyTech_CAN.h>
 
 

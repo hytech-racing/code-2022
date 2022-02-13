@@ -1,8 +1,8 @@
 #include "Dashboard.h"
 #include "DebouncedButton.h"
 #include "HyTech_CAN.h"
-#include "HyTech_MCP_CAN.h"
-#include "metro_AVR.h"
+#include "MCP_CAN.h"
+#include "Metro.h"
 #include "VariableLED.h"
 
 // only send if receiving mcu status messages

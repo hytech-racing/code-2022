@@ -5,7 +5,7 @@
  * Controls Elcon charger and communicates with BMS over CAN to enable cell balancing
  */
 
-#include <HyTech_FlexCAN.h>
+#include <IFCT.h>
 #include <HyTech_CAN.h>
 
 #include <Metro.h>

@@ -13,7 +13,7 @@
 #include "SAB_readings_front.h"
 #include "SAB_readings_rear.h"
 #include "CAN_ID.h"
-#include "HyTech_FlexCAN.h"
+#include "IFCT.h"
 #include "Metro.h"
 
 // CAN Variables
