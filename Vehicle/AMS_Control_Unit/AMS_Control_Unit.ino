@@ -231,16 +231,13 @@ void read_gpio() {
         gpio_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
         if(!(i%2) && j+k==5)
         {
-          gpio_temps[i][j+k] = -66.875 + 218.75*(gpio_voltages[i][j + k]/50000.0);
+          gpio_temps[i][j+k] = -66.875 + 218.75*(gpio_voltages[i][j + k]/50000.0); // temperature in C
         }
         else
         {
           float thermistor_resistance = (2740/(gpio_voltages[i][j+k]/ 50000.0))-2740;
-        gpio_temps[i][j+k] = 1/((1/298.15)+(1/3984.0)*log(thermistor_resistance/10000.0)); //calculates temperature in kelvins
+          gpio_temps[i][j+k] = 1/((1/298.15)+(1/3984.0)*log(thermistor_resistance/10000.0))-273.15; //calculates temperature in kelvins
         }
-        
-
-          
         if (gpio_voltages[i][j + k] > max_thermistor_voltage)
         {
           max_thermistor_voltage = gpio_voltages[i][j + k];
@@ -333,7 +330,7 @@ void print_thermistor_gpios() {
   for (int ic = 0; ic < TOTAL_IC; ic++) {
     Serial.print("Cell Temperatures"); Serial.print(ic); Serial.print("\t");
     for (int cell = 0; cell < 4; cell++) {
-      Serial.print(gpio_temps[ic][cell] -273.15, 3); Serial.print("C\t");
+      Serial.print(gpio_temps[ic][cell], 3); Serial.print("C\t");
     }
     Serial.print("\t");
     Serial.println();
