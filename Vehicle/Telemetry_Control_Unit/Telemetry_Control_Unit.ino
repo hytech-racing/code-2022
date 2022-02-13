@@ -146,6 +146,8 @@ int write_xbee_data();
 void send_xbee();
 void sd_date_time(uint16_t* date, uint16_t* time);
 void setup() {
+    delay(5000); // Prevents suprious text files when turning the car on and off rapidly
+    
     /* Set up Serial, XBee and CAN */
     Serial.begin(115200);
     XB.begin(115200);
