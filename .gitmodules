@@ -22,3 +22,7 @@
 	path = Libraries/External_Libs/Adafruit_GPS
 	url = https://github.com/adafruit/Adafruit_GPS.git
 	branch = master
+[submodule "Libraries/External/Adafruit_GPS"]
+	path = Libraries/External/Adafruit_GPS
+	url = https://github.com/adafruit/Adafruit_GPS.git
+	branch = master

@@ -30,8 +30,8 @@
  */
 
 // #include <EEPROM.h> TODO add EEPROM functionality so we can configure parameters over CAN
-//#include <External_Libs/IFCT/IFCT.h>
-#include <HyTech_Libs/HyTech_CAN.h>
+#include <IFCT.h>
+#include <HyTech_CAN.h>
 
 #include <LT_SPI.h>
 #include <LTC68042.h>
