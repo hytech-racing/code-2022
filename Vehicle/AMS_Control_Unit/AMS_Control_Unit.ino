@@ -42,10 +42,10 @@ float gpio_temps[TOTAL_IC][6];      // 2D Array to hold GPIO temperatures being 
 Metro charging_timer = Metro(1000); // Timer to check if charger is still talking to ACU
 
 // CONSECUTIVE FAULT COUNTERS: counts successive faults; resets to zero if normal reading breaks fault chain
-long uv_fault_counter = 0;             // undervoltage fault counter
-long ov_fault_counter = 0;             // overvoltage fault counter
-long pack_ov_fault_counter = 0;    // total voltage overvoltage fault counter
-long overtemp_fault_counter = 0;    //total overtemperature fault counter
+unsigned long uv_fault_counter = 0;             // undervoltage fault counter
+unsigned long ov_fault_counter = 0;             // overvoltage fault counter
+unsigned long pack_ov_fault_counter = 0;    // total voltage overvoltage fault counter
+unsigned long overtemp_fault_counter = 0;    //total overtemperature fault counter
 bool overtemp_fault_state = false; // enter fault state is 20 successive faults occur
 bool uv_fault_state = false;      // enter fault state is 20 successive faults occur
 bool ov_fault_state = false;      // enter fault state is 20 successive faults occur
@@ -112,13 +112,11 @@ void read_voltages() {
 
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
   for (int i = 0; i < 8; i++) {
-    Serial.print("Loop #: "); Serial.println(i, DEC);
     ic[i].wakeup();
     Serial.println("starting wrcfga");
     ic[i].wrcfga(configuration);
     uint8_t *wrfcga_buf = configuration.buf();
     Reg_Group_Config reg_group_config = ic[i].rdcfga();
-    Serial.println("starting adcv");
     ic[i].adcv(static_cast<CELL_SELECT>(0));
     ic[i].wakeup();
     Reg_Group_Cell_A reg_group_a = ic[i].rdcva();
@@ -215,9 +213,7 @@ void read_gpio() {
 
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
-    Serial.println("starting wrcfga");
     ic[i].wrcfga(configuration);
-    Serial.println("starting adax");
     ic[i].adax(static_cast<GPIO_SELECT>(0));
     ic[i].wakeup();
     Reg_Group_Aux_A reg_group_a = ic[i].rdauxa();
@@ -232,10 +228,10 @@ void read_gpio() {
       for (int k = 0; k < 3; k++) {
         gpio_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
         if ((i % 2) && j + k == 4) {
-          gpio_temps[i][j + k] = -66.875 + 218.75 * (gpio_voltages[i][j + k] / 50000.0); // temperature in C
+          gpio_temps[i][j + k] = -66.875 + 218.75 * (gpio_voltages[i][j + k] / 50000.0); // caculation for SHT31 temperature in C
         } else {
           float thermistor_resistance = (2740 / (gpio_voltages[i][j + k] / 50000.0)) - 2740;
-          gpio_temps[i][j + k] = 1 / ((1 / 298.15) + (1 / 3984.0) * log(thermistor_resistance / 10000.0)) - 273.15; //calculates temperature in C
+          gpio_temps[i][j + k] = 1 / ((1 / 298.15) + (1 / 3984.0) * log(thermistor_resistance / 10000.0)) - 273.15; //calculation for thermistor temperature in C
         }
         if (gpio_voltages[i][j + k] > max_thermistor_voltage) {
           max_thermistor_voltage = gpio_voltages[i][j + k];
@@ -265,13 +261,22 @@ void read_gpio() {
 
 // Cell Balancing function. NOTE: Must call read_voltages() in order to obtain balancing voltage;
 void balance_cells(uint8_t mode) {
-  static int i = 0;
+  static int i = 0; // counter to track which IC is balancing its cells
+  uint8_t cell_pwm_setting[12];
   if (balance_voltage < 30000 || balance_voltage > 42000) {
     Serial.print("BALANCE HALT: BALANCE VOLTAGE SET AS "); Serial.print(balance_voltage / 10000.0, 4); Serial.println(", OUTSIDE OF SAFE BOUNDS.");
     return;
   }
+  // determine which cells of the IC need balancing
+  for (int cell = 0; cell < 13; cell++) {
+    if (cell_voltages[i][cell] - balance_voltage > 10) {
+      cell_pwm_setting[cell] = 0xF;
+    } else {
+      cell_pwm_setting[cell] = 0x0;
+    }
+  }
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0xFFF, (uint8_t) 0x1); // base configuration for the configuration register group
-  Reg_Group_PWM pwm_configuration = Reg_Group_PWM(0xF); // base configuration for the PWM register group, which defines the duty cycle of the balancing
+  Reg_Group_PWM pwm_configuration = Reg_Group_PWM(cell_pwm_setting[0], cell_pwm_setting[1], cell_pwm_setting[2], cell_pwm_setting[3], cell_pwm_setting[4], cell_pwm_setting[5], cell_pwm_setting[6], cell_pwm_setting[7], cell_pwm_setting[8], cell_pwm_setting[9], cell_pwm_setting[10], cell_pwm_setting[11]); // base configuration for the PWM register group, which defines the duty cycle of the balancing
   if (i < 8) {
     Serial.print("Currently balancing cell #: "); Serial.println(i, DEC);
     ic[i].wakeup();
