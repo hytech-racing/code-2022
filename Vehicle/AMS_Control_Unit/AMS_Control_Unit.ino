@@ -39,14 +39,16 @@ uint32_t total_voltage;             // the total voltage of the pack
 uint16_t balance_voltage = 65535;   // the voltage to balance toward with the base unit as 100μV; equal to the lowest voltage in the battery pack. Iniitalized to max 16 bit value in order to prevent balancing without having read in valid voltages first
 uint16_t gpio_voltages[TOTAL_IC][6];  // 2D Array to hold GPIO voltages being read in; voltages are read in with the base unit as 100μV
 float gpio_temps[TOTAL_IC][6];      // 2D Array to hold GPIO temperatures being read in; temperatures are read in with the base unit as K
-Metro balance_timer = Metro(30000);                // Timer to determine balancing sequence
+Metro charging_timer = Metro(1000); // Timer to check if charger is still talking to ACU
 
 // CONSECUTIVE FAULT COUNTERS: counts successive faults; resets to zero if normal reading breaks fault chain
 int uv_fault_counter = 0;             // undervoltage fault counter
 int ov_fault_counter = 0;             // overvoltage fault counter
 int pack_ov_fault_counter = 0;    // total voltage overvoltage fault counter
 int overtemp_fault_counter = 0;    //total overtemperature fault counter
-bool overtemp_total = false;
+bool overtemp_fault_state = false; // enter fault state is 20 successive faults occur
+bool uv_fault_state = false;      // enter fault state is 20 successive faults occur
+bool ov_fault_state = false;      // enter fault state is 20 successive faults occur
 
 // LTC6811_2 OBJECT DECLARATIONS
 LTC6811_2 ic[8];
@@ -83,22 +85,17 @@ void setup() {
       The state machine initializes to the DISCHARGING state
   */
   bms_status.set_state(BMS_STATE_DISCHARGING);
+  parse_CAN_CCU_status();
 }
 int i = 0;
 void loop() {
-
   // put your main code here, to run repeatedly:
-
-  if (true) {
-    if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
-      Serial.println("BMS state: Discharging\n");
-    }
-    Serial.println(i, DEC);
-    read_voltages();
-    print_cells();
-    balance_cells(BALANCE_STANDARD);
-    i++;
+  parse_CAN_CCU_status();
+  if (charging_timer.check() && bms_status.get_state() == BMS_STATE_CHARGING) {
+    bms.set_state(BMS_STATE_DISCHARGING);
   }
+  read_voltages();
+  read_gpios();
 }
 
 // READ functions to collect and read data from the LTC6811-2
@@ -160,7 +157,9 @@ void read_voltages() {
   balance_voltage = min_voltage;
   // detect any uv fault conditions, set appropriate error flags, and print relevant message to console
   if (min_voltage < MIN_VOLTAGE) {
-    uv_fault_counter++;
+    if (uv_fault_counter <= MAX_SUCCESSIVE_FAULTS) {
+      uv_fault_counter++;
+    }
     Serial.print("UNDERVOLTAGE FAULT: "); Serial.print("IC #: "); Serial.print(min_voltage_location[0]); Serial.print("\tCell #: "); Serial.print(min_voltage_location[1]); Serial.print("\tConsecutive fault #: "); Serial.println(uv_fault_counter);
     if (uv_fault_counter > MAX_SUCCESSIVE_FAULTS) {
       bms_status.set_undervoltage(true);
@@ -218,11 +217,11 @@ void read_gpio() {
       }
       for (int k = 0; k < 3; k++) {
         gpio_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
-        if((i%2) && j+k==4){
-          gpio_temps[i][j+k] = -66.875 + 218.75*(gpio_voltages[i][j + k]/50000.0); // temperature in C
+        if ((i % 2) && j + k == 4) {
+          gpio_temps[i][j + k] = -66.875 + 218.75 * (gpio_voltages[i][j + k] / 50000.0); // temperature in C
         } else {
-          float thermistor_resistance = (2740/(gpio_voltages[i][j+k]/ 50000.0))-2740;
-          gpio_temps[i][j+k] = 1/((1/298.15)+(1/3984.0)*log(thermistor_resistance/10000.0))-273.15; //calculates temperature in C
+          float thermistor_resistance = (2740 / (gpio_voltages[i][j + k] / 50000.0)) - 2740;
+          gpio_temps[i][j + k] = 1 / ((1 / 298.15) + (1 / 3984.0) * log(thermistor_resistance / 10000.0)) - 273.15; //calculates temperature in C
         }
         if (gpio_voltages[i][j + k] > max_thermistor_voltage) {
           max_thermistor_voltage = gpio_voltages[i][j + k];
@@ -232,25 +231,26 @@ void read_gpio() {
       }
 
     }
-    if (overtemp_total){
-      Serial.println("OverTemp Fault");
-    }
-    Serial.print("Max Thermistor Temp: "); Serial.println(gpio_temps[max_temp_location[0]][max_temp_location[1]]);
   }
-  if (max_thermistor_voltage > MAX_THERMISTOR_VOLTAGE){
-    overtemp_fault_counter++;
-    if (overtemp_fault_counter > MAX_SUCCESSIVE_FAULTS){
-      overtemp_total = true;
-      bms_status.set_discharge_overtemp(true);
-   }else {
-      overtemp_fault_counter = 0;
+  if (max_thermistor_voltage > MAX_THERMISTOR_VOLTAGE) {
+    if (overtemp_fault_counter <= MAX_SUCCESSIVE_FAULTS) {
+      overtemp_fault_counter++;
+    } else {
+      overtemp_fault_state = true;
     }
+  } else {
+    overtemp_fault_counter = 0;
+  }s
+  if (overtemp_fault_state) {
+    Serial.println("OverTemp Fault");
+    bms_status.set_discharge_overtemp(true);
   }
+  Serial.print("Max Thermistor Temp: "); Serial.println(gpio_temps[max_temp_location[0]][max_temp_location[1]]);
 }
 
 // Cell Balancing function. NOTE: Must call read_voltages() in order to obtain balancing voltage;
 void balance_cells(uint8_t mode) {
-  static int i = 0; 
+  static int i = 0;
   if (balance_voltage < 30000 || balance_voltage > 42000) {
     Serial.print("BALANCE HALT: BALANCE VOLTAGE SET AS "); Serial.print(balance_voltage / 10000.0, 4); Serial.println(", OUTSIDE OF SAFE BOUNDS.");
     return;
@@ -271,10 +271,11 @@ void balance_cells(uint8_t mode) {
   }
 }
 
-// parse incoming CAN messages for CCU status message
-void parse_can_message() {
+// parse incoming CAN messages for CCU status message and changes the state of the BMS in software
+void parse_CAN_CCU_status() {
   while (CAN.read(msg)) {
     if (msg.id == ID_CCU_STATUS) {
+      charging_timer.reset();
       if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
         bms_status.set_state(BMS_STATE_CHARGING);
       }
@@ -310,8 +311,8 @@ void print_thermistor_gpios() {
     for (int cell = 0; cell < 4; cell++) {
       Serial.print(gpio_temps[ic][cell], 3); Serial.print("C\t");
     }
-    if((ic%2)) {
-       Serial.print("PCB Temps: ");Serial.print(gpio_temps[ic][4], 3);Serial.print("C\t");
+    if ((ic % 2)) {
+      Serial.print("PCB Temps: "); Serial.print(gpio_temps[ic][4], 3); Serial.print("C\t");
     }
     Serial.print("\t");
     Serial.println();
