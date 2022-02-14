@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 // debug mode
-#define DEBUG true
+#define DEBUG false
 // SPI slave select pin, as required for Teensy 4.0
 #define SS 10
 // SPI alternate pin definitions (not needed unless using Teensy 3.2 alternate SPI pins)
@@ -46,7 +46,9 @@ void LTC6811_2::spi_read_reg(uint8_t *cmd, uint8_t* cmd_pec, uint8_t *data_in) {
     // read in data and PEC; bytes 0 to 5 data bytes; bytes 6 to 7 PEC bytes
     for (int i = 0; i < 8; i++) {
         data_in[i] = SPI.transfer(0); // transfer dummy value over SPI in order to read bytes into data
+#if DEBUG
         Serial.print("SPI in byte: "); Serial.println(data_in[i], BIN);
+#endif
     }
     digitalWrite(SS, HIGH);
     delayMicroseconds(1);
@@ -170,9 +172,9 @@ void LTC6811_2::write_register_group(uint16_t cmd_code, const uint8_t *buffer) {
     generate_pec(data, data_pec, 6);
 #if DEBUG
     uint16_t dec_pec = cmd_pec[0] << 8 | cmd_pec[1];
-//    Serial.print("Command PEC: ");
-//    Serial.println(dec_pec, BIN);
-//    Serial.println("Prepare to spi_write_reg");
+    Serial.print("Command PEC: ");
+    Serial.println(dec_pec, BIN);
+    Serial.println("Prepare to spi_write_reg");
 #endif
     // write out via SPI
     spi_write_reg(cmd, cmd_pec, data, data_pec);
