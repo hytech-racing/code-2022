@@ -97,7 +97,7 @@ void loop() {
   //read_voltages();
   read_gpio();
   print_voltages();
-  //print_temperatures();
+  print_temperatures();
 }
 
 // READ functions to collect and read data from the LTC6811-2
@@ -210,8 +210,8 @@ void read_gpio() {
   uint16_t max_thermistor_voltage = 0;
   int max_temp_location[2];
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
-
   for (int i = 0; i < 8; i++) {
+    Serial.println(i);
     ic[i].wakeup();
     ic[i].wrcfga(configuration);
     ic[i].adax(static_cast<GPIO_SELECT>(0));
@@ -239,7 +239,6 @@ void read_gpio() {
           max_temp_location[1] = j + k;
         }
       }
-
     }
   }
   if (max_thermistor_voltage > MAX_THERMISTOR_VOLTAGE) {
