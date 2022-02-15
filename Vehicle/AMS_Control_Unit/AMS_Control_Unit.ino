@@ -37,8 +37,14 @@ uint16_t vov = 2625; // 4.2V         // Maximum voltage value following datashee
 uint16_t cell_voltages[TOTAL_IC][12]; // 2D Array to hold cell voltages being read in; voltages are read in with the base unit as 100μV
 uint32_t total_voltage;             // the total voltage of the pack
 uint16_t balance_voltage = 65535;   // the voltage to balance toward with the base unit as 100μV; equal to the lowest voltage in the battery pack. Iniitalized to max 16 bit value in order to prevent balancing without having read in valid voltages first
+int min_voltage_location[2]; // [0]: IC#; [1]: Cell#
+int max_voltage_location[2]; // [0]: IC#; [1]: Cell#
+uint16_t min_voltage = 65535;
+uint16_t max_voltage = 0;
 uint16_t gpio_voltages[TOTAL_IC][6];  // 2D Array to hold GPIO voltages being read in; voltages are read in with the base unit as 100μV
 float gpio_temps[TOTAL_IC][6];      // 2D Array to hold GPIO temperatures being read in; temperatures are read in with the base unit as K
+int max_temp_location[2];
+uint16_t max_thermistor_voltage = 0;
 Metro charging_timer = Metro(1000); // Timer to check if charger is still talking to ACU
 
 // CONSECUTIVE FAULT COUNTERS: counts successive faults; resets to zero if normal reading breaks fault chain
@@ -94,7 +100,7 @@ void loop() {
   if (charging_timer.check() && bms_status.get_state() == BMS_STATE_CHARGING) {
     bms_status.set_state(BMS_STATE_DISCHARGING);
   }
-  //read_voltages();
+  read_voltages();
   read_gpio();
   print_voltages();
   print_temperatures();
@@ -104,12 +110,8 @@ void loop() {
 // Read cell voltages from all eight LTC6811-2; voltages are read in with units of 100μV
 void read_voltages() {
   total_voltage = 0;
-  uint16_t min_voltage = 65535;
-  int min_voltage_location[2]; // [0]: IC#; [1]: Cell#
-  uint16_t max_voltage = 0;
-  int max_voltage_location[2]; // [0]: IC#; [1]: Cell#
 
-
+  
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
@@ -158,8 +160,7 @@ void read_voltages() {
   // detect any uv fault conditions, set appropriate error flags, and print relevant message to console
   if (min_voltage < MIN_VOLTAGE) {
     uv_fault_counter++;
-    Serial.print("UNDERVOLTAGE FAULT: "); Serial.print("IC #: "); Serial.print(min_voltage_location[0]); Serial.print("\tCell #: "); Serial.print(min_voltage_location[1]); Serial.print("\tConsecutive fault #: "); Serial.println(uv_fault_counter);
-  } else {
+    } else {
     uv_fault_counter = 0;
   }
   if (uv_fault_counter > MAX_SUCCESSIVE_FAULTS) {
@@ -174,7 +175,6 @@ void read_voltages() {
   // detect any ov fault conditions, set appropriate error flags, and print relevant message to console
   if (max_voltage > MAX_VOLTAGE) {
     ov_fault_counter++;
-    Serial.print("OVERVOLTAGE FAULT: "); Serial.print("IC #: "); Serial.print(max_voltage_location[0]); Serial.print("\tCell #: "); Serial.print(max_voltage_location[1]); Serial.print("\tConsecutive fault #: "); Serial.println(ov_fault_counter); 
   } else {
     ov_fault_counter = 0;
   }
@@ -190,7 +190,6 @@ void read_voltages() {
   // detect any pack ov fault conditions, set appropriate error flags, and print relevant message to console
   if (total_voltage > MAX_TOTAL_VOLTAGE) {
     pack_ov_fault_counter++;
-    Serial.print("PACK OVERVOLTAGE:"); Serial.print("\tConsecutive fault #: "); Serial.println(pack_ov_fault_counter);
   } else {
     pack_ov_fault_counter = 0;
   }
@@ -207,8 +206,8 @@ void read_voltages() {
 
 // Read GPIO registers from LTC6811-2; Process temperature and humidity data from relevant GPIO registers
 void read_gpio() {
-  uint16_t max_thermistor_voltage = 0;
-  int max_temp_location[2];
+
+
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
   for (int i = 0; i < 8; i++) {
     Serial.println(i);
@@ -242,7 +241,6 @@ void read_gpio() {
     }
   }
   if (max_thermistor_voltage > MAX_THERMISTOR_VOLTAGE) {
-    Serial.print("OVERTEMP FAULT: ");Serial.print("\tConsecutive fault #: "); Serial.println(overtemp_fault_counter);
     overtemp_fault_counter++;
   } else {
     overtemp_fault_counter = 0;
@@ -255,7 +253,7 @@ void read_gpio() {
   } else {
     bms_status.set_discharge_overtemp(false);
   }
-  Serial.print("Max Thermistor Temp: "); Serial.println(gpio_temps[max_temp_location[0]][max_temp_location[1]]);
+
 }
 
 // Cell Balancing function. NOTE: Must call read_voltages() in order to obtain balancing voltage;
@@ -306,6 +304,17 @@ void parse_CAN_CCU_status() {
 // Data print functions
 // Print cell voltages
 void print_voltages() {
+  Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
+  if (min_voltage < MIN_VOLTAGE) {
+    Serial.print("UNDERVOLTAGE FAULT: "); Serial.print("IC #: "); Serial.print(min_voltage_location[0]); Serial.print("\tCell #: "); Serial.print(min_voltage_location[1]); Serial.print("\tConsecutive fault #: "); Serial.println(uv_fault_counter);
+  }
+  if (max_voltage > MAX_VOLTAGE) {
+    Serial.print("OVERVOLTAGE FAULT: "); Serial.print("IC #: "); Serial.print(max_voltage_location[0]); Serial.print("\tCell #: "); Serial.print(max_voltage_location[1]); Serial.print("\tConsecutive fault #: "); Serial.println(ov_fault_counter); 
+  }
+  if (total_voltage > MAX_TOTAL_VOLTAGE) {
+    Serial.print("PACK OVERVOLTAGE:"); Serial.print("\tConsecutive fault #: "); Serial.println(pack_ov_fault_counter);
+  }
+  
   Serial.print("Total pack voltage: "); Serial.print(total_voltage / 10000.0, 4); Serial.println("V");
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
   Serial.println("Raw Cell Voltages\t\t\t\t\t\t\tCell Status (Ignoring or Balancing)");
@@ -323,6 +332,9 @@ void print_voltages() {
 // Print voltages on GPIOs 1-4 (Corresponding to cell temperatures)
 void print_temperatures() {
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
+  if (max_thermistor_voltage > MAX_THERMISTOR_VOLTAGE) 
+  Serial.print("OVERTEMP FAULT: ");Serial.print("\tConsecutive fault #: "); Serial.println(overtemp_fault_counter);
+  Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
   Serial.println("Raw Segment Temperatures");
   Serial.println("                  \tT0\tT1\tT2\tT3");
   for (int ic = 0; ic < TOTAL_IC; ic++) {
@@ -336,4 +348,7 @@ void print_temperatures() {
     Serial.print("\t");
     Serial.println();
   }
+  Serial.print("Max Thermistor Temp: "); Serial.println(gpio_temps[max_temp_location[0]][max_temp_location[1]]);
+  Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
+  
 }
