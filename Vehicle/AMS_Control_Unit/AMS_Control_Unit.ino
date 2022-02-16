@@ -118,7 +118,6 @@ void read_voltages() {
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
-    Serial.println("starting wrcfga");
     ic[i].wrcfga(configuration);
     uint8_t *wrfcga_buf = configuration.buf();
     Reg_Group_Config reg_group_config = ic[i].rdcfga();
@@ -211,7 +210,6 @@ void read_voltages() {
 void read_gpio() {
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
   for (int i = 0; i < 8; i++) {
-    Serial.println(i);
     ic[i].wakeup();
     ic[i].wrcfga(configuration);
     ic[i].adax(static_cast<GPIO_SELECT>(0));
@@ -259,7 +257,7 @@ void read_gpio() {
 
 // Cell Balancing function. NOTE: Must call read_voltages() in order to obtain balancing voltage;
 void balance_cells(uint8_t mode) {
-  static int i = 4; // counter to track which IC is balancing its cells
+  static int i = 0; // counter to track which IC is balancing its cells
   uint16_t cell_balance_setting = 0x0;
   if (balance_voltage < 30000 || balance_voltage > 42000) {
     Serial.print("BALANCE HALT: BALANCE VOLTAGE SET AS "); Serial.print(balance_voltage / 10000.0, 4); Serial.println(", OUTSIDE OF SAFE BOUNDS.");
@@ -269,8 +267,6 @@ void balance_cells(uint8_t mode) {
   for (int cell = 0; cell < 12; cell++) {
     if (cell_voltages[i][cell] - balance_voltage > 10) {
       cell_balance_setting = 0x1 << cell | cell_balance_setting;
-      Serial.print("Cell balance setting: "); Serial.println(cell_balance_setting, BIN);
-      Serial.print("Cell differential: "); Serial.println(cell_voltages[i][cell] - balance_voltage);
     }
   }
   Serial.print("Balancing voltage: "); Serial.println(balance_voltage / 10000.0, 4);
@@ -279,8 +275,8 @@ void balance_cells(uint8_t mode) {
     Serial.print("Currently balancing cell #: "); Serial.println(i, DEC);
     ic[i].wakeup();
     ic[i].wrcfga(configuration);
-    if (i == 5) {
-      i = 4;
+    if (i == 7) {
+      i = 0;
     } else {
       i++;
     }
