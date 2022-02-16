@@ -46,8 +46,8 @@ float gpio_temps[TOTAL_IC][6];      // 2D Array to hold GPIO temperatures being 
 int max_temp_location[2];
 uint16_t max_thermistor_voltage = 0;
 Metro charging_timer = Metro(1000); // Timer to check if charger is still talking to ACU
-Metro pulse_timer = Metro(50);
-bool next_pulse = false;
+IntervalTimer pulse_timer;    //ams ok pulse
+bool next_pulse = true;
 
 // CONSECUTIVE FAULT COUNTERS: counts successive faults; resets to zero if normal reading breaks fault chain
 unsigned long uv_fault_counter = 0;             // undervoltage fault counter
@@ -74,7 +74,8 @@ void setup() {
   // put your setup code here, to run once:
   pinMode(6, OUTPUT);
   pinMode(5, OUTPUT);
-  digitalWrite(6, LOW); //write Teensy_OK pin high
+  digitalWrite(6, HIGH); //write Teensy_OK pin high
+  pulse_timer.begin(ams_ok_pulse,50000); //timer to pulse pin 5 every 50 milliseconds
   Serial.begin(115200);
   SPI.begin();
   CAN.setBaudRate(500000);
@@ -95,6 +96,7 @@ void setup() {
   */
   bms_status.set_state(BMS_STATE_DISCHARGING);
   parse_CAN_CCU_status();
+
 }
 void loop() {
   // put your main code here, to run repeatedly:
@@ -106,14 +108,13 @@ void loop() {
   read_gpio();
   print_voltages();
   print_temperatures();
+  
 }
 
 // READ functions to collect and read data from the LTC6811-2
 // Read cell voltages from all eight LTC6811-2; voltages are read in with units of 100μV
 void ams_ok_pulse(){
-  if(pulse_timer.check()){
     next_pulse = !next_pulse;
-  }
     digitalWrite(5,(next_pulse?HIGH:LOW));
 }
 
