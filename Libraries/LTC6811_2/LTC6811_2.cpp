@@ -218,16 +218,20 @@ void LTC6811_2::read_register_group(uint16_t cmd_code, uint8_t *data) {
             data[i] = data_in[i];
         }
         pec_error = false;
+#if DEBUG
         Serial.println("PEC OK");
+#endif
     } else {
         // set flag indicating there is a PEC error
         for (int i = 0; i < 6; i++) {
             data[i] = data_in[i];
         }
         pec_error = true;
+#if DEBUG
         Serial.println("PEC Error");
         Serial.print("LTC PEC: "); Serial.print(data_in[6], BIN); Serial.println(data_in[7], BIN);
         Serial.print("Calculated PEC: "); Serial.print(data_pec[0], BIN); Serial.println(data_pec[1], BIN);
+#endif
     }
 }
 // Read Configuration Register Group A
