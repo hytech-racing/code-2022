@@ -108,7 +108,7 @@ void loop() {
   read_gpio();
   print_voltages();
   print_temperatures();
-  
+  balance_cells(BALANCE_STANDARD);
 }
 
 // READ functions to collect and read data from the LTC6811-2
@@ -119,9 +119,7 @@ void ams_ok_pulse(){
 }
 
 void read_voltages() {
-  total_voltage = 0;
-
-  
+  total_voltage = 0;  
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
@@ -216,8 +214,6 @@ void read_voltages() {
 
 // Read GPIO registers from LTC6811-2; Process temperature and humidity data from relevant GPIO registers
 void read_gpio() {
-
-
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
   for (int i = 0; i < 8; i++) {
     Serial.println(i);
