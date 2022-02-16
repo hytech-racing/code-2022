@@ -2,17 +2,39 @@
  * Test program that sends and receives CAN messages. Use this to test if CAN Bus is operational.
  * Created by Nathan Cheek, December 20, 2017
  */
-#include <IFCT.h>
+// #include <IFCT.h>
+#include <FlexCAN_T4.h>
 #include <Metro.h>
 
-FlexCAN CAN(500000);
+// FlexCAN CAN(500000);
+FlexCAN_T4<CAN1> CAN;
 CAN_message_t msg;
 Metro timer_can = Metro(1000);
 Metro timer_light = Metro(3);
 
+void receive(CAN_message_t &msg) {
+    // while (CAN.read(msg)) {
+        Serial.print("Received 0x");
+        Serial.print(msg.id, HEX);
+        Serial.print(": ");
+        for (unsigned int i = 0; i < msg.len; i++) {
+            Serial.print(msg.buf[i]);
+            Serial.print(" ");
+        }
+        Serial.println();
+        digitalWrite(13, HIGH);
+        timer_light.reset();
+    // }
+}
+
 void setup() {
     Serial.begin(115200); // Initialize serial for PC communication
     CAN.begin();
+    CAN.setBaudRate(500000);
+
+    CAN.enableMBInterrupts();
+    CAN.onReceive(receive);
+
     delay(200);
     Serial.println("CAN transceiver initialized");
     Serial.println("CAN TEST SENDER/RECEIVER");
@@ -21,10 +43,11 @@ void setup() {
 }
 
 void loop() {
-  
+    CAN.events();
+
     if (timer_can.check()) { // Send a message on CAN
         uint32_t t = millis();
-        msg.id = 0x1;
+        msg.id = 0x2;
         msg.len = sizeof(uint32_t);
         memcpy(msg.buf, &t, sizeof(uint32_t));
         CAN.write(msg);
@@ -37,19 +60,7 @@ void loop() {
         }
         Serial.println();
     }
-    
-    while (CAN.read(msg)) { // Receive a message on CAN
-        Serial.print("Received 0x");
-        Serial.print(msg.id, HEX);
-        Serial.print(": ");
-        for (unsigned int i = 0; i < msg.len; i++) {
-            Serial.print(msg.buf[i]);
-            Serial.print(" ");
-        }
-        Serial.println();
-        digitalWrite(13, HIGH);
-        timer_light.reset();
-    }
+
     if (timer_light.check()) { // Turn off LED
         digitalWrite(13, LOW);
     }
