@@ -227,15 +227,16 @@ void read_gpio() {
         gpio_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
         if ((i % 2) && j + k == 4) {
           gpio_temps[i][j + k] = -66.875 + 218.75 * (gpio_voltages[i][j + k] / 50000.0); // caculation for SHT31 temperature in C
-        } else {
+          if (gpio_voltages[i][j + k] > max_thermistor_voltage) {
+            max_thermistor_voltage = gpio_voltages[i][j + k];
+            max_temp_location[0] = i;
+            max_temp_location[1] = j + k;
+          }
+        }else{
           float thermistor_resistance = (2740 / (gpio_voltages[i][j + k] / 50000.0)) - 2740;
           gpio_temps[i][j + k] = 1 / ((1 / 298.15) + (1 / 3984.0) * log(thermistor_resistance / 10000.0)) - 273.15; //calculation for thermistor temperature in C
         }
-        if (gpio_voltages[i][j + k] > max_thermistor_voltage) {
-          max_thermistor_voltage = gpio_voltages[i][j + k];
-          max_temp_location[0] = i;
-          max_temp_location[1] = j + k;
-        }
+        
       }
     }
   }
