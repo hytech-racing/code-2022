@@ -111,13 +111,6 @@ void loop() {
 
 // READ functions to collect and read data from the LTC6811-2
 // Read cell voltages from all eight LTC6811-2; voltages are read in with units of 100μV
-void ams_ok_pulse(){
-  if(pulse_timer.check()){
-    next_pulse = !next_pulse;
-  }
-    digitalWrite(5,(next_pulse?HIGH:LOW));
-}
-
 void read_voltages() {
   total_voltage = 0;  
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
@@ -264,33 +257,31 @@ void read_gpio() {
 
 // Cell Balancing function. NOTE: Must call read_voltages() in order to obtain balancing voltage;
 void balance_cells(uint8_t mode) {
-  static int i = 0; // counter to track which IC is balancing its cells
-  uint8_t cell_pwm_setting[12];
+  static int i = 4; // counter to track which IC is balancing its cells
+  uint16_t cell_balance_setting = 0x0;
   if (balance_voltage < 30000 || balance_voltage > 42000) {
     Serial.print("BALANCE HALT: BALANCE VOLTAGE SET AS "); Serial.print(balance_voltage / 10000.0, 4); Serial.println(", OUTSIDE OF SAFE BOUNDS.");
     return;
   }
   // determine which cells of the IC need balancing
-  for (int cell = 0; cell < 13; cell++) {
+  for (int cell = 0; cell < 12; cell++) {
     if (cell_voltages[i][cell] - balance_voltage > 10) {
-      cell_pwm_setting[cell] = 0xF;
-    } else {
-      cell_pwm_setting[cell] = 0x0;
+      cell_balance_setting = 0x1 << cell | cell_balance_setting;
+      Serial.print("Cell balance setting: "); Serial.println(cell_balance_setting, BIN);
+      Serial.print("Cell differential: "); Serial.println(cell_voltages[i][cell] - balance_voltage);
     }
   }
-  Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0xFFF, (uint8_t) 0x1); // base configuration for the configuration register group
-  Reg_Group_PWM pwm_configuration = Reg_Group_PWM(cell_pwm_setting[0], cell_pwm_setting[1], cell_pwm_setting[2], cell_pwm_setting[3], cell_pwm_setting[4], cell_pwm_setting[5], cell_pwm_setting[6], cell_pwm_setting[7], cell_pwm_setting[8], cell_pwm_setting[9], cell_pwm_setting[10], cell_pwm_setting[11]); // base configuration for the PWM register group, which defines the duty cycle of the balancing
+  Serial.print("Balancing voltage: "); Serial.println(balance_voltage / 10000.0, 4);
+  Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) cell_balance_setting, (uint8_t) 0x1); // base configuration for the configuration register group
   if (i < 8) {
     Serial.print("Currently balancing cell #: "); Serial.println(i, DEC);
     ic[i].wakeup();
     ic[i].wrcfga(configuration);
-    ic[i].wrpwm(pwm_configuration);
-    if (i == 7) {
-      i = 0;
+    if (i == 5) {
+      i = 4;
     } else {
       i++;
     }
-    delay(1);
   }
 }
 
@@ -306,6 +297,12 @@ void parse_CAN_CCU_status() {
   }
 }
 
+void ams_ok_pulse(){
+  if(pulse_timer.check()){
+    next_pulse = !next_pulse;
+  }
+    digitalWrite(5,(next_pulse?HIGH:LOW));
+}
 
 // Data print functions
 // Print cell voltages
