@@ -225,7 +225,7 @@ void read_gpio() {
       }
       for (int k = 0; k < 3; k++) {
         gpio_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
-        if ((i % 2) && j + k == 4) {
+        if ((i % 2) && j + k) {
           gpio_temps[i][j + k] = -66.875 + 218.75 * (gpio_voltages[i][j + k] / 50000.0); // caculation for SHT31 temperature in C
           if (gpio_voltages[i][j + k] > max_thermistor_voltage) {
             max_thermistor_voltage = gpio_voltages[i][j + k];
