@@ -8,7 +8,7 @@
  */
 #define GPS_EN false
 #include <SD.h>
-#include <IFCT.h>
+#include <FlexCAN_T4.h>
 #include <HyTech_CAN.h>
 
 #include <Wire.h>
@@ -36,7 +36,7 @@ float filtered_cooling_current_reading{};
 /*
  * CAN Variables
  */
-FlexCAN CAN(500000);
+FlexCAN_T4<CAN0, RX_SIZE_256, TX_SIZE_16> CAN(500000);
 static CAN_message_t msg_rx;
 static CAN_message_t msg_tx;
 static CAN_message_t xb_msg;
