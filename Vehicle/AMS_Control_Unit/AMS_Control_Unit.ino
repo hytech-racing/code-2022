@@ -44,7 +44,11 @@ uint16_t max_voltage = 0;
 uint16_t gpio_voltages[TOTAL_IC][6];  // 2D Array to hold GPIO voltages being read in; voltages are read in with the base unit as 100μV
 float gpio_temps[TOTAL_IC][6];      // 2D Array to hold GPIO temperatures being read in; temperatures are read in with the base unit as K
 int max_temp_location[2];
+int max_thermistor_location[2];
+int max_humidity_location[2];
+uint16_t max_humidity = 0;
 uint16_t max_thermistor_voltage = 0;
+uint16_t max_temp_voltage = 0;
 Metro charging_timer = Metro(1000); // Timer to check if charger is still talking to ACU
 IntervalTimer pulse_timer;    //ams ok pulse
 bool next_pulse = true;
@@ -225,18 +229,28 @@ void read_gpio() {
       }
       for (int k = 0; k < 3; k++) {
         gpio_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
-        if ((i % 2) && j + k) {
+        if ((i % 2) && j+k ==4) {
           gpio_temps[i][j + k] = -66.875 + 218.75 * (gpio_voltages[i][j + k] / 50000.0); // caculation for SHT31 temperature in C
-          if (gpio_voltages[i][j + k] > max_thermistor_voltage) {
-            max_thermistor_voltage = gpio_voltages[i][j + k];
+          if (gpio_voltages[i][4] > max_temp_voltage) {
+            max_temp_voltage = gpio_voltages[i][j + k];
             max_temp_location[0] = i;
             max_temp_location[1] = j + k;
           }
         }else{
+          gpio_temps[i][j + k] = -12.5 + 125*(gpio_voltages[i][j + k])/50000.0;
           float thermistor_resistance = (2740 / (gpio_voltages[i][j + k] / 50000.0)) - 2740;
           gpio_temps[i][j + k] = 1 / ((1 / 298.15) + (1 / 3984.0) * log(thermistor_resistance / 10000.0)) - 273.15; //calculation for thermistor temperature in C
+          if (j+k <=3 && gpio_voltages[i][j+k] > max_thermistor_voltage) {
+            max_thermistor_voltage = gpio_voltages[i][j + k];
+            max_thermistor_location[0] = i;
+            max_thermistor_location[1] = j + k;
+          }
+          if (j+k == 4 && gpio_temps[i][j+k] > max_humidity) {
+            max_humidity = gpio_temps[i][j + k];
+            max_humidity_location[0] = i;
+            max_humidity_location[1] = j + k;
+          }
         }
-        
       }
     }
   }
@@ -345,11 +359,16 @@ void print_temperatures() {
     }
     if ((ic % 2)) {
       Serial.print("PCB Temps: "); Serial.print(gpio_temps[ic][4], 3); Serial.print("C\t");
+    }else {
+      Serial.print("PCB Humidity: "); Serial.print(gpio_temps[ic][4], 3); Serial.print("%\t");
     }
     Serial.print("\t");
     Serial.println();
   }
-  Serial.print("Max Thermistor Temp: "); Serial.println(gpio_temps[max_temp_location[0]][max_temp_location[1]]);
+  Serial.print("Max Board Temp: "); Serial.print(gpio_temps[max_temp_location[0]][max_temp_location[1]],3);Serial.print("C \t "); 
+  Serial.print("Max Thermistor Temp: "); Serial.print(gpio_temps[max_thermistor_location[0]][max_thermistor_location[1]],3);Serial.print("C \t "); 
+  Serial.print("Max Humidity: "); Serial.print(gpio_temps[max_humidity_location[0]][max_humidity_location[1]],3);Serial.println("% \t "); 
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
+  
   
 }
