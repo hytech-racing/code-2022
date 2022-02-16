@@ -46,6 +46,8 @@ float gpio_temps[TOTAL_IC][6];      // 2D Array to hold GPIO temperatures being 
 int max_temp_location[2];
 uint16_t max_thermistor_voltage = 0;
 Metro charging_timer = Metro(1000); // Timer to check if charger is still talking to ACU
+Metro pulse_timer = Metro(50);
+bool next_pulse = false;
 
 // CONSECUTIVE FAULT COUNTERS: counts successive faults; resets to zero if normal reading breaks fault chain
 unsigned long uv_fault_counter = 0;             // undervoltage fault counter
@@ -108,6 +110,13 @@ void loop() {
 
 // READ functions to collect and read data from the LTC6811-2
 // Read cell voltages from all eight LTC6811-2; voltages are read in with units of 100μV
+void ams_ok_pulse(){
+  if(pulse_timer.check()){
+    next_pulse = !next_pulse;
+  }
+    digitalWrite(5,(next_pulse?HIGH:LOW));
+}
+
 void read_voltages() {
   total_voltage = 0;
 
