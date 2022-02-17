@@ -19,7 +19,7 @@
 #define EVEN_IC_CELLS 12           // Number of cells monitored by ICs with even addresses
 #define ODD_IC_CELLS 9             // Number of cells monitored by ICS with odd addresses
 #define THERMISTORS_PER_IC 4       // Number of cell temperature monitoring thermistors connected to each IC 
-#define MAX_SUCCESSIVE_FAULTS 20   // Number of successive faults permitted before AMS fault is broadcast over CAN 
+#define MAX_SUCCESSIVE_FAULTS 3   // Number of successive faults permitted before AMS fault is broadcast over CAN 
 #define MIN_VOLTAGE 30000          // Minimum allowable single cell voltage in units of 100μV
 #define MAX_VOLTAGE 42000          // Maxiumum allowable single cell voltage in units of 100μV
 #define MAX_TOTAL_VOLTAGE 3550000  // Maximum allowable pack total voltage in units of 100μV
@@ -49,7 +49,7 @@ int max_humidity_location[2];
 uint16_t max_humidity = 0;
 uint16_t max_thermistor_voltage = 0;
 uint16_t max_temp_voltage = 0;
-Metro charging_timer = Metro(1000); // Timer to check if charger is still talking to ACU
+Metro charging_timer = Metro(5000); // Timer to check if charger is still talking to ACU
 IntervalTimer pulse_timer;    //ams ok pulse
 bool next_pulse = true;
 
@@ -93,7 +93,6 @@ void setup() {
   for (int i = 0; i < 8; i++) {
     ic[i] = LTC6811_2(i);
   }
-
   /* Initialize ACU state machine
       The state machine has two states, dependent on whether or not the charger controller is talking to the ACU.
       The state machine initializes to the DISCHARGING state
@@ -112,7 +111,9 @@ void loop() {
   read_gpio();
   print_voltages();
   print_temperatures();
-  balance_cells(BALANCE_STANDARD);
+  //if (bms_status.get_state() == BMS_STATE_CHARGING) {
+    balance_cells(BALANCE_STANDARD);
+  //}
 }
 
 // READ functions to collect and read data from the LTC6811-2
@@ -278,6 +279,9 @@ void balance_cells(uint8_t mode) {
     Serial.print("BALANCE HALT: BALANCE VOLTAGE SET AS "); Serial.print(balance_voltage / 10000.0, 4); Serial.println(", OUTSIDE OF SAFE BOUNDS.");
     return;
   }
+  if (overtemp_fault_state || uv_fault_state || ov_fault_state || pack_ov_fault_state) {
+    Serial.print("BALANCE HALT: CHECK PACK FAULTS");
+  }
   // determine which cells of the IC need balancing
   for (int cell = 0; cell < 12; cell++) {
     if (cell_voltages[i][cell] - balance_voltage > 10) {
@@ -296,6 +300,7 @@ void balance_cells(uint8_t mode) {
       i++;
     }
   }
+  delay(500);
 }
 
 // parse incoming CAN messages for CCU status message and changes the state of the BMS in software
@@ -330,7 +335,7 @@ void print_voltages() {
     Serial.print("PACK OVERVOLTAGE:"); Serial.print("\tConsecutive fault #: "); Serial.println(pack_ov_fault_counter);
   }
   
-  Serial.print("Total pack voltage: "); Serial.print(total_voltage / 10000.0, 4); Serial.println("V");
+  Serial.print("Total pack voltage: "); Serial.print(total_voltage / 10000.0, 4); Serial.print("V\t"); Serial.print("Max voltage differential: "); Serial.print(max_voltage / 10000.0 - min_voltage / 10000.0, 4); Serial.println("V");
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
   Serial.println("Raw Cell Voltages\t\t\t\t\t\t\tCell Status (Ignoring or Balancing)");
   Serial.println("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\tC9\tC10\tC11");
@@ -347,8 +352,9 @@ void print_voltages() {
 // Print voltages on GPIOs 1-4 (Corresponding to cell temperatures)
 void print_temperatures() {
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
-  if (max_thermistor_voltage > MAX_THERMISTOR_VOLTAGE) 
+  if (max_thermistor_voltage > MAX_THERMISTOR_VOLTAGE) {
   Serial.print("OVERTEMP FAULT: ");Serial.print("\tConsecutive fault #: "); Serial.println(overtemp_fault_counter);
+  }
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
   Serial.println("Raw Segment Temperatures");
   Serial.println("                  \tT0\tT1\tT2\tT3");
