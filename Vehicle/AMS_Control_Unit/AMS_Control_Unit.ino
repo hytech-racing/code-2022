@@ -82,8 +82,9 @@ void setup() {
   pulse_timer.begin(ams_ok_pulse,50000); //timer to pulse pin 5 every 50 milliseconds
   Serial.begin(115200);
   SPI.begin();
-  CAN.setBaudRate(500000);
   CAN.begin();
+  CAN.setBaudRate(500000);
+  
   for (int i = 0; i < 64; i++) { // Fill all filter slots with Charger Control Unit message filter (CAN controller requires filling all slots)
     CAN.setMBFilter(static_cast<FLEXCAN_MAILBOX>(i), ID_CCU_STATUS); // Set CAN mailbox filtering to only watch for charger controller status CAN messages
   }
@@ -321,6 +322,9 @@ void write_CAN_messages() {
   msg.id = ID_BMS_STATUS;
   msg.len = sizeof(bms_status);
   bms_status.write(msg.buf);
+  for (int i = 0; i < 8; i++) {
+    Serial.println(msg.buf[i], BIN);
+  }
   CAN.write(msg);
 }
 
