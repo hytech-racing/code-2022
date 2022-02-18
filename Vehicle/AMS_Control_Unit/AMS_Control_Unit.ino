@@ -109,6 +109,7 @@ void loop() {
   }
   read_voltages();
   read_gpio();
+  write_CAN_messages();
   print_voltages();
   print_temperatures();
   //if (bms_status.get_state() == BMS_STATE_CHARGING) {
@@ -313,6 +314,14 @@ void parse_CAN_CCU_status() {
       }
     }
   }
+}
+
+void write_CAN_messages() {
+  //Write BMS_status message
+  msg.id = ID_BMS_STATUS;
+  msg.len = sizeof(bms_status);
+  bms_status.write(msg.buf);
+  CAN.write(msg);
 }
 
 // Pulses pin 5 to keep watchdog circuit active
