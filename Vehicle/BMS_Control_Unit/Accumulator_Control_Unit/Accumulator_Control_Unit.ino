@@ -48,14 +48,15 @@
  * Uncomment whichever board this code is being uploaded to
  * Used to set pins correctly and only enable features compatible with board
  */
-#define BOARD_VERSION_HYTECH_2021_HV_REV_14
+//#define BOARD_VERSION_HYTECH_2021_HV_REV_14
 
 /*
  * Set Accumulator Version
  * If installing in an Accumulator, set the version here for BMS to ignore problematic sensor readings unique to each accumulator
  */
 //#define ACCUMULATOR_VERSION_HYTECH_2019_ACCUMULATOR
-#define ACCUMULATOR_VERSION_HYTECH_2021_ACCUMULATOR
+//#define ACCUMULATOR_VERSION_HYTECH_2021_ACCUMULATOR
+#define ACCUMULATOR_CONTROL_UNIT_2022
 
 /*
  * Set Bench Test Mode
@@ -102,6 +103,11 @@
 #define WATCHDOG 7
 #endif
 
+#ifdef ACCUMULATOR_CONTROL_UNIT_2022
+#define WATCHDOG 5
+#define LED_STATUS 6
+#endif
+
 /*
  * Constant definitions
  */
@@ -119,14 +125,14 @@
 /*
  * Current Sensor ADC definitions
  */
-#define CH_CUR_SENSE MCP3204::Channel::SINGLE_2
-#define CH_CUR_REF   MCP3204::Channel::SINGLE_3
-#define ADC_VREF     5000     // 5.0V Vref
+//#define CH_CUR_SENSE MCP3204::Channel::SINGLE_2
+//#define CH_CUR_REF   MCP3204::Channel::SINGLE_3
+//#define ADC_VREF     5000     // 5.0V Vref
 
 /*
  * Timers
  */
-Metro timer_watchdog_timer = Metro(3);
+Metro timer_watchdog_timer = Metro(2);
 Metro timer_charge_enable_limit = Metro(10000, 1); // Don't allow charger to re-enable more than once every 10 seconds
 Metro timer_charge_timeout = Metro(1000);
 
@@ -206,7 +212,7 @@ static CAN_message_t tx_msg;
 /**
  * ADC Declaration
  */
-MCP3204 ADC(ADC_VREF, ADC_CS);
+//MCP3204 ADC(ADC_VREF, ADC_CS);
 
 /**
  * BMS State Variables
@@ -262,15 +268,15 @@ void process_coulombs();
 int read_adc(int channel);
 
 void setup() {
-    pinMode(BMS_OK, OUTPUT);
+    //pinMode(BMS_OK, OUTPUT);
     pinMode(LED_STATUS, OUTPUT);
-    pinMode(LTC6820_CS, OUTPUT);
+    //pinMode(LTC6820_CS, OUTPUT);
     pinMode(WATCHDOG, OUTPUT);
-    pinMode(ADC_CS, OUTPUT);
+    //pinMode(ADC_CS, OUTPUT);
 
-    digitalWrite(LTC6820_CS, HIGH);
-    digitalWrite(ADC_CS, HIGH);
-    digitalWrite(BMS_OK, HIGH);
+    //digitalWrite(LTC6820_CS, HIGH);
+    //digitalWrite(ADC_CS, HIGH);
+    //digitalWrite(BMS_OK, HIGH);
     digitalWrite(WATCHDOG, watchdog_high);
 
     Serial.begin(115200); // Init serial for PC communication
@@ -413,12 +419,12 @@ void loop() {
 
     if (bms_status.get_error_flags()) { // BMS error - drive BMS_OK signal low
         error_flags_history |= bms_status.get_error_flags();
-        digitalWrite(BMS_OK, LOW);
+        //digitalWrite(BMS_OK, LOW);
         Serial.print("---------- STATUS NOT GOOD * Error Code 0x");
         Serial.print(bms_status.get_error_flags(), HEX);
         Serial.println(" ----------");
     } else {
-        digitalWrite(BMS_OK, HIGH);
+        //digitalWrite(BMS_OK, HIGH);
         Serial.println("---------- STATUS GOOD ----------");
         if (error_flags_history) {
             Serial.println("An Error Occured But Has Been Cleared");
@@ -450,26 +456,27 @@ void loop() {
     CAN.write(tx_msg);
 
     tx_msg.id = ID_BMS_DETAILED_VOLTAGES;
-    tx_msg.len = sizeof(bms_detailed_voltages);
     for (int i = 0; i < TOTAL_IC; i++) {
         if ( odd_ic(i) ) {
             for (int j = 0; j < 3; j++) {
                 bms_detailed_voltages[i][j].write(tx_msg.buf);
+                tx_msg.len = sizeof(bms_detailed_voltages[i][j]);
                 CAN.write(tx_msg);
             }
         } else {
             for (int j = 0; j < 4; j++) {
                 bms_detailed_voltages[i][j].write(tx_msg.buf);
+                tx_msg.len = sizeof(bms_detailed_voltages[i][j]);
                 CAN.write(tx_msg);
             }
         }
     }
 
     tx_msg.id = ID_BMS_DETAILED_TEMPERATURES;
-    tx_msg.len = sizeof(bms_detailed_temperatures);
     for (int i = 0; i < TOTAL_IC; i++) {
         for (int j = 0; i < TOTAL_IC; j++) {
             bms_detailed_temperatures[i][j].write(tx_msg.buf);
+            tx_msg.len = sizeof(bms_detailed_temperatures[i][j]);
             CAN.write(tx_msg);
         }
     }
@@ -1193,7 +1200,7 @@ void parse_can_message() {
     }
 }
 
-int16_t get_current() {
+//int16_t get_current() {
     /*
      * Current sensor: ISB-100-A-604
      * Maximum positive current (100A) corresponds to 4.5V signal
@@ -1203,44 +1210,44 @@ int16_t get_current() {
      * voltage = read_adc() * 5 / 4095
      * current = (voltage - 2.5) * 100 / 2
      */
-    double voltage = read_adc(CH_CUR_SENSE) / (double) 819;
-    double ref_voltage = read_adc(CH_CUR_REF) / (double) 819;
-    double current = (voltage - ref_voltage) * (double) 50;
+    //double voltage = read_adc(CH_CUR_SENSE) / (double) 819;
+    //double ref_voltage = read_adc(CH_CUR_REF) / (double) 819;
+    //double current = (voltage - ref_voltage) * (double) 50;
 
-    return (int16_t) (current * 100); // Current in Amps x 100
-}
+  //  return (int16_t) (current * 100); // Current in Amps x 100
+//}
 
-void integrate_current() {
-    int delta = get_current();
-    if (delta > 0) {
-        total_discharge = total_discharge + delta;
-    } else {
-        total_charge = total_charge - delta; // Units will be 0.01A / (1 / (COULOUMB_COUNT_INTERVAL x 10^-6) s)
-    }
-}
+//void integrate_current() {
+    //int delta = get_current();
+    //if (delta > 0) {
+      //  total_discharge = total_discharge + delta;
+    //} else {
+      //  total_charge = total_charge - delta; // Units will be 0.01A / (1 / (COULOUMB_COUNT_INTERVAL x 10^-6) s)
+    //}
+//}
 
-void process_coulombs() {
-    noInterrupts(); // Disable interrupts to ensure the values we are reading do not change while copying
-    total_charge_copy = total_charge;
-    total_discharge_copy = total_discharge;
-    interrupts();
+//void process_coulombs() {
+  //  noInterrupts(); // Disable interrupts to ensure the values we are reading do not change while copying
+    //total_charge_copy = total_charge;
+    //total_discharge_copy = total_discharge;
+    //interrupts();
 
-    Serial.print("\nCoulombs charged: ");
-    Serial.println(total_charge_copy / 10000);
-    Serial.print("Coulombs discharged: ");
-    Serial.println(total_discharge_copy / 10000);
+    //Serial.print("\nCoulombs charged: ");
+    //Serial.println(total_charge_copy / 10000);
+    //Serial.print("Coulombs discharged: ");
+    //Serial.println(total_discharge_copy / 10000);
 
-    bms_coulomb_counts.set_total_charge(total_charge_copy);
-    bms_coulomb_counts.set_total_discharge(total_discharge_copy);
-}
+    //bms_coulomb_counts.set_total_charge(total_charge_copy);
+    //bms_coulomb_counts.set_total_discharge(total_discharge_copy);
+//}
 
 /*
  * Helper function reads from ADC then sets SPI settings such that isoSPI will continue to work
  */
-uint16_t read_adc(MCP3204::Channel channel) {
-    noInterrupts(); // Since timer interrupt triggers SPI communication, we don't want it to interrupt other SPI communication
-    uint16_t retval = ADC.read(channel) / 2;
-    interrupts();
-    spi_enable(SPI_CLOCK_DIV16); // Reconfigure 1MHz SPI clock speed after ADC reading so LTC communication is successful
-    return retval;
-}
+//uint16_t read_adc(MCP3204::Channel channel) {
+  //  noInterrupts(); // Since timer interrupt triggers SPI communication, we don't want it to interrupt other SPI communication
+    //uint16_t retval = ADC.read(channel) / 2;
+    //interrupts();
+   //spi_enable(SPI_CLOCK_DIV16); // Reconfigure 1MHz SPI clock speed after ADC reading so LTC communication is successful
+    //return retval;
+//}
