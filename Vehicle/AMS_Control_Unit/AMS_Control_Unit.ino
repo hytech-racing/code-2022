@@ -330,7 +330,9 @@ void write_CAN_messages() {
 
 // Pulses pin 5 to keep watchdog circuit active
 void ams_ok_pulse(){
+  if(!overtemp_fault_state && !uv_fault_state && !ov_fault_state  && !pack_ov_fault_state){
     next_pulse = !next_pulse;
+  }
     digitalWrite(5,(next_pulse?HIGH:LOW));
 }
 
