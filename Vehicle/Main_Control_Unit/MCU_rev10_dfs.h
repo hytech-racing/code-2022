@@ -30,8 +30,8 @@
  */
 #define ADC_BRAKE_1_CHANNEL 1
 #define ADC_BRAKE_2_CHANNEL 0
-#define ADC_ACCEL_1_CHANNEL 2
-#define ADC_ACCEL_2_CHANNEL 3
+#define ADC_ACCEL_1_CHANNEL 3
+#define ADC_ACCEL_2_CHANNEL 2
 
 /*
  * Shutdown read thresholds
