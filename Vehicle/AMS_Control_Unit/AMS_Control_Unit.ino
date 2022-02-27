@@ -322,9 +322,9 @@ void write_CAN_messages() {
   msg.id = ID_BMS_STATUS;
   msg.len = sizeof(bms_status);
   bms_status.write(msg.buf);
-  for (int i = 0; i < 8; i++) {
-    Serial.println(msg.buf[i], BIN);
-  }
+//  for (int i = 0; i < 8; i++) {
+//    Serial.println(msg.buf[i], BIN);
+//  }
   CAN.write(msg);
 }
 
