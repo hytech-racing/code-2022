@@ -113,9 +113,9 @@ void loop() {
   write_CAN_messages();
   print_voltages();
   print_temperatures();
-  //if (bms_status.get_state() == BMS_STATE_CHARGING) {
+  if (bms_status.get_state() == BMS_STATE_CHARGING) {
     balance_cells(BALANCE_STANDARD);
-  //}
+  }
 }
 
 // READ functions to collect and read data from the LTC6811-2
@@ -351,6 +351,12 @@ void print_voltages() {
   }
   
   Serial.print("Total pack voltage: "); Serial.print(total_voltage / 10000.0, 4); Serial.print("V\t"); Serial.print("Max voltage differential: "); Serial.print(max_voltage / 10000.0 - min_voltage / 10000.0, 4); Serial.println("V");
+  Serial.print("AMS status: ");
+  if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
+    Serial.println("Discharging");
+  } else if (bms_status.get_state() == BMS_STATE_CHARGING) {
+    Serial.println("Charging");
+  }
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
   Serial.println("Raw Cell Voltages\t\t\t\t\t\t\tCell Status (Ignoring or Balancing)");
   Serial.println("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\tC9\tC10\tC11");
