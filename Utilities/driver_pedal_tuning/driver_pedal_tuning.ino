@@ -74,14 +74,14 @@ void loop() {
       }
   
       Serial.println("----------------------------\nAccel 2 Check");
-      if (filtered_accel2_reading > MIN_ACCELERATOR_PEDAL_2) {
+      if (filtered_accel2_reading < MIN_ACCELERATOR_PEDAL_2) {
           Serial.print("Accel 2 is below minimum threshold of "); Serial.print(MIN_ACCELERATOR_PEDAL_2); Serial.println(". Fault.");
       }
-      if (filtered_accel2_reading <= START_ACCELERATOR_PEDAL_2 && filtered_accel2_reading >= END_ACCELERATOR_PEDAL_2) {
+      if (filtered_accel2_reading >= START_ACCELERATOR_PEDAL_2 && filtered_accel2_reading <= END_ACCELERATOR_PEDAL_2) {
           Serial.print("Accel 2 is within valid torque range of "); Serial.print(START_ACCELERATOR_PEDAL_2); Serial.print(" to ");
           Serial.print(END_ACCELERATOR_PEDAL_2); Serial.println(".");
       }
-      if (filtered_accel2_reading < MAX_ACCELERATOR_PEDAL_2) {
+      if (filtered_accel2_reading >o MAX_ACCELERATOR_PEDAL_2) {
           Serial.print("Accel 2 is above maximum threshold of "); Serial.print(MAX_ACCELERATOR_PEDAL_2); Serial.println(". Fault.");
       }
     }
