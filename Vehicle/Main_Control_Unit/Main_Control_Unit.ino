@@ -26,7 +26,7 @@
 #define TORQUE_3 120
 
 // set to true or false for debugging
-#define DEBUG false
+#define DEBUG true
 #define BMS_DEBUG_ENABLE false
 
 #define LINEAR 0
@@ -378,7 +378,7 @@ inline void state_machine() {
 
             //update_coulomb_count();
             if (timer_motor_controller_send.check()) {
-                MC_command_message mc_command_message(0, 0, 1, 1, 0, 0);
+                MC_command_message mc_command_message(0, 0, 0, 1, 0, 0);
 
                 // FSAE EV.5.5
                 // FSAE T.4.2.10
@@ -396,12 +396,12 @@ inline void state_machine() {
                 }
                 // check that the pedals are reading within 10% of each other
                 // T.4.2.4
-                else if ((filtered_accel1_reading - START_ACCELERATOR_PEDAL_1)/(END_ACCELERATOR_PEDAL_1 - START_ACCELERATOR_PEDAL_1) - 
-                        (filtered_accel2_reading - START_ACCELERATOR_PEDAL_2)/(END_ACCELERATOR_PEDAL_2 - START_ACCELERATOR_PEDAL_2) < 0.1) {
+                else if (fabs((filtered_accel1_reading - START_ACCELERATOR_PEDAL_1)/(END_ACCELERATOR_PEDAL_1 - START_ACCELERATOR_PEDAL_1) - 
+                        (filtered_accel2_reading - START_ACCELERATOR_PEDAL_2)/(END_ACCELERATOR_PEDAL_2 - START_ACCELERATOR_PEDAL_2)) > 0.1) {
                     #if DEBUG
                     Serial.println("T.4.2.4");
                     Serial.printf("pedal 1 - %f\n", (filtered_accel1_reading - START_ACCELERATOR_PEDAL_1)/(END_ACCELERATOR_PEDAL_1 - START_ACCELERATOR_PEDAL_1));
-                    Serial.printf("pedal 2 - %d\n", (filtered_accel2_reading - START_ACCELERATOR_PEDAL_2)/(END_ACCELERATOR_PEDAL_2 - START_ACCELERATOR_PEDAL_2));
+                    Serial.printf("pedal 2 - %f\n", (filtered_accel2_reading - START_ACCELERATOR_PEDAL_2)/(END_ACCELERATOR_PEDAL_2 - START_ACCELERATOR_PEDAL_2));
                     #endif
                     mcu_status.set_no_accel_implausability(false);
                 }
@@ -519,7 +519,7 @@ inline void check_inverter_disabled() {
 // Send a message to the Motor Controller over CAN when vehicle is not ready to drive
 inline void inverter_heartbeat(int enable) {
     if (timer_motor_controller_send.check()) {
-        MC_command_message mc_command_message(0, 0, 1, enable, 0, 0);
+        MC_command_message mc_command_message(0, 0, 0, enable, 0, 0);
 
         mc_command_message.write(tx_msg.buf);
         tx_msg.id = ID_MC_COMMAND_MESSAGE;
@@ -725,7 +725,7 @@ void set_state(MCU_STATE new_state) {
         case MCU_STATE::TRACTIVE_SYSTEM_NOT_ACTIVE: break;
         case MCU_STATE::TRACTIVE_SYSTEM_ACTIVE: break;
         case MCU_STATE::ENABLING_INVERTER: {
-            MC_command_message mc_command_message(0, 0, 1, 1, 0, 0);
+            MC_command_message mc_command_message(0, 0, 0, 1, 0, 0);
             tx_msg.id = 0xC0;
             tx_msg.len = 8;
             mc_command_message.write(tx_msg.buf); // many enable commands
