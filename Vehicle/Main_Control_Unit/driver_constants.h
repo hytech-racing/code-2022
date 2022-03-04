@@ -4,7 +4,7 @@
 
 #ifdef DRIVER
     #if DRIVER == DAVID
-        #define BRAKE_ACTIVE 4000               // Threshold for brake pedal active  
+        #define BRAKE_ACTIVE 800                // Threshold for brake pedal active  
 
         #define MIN_ACCELERATOR_PEDAL_1 1280    // Low accelerator implausibility threshold
         #define START_ACCELERATOR_PEDAL_1 1300  // Position to start acceleration
