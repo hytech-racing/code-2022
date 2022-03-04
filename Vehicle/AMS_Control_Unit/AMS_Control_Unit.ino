@@ -128,7 +128,7 @@ void read_voltages() {
     ic[i].wrcfga(configuration);
     uint8_t *wrfcga_buf = configuration.buf();
     Reg_Group_Config reg_group_config = ic[i].rdcfga();
-    ic[i].adcv(static_cast<CELL_SELECT>(0), true);
+    ic[i].adcv(static_cast<CELL_SELECT>(0), false);
   }
   delay(203);
   for (int i = 0; i < 8; i++) {
@@ -225,7 +225,7 @@ void read_gpio() {
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
     ic[i].wrcfga(configuration);
-    ic[i].adax(static_cast<GPIO_SELECT>(0), true);
+    ic[i].adax(static_cast<GPIO_SELECT>(0), false);
     }
   delay(203);
   for (int i = 0; i < 8; i++) {
