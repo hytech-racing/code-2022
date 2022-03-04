@@ -44,11 +44,15 @@ uint16_t max_voltage = 0;
 uint16_t gpio_voltages[TOTAL_IC][6];  // 2D Array to hold GPIO voltages being read in; voltages are read in with the base unit as 100μV
 float gpio_temps[TOTAL_IC][6];      // 2D Array to hold GPIO temperatures being read in; temperatures are read in with the base unit as K
 int max_temp_location[2];
+int min_temp_location[2];
 int max_thermistor_location[2];
+int min_thermistor_location[2];
 int max_humidity_location[2];
 uint16_t max_humidity = 0;
 uint16_t max_thermistor_voltage = 0;
+uint16_t min_thermistor_voltage = 65535;
 uint16_t max_temp_voltage = 0;
+uint16_t min_temp_voltage = 65535;
 Metro charging_timer = Metro(5000); // Timer to check if charger is still talking to ACU
 IntervalTimer pulse_timer;    //ams ok pulse
 bool next_pulse = true;
@@ -72,6 +76,10 @@ CAN_message_t msg;
 
 // BMS CAN MESSAGE AND STATE MACHINE OBJECT DECLARATIONS
 BMS_status bms_status; //Message class that contains flags for AMS errors as well as a variable encoding the current state of the AMS (charging vs. discharging)
+BMS_voltages bms_voltages;
+BMS_temperatures bms_temperatures;
+BMS_onboard_temperatures bms_onboard_temperatures;
+BMS_detailed_voltages bms_detailed_voltages;
 
 
 void setup() {
@@ -169,6 +177,11 @@ void read_voltages() {
     }
   }
   voltage_fault_check();
+  bms_voltages.set_low(min_voltage);
+  bms_voltages.set_high(max_voltage);
+  bms_voltages.set_average(total_voltage / 84);
+  bms_voltages.set_total(total_voltage >> 7);
+  
 }
 
 void voltage_fault_check(){
@@ -221,6 +234,8 @@ void voltage_fault_check(){
 
 // Read GPIO registers from LTC6811-2; Process temperature and humidity data from relevant GPIO registers
 void read_gpio() {
+  double total_cell_temps = 0;
+  double total_thermistor_temps = 0;
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
@@ -243,10 +258,16 @@ void read_gpio() {
         gpio_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
         if ((i % 2) && j+k ==4) {
           gpio_temps[i][j + k] = -66.875 + 218.75 * (gpio_voltages[i][j + k] / 50000.0); // caculation for SHT31 temperature in C
+          total_cell_temps += gpio_temps[i][j+k];
           if (gpio_voltages[i][4] > max_temp_voltage) {
             max_temp_voltage = gpio_voltages[i][j + k];
             max_temp_location[0] = i;
             max_temp_location[1] = j + k;
+          }
+          if (gpio_voltages[i][4] > min_temp_voltage) {
+            min_temp_voltage = gpio_voltages[i][j + k];
+            min_temp_location[0] = i;
+            min_temp_location[1] = j + k;
           }
         }else{
           gpio_temps[i][j + k] = -12.5 + 125*(gpio_voltages[i][j + k])/50000.0;
@@ -257,6 +278,11 @@ void read_gpio() {
             max_thermistor_location[0] = i;
             max_thermistor_location[1] = j + k;
           }
+          if (j+k <=3 && gpio_voltages[i][j+k] < min_thermistor_voltage) {
+            min_thermistor_voltage = gpio_voltages[i][j + k];
+            min_thermistor_location[0] = i;
+            min_thermistor_location[1] = j + k;
+          }
           if (j+k == 4 && gpio_temps[i][j+k] > max_humidity) {
             max_humidity = gpio_temps[i][j + k];
             max_humidity_location[0] = i;
@@ -266,8 +292,15 @@ void read_gpio() {
       }
     }
   }
-
   void temp_fault_check();
+  
+  bms_temperatures.set_low_temperature((uint16_t) (gpio_temps[min_temp_location[0]][min_temp_location[1]] * 100));
+  bms_temperatures.set_high_temperature((uint16_t) (gpio_temps[max_temp_location[0]][max_temp_location[1]] *100));
+  bms_temperatures.set_average_temperature((uint16_t)(total_cell_temps * 100 / 32));
+
+  bms_onboard_temperatures.set_low_temperature((uint16_t) gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
+  bms_onboard_temperatures.set_high_temperature((uint16_t) gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
+  bms_onboard_temperatures.set_average_temperature((uint16_t)(total_thermistor_temps / 32));
 }
 
 void temp_fault_check(){
@@ -339,6 +372,37 @@ void write_CAN_messages() {
 //    Serial.println(msg.buf[i], BIN);
 //  }
   CAN.write(msg);
+
+  msg.id = ID_BMS_VOLTAGES;
+  msg.len = sizeof(bms_voltages);
+  bms_voltages.write(msg.buf);
+  CAN.write(msg);
+
+  msg.id = ID_BMS_TEMPERATURES;
+  msg.len = sizeof(bms_temperatures);
+  bms_temperatures.write(msg.buf);
+  CAN.write(msg);
+
+  msg.id = ID_BMS_ONBOARD_TEMPERATURES;
+  msg.len = sizeof(bms_onboard_temperatures);
+  bms_onboard_temperatures.write(msg.buf);
+  CAN.write(msg);
+
+  for(int i = 0; i < 8; i++){
+    for(int j = 0; j < 12; j+=3){
+      if(!(i%2 && j==9))
+        bms_detailed_voltages.set_ic_id(i);
+        bms_detailed_voltages.set_group_id(j);
+        bms_detailed_voltages.set_voltage_0(cell_voltages[i][j]);
+        bms_detailed_voltages.set_voltage_1(cell_voltages[i][j+1]);
+        bms_detailed_voltages.set_voltage_2(cell_voltages[i][j+2]);
+        msg.id = ID_BMS_DETAILED_VOLTAGES;
+        msg.len = sizeof(bms_detailed_voltages);
+        bms_detailed_voltages.write(msg.buf);
+        CAN.write(msg);
+    }
+  }
+    
 }
 
 // Pulses pin 5 to keep watchdog circuit active
