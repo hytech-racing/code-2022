@@ -28,8 +28,18 @@
 #define BALANCE_STANDARD 8         // Sets balancing duty cycle as 53.3%
 #define BALANCE_HOT 12             // Sets balancing duty cycle as 80%
 #define BALANCE_CONTINUOUS 15      // Sets balancing duty cycle as 100% 
+#define EM_CURRENT_SF .000015258789063      // Energy Meter Current Scale Factor from DBC for parsing CAN
 
 // VARIABLE DECLARATIONS
+double startTime = millis(); // Next 8 lines are for Coulomb Counter
+double currentTime;
+double timeElapsed;
+double coulombCount;
+double totalCapacity = 18 * 60 * 60; // 18 amp hours => amp minutes => amp seconds
+double percentRemaining = 100;
+uint32_t rawCurrent;
+double current;
+uint32_t rawHexData[5];                     // Array containing Current from the Energy Meter in Hexadecimal 
 uint16_t pec15Table[256];          // Array containing lookup table for PEC generator
 uint16_t* LTC6811_2::pec15Table_pointer = pec15Table;   // Pointer to the PEC lookup table
 uint16_t vuv = 1874; // 3V           // Minimum voltage value following datasheet formula: Comparison Voltage = (VUV + 1) • 16 • 100μV
@@ -104,6 +114,8 @@ void setup() {
 }
 void loop() {
   // put your main code here, to run repeatedly:
+  can_parse_current(); // The function that can parse current
+  coulombCounter(); // Function that counts coulombs
   parse_CAN_CCU_status();
   if (charging_timer.check() && bms_status.get_state() == BMS_STATE_CHARGING) {
     bms_status.set_state(BMS_STATE_DISCHARGING);
@@ -307,7 +319,7 @@ void balance_cells(uint8_t mode) {
 
 // parse incoming CAN messages for CCU status message and changes the state of the BMS in software
 void parse_CAN_CCU_status() {
-  while (CAN.read(msg)) {
+  while (CAN.read(msg)) {                                                                                 
     if (msg.id == ID_CCU_STATUS) {
       charging_timer.reset();
       if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
@@ -316,6 +328,57 @@ void parse_CAN_CCU_status() {
     }
   }
 }
+
+bool can_parse_current() {
+  bool temp;
+  while(CAN.read(msg)){
+    if (msg.id == ID_EM_CURRENT) {
+      for (int i = 0; i<4; i++) {
+        rawHexData[i] = msg.buf[i]; //rawHexData is DATA recieved from sender in Hex
+      }
+     temp = true;
+    }
+    else
+      temp = false;
+  }
+  
+  return temp;
+}
+
+
+void coulombCounter()
+{
+  if (can_parse_current() == false)
+    return;
+    
+  rawHexData[0] <<= 31;
+  rawHexData[1] <<= 30;
+  rawHexData[2] <<= 22;
+  rawHexData[3] <<= 14;
+  rawHexData[4] >>= 1;
+
+
+  rawCurrent = (rawHexData[0] | rawHexData[1] | rawHexData[2] | rawHexData[3] | rawHexData[4]);
+  current = rawCurrent* EM_CURRENT_SF; //DBC Scale Factor
+  
+  
+  
+  currentTime = millis();
+  timeElapsed = currentTime - startTime;
+  coulombCount += current * timeElapsed;
+  percentRemaining = ((totalCapacity - coulombCount)/totalCapacity) * 100;
+  Serial.print("Percent remaining = ");
+  Serial.print(percentRemaining);
+  Serial.println("%");
+  
+  startTime = currentTime;
+}
+
+
+
+
+
+
 
 void write_CAN_messages() {
   //Write BMS_status message
