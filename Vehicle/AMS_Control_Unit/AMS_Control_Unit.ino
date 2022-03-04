@@ -3,7 +3,7 @@
    It also handles CAN communications with the mainECU and energy meter, performs coulomb counting operations, and drives a watchdog timer on the ACU.
    See LTC6811_2.cpp and LTC6811-2 Datasheet provided by Analog Devices for more details.
    Author: Zekun Li, Liwei Sun
-   Version: 0.1
+   Version: 0.2
    Since: 02/07/2022
 */
 
@@ -128,7 +128,10 @@ void read_voltages() {
     ic[i].wrcfga(configuration);
     uint8_t *wrfcga_buf = configuration.buf();
     Reg_Group_Config reg_group_config = ic[i].rdcfga();
-    ic[i].adcv(static_cast<CELL_SELECT>(0));
+    ic[i].adcv(static_cast<CELL_SELECT>(0), true);
+  }
+  delay(203);
+  for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
     Reg_Group_Cell_A reg_group_a = ic[i].rdcva();
     Reg_Group_Cell_B reg_group_b = ic[i].rdcvb();
@@ -222,7 +225,10 @@ void read_gpio() {
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
     ic[i].wrcfga(configuration);
-    ic[i].adax(static_cast<GPIO_SELECT>(0));
+    ic[i].adax(static_cast<GPIO_SELECT>(0), true);
+    }
+  delay(203);
+  for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
     Reg_Group_Aux_A reg_group_a = ic[i].rdauxa();
     Reg_Group_Aux_B reg_group_b = ic[i].rdauxb();
