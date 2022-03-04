@@ -112,7 +112,7 @@ void loop() {
   read_gpio();
   write_CAN_messages();
   print_voltages();
-  print_temperatures();
+  print_gpios();
   if (bms_status.get_state() == BMS_STATE_CHARGING) {
     balance_cells(BALANCE_STANDARD);
   }
@@ -165,7 +165,11 @@ void read_voltages() {
       }
     }
   }
-  balance_voltage = min_voltage;
+  voltage_fault_check();
+}
+
+void voltage_fault_check(){
+    balance_voltage = min_voltage;
   // detect any uv fault conditions, set appropriate error flags, and print relevant message to console
   if (min_voltage < MIN_VOLTAGE) {
     uv_fault_counter++;
@@ -210,7 +214,6 @@ void read_voltages() {
   } else {
     bms_status.set_total_voltage_high(false);
   }
-
 }
 
 // Read GPIO registers from LTC6811-2; Process temperature and humidity data from relevant GPIO registers
@@ -257,7 +260,12 @@ void read_gpio() {
       }
     }
   }
-  if (max_thermistor_voltage > MAX_THERMISTOR_VOLTAGE) {
+
+  void temp_fault_check();
+}
+
+void temp_fault_check(){
+    if (max_thermistor_voltage > MAX_THERMISTOR_VOLTAGE) {
     overtemp_fault_counter++;
   } else {
     overtemp_fault_counter = 0;
@@ -270,7 +278,6 @@ void read_gpio() {
   } else {
     bms_status.set_discharge_overtemp(false);
   }
-
 }
 
 // Cell Balancing function. NOTE: Must call read_voltages() in order to obtain balancing voltage;
@@ -370,8 +377,8 @@ void print_voltages() {
   }
 }
 
-// Print voltages on GPIOs 1-4 (Corresponding to cell temperatures)
-void print_temperatures() {
+// Print values of temperature and humidity sensors in GPIOs
+void print_gpios() {
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
   if (max_thermistor_voltage > MAX_THERMISTOR_VOLTAGE) {
   Serial.print("OVERTEMP FAULT: ");Serial.print("\tConsecutive fault #: "); Serial.println(overtemp_fault_counter);
