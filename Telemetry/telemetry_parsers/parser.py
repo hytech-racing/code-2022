@@ -290,7 +290,7 @@ def parse_ID_MC_FAULT_CODES(raw_message):
         "run_lo_accelerator_input_open_fault",
         "run_lo_direction_command_fault",
         "run_lo_inverter_response_timeout_fault",
-        "run_lo_hardware_gatedesaturation_fault",
+        "run_lo_hardware_gate_desaturation_fault",
         "run_lo_hardware_overcurrent_fault",
         "run_lo_undervoltage_fault",
         "run_lo_can_command_message_lost_fault",

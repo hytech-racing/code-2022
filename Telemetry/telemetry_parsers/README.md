@@ -30,6 +30,7 @@ pip install python-dateutil
 2. Place them in a folder called Raw_Data.
 3. Copy `parser.py`, `multipliers.py`, and `dataPlots.m` into the directory containing the Raw_Data folder
 4. Run `parser.py` by either using the Python Interpreter or by going into the directory and issuing: `py parser.py`
+    - If you are using the Python interpreter for the first time, you will need to run twice. The first time will build the __pycache__ folder
 5. Wait for a success message from `parser.py`
 6. Open `dataPlots.m` in MatLab
 7. In MatLab, first load `output.mat` by double clicking it on the sidebar. Then click run on `dataPlots.m`.
