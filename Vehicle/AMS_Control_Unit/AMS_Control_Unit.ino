@@ -184,54 +184,6 @@ void read_voltages() {
   
 }
 
-void voltage_fault_check(){
-    balance_voltage = min_voltage;
-  // detect any uv fault conditions, set appropriate error flags, and print relevant message to console
-  if (min_voltage < MIN_VOLTAGE) {
-    uv_fault_counter++;
-    } else {
-    uv_fault_counter = 0;
-  }
-  if (uv_fault_counter > MAX_SUCCESSIVE_FAULTS) {
-    uv_fault_state = true;
-  }
-  if (uv_fault_state) {
-    bms_status.set_undervoltage(true);
-  }
-  else {
-    bms_status.set_undervoltage(false);
-  }
-  // detect any ov fault conditions, set appropriate error flags, and print relevant message to console
-  if (max_voltage > MAX_VOLTAGE) {
-    ov_fault_counter++;
-  } else {
-    ov_fault_counter = 0;
-  }
-  if (ov_fault_counter > MAX_SUCCESSIVE_FAULTS) {
-    ov_fault_state = true;
-  }
-  if (ov_fault_state) {
-    bms_status.set_overvoltage(true);
-  } else {
-    bms_status.set_overvoltage(false);
-
-  }
-  // detect any pack ov fault conditions, set appropriate error flags, and print relevant message to console
-  if (total_voltage > MAX_TOTAL_VOLTAGE) {
-    pack_ov_fault_counter++;
-  } else {
-    pack_ov_fault_counter = 0;
-  }
-  if (pack_ov_fault_counter > MAX_SUCCESSIVE_FAULTS) {
-    pack_ov_fault_state = true;
-  }
-  if (pack_ov_fault_state) {
-    bms_status.set_total_voltage_high(true);
-  } else {
-    bms_status.set_total_voltage_high(false);
-  }
-}
-
 // Read GPIO registers from LTC6811-2; Process temperature and humidity data from relevant GPIO registers
 void read_gpio() {
   double total_cell_temps = 0;
@@ -301,6 +253,54 @@ void read_gpio() {
   bms_onboard_temperatures.set_low_temperature((uint16_t) gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
   bms_onboard_temperatures.set_high_temperature((uint16_t) gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
   bms_onboard_temperatures.set_average_temperature((uint16_t)(total_thermistor_temps / 32));
+}
+
+void voltage_fault_check(){
+    balance_voltage = min_voltage;
+  // detect any uv fault conditions, set appropriate error flags, and print relevant message to console
+  if (min_voltage < MIN_VOLTAGE) {
+    uv_fault_counter++;
+    } else {
+    uv_fault_counter = 0;
+  }
+  if (uv_fault_counter > MAX_SUCCESSIVE_FAULTS) {
+    uv_fault_state = true;
+  }
+  if (uv_fault_state) {
+    bms_status.set_undervoltage(true);
+  }
+  else {
+    bms_status.set_undervoltage(false);
+  }
+  // detect any ov fault conditions, set appropriate error flags, and print relevant message to console
+  if (max_voltage > MAX_VOLTAGE) {
+    ov_fault_counter++;
+  } else {
+    ov_fault_counter = 0;
+  }
+  if (ov_fault_counter > MAX_SUCCESSIVE_FAULTS) {
+    ov_fault_state = true;
+  }
+  if (ov_fault_state) {
+    bms_status.set_overvoltage(true);
+  } else {
+    bms_status.set_overvoltage(false);
+
+  }
+  // detect any pack ov fault conditions, set appropriate error flags, and print relevant message to console
+  if (total_voltage > MAX_TOTAL_VOLTAGE) {
+    pack_ov_fault_counter++;
+  } else {
+    pack_ov_fault_counter = 0;
+  }
+  if (pack_ov_fault_counter > MAX_SUCCESSIVE_FAULTS) {
+    pack_ov_fault_state = true;
+  }
+  if (pack_ov_fault_state) {
+    bms_status.set_total_voltage_high(true);
+  } else {
+    bms_status.set_total_voltage_high(false);
+  }
 }
 
 void temp_fault_check(){
