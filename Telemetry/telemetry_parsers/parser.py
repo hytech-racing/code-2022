@@ -416,8 +416,8 @@ def parse_ID_MC_FLUX_WEAKENING_OUTPUT(raw_message):
     values = [
         hex(hex_to_decimal(raw_message[0:4], 16, False)),
         hex(hex_to_decimal(raw_message[4:8], 16, False)),
-        hex_to_decimal(raw_message[8:12], 16, True), 
-        hex_to_decimal(raw_message[12:16], 16, True)
+        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.MC_FLUX_WEAKENING_OUTPUT_ID_COMMAND.value, 
+        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.MC_FLUX_WEAKENING_OUTPUT_IQ_COMMAND.value
     ]
     units = ["", "", "", ""]
     return [message, labels, values, units]
