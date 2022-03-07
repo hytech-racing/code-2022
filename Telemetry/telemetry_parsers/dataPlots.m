@@ -212,9 +212,16 @@ title('Accumulator Energy Expended vs Distance Traveled (No Slip Assumption)')
 %% Accumulator Voltage Drop
 figure
 
-mask = adjCurrent>10 & adjVoltage > 245;
+mask = adjCurrent>1 & adjVoltage>300;
 adjCurrent(~mask) = [];
 adjVoltage(~mask) = [];
+
+adjCurrent = movmean(adjCurrent, 100000);
+adjVoltage = movmean(adjVoltage, 100000);
+
+adjCurrent = movmean(adjCurrent, 100);
+adjVoltage = movmean(adjVoltage, 100);
+
 plot(adjCurrent,adjVoltage,'.')
 xlabel('Current')
 ylabel('Voltage')
