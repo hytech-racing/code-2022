@@ -290,7 +290,7 @@ def parse_ID_MC_FAULT_CODES(raw_message):
         "run_lo_accelerator_input_open_fault",
         "run_lo_direction_command_fault",
         "run_lo_inverter_response_timeout_fault",
-        "run_lo_hardware_gatedesaturation_fault",
+        "run_lo_hardware_gate_desaturation_fault",
         "run_lo_hardware_overcurrent_fault",
         "run_lo_undervoltage_fault",
         "run_lo_can_command_message_lost_fault",
@@ -620,6 +620,8 @@ def parse_ID_BMS_DETAILED_VOLTAGES(raw_message):
         labels = ["IC_" + ic_id + "_CELL_3", "IC_" + ic_id + "_CELL_4", "IC_" + ic_id + "_CELL_5"]
     elif group_id == 2:
         labels = ["IC_" + ic_id + "_CELL_6", "IC_" + ic_id + "_CELL_7", "IC_" + ic_id + "_CELL_8"]
+    elif group_id == 3 and int(ic_id) % 2 == 0:
+        labels = ["IC_" + ic_id + "_CELL_9", "IC_" + ic_id + "_CELL_10", "IC_" + ic_id + "_CELL_11"]
     else:
         if DEBUG: print("UNFATAL ERROR: BMS detailed voltage group " + str(group_id) + " is invalid.")
         return "UNPARSEABLE"
