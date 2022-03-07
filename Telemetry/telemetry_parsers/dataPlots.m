@@ -216,13 +216,14 @@ mask = adjCurrent>1 & adjVoltage>300;
 adjCurrent(~mask) = [];
 adjVoltage(~mask) = [];
 
-adjCurrent = movmean(adjCurrent, 100000);
-adjVoltage = movmean(adjVoltage, 100000);
+voltageDrop = cat(1, adjCurrent, adjVoltage);
+voltageDrop = round(voltageDrop, 2); % Smooth out, only use two decimal places
 
-adjCurrent = movmean(adjCurrent, 100);
-adjVoltage = movmean(adjVoltage, 100);
+% Credit: https://www.mathworks.com/matlabcentral/answers/151709-how-can-i-average-points-with-just-the-same-x-coordinate
+[uniqueCurrent,~,idx] = unique(voltageDrop(1,:));
+averageVoltage = accumarray(idx,voltageDrop(2,:),[],@mean);
 
-plot(adjCurrent,adjVoltage,'.')
+plot(uniqueCurrent, averageVoltage,'.-')
 xlabel('Current')
 ylabel('Voltage')
 title('Accumulator Voltage Drop Analysis')
