@@ -54,7 +54,7 @@ FlexCAN CAN(500000);
 
 Metro update_ls = Metro(1000);
 Metro update_CAN = Metro(100);
-Metro update_watchdog = Metro(2);
+Metro update_watchdog = Metro(3);
 
 void print_cells();
 void print_temps();
@@ -94,7 +94,7 @@ void setup() {
 
     Serial.println("CAN system and serial communication initialized");
 
-    ccu_status.set_charger_enabled(false);
+    ccu_status.set_charger_enabled(true);
 
 }
 
@@ -119,16 +119,19 @@ void loop() {
     }
 
     if (update_ls.check()) {
-        print_cells();
-        print_temps();
+        //print_cells();
+        //print_temps();
         Serial.print("Charge enable: ");
         Serial.println(ccu_status.get_charger_enabled());
         Serial.print("BMS state: ");
         Serial.println(bms_status.get_state());
+        print_charger_data();
+        configure_charging();
     }
 
     check_shutdown_signals();
-    configure_charging();
+    
+    
 }
 
 void parse_can_message() {
@@ -183,21 +186,23 @@ void check_shutdown_signals() {
     int shutdown_b = digitalRead(SHUTDOWN_B);
     int shutdown_c = digitalRead(SHUTDOWN_C);
     int shutdown_d = digitalRead(SHUTDOWN_D);
+    int shutdown_e = digitalRead(SHUTDOWN_E);
+    int shutdown_f = digitalRead(SHUTDOWN_F);
 
-    if (shutdown_b == 0 || shutdown_c == 0) {
-        digitalWrite(TEENSY_OK, LOW);
-    }
+    //if (shutdown_b == 0 || shutdown_c == 0 || shutdown_d == 0 || shutdown_e == 0) {
+      //   ccu_status.set_charger_enabled(false);
+    //
 }
 
-void configure_charger() {
+void configure_charging() {
     if (charge_enable) {
         charger_configure.set_max_charging_voltage(3500);
-        charger_configure.set_max_charging_current(150);
-        charger_configure.set_control(1);
+        charger_configure.set_max_charging_current(50);
+        charger_configure.set_control(0);
     } else {
         charger_configure.set_max_charging_voltage(0);
         charger_configure.set_max_charging_current(0);
-        charger_configure.set_control(0);
+        charger_configure.set_control(1);
     }
 }
 
@@ -283,17 +288,17 @@ void print_temps() {
 }
 
 void print_charger_data(){
-    float ac_voltage = charger_data.get_input_ac_voltage() / 10;
-    float output_voltage = charger_data.get_output_dc_voltage() / 10;
-    float output_current = charger_data.get_output_current() / 10;
+    float ac_voltage = charger_data.get_input_ac_voltage();
+    float output_voltage = charger_data.get_output_dc_voltage();
+    float output_current = charger_data.get_output_current();
     
     Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
     Serial.println("\t\tAC VOLTAGE\t\tOUTPUT VOLTAGE\t\tOUTPUT CURRENT\t\tFLAGS");
-    Serial.print(ac_voltage);
+    Serial.print(ac_voltage, HEX);
     Serial.print(" V\t\t");
-    Serial.print(output_voltage);
+    Serial.print(output_voltage, HEX);
     Serial.print(" V\t\t");
-    Serial.print(output_current);
+    Serial.print(output_current, HEX);
     Serial.print(" A\t\t");
     Serial.print(charger_data.get_flags());
     Serial.println();
