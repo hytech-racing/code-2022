@@ -7,7 +7,8 @@ This folder contains all the files needed to flash ESP32 boards for use in live 
 - ESP32_receive: RTOS-based code to receive raw messages, call the Python C-API and the python parser to parse them, and print to serial
 ## Setup
 1. Revert Arduino path preferences back to the standard Arduino lib instead of code-2022
-2. To upload and setup Arduino IDE for ESP32, follow instructions from the link here: https://randomnerdtutorials.com/installing-the-esp32-board-in-arduino-ide-windows-instructions/
+2. Add the dictionary library to your Arduino: https://www.arduino.cc/reference/en/libraries/dictionary/ 
+3. To upload and setup Arduino IDE for ESP32, follow instructions from the link here: https://randomnerdtutorials.com/installing-the-esp32-board-in-arduino-ide-windows-instructions/
 ## Running List of ESP32 MAC Addresses
 Because ESP-now requires MAC addresses to be directly called in the code for direct communications, here's a list to keep track:
 - Transmitter MAC(s):
