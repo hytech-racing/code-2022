@@ -7,6 +7,10 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <iostream>
+#include <fstream>
+#include <string>
+
+#define MAGIC_NUMBER 10						// For some reason this is the magic number to advance the cursor when file parsing gets stuck. Other numbers cause segfaults.
 
 void showMenu(char* exe) {
 	puts("\nHyTech SD Parsing System");
@@ -22,7 +26,6 @@ void showMenu(char* exe) {
 
 FILE* outfile;
 int verbose = 0;
-
 void run(FILE* infile);
 
 int main(int argc, char** argv) {
@@ -99,10 +102,12 @@ void run (FILE* infile) {
 		fflush(outfile);
 
 	uint64_t timeRaw; uint32_t ms;
-
+	long last = -1; // variable to keep track of the cursor from the previous iteration
 	while (!feof(infile)) {
-		if (fscanf(infile, "%lu,%x,%u,%lx", &timeRaw, &id, &len, (uint64_t*) data) == EOF)
+		char* line;
+		if (fscanf(infile, "%lu,%x,%u,%lx", &timeRaw, &id, &len, (uint64_t*) data) == EOF)	
 			continue;
+		
 		// split ms time to seconds for processing
 		ms = timeRaw % 1000;
 		timeRaw /= 1000;
@@ -113,11 +118,19 @@ void run (FILE* infile) {
 		#if (__BYTE_ORDER__ != __ORDER_BIG_ENDIAN__) // handle endianness change
 			for (uint8_t *l = data, *r = data + len - 1; l < r; std::swap(*l++, *r--));
 		#endif
-
+		
+		// "STUCK" AUTOPARSER DEBUGGING CHANGES BEGIN HERE
+		long temp = ftell(infile); 									// temporary variable holding the state of the position of the cursor currently
+		while (last == ftell(infile)) {								// If the cursor has not advanced, add MAGIC_NUMBER characters to its position and try again
+			fseek(infile, ftell(infile) + MAGIC_NUMBER, SEEK_SET);
+		}
 		parseMessage(id, timeString, data);
+		last = temp;												// Set the tracker from the last iteration
+		//END CHANGES
 
 		if (outfile == stdout)
 			fflush(outfile);
+		
 	}
 
 	exit(0);

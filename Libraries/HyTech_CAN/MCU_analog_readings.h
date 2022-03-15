@@ -31,7 +31,7 @@ private:
     uint16_t ecu_current;
 	// @Parse @Unit(A) @Scale(5000)
     uint16_t cooling_current;
-    // @Parse @Unit(C)
+    // @Parse @Unit(C) @Scale(100)
     int16_t temperature;
     // @Parse @Unit(V) @Scale(2500)
     uint16_t glv_battery_voltage;
