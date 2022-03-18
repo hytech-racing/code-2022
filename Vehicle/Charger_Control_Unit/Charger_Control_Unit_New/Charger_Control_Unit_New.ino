@@ -15,7 +15,7 @@
 #define CELLS_PER_ODD_IC 9
 #define THERMISTORS_PER_IC 4            // Number of cell thermistors per IC
 #define PCB_THERM_PER_IC 2              // Number of PCB thermistors per IC
-
+#define MAX_CURRENT 5
 
 #define SHUTDOWN_A A0
 #define SHUTDOWN_B A1
@@ -55,7 +55,6 @@ FlexCAN CAN(500000);
 Metro update_ls = Metro(1000);
 Metro update_CAN = Metro(100);
 Metro update_watchdog = Metro(3);
-Metro update_charger = Metro(10000);
 
 void print_cells();
 void print_temps();
@@ -66,8 +65,6 @@ void configure_charging();
 void print_cells();
 void print_temps();
 void print_charger_data();
-
-bool charge_begin = true;
 
 void setup() {
     pinMode(LED, OUTPUT);
@@ -115,20 +112,7 @@ void loop() {
         CAN.write(tx_msg);
         tx_msg.ext = 0;
     }
-
-    if (charge_begin = true) {
-        charger_configure.set_max_charging_voltage_high(35);
-        charger_configure.set_max_charging_voltage_low(0);
-        charger_configure.set_max_charging_current_low(10);
-        tx_msg.ext = 1;
-        charger_configure.write(tx_msg.buf);
-        tx_msg.id = ID_CHARGER_CONTROL;
-        tx_msg.len = sizeof(charger_configure);
-        CAN.write(tx_msg);
-        tx_msg.ext = 0;
-        charge_begin = false;
-    }
-
+    
     if (update_watchdog.check()) {
         watchdog_state = !watchdog_state;
         digitalWrite(WATCHDOG_OUT, watchdog_state);
@@ -211,12 +195,9 @@ void check_shutdown_signals() {
 
 void configure_charging() {
     if (charge_enable) {
-        uint8_t vout = charger_data.get_output_dc_voltage_high() * 16 * 16 + charger_data.get_output_dc_voltage_low();
-        vout = vout / 10;
-        uint8_t cur = 10*(2000 / vout);
         charger_configure.set_max_charging_voltage_high(35);
         charger_configure.set_max_charging_voltage_low(0);
-        charger_configure.set_max_charging_current_low(cur);
+        charger_configure.set_max_charging_current_low(MAX_CURRENT * 10);
         charger_configure.set_control(0);
     } else {
         charger_configure.set_max_charging_voltage_high(0);
