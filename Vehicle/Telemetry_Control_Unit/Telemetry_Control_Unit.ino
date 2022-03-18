@@ -89,6 +89,7 @@ Metro timer_imu_accelerometer = Metro(200);
 Metro timer_imu_gyroscope = Metro(200);
 Metro timer_sab_readings_front = Metro(200);
 Metro timer_sab_readings_rear = Metro(200);
+Metro timer_sab_readings_gps = Metro(200);
 MCU_status mcu_status;
 MCU_pedal_readings mcu_pedal_readings;
 MCU_analog_readings mcu_analog_readings;
@@ -129,6 +130,7 @@ IMU_accelerometer imu_accelerometer;
 IMU_gyroscope imu_gyroscope;
 SAB_readings_front sab_readings_front;
 SAB_readings_rear sab_readings_rear;
+SAB_readings_gps sab_readings_gps;
 
 void parse_can_message();
 void write_to_SD(CAN_message_t *msg);
@@ -299,6 +301,7 @@ void parse_can_message() {
             case ID_IMU_GYROSCOPE:                      imu_gyroscope.load(msg_rx.buf);                     break;
             case ID_SAB_READINGS_FRONT:                 sab_readings_front.load(msg_rx.buf);                break;
             case ID_SAB_READINGS_REAR:                  sab_readings_rear.load(msg_rx.buf);                 break;
+            case ID_SAB_READINGS_GPS:                   sab_readings_gps.load(msg_rx.buf);                  break;
         }
     }
 }
@@ -662,10 +665,6 @@ void send_xbee() {
         xb_msg.id = ID_DASHBOARD_STATUS;
         write_xbee_data();
     }
-
-
-    // DISABLED EM, SAB, and IMU to XBee for Now
-    /*
     if (timer_em_status.check()) {
         em_status.write(xb_msg.buf);
         xb_msg.len = sizeof(em_status);
@@ -702,7 +701,12 @@ void send_xbee() {
         xb_msg.id = ID_SAB_READINGS_REAR;
         write_xbee_data();
     }
-    */
+    if (timer_sab_readings_gps.check()) {
+        sab_readings_gps.write(xb_msg.buf);
+        xb_msg.len = sizeof(sab_readings_gps);
+        xb_msg.id = ID_SAB_READINGS_GPS;
+        write_xbee_data();
+    }
 }
 void sd_date_time(uint16_t* date, uint16_t* time) {
     // return date using FAT_DATE macro to format fields
