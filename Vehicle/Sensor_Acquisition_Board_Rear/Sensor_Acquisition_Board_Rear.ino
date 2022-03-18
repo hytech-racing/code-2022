@@ -34,7 +34,7 @@ CAN_message_t msg;
 #define ALPHA 0.75                                                                                      // Adjust Filtering Strength (Higher = More Filtering)
 //#define INPUT_TO_5000mV 5.9082, expression: 3.3V/(30/11)V * 3.3V/1024counts * 5V/3.3V * 1000mV/1V = 5.9082, used just for reference
 // Functions scale value up by 1000, will get scaled down 1000 later in autoparse
-inline float get_sensor1_value() {return (analogRead(SENSOR_1_CHANNEL) * 0.22988 - 41.93897) * 1000;}   // DO NOT CHANGE THIS W/O SPECIAL REASON
+inline float get_sensor1_value() {return 0.0;}   // Needs to be implemented for cooling loop fluid temp
 inline float get_sensor2_value() {return (analogRead(SENSOR_2_CHANNEL) * -0.43003 + 190.95588) * 1000;} // DO NOT CHANGE THIS W/O SPECIAL REASON
 inline float get_sensor3_value() {return (analogRead(SENSOR_3_CHANNEL) * 0.059312 + 3.0) * 1000;}       // DO NOT CHANGE THIS W/O SPECIAL REASON
 inline float get_sensor4_value() {return (analogRead(SENSOR_4_CHANNEL) * 0.059312 + 3.0) * 1000;}       // DO NOT CHANGE THIS W/O SPECIAL REASON

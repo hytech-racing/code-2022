@@ -827,14 +827,14 @@ def parse_ID_SAB_READINGS_FRONT(raw_message):
 
 def parse_ID_SAB_READINGS_REAR(raw_message):
     message = "SAB_readings_rear"
-    labels = ["amb_air_hum", "amb_air_temp", "bl_susp_lin_pot", "br_susp_lin_pot"]
+    labels = ["cooling_loop_fluid_temp", "amb_air_temp", "bl_susp_lin_pot", "br_susp_lin_pot"]
     values = [
         hex_to_decimal(raw_message[0:4], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value,
-        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.SAB_READINGS_NON_GPS.value,
+        hex_to_decimal(raw_message[4:8], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value,
         hex_to_decimal(raw_message[8:12], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value,
         hex_to_decimal(raw_message[12:16], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value
     ]
-    units = ["%", "C", "mm", "mm"]
+    units = ["C", "C", "mm", "mm"]
     return [message, labels, values, units]
 
 def parse_ID_SAB_READINGS_GPS(raw_message):

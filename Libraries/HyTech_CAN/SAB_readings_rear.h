@@ -27,7 +27,7 @@ public:
     inline void set_sensor_4(uint16_t reading) { sensor_4 = reading; }
 
 private:
-    // @Parse @Name(amb_air_hum) @Unit(percent) @Scale(1000)
+    // @Parse @Name(cooling_loop_fluid_temp) @Unit(C) @Scale(1000)
     uint16_t sensor_1;
     // @Parse @Name(amb_air_temp) @Unit(C) @Scale(1000)
     uint16_t sensor_2;
