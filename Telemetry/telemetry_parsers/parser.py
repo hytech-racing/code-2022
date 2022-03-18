@@ -416,8 +416,8 @@ def parse_ID_MC_FLUX_WEAKENING_OUTPUT(raw_message):
     values = [
         hex(hex_to_decimal(raw_message[0:4], 16, False)),
         hex(hex_to_decimal(raw_message[4:8], 16, False)),
-        hex_to_decimal(raw_message[8:12], 16, True), 
-        hex_to_decimal(raw_message[12:16], 16, True)
+        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.MC_FLUX_WEAKENING_OUTPUT_ID_COMMAND.value, 
+        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.MC_FLUX_WEAKENING_OUTPUT_IQ_COMMAND.value
     ]
     units = ["", "", "", ""]
     return [message, labels, values, units]
@@ -1181,12 +1181,18 @@ def get_time_elapsed(frames = []):
     '''
     skip = 0
     df_list = []
+    start_time = 0
+    set_start_time = True # boolean flag: we only want to set the start time once, during the first (i.e. earliest) CSV
     try:
         for df in frames:
             skip += 1
             timestamps = [dp.isoparse(x) for x in df['time']]
             if(len(timestamps) != 0):
-                start_time = min(timestamps)
+                
+                if set_start_time:
+                    start_time = min(timestamps)
+                    set_start_time = False # don't set start time again this run
+
                 last_time = -1 # sometimes the Teensy has a slight ms miscue where it jumps back 1 sec on a second change, we must address it here
                 time_delta = []
                 for x in timestamps:
