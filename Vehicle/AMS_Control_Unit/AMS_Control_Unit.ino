@@ -13,6 +13,7 @@
 #include <HyTech_CAN.h>
 #include <LTC6811_2.h>
 #include <Metro.h>
+#include <math.h>
 
 // CONSTANT DEFINITIONS: define important values, such as IC count and cells per IC
 #define TOTAL_IC 8                 // Number of LTC6811-2 ICs that are used in the accumulator
@@ -29,17 +30,21 @@
 #define BALANCE_HOT 12             // Sets balancing duty cycle as 80%
 #define BALANCE_CONTINUOUS 15      // Sets balancing duty cycle as 100% 
 #define EM_CURRENT_SF .000015258789063      // Energy Meter Current Scale Factor from DBC for parsing CAN
+#define EM_VOLTAGE_SF .000015258789063 // Energy Meter Voltage Scale Factor
 
 // VARIABLE DECLARATIONS
 double startTime = millis(); // Next 8 lines are for Coulomb Counter
 double currentTime;
 double timeElapsed;
 double coulombCount;
+double initialCharge = 0;
 double totalCapacity = 18 * 60 * 60; // 18 amp hours => amp minutes => amp seconds
 double percentRemaining = 100;
 uint32_t rawCurrent;
 double current;
-uint32_t rawHexData[5];                     // Array containing Current from the Energy Meter in Hexadecimal 
+uint32_t rawVoltage;
+double voltage;
+uint32_t rawHexData[9];                     // Array containing Current and Voltage from the Energy Meter in Hexadecimal 
 uint16_t pec15Table[256];          // Array containing lookup table for PEC generator
 uint16_t* LTC6811_2::pec15Table_pointer = pec15Table;   // Pointer to the PEC lookup table
 uint16_t vuv = 1874; // 3V           // Minimum voltage value following datasheet formula: Comparison Voltage = (VUV + 1) • 16 • 100μV
@@ -122,6 +127,10 @@ void setup() {
 }
 void loop() {
   // put your main code here, to run repeatedly:
+  if (initialCharge == 0)
+  {
+    initial_charge_initializer();  // ini
+  }
   can_parse_current(); // The function that can parse current
   coulombCounter(); // Function that counts coulombs
   parse_CAN_CCU_status();
@@ -379,7 +388,7 @@ bool can_parse_current() {
   bool temp;
   while(CAN.read(msg)){
     if (msg.id == ID_EM_CURRENT) {
-      for (int i = 0; i<4; i++) {
+      for (int i = 0; i<5; i++) {
         rawHexData[i] = msg.buf[i]; //rawHexData is DATA recieved from sender in Hex
       }
      temp = true;
@@ -390,6 +399,33 @@ bool can_parse_current() {
   
   return temp;
 }
+
+
+void initial_charge_initializer() {
+  while(CAN.read(msg)){
+    if (msg.id == ID_EM_VOLTAGE) {                                                        // Add a line in CAN_ID
+      for (int i = 5; i<10; i++) {
+        rawHexData[i] = msg.buf[i]; //rawHexData is DATA recieved from sender in Hex
+      }
+    }
+  }
+    rawHexData[4] <<= 31;
+    rawHexData[5] <<= 30;
+    rawHexData[6] <<= 22;
+    rawHexData[7] <<= 14;
+    rawHexData[8] >>= 1;
+
+
+    rawVoltage = (rawHexData[4] | rawHexData[5] | rawHexData[6] | rawHexData[7] | rawHexData[8]);
+    voltage = voltage * EM_VOLTAGE_SF; //DBC Scale Factor
+    Serial.print("Voltage from EM: ");
+    Serial.println(voltage);
+    percentRemaining = pow(-0.0000000016*(voltage),(6)) + pow(0.0000001307*(voltage),(5)) - pow(0.0000059464*(voltage),(4)) + pow(0.0001556270*(voltage),(3)) + pow(0.0024016153*(voltage),(2)) + 0.025375128*(voltage)+3.5849650673;
+    initialCharge = percentRemaining * totalCapacity;
+    
+    
+}
+
 
 
 void coulombCounter()
@@ -412,7 +448,7 @@ void coulombCounter()
   currentTime = millis();
   timeElapsed = currentTime - startTime;
   coulombCount += current * timeElapsed;
-  percentRemaining = ((totalCapacity - coulombCount)/totalCapacity) * 100;
+  percentRemaining = ((initialCharge - coulombCount)/totalCapacity) * 100;
   Serial.print("Percent remaining = ");
   Serial.print(percentRemaining);
   Serial.println("%");

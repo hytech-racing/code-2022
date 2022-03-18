@@ -44,6 +44,7 @@
 #define ID_SAB_REAR                                                 0xED
 
 #define ID_EM_CURRENT												0x100 // Energy Meter Current Value
+#define ID_EM_VOLTAGE												0x100 // Energy Meter Voltage Value
 
 #define ID_SAB_READINGS_FRONT                                       0xEC
 #define ID_SAB_READINGS_REAR                                        0xED
