@@ -17,15 +17,21 @@ public:
     inline void write(uint8_t buf[])        { memcpy(buf, this, sizeof(*this)); }
 
     inline uint8_t get_control()      { return control; }
-    inline void set_control(uint16_t con) { this->control = con; }
-    inline uint16_t get_max_charging_voltage()  { return max_charging_voltage; }
-    inline void set_max_charging_voltage(uint16_t max_charging_voltage) { this->max_charging_voltage = max_charging_voltage; }
-    inline uint16_t get_max_charging_current()  { return max_charging_current; }
-    inline void set_max_charging_current(uint16_t max_charging_current) { this->max_charging_current = max_charging_current; }
+    inline void set_control(uint8_t con) { this->control = con; }
+    inline uint8_t get_max_charging_voltage_high()  { return max_charging_voltage_high; }
+    inline void set_max_charging_voltage_high(uint8_t max_charging_voltage_high) { this->max_charging_voltage_high = max_charging_voltage_high; }
+    inline uint8_t get_max_charging_voltage_low()  { return max_charging_voltage_low; }
+    inline void set_max_charging_voltage_low(uint8_t max_charging_voltage_low) { this->max_charging_voltage_low = max_charging_voltage_low; }
+    inline uint8_t get_max_charging_current_high()  { return max_charging_current_high; }
+    inline void set_max_charging_current_high(uint8_t max_charging_current_high) { this->max_charging_current_high = max_charging_current_high; }
+    inline uint8_t get_max_charging_current_low()  { return max_charging_current_low; }
+    inline void set_max_charging_current_low(uint8_t max_charging_current_low) { this->max_charging_current_low = max_charging_current_low; }
 
 private:
-    uint16_t max_charging_voltage;
-    uint16_t max_charging_current;
+    uint8_t max_charging_voltage_high;
+    uint8_t max_charging_voltage_low;
+    uint8_t max_charging_current_high;
+    uint8_t max_charging_current_low;
     uint8_t control;
 };
 

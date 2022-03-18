@@ -196,12 +196,14 @@ void check_shutdown_signals() {
 
 void configure_charging() {
     if (charge_enable) {
-        charger_configure.set_max_charging_voltage(3500);
-        charger_configure.set_max_charging_current(50);
+        charger_configure.set_max_charging_voltage_high(35);
+        charger_configure.set_max_charging_voltage_low(0);
+        charger_configure.set_max_charging_current_low(50);
         charger_configure.set_control(0);
     } else {
-        charger_configure.set_max_charging_voltage(0);
-        charger_configure.set_max_charging_current(0);
+        charger_configure.set_max_charging_voltage_high(0);
+        charger_configure.set_max_charging_voltage_low(0);
+        charger_configure.set_max_charging_current_low(0);
         charger_configure.set_control(1);
     }
 }
@@ -288,17 +290,21 @@ void print_temps() {
 }
 
 void print_charger_data(){
-    float ac_voltage = charger_data.get_input_ac_voltage();
-    float output_voltage = charger_data.get_output_dc_voltage();
-    float output_current = charger_data.get_output_current();
+    uint8_t ac_voltage_high = charger_data.get_input_ac_voltage_high();
+    uint8_t ac_voltage_low = charger_data.get_input_ac_voltage_low();
+    uint8_t output_voltage_high = charger_data.get_output_dc_voltage_high();
+    uint8_t output_voltage_low = charger_data.get_output_dc_voltage_low();
+    uint8_t output_current_high = charger_data.get_output_current_high();
+    uint8_t output_current_low = charger_data.get_output_current_low();
+
+
     
     Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
-    Serial.println("\t\tAC VOLTAGE\t\tOUTPUT VOLTAGE\t\tOUTPUT CURRENT\t\tFLAGS");
-    Serial.print(ac_voltage, HEX);
+    Serial.print(ac_voltage_high*16*16 + ac_voltage_low);
     Serial.print(" V\t\t");
-    Serial.print(output_voltage, HEX);
+    Serial.print(output_voltage_high*16*16 + output_voltage_low);
     Serial.print(" V\t\t");
-    Serial.print(output_current, HEX);
+    Serial.print(output_current_high*16*16 + output_current_low);
     Serial.print(" A\t\t");
     Serial.print(charger_data.get_flags());
     Serial.println();
