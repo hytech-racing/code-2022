@@ -27,13 +27,13 @@ public:
     inline void set_sensor_4(uint16_t reading) { sensor_4 = reading; }
 
 private:
-    // @Parse @Name(Back-Left_Suspension_Linear_Potentiometer) @Unit(mm) @Scale(1000)
+    // @Parse @Name(cooling_loop_fluid_temp) @Unit(C) @Scale(1000)
     uint16_t sensor_1;
-    // @Parse @Name(Back-Right_Suspension_Linear_Potentiometer) @Unit(mm) @Scale(1000)
+    // @Parse @Name(amb_air_temp) @Unit(C) @Scale(1000)
     uint16_t sensor_2;
-    // @Parse @Name(Ambient_Air_Temperature) @Unit(C) @Scale(1000)
+    // @Parse @Name(bl_susp_lin_pot) @Unit(mm) @Scale(1000)
     uint16_t sensor_3;
-    // @Parse @Name(Motor_Loop_Cooling_Fluid_Temperature) @Unit(C) @Scale(1000)
+    // @Parse @Name(br_susp_lin_pot) @Unit(mm) @Scale(1000)
     uint16_t sensor_4;
 };
 

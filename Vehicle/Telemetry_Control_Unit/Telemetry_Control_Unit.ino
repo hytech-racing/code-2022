@@ -85,10 +85,11 @@ Metro timer_flush = Metro(100);
 Metro timer_total_discharge = Metro(1000);
 Metro timer_em_status = Metro(1000);
 Metro timer_em_measurement = Metro(1000);
-Metro timer_imu_accelerometer = Metro(1000);
-Metro timer_imu_gyroscope = Metro(1000);
-Metro timer_sab_readings_front = Metro(1000);
-Metro timer_sab_readings_rear = Metro(1000);
+Metro timer_imu_accelerometer = Metro(200);
+Metro timer_imu_gyroscope = Metro(200);
+Metro timer_sab_readings_front = Metro(200);
+Metro timer_sab_readings_rear = Metro(200);
+Metro timer_sab_readings_gps = Metro(200);
 MCU_status mcu_status;
 MCU_pedal_readings mcu_pedal_readings;
 MCU_analog_readings mcu_analog_readings;
@@ -129,6 +130,7 @@ IMU_accelerometer imu_accelerometer;
 IMU_gyroscope imu_gyroscope;
 SAB_readings_front sab_readings_front;
 SAB_readings_rear sab_readings_rear;
+SAB_readings_gps sab_readings_gps;
 
 void parse_can_message();
 void write_to_SD(CAN_message_t *msg);
@@ -146,6 +148,8 @@ int write_xbee_data();
 void send_xbee();
 void sd_date_time(uint16_t* date, uint16_t* time);
 void setup() {
+    delay(5000); // Prevents suprious text files when turning the car on and off rapidly
+    
     /* Set up Serial, XBee and CAN */
     Serial.begin(115200);
     XB.begin(115200);
@@ -297,6 +301,7 @@ void parse_can_message() {
             case ID_IMU_GYROSCOPE:                      imu_gyroscope.load(msg_rx.buf);                     break;
             case ID_SAB_READINGS_FRONT:                 sab_readings_front.load(msg_rx.buf);                break;
             case ID_SAB_READINGS_REAR:                  sab_readings_rear.load(msg_rx.buf);                 break;
+            case ID_SAB_READINGS_GPS:                   sab_readings_gps.load(msg_rx.buf);                  break;
         }
     }
 }
@@ -694,6 +699,12 @@ void send_xbee() {
         sab_readings_rear.write(xb_msg.buf);
         xb_msg.len = sizeof(sab_readings_rear);
         xb_msg.id = ID_SAB_READINGS_REAR;
+        write_xbee_data();
+    }
+    if (timer_sab_readings_gps.check()) {
+        sab_readings_gps.write(xb_msg.buf);
+        xb_msg.len = sizeof(sab_readings_gps);
+        xb_msg.id = ID_SAB_READINGS_GPS;
         write_xbee_data();
     }
 }
