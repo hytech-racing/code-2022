@@ -611,8 +611,8 @@ def parse_ID_BMS_VOLTAGES(raw_message):
 
 def parse_ID_BMS_DETAILED_VOLTAGES(raw_message):
     message = "BMS_detailed_voltages"
-    ic_id = raw_message[1]
-    group_id = int(raw_message[0])
+    ic_id = raw_message[2]
+    group_id = int(raw_message[3])
     labels = ""
     if group_id == 0:
         labels = ["IC_" + ic_id + "_CELL_0", "IC_" + ic_id + "_CELL_1", "IC_" + ic_id + "_CELL_2"]
@@ -626,9 +626,9 @@ def parse_ID_BMS_DETAILED_VOLTAGES(raw_message):
         if DEBUG: print("UNFATAL ERROR: BMS detailed voltage group " + str(group_id) + " is invalid.")
         return "UNPARSEABLE"
     values = [
-        hex_to_decimal(raw_message[2:6], 16, False) / Multipliers.BMS_DETAILED_VOLTAGES_VOLTAGE_0.value,
-        hex_to_decimal(raw_message[6:10], 16, False) / Multipliers.BMS_DETAILED_VOLTAGES_VOLTAGE_1.value,
-        hex_to_decimal(raw_message[10:14], 16, False) / Multipliers.BMS_DETAILED_VOLTAGES_VOLTAGE_2.value
+        hex_to_decimal(raw_message[4:8], 16, False) / Multipliers.BMS_DETAILED_VOLTAGES_VOLTAGE_0.value,
+        hex_to_decimal(raw_message[8:12], 16, False) / Multipliers.BMS_DETAILED_VOLTAGES_VOLTAGE_1.value,
+        hex_to_decimal(raw_message[12:16], 16, False) / Multipliers.BMS_DETAILED_VOLTAGES_VOLTAGE_2.value
     ]
     units = ["V", "V", "V"]
     return [message, labels, values, units]
@@ -646,8 +646,8 @@ def parse_ID_BMS_TEMPERATURES(raw_message):
 
 def parse_ID_BMS_DETAILED_TEMPERATURES(raw_message):
     message = "BMS_detailed_temperatures"
-    ic_id = raw_message[1]
-    group_id = int(raw_message[0])
+    ic_id = raw_message[2]
+    group_id = int(raw_message[3])
 
     # Different parsing if IC_ID is even or old
     # If IC_ID is even, GPIO 5 is humidity; if IC_ID is odd, GPIO 5 is temperature
@@ -673,9 +673,9 @@ def parse_ID_BMS_DETAILED_TEMPERATURES(raw_message):
             return "UNPARSEABLE"
 
     values = [
-        hex_to_decimal(raw_message[2:6], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_0.value,
-        hex_to_decimal(raw_message[6:10], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_1.value,
-        hex_to_decimal(raw_message[10:14], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_2.value
+        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_0.value,
+        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_1.value,
+        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_2.value
     ]
 
     units = []
@@ -685,18 +685,6 @@ def parse_ID_BMS_DETAILED_TEMPERATURES(raw_message):
         else: units = ["C", "C", "V"]
 
     return [message, labels, values, units]
-
-    '''
-    ic_id = str(hex_to_decimal(raw_message[0:2], 8, False))
-    labels = ["IC_" + ic_id + "_therm_0", "IC_" + ic_id + "_therm_1", "IC_" + ic_id + "_therm_2"]
-    values = [
-        hex_to_decimal(raw_message[2:6], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_0.value,
-        hex_to_decimal(raw_message[6:10], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_1.value,
-        hex_to_decimal(raw_message[10:14], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_2.value
-    ]
-    units = ["C", "C", "C"]
-    return [message, labels, values, units]
-    '''
     
 def parse_ID_BMS_STATUS(raw_message):
     message = "BMS_status"
