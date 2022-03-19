@@ -1,8 +1,8 @@
 /*
-   HyTech 2019 Charger Control Unit
+   HyTech 2022 Charger Control Unit
    Init 2019-05-16
-   Configured for Charger Control Board rev1
-   Controls Elcon charger and communicates with BMS over CAN to enable cell balancing
+   Configured for Charger Control Board rev3
+   Controls OVARTECH charger and communicates with BMS over CAN to enable cell balancing
 */
 
 #include <HyTech_FlexCAN.h>
