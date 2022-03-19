@@ -198,7 +198,7 @@ void configure_charging() {
     if (charge_enable) {
         charger_configure.set_max_charging_voltage_high(35);
         charger_configure.set_max_charging_voltage_low(0);
-        charger_configure.set_max_charging_current_low(50);
+        charger_configure.set_max_charging_current_low(30);
         charger_configure.set_control(0);
     } else {
         charger_configure.set_max_charging_voltage_high(0);
