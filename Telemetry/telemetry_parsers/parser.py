@@ -817,27 +817,36 @@ def parse_ID_DASHBOARD_STATUS(raw_message):
 
 def parse_ID_SAB_READINGS_FRONT(raw_message):
     message = "SAB_readings_front"
-    labels = ["fl_susp_lin_pot", "fr_susp_lin_pot", "steer_wheel_sensor", "amb_air_hum"]
+    labels = ["fl_susp_lin_pot", "fr_susp_lin_pot"]
     values = [
-        hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.SAB_READINGS_ALL.value,
-        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.SAB_READINGS_ALL.value,
-        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.SAB_READINGS_ALL.value,
-        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.SAB_READINGS_ALL.value
+        hex_to_decimal(raw_message[0:4], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value,
+        hex_to_decimal(raw_message[4:8], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value
     ]
-    units = ["mm", "mm", "", "%"]
+    units = ["mm", "mm"]
     return [message, labels, values, units]
 
 def parse_ID_SAB_READINGS_REAR(raw_message):
     message = "SAB_readings_rear"
-    labels = ["bl_susp_lin_pot", "br_susp_lin_pot", "amb_air_temp", "mc_cool_fluid_temp"]
+    labels = ["cooling_loop_fluid_temp", "amb_air_temp", "bl_susp_lin_pot", "br_susp_lin_pot"]
     values = [
-        hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.SAB_READINGS_ALL.value,
-        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.SAB_READINGS_ALL.value,
-        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.SAB_READINGS_ALL.value,
-        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.SAB_READINGS_ALL.value
+        hex_to_decimal(raw_message[0:4], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value,
+        hex_to_decimal(raw_message[4:8], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value,
+        hex_to_decimal(raw_message[8:12], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value,
+        hex_to_decimal(raw_message[12:16], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value
     ]
-    units = ["mm", "mm", "C", "C"]
+    units = ["C", "C", "mm", "mm"]
     return [message, labels, values, units]
+
+def parse_ID_SAB_READINGS_GPS(raw_message):
+    message = "SAB_readings_gps"
+    labels = ["gps_latitude", "gps_longitude"]
+    values = [
+        hex_to_decimal(raw_message[0:8], 32, True) / Multipliers.SAB_READINGS_GPS.value,
+        hex_to_decimal(raw_message[8:16], 32, True) / Multipliers.SAB_READINGS_GPS.value
+    ]
+    units = ["deg", "deg"]
+    return [message, labels, values, units]
+
 
 def parse_ID_EM_MEASUREMENT(raw_message):
     message = "EM_measurement"
@@ -850,9 +859,9 @@ def parse_ID_EM_MEASUREMENT(raw_message):
         return value
     bin_rep = bin(int(raw_message, 16))
     bin_rep = bin_rep[2:].zfill(64)
-    voltage = twos_comp(int(bin_rep[7:39], 2)) / Multipliers.EM_MEASUREMENTS_VOLTAGE.value
-    current = twos_comp(int(bin_rep[39:71], 2)) / Multipliers.EM_MEASUREMENTS_CURRENT.value
-    values = [voltage, current]
+    current = twos_comp(int(bin_rep[7:39], 2)) / Multipliers.EM_MEASUREMENTS_CURRENT.value
+    voltage = twos_comp(int(bin_rep[39:71], 2)) / Multipliers.EM_MEASUREMENTS_VOLTAGE.value
+    values = [current, voltage]
 
     units = ["A", "V"]
     return [message, labels, values, units]
@@ -985,6 +994,7 @@ def parse_message(raw_id, raw_message):
     if raw_id == "EB": return parse_ID_DASHBOARD_STATUS(raw_message)
     if raw_id == "EC": return parse_ID_SAB_READINGS_FRONT(raw_message)
     if raw_id == "ED": return parse_ID_SAB_READINGS_REAR(raw_message)
+    if raw_id == "EE": return parse_ID_SAB_READINGS_GPS(raw_message)
 
     if raw_id == "100": return parse_ID_EM_MEASUREMENT(raw_message)
     if raw_id == "400": return parse_ID_EM_STATUS(raw_message)
