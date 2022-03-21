@@ -84,13 +84,13 @@ void setup() {
   pinMode(6, OUTPUT);
   pinMode(5, OUTPUT);
   digitalWrite(6, HIGH); //write Teensy_OK pin high
-  pulse_timer.begin(ams_ok_pulse,50000); //timer to pulse pin 5 every 50 milliseconds
+  pulse_timer.begin(ams_ok_pulse, 50000); //timer to pulse pin 5 every 50 milliseconds
   Serial.begin(115200);
   SPI.begin();
   CAN.begin();
   CAN.setBaudRate(500000);
-  
-  for (int i = 0; i < 64; i++) { // Fill all filter slots with Charger Control Unit message filter 
+
+  for (int i = 0; i < 64; i++) { // Fill all filter slots with Charger Control Unit message filter
     CAN.setMBFilter(static_cast<FLEXCAN_MAILBOX>(i), ID_CCU_STATUS); // Set CAN mailbox filtering to only watch for charger controller status CAN messages
   }
   // initialize the PEC table
@@ -126,16 +126,16 @@ void loop() {
 // READ functions to collect and read data from the LTC6811-2
 // Read cell voltages from all eight LTC6811-2; voltages are read in with units of 100μV
 void read_voltages() {
-  total_voltage = 0;  
+  total_voltage = 0;
+  max_voltage = 0;
+  min_voltage = 65535;
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
     ic[i].wrcfga(configuration);
-    uint8_t *wrfcga_buf = configuration.buf();
-    Reg_Group_Config reg_group_config = ic[i].rdcfga();
     ic[i].adcv(static_cast<CELL_SELECT>(0), false);
   }
-  delay(300);
+  delay(210);
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
     Reg_Group_Cell_A reg_group_a = ic[i].rdcva();
@@ -177,11 +177,11 @@ void read_voltages() {
   voltage_fault_check();
 }
 
-void voltage_fault_check(){
+void voltage_fault_check() {
   // detect any uv fault conditions, set appropriate error flags, and print relevant message to console
   if (min_voltage < MIN_VOLTAGE) {
     uv_fault_counter++;
-    } else {
+  } else {
     uv_fault_counter = 0;
   }
   if (uv_fault_counter > MAX_SUCCESSIVE_FAULTS) {
@@ -225,6 +225,11 @@ void voltage_fault_check(){
 
 // Read GPIO registers from LTC6811-2; Process temperature and humidity data from relevant GPIO registers
 void read_gpio() {
+  max_humidity = 0;
+  max_thermistor_voltage = 0;
+  min_thermistor_voltage = 65535;
+  max_temp_voltage = 0;
+  min_temp_voltage = 65535;
   double total_cell_temps = 0;
   double total_thermistor_temps = 0;
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
@@ -232,8 +237,8 @@ void read_gpio() {
     ic[i].wakeup();
     ic[i].wrcfga(configuration);
     ic[i].adax(static_cast<GPIO_SELECT>(0), false);
-    }
-  delay(300);
+  }
+  delay(210);
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
     Reg_Group_Aux_A reg_group_a = ic[i].rdauxa();
@@ -247,9 +252,9 @@ void read_gpio() {
       }
       for (int k = 0; k < 3; k++) {
         gpio_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
-        if ((i % 2) && j+k == 4) {
+        if ((i % 2) && j + k == 4) {
           gpio_temps[i][j + k] = -66.875 + 218.75 * (gpio_voltages[i][j + k] / 50000.0); // caculation for SHT31 temperature in C
-          total_cell_temps += gpio_temps[i][j+k];
+          total_cell_temps += gpio_temps[i][j + k];
           if (gpio_voltages[i][4] > max_temp_voltage) {
             max_temp_voltage = gpio_voltages[i][j + k];
             max_temp_location[0] = i;
@@ -261,20 +266,20 @@ void read_gpio() {
             min_temp_location[1] = j + k;
           }
         } else {
-          gpio_temps[i][j + k] = -12.5 + 125*(gpio_voltages[i][j + k])/50000.0;
+          gpio_temps[i][j + k] = -12.5 + 125 * (gpio_voltages[i][j + k]) / 50000.0;
           float thermistor_resistance = (2740 / (gpio_voltages[i][j + k] / 50000.0)) - 2740;
           gpio_temps[i][j + k] = 1 / ((1 / 298.15) + (1 / 3984.0) * log(thermistor_resistance / 10000.0)) - 273.15; //calculation for thermistor temperature in C
-          if (j+k <=3 && gpio_voltages[i][j+k] > max_thermistor_voltage) {
+          if (j + k <= 3 && gpio_voltages[i][j + k] > max_thermistor_voltage) {
             max_thermistor_voltage = gpio_voltages[i][j + k];
             max_thermistor_location[0] = i;
             max_thermistor_location[1] = j + k;
           }
-          if (j+k <=3 && gpio_voltages[i][j+k] < min_thermistor_voltage) {
+          if (j + k <= 3 && gpio_voltages[i][j + k] < min_thermistor_voltage) {
             min_thermistor_voltage = gpio_voltages[i][j + k];
             min_thermistor_location[0] = i;
             min_thermistor_location[1] = j + k;
           }
-          if (j+k == 4 && gpio_temps[i][j+k] > max_humidity) {
+          if (j + k == 4 && gpio_temps[i][j + k] > max_humidity) {
             max_humidity = gpio_temps[i][j + k];
             max_humidity_location[0] = i;
             max_humidity_location[1] = j + k;
@@ -286,8 +291,8 @@ void read_gpio() {
   void temp_fault_check();
 }
 
-void temp_fault_check(){
-    if (max_thermistor_voltage > MAX_THERMISTOR_VOLTAGE) {
+void temp_fault_check() {
+  if (max_thermistor_voltage > MAX_THERMISTOR_VOLTAGE) {
     overtemp_fault_counter++;
   } else {
     overtemp_fault_counter = 0;
@@ -351,18 +356,18 @@ void write_CAN_messages() {
   msg.id = ID_BMS_STATUS;
   msg.len = sizeof(bms_status);
   bms_status.write(msg.buf);
-//  for (int i = 0; i < 8; i++) {
-//    Serial.println(msg.buf[i], BIN);
-//  }
+  //  for (int i = 0; i < 8; i++) {
+  //    Serial.println(msg.buf[i], BIN);
+  //  }
   CAN.write(msg);
 }
 
 // Pulses pin 5 to keep watchdog circuit active
-void ams_ok_pulse(){
-  if(!overtemp_fault_state && !uv_fault_state && !ov_fault_state  && !pack_ov_fault_state){
+void ams_ok_pulse() {
+  if (!overtemp_fault_state && !uv_fault_state && !ov_fault_state  && !pack_ov_fault_state) {
     next_pulse = !next_pulse;
   }
-    digitalWrite(5,(next_pulse?HIGH:LOW));
+  digitalWrite(5, (next_pulse ? HIGH : LOW));
 }
 
 // Data print functions
@@ -370,15 +375,15 @@ void ams_ok_pulse(){
 void print_voltages() {
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
   if (min_voltage < MIN_VOLTAGE) {
-    Serial.print("UNDERVOLTAGE FAULT: "); Serial.print("IC #: "); Serial.print(min_voltage_location[0]); Serial.print("\tCell #: "); Serial.print(min_voltage_location[1]); Serial.print("\tConsecutive fault #: "); Serial.println(uv_fault_counter);
+    Serial.print("UNDERVOLTAGE FAULT: "); Serial.print("IC #: "); Serial.print(min_voltage_location[0]); Serial.print("\tCell #: "); Serial.print(min_voltage_location[1]); Serial.print("\tFault Voltage: "); Serial.print(min_voltage / 10000.0, 4); Serial.print("\tConsecutive fault #: "); Serial.println(uv_fault_counter);
   }
   if (max_voltage > MAX_VOLTAGE) {
-    Serial.print("OVERVOLTAGE FAULT: "); Serial.print("IC #: "); Serial.print(max_voltage_location[0]); Serial.print("\tCell #: "); Serial.print(max_voltage_location[1]); Serial.print("\tConsecutive fault #: "); Serial.println(ov_fault_counter); 
+    Serial.print("OVERVOLTAGE FAULT: "); Serial.print("IC #: "); Serial.print(max_voltage_location[0]); Serial.print("\tCell #: "); Serial.print(max_voltage_location[1]); Serial.print("\tFault Voltage: "); Serial.print(max_voltage / 10000.0, 4);  Serial.print("\tConsecutive fault #: "); Serial.println(ov_fault_counter);
   }
   if (total_voltage > MAX_TOTAL_VOLTAGE) {
     Serial.print("PACK OVERVOLTAGE:"); Serial.print("\tConsecutive fault #: "); Serial.println(pack_ov_fault_counter);
   }
-  
+
   Serial.print("Total pack voltage: "); Serial.print(total_voltage / 10000.0, 4); Serial.print("V\t"); Serial.print("Max voltage differential: "); Serial.print(max_voltage / 10000.0 - min_voltage / 10000.0, 4); Serial.println("V");
   Serial.print("AMS status: ");
   if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
@@ -403,7 +408,7 @@ void print_voltages() {
 void print_gpios() {
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
   if (max_thermistor_voltage > MAX_THERMISTOR_VOLTAGE) {
-  Serial.print("OVERTEMP FAULT: ");Serial.print("\tConsecutive fault #: "); Serial.println(overtemp_fault_counter);
+    Serial.print("OVERTEMP FAULT: "); Serial.print("\tConsecutive fault #: "); Serial.println(overtemp_fault_counter);
   }
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
   Serial.println("Raw Segment Temperatures");
@@ -415,16 +420,16 @@ void print_gpios() {
     }
     if ((ic % 2)) {
       Serial.print("PCB Temps: "); Serial.print(gpio_temps[ic][4], 3); Serial.print("C\t");
-    }else {
+    } else {
       Serial.print("PCB Humidity: "); Serial.print(gpio_temps[ic][4], 3); Serial.print("%\t");
     }
     Serial.print("\t");
     Serial.println();
   }
-  Serial.print("Max Board Temp: "); Serial.print(gpio_temps[max_temp_location[0]][max_temp_location[1]],3);Serial.print("C \t "); 
-  Serial.print("Max Thermistor Temp: "); Serial.print(gpio_temps[max_thermistor_location[0]][max_thermistor_location[1]],3);Serial.print("C \t "); 
-  Serial.print("Max Humidity: "); Serial.print(gpio_temps[max_humidity_location[0]][max_humidity_location[1]],3);Serial.println("% \t "); 
+  Serial.print("Max Board Temp: "); Serial.print(gpio_temps[max_temp_location[0]][max_temp_location[1]], 3); Serial.print("C \t ");
+  Serial.print("Max Thermistor Temp: "); Serial.print(gpio_temps[max_thermistor_location[0]][max_thermistor_location[1]], 3); Serial.print("C \t ");
+  Serial.print("Max Humidity: "); Serial.print(gpio_temps[max_humidity_location[0]][max_humidity_location[1]], 3); Serial.println("% \t ");
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
-  
-  
+
+
 }
