@@ -244,18 +244,18 @@ void loop() {
         tx_msg.len = sizeof(mcu_pedal_readings);
         CAN.write(tx_msg);
 
-        // write the rpm data
-        // scale factor for transmit
-        mcu_wheel_speed.set_rpm_front_left(rpm_front_left*10);
-        mcu_wheel_speed.set_rpm_front_right(rpm_front_left*10);
-        mcu_wheel_speed.set_rpm_back_left(rpm_back_left*10);
-        mcu_wheel_speed.set_rpm_back_right(rpm_back_right*10);
-
-        // Send Main Control Unit pedal reading message
-        mcu_wheel_speed.write(tx_msg.buf);
-        tx_msg.id = ID_MCU_WHEEL_SPEED;
-        tx_msg.len = sizeof(mcu_wheel_speed);
-        CAN.write(tx_msg);
+//        // write the rpm data
+//        // scale factor for transmit
+//        mcu_wheel_speed.set_rpm_front_left(rpm_front_left*10);
+//        mcu_wheel_speed.set_rpm_front_right(rpm_front_left*10);
+//        mcu_wheel_speed.set_rpm_back_left(rpm_back_left*10);
+//        mcu_wheel_speed.set_rpm_back_right(rpm_back_right*10);
+//
+//        // Send Main Control Unit pedal reading message
+//        mcu_wheel_speed.write(tx_msg.buf);
+//        tx_msg.id = ID_MCU_WHEEL_SPEED;
+//        tx_msg.len = sizeof(mcu_wheel_speed);
+//        CAN.write(tx_msg);
     }
 
     if (timer_coloumb_count_send.check()){
