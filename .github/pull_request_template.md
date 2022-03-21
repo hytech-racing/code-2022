@@ -17,8 +17,12 @@ Follow HyTech's [Github Software Guidelines](https://gtvault.sharepoint.com/:w:/
 ## Checklist
 - [ ] Is this code linked to a new board or board rev?
 - - [ ] Is *there a PR* for that board in `circuits-2022`? If so, please pause until that PR is merged.
+- [ ] If you made a change or addition or deletion to the CAN library, did you inform the Data Aq lead?
 - [ ] Did you test the code in real-world conditions before submitting?
-- - [ ] Did you *use CPU Speed = 76 Mhz and Optimize = Faster* when testing?
+- - [ ] Did you *use CPU Speed = 720 MHz (overclock) and Optimize = Fastest* when testing with Teensy 4.x?
+- - [ ] Did you *use CPU Speed = 144 MHz (overclock) and Optimize = Fastest with LTO* when testing with Teensy 3.5?
+- - [ ] Did you *use CPU Speed = 120 MHz (overclock) and Optimize = Fastest with LTO* when testing with Teensy 3.2?
+- - [ ] Did you *use Teensyduino 1.56 with Arduino 1.8.19* when testing with the latest libraries from `main`?
 - [ ] Did you pull `main` into your branch?
 - - [ ] Did you *check for merge conflicts*?
 - - [ ] Did you *resolve* any that occurred? ***If you are having trouble or are confused, contact a lead!***

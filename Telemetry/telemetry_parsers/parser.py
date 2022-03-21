@@ -1,8 +1,14 @@
+########################################################################
+########################################################################
+# Raw Data CSV to Parsed Data CSV Code Section
+########################################################################
+########################################################################
+
+
 """
 @Author: Bo Han Zhu
 @Date: 1/15/2022
 @Description: HyTech custom python parser. Reads CSVs from Raw_Data, parses them, and writes to Parsed_Data. Uses multiplier.py for multipliers.
-@TODO: Also output to MATLAB struct
 @TODO: Dashboard_status is not correct. Need more data to validate bit ordering.
 
 parse_folder --> parse_file --> parse_time
@@ -284,7 +290,7 @@ def parse_ID_MC_FAULT_CODES(raw_message):
         "run_lo_accelerator_input_open_fault",
         "run_lo_direction_command_fault",
         "run_lo_inverter_response_timeout_fault",
-        "run_lo_hardware_gatedesaturation_fault",
+        "run_lo_hardware_gate_desaturation_fault",
         "run_lo_hardware_overcurrent_fault",
         "run_lo_undervoltage_fault",
         "run_lo_can_command_message_lost_fault",
@@ -410,8 +416,8 @@ def parse_ID_MC_FLUX_WEAKENING_OUTPUT(raw_message):
     values = [
         hex(hex_to_decimal(raw_message[0:4], 16, False)),
         hex(hex_to_decimal(raw_message[4:8], 16, False)),
-        hex_to_decimal(raw_message[8:12], 16, True), 
-        hex_to_decimal(raw_message[12:16], 16, True)
+        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.MC_FLUX_WEAKENING_OUTPUT_ID_COMMAND.value, 
+        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.MC_FLUX_WEAKENING_OUTPUT_IQ_COMMAND.value
     ]
     units = ["", "", "", ""]
     return [message, labels, values, units]
@@ -614,6 +620,8 @@ def parse_ID_BMS_DETAILED_VOLTAGES(raw_message):
         labels = ["IC_" + ic_id + "_CELL_3", "IC_" + ic_id + "_CELL_4", "IC_" + ic_id + "_CELL_5"]
     elif group_id == 2:
         labels = ["IC_" + ic_id + "_CELL_6", "IC_" + ic_id + "_CELL_7", "IC_" + ic_id + "_CELL_8"]
+    elif group_id == 3 and int(ic_id) % 2 == 0:
+        labels = ["IC_" + ic_id + "_CELL_9", "IC_" + ic_id + "_CELL_10", "IC_" + ic_id + "_CELL_11"]
     else:
         if DEBUG: print("UNFATAL ERROR: BMS detailed voltage group " + str(group_id) + " is invalid.")
         return "UNPARSEABLE"
@@ -809,27 +817,36 @@ def parse_ID_DASHBOARD_STATUS(raw_message):
 
 def parse_ID_SAB_READINGS_FRONT(raw_message):
     message = "SAB_readings_front"
-    labels = ["fl_susp_lin_pot", "fr_susp_lin_pot", "steer_wheel_sensor", "amb_air_hum"]
+    labels = ["fl_susp_lin_pot", "fr_susp_lin_pot"]
     values = [
-        hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.SAB_READINGS_ALL.value,
-        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.SAB_READINGS_ALL.value,
-        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.SAB_READINGS_ALL.value,
-        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.SAB_READINGS_ALL.value
+        hex_to_decimal(raw_message[0:4], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value,
+        hex_to_decimal(raw_message[4:8], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value
     ]
-    units = ["mm", "mm", "", "%"]
+    units = ["mm", "mm"]
     return [message, labels, values, units]
 
 def parse_ID_SAB_READINGS_REAR(raw_message):
     message = "SAB_readings_rear"
-    labels = ["bl_susp_lin_pot", "br_susp_lin_pot", "amb_air_temp", "mc_cool_fluid_temp"]
+    labels = ["cooling_loop_fluid_temp", "amb_air_temp", "bl_susp_lin_pot", "br_susp_lin_pot"]
     values = [
-        hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.SAB_READINGS_ALL.value,
-        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.SAB_READINGS_ALL.value,
-        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.SAB_READINGS_ALL.value,
-        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.SAB_READINGS_ALL.value
+        hex_to_decimal(raw_message[0:4], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value,
+        hex_to_decimal(raw_message[4:8], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value,
+        hex_to_decimal(raw_message[8:12], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value,
+        hex_to_decimal(raw_message[12:16], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value
     ]
-    units = ["mm", "mm", "C", "C"]
+    units = ["C", "C", "mm", "mm"]
     return [message, labels, values, units]
+
+def parse_ID_SAB_READINGS_GPS(raw_message):
+    message = "SAB_readings_gps"
+    labels = ["gps_latitude", "gps_longitude"]
+    values = [
+        hex_to_decimal(raw_message[0:8], 32, True) / Multipliers.SAB_READINGS_GPS.value,
+        hex_to_decimal(raw_message[8:16], 32, True) / Multipliers.SAB_READINGS_GPS.value
+    ]
+    units = ["deg", "deg"]
+    return [message, labels, values, units]
+
 
 def parse_ID_EM_MEASUREMENT(raw_message):
     message = "EM_measurement"
@@ -842,9 +859,9 @@ def parse_ID_EM_MEASUREMENT(raw_message):
         return value
     bin_rep = bin(int(raw_message, 16))
     bin_rep = bin_rep[2:].zfill(64)
-    voltage = twos_comp(int(bin_rep[7:39], 2)) / Multipliers.EM_MEASUREMENTS_VOLTAGE.value
-    current = twos_comp(int(bin_rep[39:71], 2)) / Multipliers.EM_MEASUREMENTS_CURRENT.value
-    values = [voltage, current]
+    current = twos_comp(int(bin_rep[7:39], 2)) / Multipliers.EM_MEASUREMENTS_CURRENT.value
+    voltage = twos_comp(int(bin_rep[39:71], 2)) / Multipliers.EM_MEASUREMENTS_VOLTAGE.value
+    values = [current, voltage]
 
     units = ["A", "V"]
     return [message, labels, values, units]
@@ -977,6 +994,7 @@ def parse_message(raw_id, raw_message):
     if raw_id == "EB": return parse_ID_DASHBOARD_STATUS(raw_message)
     if raw_id == "EC": return parse_ID_SAB_READINGS_FRONT(raw_message)
     if raw_id == "ED": return parse_ID_SAB_READINGS_REAR(raw_message)
+    if raw_id == "EE": return parse_ID_SAB_READINGS_GPS(raw_message)
 
     if raw_id == "100": return parse_ID_EM_MEASUREMENT(raw_message)
     if raw_id == "400": return parse_ID_EM_STATUS(raw_message)
@@ -1063,9 +1081,7 @@ def parse_folder():
     '''
 
     # Stop attempting to parse if Raw_Data is not there.
-    try:
-        directory = os.fsencode("Raw_Data")
-    except:
+    if not os.path.exists("Raw_Data"):
         print("FATAL ERROR: Raw_Data folder does not exist. Please move parser.py or create Raw_Data folder.")
         sys.exit(0)
 
@@ -1073,10 +1089,8 @@ def parse_folder():
     if not os.path.exists("Parsed_Data"):
         os.makedirs("Parsed_Data")
 
-    print("Currently parsing, please be patient...")
-
     # Loops through files and call parse_file on each raw CSV.
-    for file in os.listdir(directory):
+    for file in os.listdir("Raw_Data"):
         filename = os.fsdecode(file)
         if filename.endswith(".CSV") or filename.endswith(".csv"):
             parse_file(filename)
@@ -1087,7 +1101,219 @@ def parse_folder():
     return 
 
 ########################################################################
+########################################################################
+# Parsed Data CSV to MAT struct Code Section
+########################################################################
+########################################################################
+
+"""
+@Author: Sophia Smith + Bo Han Zhu
+@Date: 2/11/2022
+@Description: Takes a Parse_Data folder of CSVs and outputs a .mat struct for plotting.
+
+create_mat():
+    read_files() --> create_dataframe(csv_files) --> get_time_elapsed(frames_list) --> create_struct(frames_list1) --> transpose_all(struct1)
+
+"""
+
+import os
+import re
+import pandas as pd
+import scipy.io
+import numpy as np
+import dateutil.parser as dp
+from os import listdir
+from os.path import isfile, join
+from datetime import datetime
+from scipy.io import savemat
+
+
+def read_files():
+    '''
+    @brief: Reads parsed data files from Parsed_Data folder and returns a 
+            list of file paths (as strings)
+    @input: None
+    @return: None
+    '''
+    try:
+        path_name = 'Parsed_Data'
+
+        file_path = []
+        file_count = 0
+        for root, dirs, files in os.walk(path_name, topdown=False):
+            for name in files:
+                if ".CSV" in name or ".csv" in name:
+                    fp = os.path.join(root, name)
+                    file_path.append(fp)
+                    file_count += 1
+    except:
+        print('FATAL ERROR: Process failed at step 1.')
+        sys.exit(0)
+
+    print('Step 1: found ' + str(file_count) + ' files in the Parsed_Data folder')
+    return file_path
+
+def create_dataframe(files = []):
+    '''
+    @brief: Reads parsed data file and creates a pandas dataframe.
+            Each row is formatted to work with the Matlab parser. 
+    @input: A list of files
+    @return: A dataframe list
+    '''
+    try:
+        df_list = []
+        for f in files:
+            df = pd.read_csv(f)
+            df_list.append(df)
+    except:
+        print('FATAL ERROR: Process failed at step 2.')
+        sys.exit(0)
+
+    print('Step 2: created dataframes')
+
+    return df_list
+
+def get_time_elapsed(frames = []):
+    '''
+    @brief: Calculated the elapsed time for each label based on a baseline
+    @input: A dataframe list
+    @ouput: An updated dataframe list with elapsed times
+    '''
+    skip = 0
+    df_list = []
+    start_time = 0
+    set_start_time = True # boolean flag: we only want to set the start time once, during the first (i.e. earliest) CSV
+    try:
+        for df in frames:
+            skip += 1
+            timestamps = [dp.isoparse(x) for x in df['time']]
+            if(len(timestamps) != 0):
+                
+                if set_start_time:
+                    start_time = min(timestamps)
+                    set_start_time = False # don't set start time again this run
+
+                last_time = -1 # sometimes the Teensy has a slight ms miscue where it jumps back 1 sec on a second change, we must address it here
+                time_delta = []
+                for x in timestamps:
+                    current_time = (x - start_time).total_seconds() * 1000
+                    if current_time < last_time:
+                        current_time += 1000 # add one second on a second switch miscue
+                    time_delta.append(current_time)
+                    last_time = current_time
+
+                df['time_elapsed'] = pd.Series(time_delta)
+                df_list.append(df)
+            else:
+                if DEBUG: print("Frame " + skip + "was skipped in elapsed time calculation.")
+                continue
+    except:
+        print('FATAL ERROR: Process failed at step 3.')
+        sys.exit(0)
+
+    print('Step 3: calculated elapsed time')
+    return df_list
+
+def create_struct(frames = []):
+    '''
+    @brief: Formats dataframe data to work with the Matlab parser. 
+    @input: A dataframe of the original CSV with elapsed times
+    @return: A dictionary of times and values for each label
+    '''
+    
+    struct = {}
+    all_labels = []
+
+    # Need to average out all values under one timestamp
+    last_time = {}
+    same_time_sum = {}
+    same_time_count = {}
+
+    try:
+        for df in frames:
+            labels = df['label'].unique()
+            df = df[pd.to_numeric(df['value'], errors='coerce').notnull()]
+
+            for label in labels:
+                df_label = df[df['label'] == label]
+                df_new = df_label[['time_elapsed', 'value']].copy()
+                rows = df_new.values.tolist()
+
+                for i in range(len(rows)):
+                    if label in all_labels:
+                        # Do not add to struct if the time is the same, instead add to tracking dictionaries
+                        if last_time[label] == float(rows[i][0]):
+                            # Update tracking dictionaries
+                            same_time_sum[label] = same_time_sum[label] + float(rows[i][1])
+                            same_time_count[label] = same_time_count[label] + 1
+                        else:
+                            # Add tracking dictionaries' values to struct
+                            struct[label][0].append(last_time[label])
+                            struct[label][1].append(same_time_sum[label] / same_time_count[label])
+
+                            # Reset all tracking dictionaries
+                            last_time[label] = float(rows[i][0])
+                            same_time_sum[label] = float(rows[i][1])
+                            same_time_count[label] = 1
+                    else:
+                        struct[label] = [[float(rows[i][0])], [float(rows[i][1])]]
+                        all_labels.append(label)
+                        last_time[label] = float(rows[i][0])
+                        same_time_sum[label] = float(rows[i][1])
+                        same_time_count[label] = 1
+
+    except:
+        print('FATAL ERROR: Process failed at step 4.')
+        sys.exit(0)
+
+    print('Step 4: created struct')
+    return struct
+
+def transpose_all(struct):
+    '''
+    @brief: Helper function to transfer 2xN array into Nx2 array for dataPlots
+    @input: A dictionary of multiple 2xN arrays
+    @return: A dictionary of those 2xN arrays transposed as Nx2 arrays
+    '''
+    for label in struct:
+        struct[label] = np.array(struct[label]).T
+    return struct
+
+def create_mat():
+    '''
+    @brief: Entry point to the parser to create the .mat file
+    @input: N/A
+    @return: N/A
+    '''
+    print("Step 0: starting...")
+    csv_files = read_files()
+    frames_list = create_dataframe(csv_files)
+    frames_list1 = get_time_elapsed(frames_list)
+    struct1 = create_struct(frames_list1)
+    struct2 = transpose_all(struct1)
+
+    try:
+        savemat('output.mat', {'S': struct2}, long_field_names=True)
+        print('Saved struct in output.mat file.')
+    except:
+        print('FATAL ERROR: Failed to create .mat file')
+
+
+########################################################################
+########################################################################
 # Entry Point to Framework
 ########################################################################
+########################################################################
+print("Welcome to HyTech 2022 Parsing Framework")
+print("The process will be of two parts: CSV to CSV parsing, and then CSV to MAT parsing.")
+print("The entire process will take about 5 mins for a test session's worth of data.")
+print("----------------------------------------------------------------------------------")
+print("Beginning CSV to CSV parsing...")
 parse_folder()
+print("Finished CSV to CSV parsing.")
+print("----------------------------------------------------------------------------------")
+print("Beginning CSV to MAT parsing...")
+create_mat()
+print("Finished CSV to MAT parsing.")
+print("----------------------------------------------------------------------------------")
 print("SUCCESS: Parsing Complete.")
