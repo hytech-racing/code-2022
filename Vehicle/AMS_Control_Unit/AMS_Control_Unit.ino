@@ -4,7 +4,7 @@
    See LTC6811_2.cpp and LTC6811-2 Datasheet provided by Analog Devices for more details.
    Author: Zekun Li, Liwei Sun
    Version: 1.0
-   Since: 02/07/2022
+   Since: 03/021/2022
 */
 
 #include <Arduino.h>
@@ -53,7 +53,9 @@ uint16_t max_thermistor_voltage = 0;
 uint16_t min_thermistor_voltage = 65535;
 uint16_t max_temp_voltage = 0;
 uint16_t min_temp_voltage = 65535;
+double total_cell_temps = 0;
 Metro charging_timer = Metro(5000); // Timer to check if charger is still talking to ACU
+Metro CAN_general_timer = Metro(2500); // Timer that spaces apart writes for general CAN messages so as to not saturate CAN bus
 IntervalTimer pulse_timer;    //ams ok pulse
 bool next_pulse = true;
 
@@ -62,10 +64,10 @@ unsigned long uv_fault_counter = 0;             // undervoltage fault counter
 unsigned long ov_fault_counter = 0;             // overvoltage fault counter
 unsigned long pack_ov_fault_counter = 0;    // total voltage overvoltage fault counter
 unsigned long overtemp_fault_counter = 0;    //total overtemperature fault counter
-bool overtemp_fault_state = false; // enter fault state is 20 successive faults occur
-bool uv_fault_state = false;      // enter fault state is 20 successive faults occur
-bool ov_fault_state = false;      // enter fault state is 20 successive faults occur
-bool pack_ov_fault_state = false; // enter fault state is 20 successive faults occur
+bool overtemp_fault_state = false; // enter fault state if 20 successive faults occur
+bool uv_fault_state = false;      // enter fault state if 20 successive faults occur
+bool ov_fault_state = false;      // enter fault state if 20 successive faults occur
+bool pack_ov_fault_state = false; // enter fault state if 20 successive faults occur
 
 // LTC6811_2 OBJECT DECLARATIONS
 LTC6811_2 ic[8];
@@ -76,7 +78,11 @@ CAN_message_t msg;
 
 // BMS CAN MESSAGE AND STATE MACHINE OBJECT DECLARATIONS
 BMS_status bms_status; //Message class that contains flags for AMS errors as well as a variable encoding the current state of the AMS (charging vs. discharging)
-BMS_voltages bms_voltages; //Message class containing basic voltage information
+BMS_voltages bms_voltages; //Message class containing general voltage information
+BMS_temperatures bms_temperatures; //Message class containing general temperature information
+BMS_onboard_temperatures bms_onboard_temperatures; //Message class containing general AMS temperature information
+BMS_detailed_voltages bms_detailed_voltages; //Message class containing detailed voltage information
+BMS_detailed_temperatures bms_detailed_temperatures; // message class containing detailed temperature information
 
 
 void setup() {
@@ -230,7 +236,7 @@ void read_gpio() {
   min_thermistor_voltage = 65535;
   max_temp_voltage = 0;
   min_temp_voltage = 65535;
-  double total_cell_temps = 0;
+  total_cell_temps = 0;
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
@@ -351,14 +357,42 @@ void parse_CAN_CCU_status() {
 }
 
 void write_CAN_messages() {
-  //Write BMS_status message
+  //Write BMS_status message at every possible chance
   msg.id = ID_BMS_STATUS;
   msg.len = sizeof(bms_status);
   bms_status.write(msg.buf);
-  //  for (int i = 0; i < 8; i++) {
-  //    Serial.println(msg.buf[i], BIN);
-  //  }
   CAN.write(msg);
+  
+  if (CAN_general_timer.check()) {
+    CAN_general_timer.reset();
+    // set voltage message values
+    bms_voltages.set_low(min_voltage);
+    bms_voltages.set_high(max_voltage);
+    bms_voltages.set_average(total_voltage / 84);
+    bms_voltages.set_total(total_voltage / 100);
+    // set temperature message values
+    bms_temperatures.set_low_temperature((uint16_t) (gpio_temps[min_temp_location[0]][min_temp_location[1]] * 100));
+    bms_temperatures.set_high_temperature((uint16_t) (gpio_temps[max_temp_location[0]][max_temp_location[1]] * 100));
+    bms_temperatures.set_average_temperature((uint16_t)(total_cell_temps * 100 / 4));
+    // set onboard temperature message values
+    bms_onboard_temperatures.set_low_temperature((uint16_t) gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
+    bms_onboard_temperatures.set_high_temperature((uint16_t) gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
+    // Write BMS_voltages message
+    msg.id = ID_BMS_VOLTAGES;
+    msg.len = sizeof(bms_voltages);
+    bms_voltages.write(msg.buf);
+    CAN.write(msg);
+    // Write BMS_temperatures message
+    msg.id = ID_BMS_TEMPERATURES;
+    msg.len = sizeof(bms_temperatures);
+    bms_temperatures.write(msg.buf);
+    CAN.write(msg);
+    // Write BMS_onboard_temperatures message
+    msg.id = ID_BMS_ONBOARD_TEMPERATURES;
+    msg.len = sizeof(bms_onboard_temperatures);
+    bms_onboard_temperatures.write(msg.buf);
+    CAN.write(msg);
+  }
 }
 
 // Pulses pin 5 to keep watchdog circuit active
