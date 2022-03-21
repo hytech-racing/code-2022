@@ -76,7 +76,7 @@ bool pack_ov_fault_state = false; // enter fault state if 20 successive faults o
 LTC6811_2 ic[8];
 
 // CAN OBJECT AND VARIABLE DECLARATIONS
-FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> CAN;
+FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_256> CAN;
 CAN_message_t msg;
 
 // BMS CAN MESSAGE AND STATE MACHINE OBJECT DECLARATIONS
