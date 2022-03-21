@@ -231,7 +231,6 @@ void read_gpio() {
   max_temp_voltage = 0;
   min_temp_voltage = 65535;
   double total_cell_temps = 0;
-  double total_thermistor_temps = 0;
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
