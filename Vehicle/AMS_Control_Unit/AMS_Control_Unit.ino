@@ -54,10 +54,13 @@ uint16_t min_thermistor_voltage = 65535;
 uint16_t max_temp_voltage = 0;
 uint16_t min_temp_voltage = 65535;
 double total_cell_temps = 0;
+double total_thermistor_temps = 0;
 Metro charging_timer = Metro(5000); // Timer to check if charger is still talking to ACU
-Metro CAN_general_timer = Metro(2500); // Timer that spaces apart writes for general CAN messages so as to not saturate CAN bus
-IntervalTimer pulse_timer;    //ams ok pulse
-bool next_pulse = true;
+Metro CAN_timer = Metro(2); // Timer that spaces apart writes for CAN messages so as to not saturate CAN bus
+IntervalTimer pulse_timer;    //AMS ok pulse timer
+bool next_pulse = true; //AMS ok pulse
+int can_current_ic = 0; //counter for the current IC data to send for detailed voltage CAN message
+int can_current_group = 0; // counter for current group data to send for detailed voltage CAN message
 
 // CONSECUTIVE FAULT COUNTERS: counts successive faults; resets to zero if normal reading breaks fault chain
 unsigned long uv_fault_counter = 0;             // undervoltage fault counter
@@ -237,6 +240,7 @@ void read_gpio() {
   max_temp_voltage = 0;
   min_temp_voltage = 65535;
   total_cell_temps = 0;
+  total_thermistor_temps = 0;
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
@@ -274,6 +278,7 @@ void read_gpio() {
           gpio_temps[i][j + k] = -12.5 + 125 * (gpio_voltages[i][j + k]) / 50000.0;
           float thermistor_resistance = (2740 / (gpio_voltages[i][j + k] / 50000.0)) - 2740;
           gpio_temps[i][j + k] = 1 / ((1 / 298.15) + (1 / 3984.0) * log(thermistor_resistance / 10000.0)) - 273.15; //calculation for thermistor temperature in C
+          total_thermistor_temps += gpio_temps[i][j + k];
           if (j + k <= 3 && gpio_voltages[i][j + k] > max_thermistor_voltage) {
             max_thermistor_voltage = gpio_voltages[i][j + k];
             max_thermistor_location[0] = i;
@@ -356,43 +361,71 @@ void parse_CAN_CCU_status() {
   }
 }
 
+//CAN message write handler
 void write_CAN_messages() {
   //Write BMS_status message at every possible chance
   msg.id = ID_BMS_STATUS;
   msg.len = sizeof(bms_status);
   bms_status.write(msg.buf);
   CAN.write(msg);
-  
-  if (CAN_general_timer.check()) {
-    CAN_general_timer.reset();
-    // set voltage message values
-    bms_voltages.set_low(min_voltage);
-    bms_voltages.set_high(max_voltage);
-    bms_voltages.set_average(total_voltage / 84);
-    bms_voltages.set_total(total_voltage / 100);
-    // set temperature message values
-    bms_temperatures.set_low_temperature((uint16_t) (gpio_temps[min_temp_location[0]][min_temp_location[1]] * 100));
-    bms_temperatures.set_high_temperature((uint16_t) (gpio_temps[max_temp_location[0]][max_temp_location[1]] * 100));
-    bms_temperatures.set_average_temperature((uint16_t)(total_cell_temps * 100 / 4));
-    // set onboard temperature message values
-    bms_onboard_temperatures.set_low_temperature((uint16_t) gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
-    bms_onboard_temperatures.set_high_temperature((uint16_t) gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
-    // Write BMS_voltages message
-    msg.id = ID_BMS_VOLTAGES;
-    msg.len = sizeof(bms_voltages);
-    bms_voltages.write(msg.buf);
-    CAN.write(msg);
-    // Write BMS_temperatures message
-    msg.id = ID_BMS_TEMPERATURES;
-    msg.len = sizeof(bms_temperatures);
-    bms_temperatures.write(msg.buf);
-    CAN.write(msg);
-    // Write BMS_onboard_temperatures message
-    msg.id = ID_BMS_ONBOARD_TEMPERATURES;
-    msg.len = sizeof(bms_onboard_temperatures);
-    bms_onboard_temperatures.write(msg.buf);
+
+//  if (CAN_timer.check()) {
+//    CAN_timer.reset();
+//    // set voltage message values
+//    bms_voltages.set_low(min_voltage);
+//    bms_voltages.set_high(max_voltage);
+//    bms_voltages.set_average(total_voltage / 84);
+//    bms_voltages.set_total(total_voltage / 100);
+//    // set temperature message values
+//    bms_temperatures.set_low_temperature((uint16_t) (gpio_temps[min_temp_location[0]][min_temp_location[1]] * 100));
+//    bms_temperatures.set_high_temperature((uint16_t) (gpio_temps[max_temp_location[0]][max_temp_location[1]] * 100));
+//    bms_temperatures.set_average_temperature((uint16_t)(total_cell_temps * 100 / 4));
+//    // set onboard temperature message values
+//    bms_onboard_temperatures.set_low_temperature((uint16_t) gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
+//    bms_onboard_temperatures.set_high_temperature((uint16_t) gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
+//    bms_onboard_temperatures.set_average_temperature((uint16_t)(total_thermistor_temps / 32));
+//    // Write BMS_voltages message
+//    msg.id = ID_BMS_VOLTAGES;
+//    msg.len = sizeof(bms_voltages);
+//    bms_voltages.write(msg.buf);
+//    CAN.write(msg);
+//    // Write BMS_temperatures message
+//    msg.id = ID_BMS_TEMPERATURES;
+//    msg.len = sizeof(bms_temperatures);
+//    bms_temperatures.write(msg.buf);
+//    CAN.write(msg);
+//    // Write BMS_onboard_temperatures message
+//    msg.id = ID_BMS_ONBOARD_TEMPERATURES;
+//    msg.len = sizeof(bms_onboard_temperatures);
+//    bms_onboard_temperatures.write(msg.buf);
+//    CAN.write(msg);
+//    // write detailed voltages for one IC group
+//    write_CAN_detailed_voltages();
+//  }
+}
+
+//detailed voltages CAN message handler; writes the CAN message for one ic group at a time
+void write_CAN_detailed_voltages() {
+  if (can_current_group > 9) {
+    can_current_ic++;
+    can_current_group = 0;
+  }
+  if (can_current_ic > 7) {
+    can_current_ic = 0;
+    can_current_group = 0;
+  }
+  if (!(can_current_ic % 2 && can_current_group == 9)) {
+    bms_detailed_voltages.set_ic_id(can_current_ic);
+    bms_detailed_voltages.set_group_id(can_current_group / 3);
+    bms_detailed_voltages.set_voltage_0(cell_voltages[can_current_ic][can_current_group]);
+    bms_detailed_voltages.set_voltage_1(cell_voltages[can_current_ic][can_current_group + 1]);
+    bms_detailed_voltages.set_voltage_2(cell_voltages[can_current_ic][can_current_group + 2]);
+    msg.id = ID_BMS_DETAILED_VOLTAGES;
+    msg.len = sizeof(bms_detailed_voltages);
+    bms_detailed_voltages.write(msg.buf);
     CAN.write(msg);
   }
+  can_current_group += 3;
 }
 
 // Pulses pin 5 to keep watchdog circuit active
