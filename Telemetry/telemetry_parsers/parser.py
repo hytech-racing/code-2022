@@ -290,7 +290,7 @@ def parse_ID_MC_FAULT_CODES(raw_message):
         "run_lo_accelerator_input_open_fault",
         "run_lo_direction_command_fault",
         "run_lo_inverter_response_timeout_fault",
-        "run_lo_hardware_gatedesaturation_fault",
+        "run_lo_hardware_gate_desaturation_fault",
         "run_lo_hardware_overcurrent_fault",
         "run_lo_undervoltage_fault",
         "run_lo_can_command_message_lost_fault",
@@ -416,8 +416,8 @@ def parse_ID_MC_FLUX_WEAKENING_OUTPUT(raw_message):
     values = [
         hex(hex_to_decimal(raw_message[0:4], 16, False)),
         hex(hex_to_decimal(raw_message[4:8], 16, False)),
-        hex_to_decimal(raw_message[8:12], 16, True), 
-        hex_to_decimal(raw_message[12:16], 16, True)
+        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.MC_FLUX_WEAKENING_OUTPUT_ID_COMMAND.value, 
+        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.MC_FLUX_WEAKENING_OUTPUT_IQ_COMMAND.value
     ]
     units = ["", "", "", ""]
     return [message, labels, values, units]
@@ -620,6 +620,8 @@ def parse_ID_BMS_DETAILED_VOLTAGES(raw_message):
         labels = ["IC_" + ic_id + "_CELL_3", "IC_" + ic_id + "_CELL_4", "IC_" + ic_id + "_CELL_5"]
     elif group_id == 2:
         labels = ["IC_" + ic_id + "_CELL_6", "IC_" + ic_id + "_CELL_7", "IC_" + ic_id + "_CELL_8"]
+    elif group_id == 3 and int(ic_id) % 2 == 0:
+        labels = ["IC_" + ic_id + "_CELL_9", "IC_" + ic_id + "_CELL_10", "IC_" + ic_id + "_CELL_11"]
     else:
         if DEBUG: print("UNFATAL ERROR: BMS detailed voltage group " + str(group_id) + " is invalid.")
         return "UNPARSEABLE"
@@ -815,27 +817,36 @@ def parse_ID_DASHBOARD_STATUS(raw_message):
 
 def parse_ID_SAB_READINGS_FRONT(raw_message):
     message = "SAB_readings_front"
-    labels = ["fl_susp_lin_pot", "fr_susp_lin_pot", "steer_wheel_sensor", "amb_air_hum"]
+    labels = ["fl_susp_lin_pot", "fr_susp_lin_pot"]
     values = [
-        hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.SAB_READINGS_ALL.value,
-        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.SAB_READINGS_ALL.value,
-        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.SAB_READINGS_ALL.value,
-        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.SAB_READINGS_ALL.value
+        hex_to_decimal(raw_message[0:4], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value,
+        hex_to_decimal(raw_message[4:8], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value
     ]
-    units = ["mm", "mm", "", "%"]
+    units = ["mm", "mm"]
     return [message, labels, values, units]
 
 def parse_ID_SAB_READINGS_REAR(raw_message):
     message = "SAB_readings_rear"
-    labels = ["bl_susp_lin_pot", "br_susp_lin_pot", "amb_air_temp", "mc_cool_fluid_temp"]
+    labels = ["cooling_loop_fluid_temp", "amb_air_temp", "bl_susp_lin_pot", "br_susp_lin_pot"]
     values = [
-        hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.SAB_READINGS_ALL.value,
-        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.SAB_READINGS_ALL.value,
-        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.SAB_READINGS_ALL.value,
-        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.SAB_READINGS_ALL.value
+        hex_to_decimal(raw_message[0:4], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value,
+        hex_to_decimal(raw_message[4:8], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value,
+        hex_to_decimal(raw_message[8:12], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value,
+        hex_to_decimal(raw_message[12:16], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value
     ]
-    units = ["mm", "mm", "C", "C"]
+    units = ["C", "C", "mm", "mm"]
     return [message, labels, values, units]
+
+def parse_ID_SAB_READINGS_GPS(raw_message):
+    message = "SAB_readings_gps"
+    labels = ["gps_latitude", "gps_longitude"]
+    values = [
+        hex_to_decimal(raw_message[0:8], 32, True) / Multipliers.SAB_READINGS_GPS.value,
+        hex_to_decimal(raw_message[8:16], 32, True) / Multipliers.SAB_READINGS_GPS.value
+    ]
+    units = ["deg", "deg"]
+    return [message, labels, values, units]
+
 
 def parse_ID_EM_MEASUREMENT(raw_message):
     message = "EM_measurement"
@@ -848,9 +859,9 @@ def parse_ID_EM_MEASUREMENT(raw_message):
         return value
     bin_rep = bin(int(raw_message, 16))
     bin_rep = bin_rep[2:].zfill(64)
-    voltage = twos_comp(int(bin_rep[7:39], 2)) / Multipliers.EM_MEASUREMENTS_VOLTAGE.value
-    current = twos_comp(int(bin_rep[39:71], 2)) / Multipliers.EM_MEASUREMENTS_CURRENT.value
-    values = [voltage, current]
+    current = twos_comp(int(bin_rep[7:39], 2)) / Multipliers.EM_MEASUREMENTS_CURRENT.value
+    voltage = twos_comp(int(bin_rep[39:71], 2)) / Multipliers.EM_MEASUREMENTS_VOLTAGE.value
+    values = [current, voltage]
 
     units = ["A", "V"]
     return [message, labels, values, units]
@@ -983,6 +994,7 @@ def parse_message(raw_id, raw_message):
     if raw_id == "EB": return parse_ID_DASHBOARD_STATUS(raw_message)
     if raw_id == "EC": return parse_ID_SAB_READINGS_FRONT(raw_message)
     if raw_id == "ED": return parse_ID_SAB_READINGS_REAR(raw_message)
+    if raw_id == "EE": return parse_ID_SAB_READINGS_GPS(raw_message)
 
     if raw_id == "100": return parse_ID_EM_MEASUREMENT(raw_message)
     if raw_id == "400": return parse_ID_EM_STATUS(raw_message)
@@ -1169,12 +1181,18 @@ def get_time_elapsed(frames = []):
     '''
     skip = 0
     df_list = []
+    start_time = 0
+    set_start_time = True # boolean flag: we only want to set the start time once, during the first (i.e. earliest) CSV
     try:
         for df in frames:
             skip += 1
             timestamps = [dp.isoparse(x) for x in df['time']]
             if(len(timestamps) != 0):
-                start_time = min(timestamps)
+                
+                if set_start_time:
+                    start_time = min(timestamps)
+                    set_start_time = False # don't set start time again this run
+
                 last_time = -1 # sometimes the Teensy has a slight ms miscue where it jumps back 1 sec on a second change, we must address it here
                 time_delta = []
                 for x in timestamps:
