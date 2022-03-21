@@ -90,7 +90,7 @@ void setup() {
   CAN.begin();
   CAN.setBaudRate(500000);
   
-  for (int i = 0; i < 64; i++) { // Fill all filter slots with Charger Control Unit message filter (CAN controller requires filling all slots)
+  for (int i = 0; i < 64; i++) { // Fill all filter slots with Charger Control Unit message filter 
     CAN.setMBFilter(static_cast<FLEXCAN_MAILBOX>(i), ID_CCU_STATUS); // Set CAN mailbox filtering to only watch for charger controller status CAN messages
   }
   // initialize the PEC table
@@ -135,7 +135,7 @@ void read_voltages() {
     Reg_Group_Config reg_group_config = ic[i].rdcfga();
     ic[i].adcv(static_cast<CELL_SELECT>(0), false);
   }
-  delay(250);
+  delay(300);
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
     Reg_Group_Cell_A reg_group_a = ic[i].rdcva();
@@ -173,11 +173,11 @@ void read_voltages() {
       }
     }
   }
+  balance_voltage = min_voltage;
   voltage_fault_check();
 }
 
 void voltage_fault_check(){
-    balance_voltage = min_voltage;
   // detect any uv fault conditions, set appropriate error flags, and print relevant message to console
   if (min_voltage < MIN_VOLTAGE) {
     uv_fault_counter++;
@@ -233,7 +233,7 @@ void read_gpio() {
     ic[i].wrcfga(configuration);
     ic[i].adax(static_cast<GPIO_SELECT>(0), false);
     }
-  delay(250);
+  delay(300);
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
     Reg_Group_Aux_A reg_group_a = ic[i].rdauxa();
