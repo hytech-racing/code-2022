@@ -3,7 +3,7 @@
    It also handles CAN communications with the mainECU and energy meter, performs coulomb counting operations, and drives a watchdog timer on the ACU.
    See LTC6811_2.cpp and LTC6811-2 Datasheet provided by Analog Devices for more details.
    Author: Zekun Li, Liwei Sun
-   Version: 0.1
+   Version: 1.0
    Since: 02/07/2022
 */
 
@@ -19,7 +19,7 @@
 #define EVEN_IC_CELLS 12           // Number of cells monitored by ICs with even addresses
 #define ODD_IC_CELLS 9             // Number of cells monitored by ICS with odd addresses
 #define THERMISTORS_PER_IC 4       // Number of cell temperature monitoring thermistors connected to each IC 
-#define MAX_SUCCESSIVE_FAULTS 3   // Number of successive faults permitted before AMS fault is broadcast over CAN 
+#define MAX_SUCCESSIVE_FAULTS 20   // Number of successive faults permitted before AMS fault is broadcast over CAN 
 #define MIN_VOLTAGE 30000          // Minimum allowable single cell voltage in units of 100μV
 #define MAX_VOLTAGE 42000          // Maxiumum allowable single cell voltage in units of 100μV
 #define MAX_TOTAL_VOLTAGE 3550000  // Maximum allowable pack total voltage in units of 100μV
@@ -43,12 +43,16 @@ uint16_t min_voltage = 65535;
 uint16_t max_voltage = 0;
 uint16_t gpio_voltages[TOTAL_IC][6];  // 2D Array to hold GPIO voltages being read in; voltages are read in with the base unit as 100μV
 float gpio_temps[TOTAL_IC][6];      // 2D Array to hold GPIO temperatures being read in; temperatures are read in with the base unit as K
-int max_temp_location[2];
-int max_thermistor_location[2];
-int max_humidity_location[2];
+int max_temp_location[2]; // [0]: IC#; [1]: Cell#
+int min_temp_location[2]; // [0]: IC#; [1]: Cell#
+int max_thermistor_location[2]; // [0]: IC#; [1]: Cell#
+int max_humidity_location[2]; // [0]: IC#; [1]: Cell#
+int min_thermistor_location[2]; // [0]: IC#; [1]: Cell#
 uint16_t max_humidity = 0;
 uint16_t max_thermistor_voltage = 0;
+uint16_t min_thermistor_voltage = 65535;
 uint16_t max_temp_voltage = 0;
+uint16_t min_temp_voltage = 65535;
 Metro charging_timer = Metro(5000); // Timer to check if charger is still talking to ACU
 IntervalTimer pulse_timer;    //ams ok pulse
 bool next_pulse = true;
@@ -72,6 +76,7 @@ CAN_message_t msg;
 
 // BMS CAN MESSAGE AND STATE MACHINE OBJECT DECLARATIONS
 BMS_status bms_status; //Message class that contains flags for AMS errors as well as a variable encoding the current state of the AMS (charging vs. discharging)
+BMS_voltages bms_voltages; //Message class containing basic voltage information
 
 
 void setup() {
@@ -128,7 +133,10 @@ void read_voltages() {
     ic[i].wrcfga(configuration);
     uint8_t *wrfcga_buf = configuration.buf();
     Reg_Group_Config reg_group_config = ic[i].rdcfga();
-    ic[i].adcv(static_cast<CELL_SELECT>(0));
+    ic[i].adcv(static_cast<CELL_SELECT>(0), false);
+  }
+  delay(250);
+  for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
     Reg_Group_Cell_A reg_group_a = ic[i].rdcva();
     Reg_Group_Cell_B reg_group_b = ic[i].rdcvb();
@@ -198,7 +206,6 @@ void voltage_fault_check(){
     bms_status.set_overvoltage(true);
   } else {
     bms_status.set_overvoltage(false);
-
   }
   // detect any pack ov fault conditions, set appropriate error flags, and print relevant message to console
   if (total_voltage > MAX_TOTAL_VOLTAGE) {
@@ -218,11 +225,16 @@ void voltage_fault_check(){
 
 // Read GPIO registers from LTC6811-2; Process temperature and humidity data from relevant GPIO registers
 void read_gpio() {
+  double total_cell_temps = 0;
+  double total_thermistor_temps = 0;
   Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
   for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
     ic[i].wrcfga(configuration);
-    ic[i].adax(static_cast<GPIO_SELECT>(0));
+    ic[i].adax(static_cast<GPIO_SELECT>(0), false);
+    }
+  delay(250);
+  for (int i = 0; i < 8; i++) {
     ic[i].wakeup();
     Reg_Group_Aux_A reg_group_a = ic[i].rdauxa();
     Reg_Group_Aux_B reg_group_b = ic[i].rdauxb();
@@ -235,14 +247,20 @@ void read_gpio() {
       }
       for (int k = 0; k < 3; k++) {
         gpio_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
-        if ((i % 2) && j+k ==4) {
+        if ((i % 2) && j+k == 4) {
           gpio_temps[i][j + k] = -66.875 + 218.75 * (gpio_voltages[i][j + k] / 50000.0); // caculation for SHT31 temperature in C
+          total_cell_temps += gpio_temps[i][j+k];
           if (gpio_voltages[i][4] > max_temp_voltage) {
             max_temp_voltage = gpio_voltages[i][j + k];
             max_temp_location[0] = i;
             max_temp_location[1] = j + k;
           }
-        }else{
+          if (gpio_voltages[i][4] > min_temp_voltage) {
+            min_temp_voltage = gpio_voltages[i][j + k];
+            min_temp_location[0] = i;
+            min_temp_location[1] = j + k;
+          }
+        } else {
           gpio_temps[i][j + k] = -12.5 + 125*(gpio_voltages[i][j + k])/50000.0;
           float thermistor_resistance = (2740 / (gpio_voltages[i][j + k] / 50000.0)) - 2740;
           gpio_temps[i][j + k] = 1 / ((1 / 298.15) + (1 / 3984.0) * log(thermistor_resistance / 10000.0)) - 273.15; //calculation for thermistor temperature in C
@@ -250,6 +268,11 @@ void read_gpio() {
             max_thermistor_voltage = gpio_voltages[i][j + k];
             max_thermistor_location[0] = i;
             max_thermistor_location[1] = j + k;
+          }
+          if (j+k <=3 && gpio_voltages[i][j+k] < min_thermistor_voltage) {
+            min_thermistor_voltage = gpio_voltages[i][j + k];
+            min_thermistor_location[0] = i;
+            min_thermistor_location[1] = j + k;
           }
           if (j+k == 4 && gpio_temps[i][j+k] > max_humidity) {
             max_humidity = gpio_temps[i][j + k];
@@ -260,7 +283,6 @@ void read_gpio() {
       }
     }
   }
-
   void temp_fault_check();
 }
 
