@@ -369,39 +369,36 @@ void write_CAN_messages() {
   bms_status.write(msg.buf);
   CAN.write(msg);
 
-//  if (CAN_timer.check()) {
-//    CAN_timer.reset();
-//    // set voltage message values
-//    bms_voltages.set_low(min_voltage);
-//    bms_voltages.set_high(max_voltage);
-//    bms_voltages.set_average(total_voltage / 84);
-//    bms_voltages.set_total(total_voltage / 100);
-//    // set temperature message values
-//    bms_temperatures.set_low_temperature((uint16_t) (gpio_temps[min_temp_location[0]][min_temp_location[1]] * 100));
-//    bms_temperatures.set_high_temperature((uint16_t) (gpio_temps[max_temp_location[0]][max_temp_location[1]] * 100));
-//    bms_temperatures.set_average_temperature((uint16_t)(total_cell_temps * 100 / 4));
-//    // set onboard temperature message values
-//    bms_onboard_temperatures.set_low_temperature((uint16_t) gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
-//    bms_onboard_temperatures.set_high_temperature((uint16_t) gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
-//    bms_onboard_temperatures.set_average_temperature((uint16_t)(total_thermistor_temps / 32));
-//    // Write BMS_voltages message
-//    msg.id = ID_BMS_VOLTAGES;
-//    msg.len = sizeof(bms_voltages);
-//    bms_voltages.write(msg.buf);
-//    CAN.write(msg);
-//    // Write BMS_temperatures message
-//    msg.id = ID_BMS_TEMPERATURES;
-//    msg.len = sizeof(bms_temperatures);
-//    bms_temperatures.write(msg.buf);
-//    CAN.write(msg);
-//    // Write BMS_onboard_temperatures message
-//    msg.id = ID_BMS_ONBOARD_TEMPERATURES;
-//    msg.len = sizeof(bms_onboard_temperatures);
-//    bms_onboard_temperatures.write(msg.buf);
-//    CAN.write(msg);
-//    // write detailed voltages for one IC group
-//    write_CAN_detailed_voltages();
-//  }
+  // set voltage message values
+  bms_voltages.set_low(min_voltage);
+  bms_voltages.set_high(max_voltage);
+  bms_voltages.set_average(total_voltage / 84);
+  bms_voltages.set_total(total_voltage / 100);
+  // set temperature message values
+  bms_temperatures.set_low_temperature((uint16_t) (gpio_temps[min_temp_location[0]][min_temp_location[1]] * 100));
+  bms_temperatures.set_high_temperature((uint16_t) (gpio_temps[max_temp_location[0]][max_temp_location[1]] * 100));
+  bms_temperatures.set_average_temperature((uint16_t)(total_cell_temps * 100 / 4));
+  // set onboard temperature message values
+  bms_onboard_temperatures.set_low_temperature((uint16_t) gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
+  bms_onboard_temperatures.set_high_temperature((uint16_t) gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
+  bms_onboard_temperatures.set_average_temperature((uint16_t)(total_thermistor_temps / 32));
+  // Write BMS_voltages message
+  msg.id = ID_BMS_VOLTAGES;
+  msg.len = sizeof(bms_voltages);
+  bms_voltages.write(msg.buf);
+  CAN.write(msg);
+  // Write BMS_temperatures message
+  msg.id = ID_BMS_TEMPERATURES;
+  msg.len = sizeof(bms_temperatures);
+  bms_temperatures.write(msg.buf);
+  CAN.write(msg);
+  // Write BMS_onboard_temperatures message
+  msg.id = ID_BMS_ONBOARD_TEMPERATURES;
+  msg.len = sizeof(bms_onboard_temperatures);
+  bms_onboard_temperatures.write(msg.buf);
+  CAN.write(msg);
+  // write detailed voltages for one IC group
+  write_CAN_detailed_voltages();
 }
 
 //detailed voltages CAN message handler; writes the CAN message for one ic group at a time
