@@ -62,8 +62,10 @@ elapsedMillis adc_timer; // timer that determines wait time for ADCs to finish t
 uint8_t adc_state; // 0: wait to begin voltage conversions; 1: adcs converting voltage values; 2: wait to begin gpio conversions; 3: adcs converting GPIO values
 IntervalTimer pulse_timer;    //AMS ok pulse timer
 bool next_pulse = true; //AMS ok pulse
-int can_current_ic = 0; //counter for the current IC data to send for detailed voltage CAN message
-int can_current_group = 0; // counter for current group data to send for detailed voltage CAN message
+int can_voltage_ic = 0; //counter for the current IC data to send for detailed voltage CAN message
+int can_voltage_group = 0; // counter for current group data to send for detailed voltage CAN message
+int can_gpio_ic = 0; //counter for the current IC data to send for detailed voltage CAN message
+int can_gpio_group = 0; // counter for current group data to send for detailed voltage CAN message
 
 // CONSECUTIVE FAULT COUNTERS: counts successive faults; resets to zero if normal reading breaks fault chain
 unsigned long uv_fault_counter = 0;             // undervoltage fault counter
@@ -79,7 +81,7 @@ bool pack_ov_fault_state = false; // enter fault state if 20 successive faults o
 LTC6811_2 ic[8];
 
 // CAN OBJECT AND VARIABLE DECLARATIONS
-FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_256> CAN;
+FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> CAN;
 CAN_message_t msg;
 
 // BMS CAN MESSAGE AND STATE MACHINE OBJECT DECLARATIONS
@@ -364,7 +366,7 @@ void balance_cells(uint8_t mode) {
       i++;
     }
   }
-  delay(500);
+  delay(500); //TODO: remove delay and find better way to achieve result
 }
 
 // parse incoming CAN messages for CCU status message and changes the state of the BMS in software
@@ -381,66 +383,89 @@ void parse_CAN_CCU_status() {
 
 //CAN message write handler
 void write_CAN_messages() {
-  //Write BMS_status message at every possible chance
-  msg.id = ID_BMS_STATUS;
-  msg.len = sizeof(bms_status);
-  bms_status.write(msg.buf);
-  CAN.write(msg);
-
-  // set voltage message values
+    // set voltage message values
   bms_voltages.set_low(min_voltage);
   bms_voltages.set_high(max_voltage);
   bms_voltages.set_average(total_voltage / 84);
   bms_voltages.set_total(total_voltage / 100);
   // set temperature message values
-  bms_temperatures.set_low_temperature((uint16_t) (gpio_temps[min_temp_location[0]][min_temp_location[1]] * 100));
-  bms_temperatures.set_high_temperature((uint16_t) (gpio_temps[max_temp_location[0]][max_temp_location[1]] * 100));
-  bms_temperatures.set_average_temperature((uint16_t)(total_cell_temps * 100 / 4));
+  bms_temperatures.set_low_temperature(gpio_temps[min_temp_location[0]][min_temp_location[1]] * 100);
+  bms_temperatures.set_high_temperature(gpio_temps[max_temp_location[0]][max_temp_location[1]] * 100);
+  bms_temperatures.set_average_temperature(total_cell_temps * 100 / 4);
   // set onboard temperature message values
-  bms_onboard_temperatures.set_low_temperature((uint16_t) gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
-  bms_onboard_temperatures.set_high_temperature((uint16_t) gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
-  bms_onboard_temperatures.set_average_temperature((uint16_t)(total_thermistor_temps / 32));
+  bms_onboard_temperatures.set_low_temperature(gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
+  bms_onboard_temperatures.set_high_temperature(gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
+  bms_onboard_temperatures.set_average_temperature(total_thermistor_temps / 32);
+  
+  //Write BMS_status message
+  msg.id = ID_BMS_STATUS;
+  msg.len = sizeof(bms_status);
+  bms_status.write(msg.buf);
+  CAN.write(msg);
+  delay(10);
   // Write BMS_voltages message
   msg.id = ID_BMS_VOLTAGES;
   msg.len = sizeof(bms_voltages);
   bms_voltages.write(msg.buf);
   CAN.write(msg);
+  delay(10);
   // Write BMS_temperatures message
   msg.id = ID_BMS_TEMPERATURES;
   msg.len = sizeof(bms_temperatures);
   bms_temperatures.write(msg.buf);
   CAN.write(msg);
+  delay(10);
   // Write BMS_onboard_temperatures message
   msg.id = ID_BMS_ONBOARD_TEMPERATURES;
   msg.len = sizeof(bms_onboard_temperatures);
   bms_onboard_temperatures.write(msg.buf);
   CAN.write(msg);
+  delay(10);
   // write detailed voltages for one IC group
   write_CAN_detailed_voltages();
+  delay(10);
+  write_CAN_detailed_temps();
+  delay(10);
 }
 
 //detailed voltages CAN message handler; writes the CAN message for one ic group at a time
 void write_CAN_detailed_voltages() {
-  if (can_current_group > 9) {
-    can_current_ic++;
-    can_current_group = 0;
+  if (can_voltage_group > 9) {
+    can_voltage_ic++;
+    can_voltage_group = 0;
   }
-  if (can_current_ic > 7) {
-    can_current_ic = 0;
-    can_current_group = 0;
+  if (can_voltage_ic > 7) {
+    can_voltage_ic = 0;
+    can_voltage_group = 0;
   }
-  if (!(can_current_ic % 2 && can_current_group == 9)) {
-    bms_detailed_voltages.set_ic_id(can_current_ic);
-    bms_detailed_voltages.set_group_id(can_current_group / 3);
-    bms_detailed_voltages.set_voltage_0(cell_voltages[can_current_ic][can_current_group]);
-    bms_detailed_voltages.set_voltage_1(cell_voltages[can_current_ic][can_current_group + 1]);
-    bms_detailed_voltages.set_voltage_2(cell_voltages[can_current_ic][can_current_group + 2]);
+  if (!(can_voltage_ic % 2 && can_voltage_group == 9)) {
+    bms_detailed_voltages.set_ic_id(can_voltage_ic);
+    bms_detailed_voltages.set_group_id(can_voltage_group / 3);
+    bms_detailed_voltages.set_voltage_0(cell_voltages[can_voltage_ic][can_voltage_group]);
+    bms_detailed_voltages.set_voltage_1(cell_voltages[can_voltage_ic][can_voltage_group + 1]);
+    bms_detailed_voltages.set_voltage_2(cell_voltages[can_voltage_ic][can_voltage_group + 2]);
     msg.id = ID_BMS_DETAILED_VOLTAGES;
     msg.len = sizeof(bms_detailed_voltages);
     bms_detailed_voltages.write(msg.buf);
     CAN.write(msg);
   }
-  can_current_group += 3;
+  can_voltage_group += 3;
+}
+
+// TODO: This CAN message is in the HT05 Style; it needs to be updated with group ID to conform to HT06 standards
+void write_CAN_detailed_temps() {
+  if (can_gpio_ic > 7) {
+    can_gpio_ic = 0;
+  }
+  bms_detailed_temperatures.set_ic_id(can_gpio_ic);
+  bms_detailed_temperatures.set_temperature_0(gpio_temps[can_gpio_ic][0] * 100);
+  bms_detailed_temperatures.set_temperature_1(gpio_temps[can_gpio_ic][1] * 100);
+  bms_detailed_temperatures.set_temperature_2(gpio_temps[can_gpio_ic][2] * 100);
+  msg.id = ID_BMS_DETAILED_TEMPERATURES;
+  msg.len = sizeof(bms_detailed_temperatures);
+  bms_detailed_temperatures.write(msg.buf);
+  CAN.write(msg);
+  can_gpio_ic++;
 }
 
 // Pulses pin 5 to keep watchdog circuit active
