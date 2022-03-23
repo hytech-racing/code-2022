@@ -58,10 +58,8 @@ double total_thermistor_temps = 0;
 Metro charging_timer = Metro(5000); // Timer to check if charger is still talking to ACU
 Metro CAN_timer = Metro(2); // Timer that spaces apart writes for CAN messages so as to not saturate CAN bus
 Metro print_timer = Metro(500);
-elapsedMillis voltage_adc_timer;
-bool voltage_adc_running = false;
-elapsedMillis gpio_adc_timer;
-bool gpio_adc_running = false;
+elapsedMillis adc_timer; // timer that determines wait time for ADCs to finish their conversions
+uint8_t adc_state; // 0: wait to begin voltage conversions; 1: adcs converting voltage values; 2: wait to begin gpio conversions; 3: adcs converting GPIO values
 IntervalTimer pulse_timer;    //AMS ok pulse timer
 bool next_pulse = true; //AMS ok pulse
 int can_current_ic = 0; //counter for the current IC data to send for detailed voltage CAN message
@@ -131,9 +129,9 @@ void loop() {
   read_gpio();
   write_CAN_messages();
   if (print_timer.check()) {
-    print_timer.reset();
     print_voltages();
     print_gpios();
+    print_timer.reset();
   }
   if (bms_status.get_state() == BMS_STATE_CHARGING) {
     balance_cells(BALANCE_STANDARD);
@@ -143,17 +141,17 @@ void loop() {
 // READ functions to collect and read data from the LTC6811-2
 // Read cell voltages from all eight LTC6811-2; voltages are read in with units of 100μV
 void read_voltages() {
-  if (!voltage_adc_running) {
-    voltage_adc_running = true;
+  if (adc_state == 0) {
     Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
     for (int i = 0; i < 8; i++) {
       ic[i].wakeup();
       ic[i].wrcfga(configuration);
       ic[i].adcv(static_cast<CELL_SELECT>(0), false);
     }
-    voltage_adc_timer = 0;
+    adc_state = 1;
+    adc_timer = 0;
   }
-  if (voltage_adc_timer > 203) {
+  if (adc_state == 1 && adc_timer > 203) {
     total_voltage = 0;
     max_voltage = 0;
     min_voltage = 65535;
@@ -196,7 +194,7 @@ void read_voltages() {
     }
     balance_voltage = min_voltage;
     voltage_fault_check();
-    voltage_adc_running = false;
+    adc_state = 2;
   }
 }
 
@@ -248,17 +246,17 @@ void voltage_fault_check() {
 
 // Read GPIO registers from LTC6811-2; Process temperature and humidity data from relevant GPIO registers
 void read_gpio() {
-  if (!gpio_adc_running) {
-    gpio_adc_running = true;
+  if (adc_state == 2) {
     Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
     for (int i = 0; i < 8; i++) {
       ic[i].wakeup();
       ic[i].wrcfga(configuration);
       ic[i].adax(static_cast<GPIO_SELECT>(0), false);
     }
-    gpio_adc_timer = 0;
+    adc_state = 3;
+    adc_timer = 0;
   }
-  if (gpio_adc_timer > 203) {
+  if (adc_state == 3 && adc_timer > 203) {
     max_humidity = 0;
     max_thermistor_voltage = 0;
     min_thermistor_voltage = 65535;
@@ -317,7 +315,7 @@ void read_gpio() {
       }
     }
     temp_fault_check();
-    gpio_adc_running = false;
+    adc_state = 0;
   }
 }
 
@@ -513,6 +511,4 @@ void print_gpios() {
   Serial.print("Max Thermistor Temp: "); Serial.print(gpio_temps[max_thermistor_location[0]][max_thermistor_location[1]], 3); Serial.print("C \t ");
   Serial.print("Max Humidity: "); Serial.print(gpio_temps[max_humidity_location[0]][max_humidity_location[1]], 3); Serial.println("% \t ");
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
-
-
 }
