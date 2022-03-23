@@ -57,6 +57,11 @@ double total_cell_temps = 0;
 double total_thermistor_temps = 0;
 Metro charging_timer = Metro(5000); // Timer to check if charger is still talking to ACU
 Metro CAN_timer = Metro(2); // Timer that spaces apart writes for CAN messages so as to not saturate CAN bus
+Metro print_timer = Metro(500);
+elapsedMillis voltage_adc_timer;
+bool voltage_adc_running = false;
+elapsedMillis gpio_adc_timer;
+bool gpio_adc_running = false;
 IntervalTimer pulse_timer;    //AMS ok pulse timer
 bool next_pulse = true; //AMS ok pulse
 int can_current_ic = 0; //counter for the current IC data to send for detailed voltage CAN message
@@ -125,8 +130,11 @@ void loop() {
   read_voltages();
   read_gpio();
   write_CAN_messages();
-  print_voltages();
-  print_gpios();
+  if (print_timer.check()) {
+    print_timer.reset();
+    print_voltages();
+    print_gpios();
+  }
   if (bms_status.get_state() == BMS_STATE_CHARGING) {
     balance_cells(BALANCE_STANDARD);
   }
@@ -135,55 +143,61 @@ void loop() {
 // READ functions to collect and read data from the LTC6811-2
 // Read cell voltages from all eight LTC6811-2; voltages are read in with units of 100μV
 void read_voltages() {
-  total_voltage = 0;
-  max_voltage = 0;
-  min_voltage = 65535;
-  Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
-  for (int i = 0; i < 8; i++) {
-    ic[i].wakeup();
-    ic[i].wrcfga(configuration);
-    ic[i].adcv(static_cast<CELL_SELECT>(0), false);
+  if (!voltage_adc_running) {
+    voltage_adc_running = true;
+    Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
+    for (int i = 0; i < 8; i++) {
+      ic[i].wakeup();
+      ic[i].wrcfga(configuration);
+      ic[i].adcv(static_cast<CELL_SELECT>(0), false);
+    }
+    voltage_adc_timer = 0;
   }
-  delay(210);
-  for (int i = 0; i < 8; i++) {
-    ic[i].wakeup();
-    Reg_Group_Cell_A reg_group_a = ic[i].rdcva();
-    Reg_Group_Cell_B reg_group_b = ic[i].rdcvb();
-    Reg_Group_Cell_C reg_group_c = ic[i].rdcvc();
-    Reg_Group_Cell_D reg_group_d = ic[i].rdcvd();
-    for (int j = 0; j < 12; j += 3) {
-      uint8_t *buf;
-      if (j == 0) {
-        buf = reg_group_a.buf();
-      } else if (j == 3) {
-        buf = reg_group_b.buf();
-      } else if (j == 6) {
-        buf = reg_group_c.buf();
-      } else if (j == 9) {
-        if (i % 2 == 0) {
-          buf = reg_group_d.buf();
-        } else {
-          break;
+  if (voltage_adc_timer > 203) {
+    total_voltage = 0;
+    max_voltage = 0;
+    min_voltage = 65535;
+    for (int i = 0; i < 8; i++) {
+      ic[i].wakeup();
+      Reg_Group_Cell_A reg_group_a = ic[i].rdcva();
+      Reg_Group_Cell_B reg_group_b = ic[i].rdcvb();
+      Reg_Group_Cell_C reg_group_c = ic[i].rdcvc();
+      Reg_Group_Cell_D reg_group_d = ic[i].rdcvd();
+      for (int j = 0; j < 12; j += 3) {
+        uint8_t *buf;
+        if (j == 0) {
+          buf = reg_group_a.buf();
+        } else if (j == 3) {
+          buf = reg_group_b.buf();
+        } else if (j == 6) {
+          buf = reg_group_c.buf();
+        } else if (j == 9) {
+          if (i % 2 == 0) {
+            buf = reg_group_d.buf();
+          } else {
+            break;
+          }
         }
-      }
-      for (int k = 0; k < 3; k++) {
-        cell_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
-        total_voltage += cell_voltages[i][j + k];
-        if (cell_voltages[i][j + k] < min_voltage) {
-          min_voltage = cell_voltages[i][j + k];
-          min_voltage_location[0] = i;
-          min_voltage_location[1] = j + k;
-        }
-        if (cell_voltages[i][j + k] > max_voltage) {
-          max_voltage = cell_voltages[i][j + k];
-          max_voltage_location[0] = i;
-          max_voltage_location[1] = j + k;
+        for (int k = 0; k < 3; k++) {
+          cell_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
+          total_voltage += cell_voltages[i][j + k];
+          if (cell_voltages[i][j + k] < min_voltage) {
+            min_voltage = cell_voltages[i][j + k];
+            min_voltage_location[0] = i;
+            min_voltage_location[1] = j + k;
+          }
+          if (cell_voltages[i][j + k] > max_voltage) {
+            max_voltage = cell_voltages[i][j + k];
+            max_voltage_location[0] = i;
+            max_voltage_location[1] = j + k;
+          }
         }
       }
     }
+    balance_voltage = min_voltage;
+    voltage_fault_check();
+    voltage_adc_running = false;
   }
-  balance_voltage = min_voltage;
-  voltage_fault_check();
 }
 
 void voltage_fault_check() {
@@ -234,71 +248,77 @@ void voltage_fault_check() {
 
 // Read GPIO registers from LTC6811-2; Process temperature and humidity data from relevant GPIO registers
 void read_gpio() {
-  max_humidity = 0;
-  max_thermistor_voltage = 0;
-  min_thermistor_voltage = 65535;
-  max_temp_voltage = 0;
-  min_temp_voltage = 65535;
-  total_cell_temps = 0;
-  total_thermistor_temps = 0;
-  Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
-  for (int i = 0; i < 8; i++) {
-    ic[i].wakeup();
-    ic[i].wrcfga(configuration);
-    ic[i].adax(static_cast<GPIO_SELECT>(0), false);
+  if (!gpio_adc_running) {
+    gpio_adc_running = true;
+    Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) 0x0, (uint8_t) 0x1); // base configuration for the configuration register group
+    for (int i = 0; i < 8; i++) {
+      ic[i].wakeup();
+      ic[i].wrcfga(configuration);
+      ic[i].adax(static_cast<GPIO_SELECT>(0), false);
+    }
+    gpio_adc_timer = 0;
   }
-  delay(210);
-  for (int i = 0; i < 8; i++) {
-    ic[i].wakeup();
-    Reg_Group_Aux_A reg_group_a = ic[i].rdauxa();
-    Reg_Group_Aux_B reg_group_b = ic[i].rdauxb();
-    for (int j = 0; j < 6; j += 3) {
-      uint8_t *buf;
-      if (j == 0) {
-        buf = reg_group_a.buf();
-      } else if (j == 3) {
-        buf = reg_group_b.buf();
-      }
-      for (int k = 0; k < 3; k++) {
-        gpio_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
-        if ((i % 2) && j + k == 4) {
-          gpio_temps[i][j + k] = -66.875 + 218.75 * (gpio_voltages[i][j + k] / 50000.0); // caculation for SHT31 temperature in C
-          total_cell_temps += gpio_temps[i][j + k];
-          if (gpio_voltages[i][4] > max_temp_voltage) {
-            max_temp_voltage = gpio_voltages[i][j + k];
-            max_temp_location[0] = i;
-            max_temp_location[1] = j + k;
-          }
-          if (gpio_voltages[i][4] > min_temp_voltage) {
-            min_temp_voltage = gpio_voltages[i][j + k];
-            min_temp_location[0] = i;
-            min_temp_location[1] = j + k;
-          }
-        } else {
-          gpio_temps[i][j + k] = -12.5 + 125 * (gpio_voltages[i][j + k]) / 50000.0;
-          float thermistor_resistance = (2740 / (gpio_voltages[i][j + k] / 50000.0)) - 2740;
-          gpio_temps[i][j + k] = 1 / ((1 / 298.15) + (1 / 3984.0) * log(thermistor_resistance / 10000.0)) - 273.15; //calculation for thermistor temperature in C
-          total_thermistor_temps += gpio_temps[i][j + k];
-          if (j + k <= 3 && gpio_voltages[i][j + k] > max_thermistor_voltage) {
-            max_thermistor_voltage = gpio_voltages[i][j + k];
-            max_thermistor_location[0] = i;
-            max_thermistor_location[1] = j + k;
-          }
-          if (j + k <= 3 && gpio_voltages[i][j + k] < min_thermistor_voltage) {
-            min_thermistor_voltage = gpio_voltages[i][j + k];
-            min_thermistor_location[0] = i;
-            min_thermistor_location[1] = j + k;
-          }
-          if (j + k == 4 && gpio_temps[i][j + k] > max_humidity) {
-            max_humidity = gpio_temps[i][j + k];
-            max_humidity_location[0] = i;
-            max_humidity_location[1] = j + k;
+  if (gpio_adc_timer > 203) {
+    max_humidity = 0;
+    max_thermistor_voltage = 0;
+    min_thermistor_voltage = 65535;
+    max_temp_voltage = 0;
+    min_temp_voltage = 65535;
+    total_cell_temps = 0;
+    total_thermistor_temps = 0;
+    for (int i = 0; i < 8; i++) {
+      ic[i].wakeup();
+      Reg_Group_Aux_A reg_group_a = ic[i].rdauxa();
+      Reg_Group_Aux_B reg_group_b = ic[i].rdauxb();
+      for (int j = 0; j < 6; j += 3) {
+        uint8_t *buf;
+        if (j == 0) {
+          buf = reg_group_a.buf();
+        } else if (j == 3) {
+          buf = reg_group_b.buf();
+        }
+        for (int k = 0; k < 3; k++) {
+          gpio_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
+          if ((i % 2) && j + k == 4) {
+            gpio_temps[i][j + k] = -66.875 + 218.75 * (gpio_voltages[i][j + k] / 50000.0); // caculation for SHT31 temperature in C
+            total_cell_temps += gpio_temps[i][j + k];
+            if (gpio_voltages[i][4] > max_temp_voltage) {
+              max_temp_voltage = gpio_voltages[i][j + k];
+              max_temp_location[0] = i;
+              max_temp_location[1] = j + k;
+            }
+            if (gpio_voltages[i][4] > min_temp_voltage) {
+              min_temp_voltage = gpio_voltages[i][j + k];
+              min_temp_location[0] = i;
+              min_temp_location[1] = j + k;
+            }
+          } else {
+            gpio_temps[i][j + k] = -12.5 + 125 * (gpio_voltages[i][j + k]) / 50000.0;
+            float thermistor_resistance = (2740 / (gpio_voltages[i][j + k] / 50000.0)) - 2740;
+            gpio_temps[i][j + k] = 1 / ((1 / 298.15) + (1 / 3984.0) * log(thermistor_resistance / 10000.0)) - 273.15; //calculation for thermistor temperature in C
+            total_thermistor_temps += gpio_temps[i][j + k];
+            if (j + k <= 3 && gpio_voltages[i][j + k] > max_thermistor_voltage) {
+              max_thermistor_voltage = gpio_voltages[i][j + k];
+              max_thermistor_location[0] = i;
+              max_thermistor_location[1] = j + k;
+            }
+            if (j + k <= 3 && gpio_voltages[i][j + k] < min_thermistor_voltage) {
+              min_thermistor_voltage = gpio_voltages[i][j + k];
+              min_thermistor_location[0] = i;
+              min_thermistor_location[1] = j + k;
+            }
+            if (j + k == 4 && gpio_temps[i][j + k] > max_humidity) {
+              max_humidity = gpio_temps[i][j + k];
+              max_humidity_location[0] = i;
+              max_humidity_location[1] = j + k;
+            }
           }
         }
       }
     }
+    temp_fault_check();
+    gpio_adc_running = false;
   }
-  void temp_fault_check();
 }
 
 void temp_fault_check() {
