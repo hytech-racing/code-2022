@@ -3,8 +3,8 @@
    It also handles CAN communications with the mainECU and energy meter, performs coulomb counting operations, and drives a watchdog timer on the ACU.
    See LTC6811_2.cpp and LTC6811-2 Datasheet provided by Analog Devices for more details.
    Author: Zekun Li, Liwei Sun
-   Version: 1.0
-   Since: 03/021/2022
+   Version: 1.01
+   Since: 03/27/2022
 */
 
 #include <Arduino.h>
@@ -43,18 +43,18 @@ uint16_t min_voltage = 65535;
 uint16_t max_voltage = 0;
 uint16_t gpio_voltages[TOTAL_IC][6];  // 2D Array to hold GPIO voltages being read in; voltages are read in with the base unit as 100μV
 float gpio_temps[TOTAL_IC][6];      // 2D Array to hold GPIO temperatures being read in; temperatures are read in with the base unit as K
-int max_temp_location[2]; // [0]: IC#; [1]: Cell#
-int min_temp_location[2]; // [0]: IC#; [1]: Cell#
+int max_board_temp_location[2]; // [0]: IC#; [1]: Cell#
+int min_board_temp_location[2]; // [0]: IC#; [1]: Cell#
 int max_thermistor_location[2]; // [0]: IC#; [1]: Cell#
 int max_humidity_location[2]; // [0]: IC#; [1]: Cell#
 int min_thermistor_location[2]; // [0]: IC#; [1]: Cell#
 uint16_t max_humidity = 0;
 uint16_t max_thermistor_voltage = 0;
 uint16_t min_thermistor_voltage = 65535;
-uint16_t max_temp_voltage = 0;
-uint16_t min_temp_voltage = 65535;
-double total_cell_temps = 0;
-double total_thermistor_temps = 0;
+uint16_t max_board_temp_voltage = 0;
+uint16_t min_board_temp_voltage = 65535;
+float total_board_temps = 0;
+float total_thermistor_temps = 0;
 Metro charging_timer = Metro(5000); // Timer to check if charger is still talking to ACU
 Metro CAN_timer = Metro(2); // Timer that spaces apart writes for CAN messages so as to not saturate CAN bus
 Metro print_timer = Metro(500);
@@ -262,9 +262,9 @@ void read_gpio() {
     max_humidity = 0;
     max_thermistor_voltage = 0;
     min_thermistor_voltage = 65535;
-    max_temp_voltage = 0;
-    min_temp_voltage = 65535;
-    total_cell_temps = 0;
+    max_board_temp_voltage = 0;
+    min_board_temp_voltage = 65535;
+    total_board_temps = 0;
     total_thermistor_temps = 0;
     for (int i = 0; i < 8; i++) {
       ic[i].wakeup();
@@ -281,28 +281,29 @@ void read_gpio() {
           gpio_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
           if ((i % 2) && j + k == 4) {
             gpio_temps[i][j + k] = -66.875 + 218.75 * (gpio_voltages[i][j + k] / 50000.0); // caculation for SHT31 temperature in C
-            total_cell_temps += gpio_temps[i][j + k];
-            if (gpio_voltages[i][4] > max_temp_voltage) {
-              max_temp_voltage = gpio_voltages[i][j + k];
-              max_temp_location[0] = i;
-              max_temp_location[1] = j + k;
+            Serial.print("Board Temp: "); Serial.println(gpio_temps[i][j + k], 3);
+            total_board_temps += gpio_temps[i][j + k];
+            if (gpio_voltages[i][4] > max_board_temp_voltage) {
+              max_board_temp_voltage = gpio_voltages[i][j + k];
+              max_board_temp_location[0] = i;
+              max_board_temp_location[1] = j + k;
             }
-            if (gpio_voltages[i][4] > min_temp_voltage) {
-              min_temp_voltage = gpio_voltages[i][j + k];
-              min_temp_location[0] = i;
-              min_temp_location[1] = j + k;
+            if (gpio_voltages[i][4] > min_board_temp_voltage) {
+              min_board_temp_voltage = gpio_voltages[i][j + k];
+              min_board_temp_location[0] = i;
+              min_board_temp_location[1] = j + k;
             }
-          } else {
+          } else if (j + k < 4)  {
             gpio_temps[i][j + k] = -12.5 + 125 * (gpio_voltages[i][j + k]) / 50000.0;
             float thermistor_resistance = (2740 / (gpio_voltages[i][j + k] / 50000.0)) - 2740;
             gpio_temps[i][j + k] = 1 / ((1 / 298.15) + (1 / 3984.0) * log(thermistor_resistance / 10000.0)) - 273.15; //calculation for thermistor temperature in C
             total_thermistor_temps += gpio_temps[i][j + k];
-            if (j + k <= 3 && gpio_voltages[i][j + k] > max_thermistor_voltage) {
+            if (gpio_voltages[i][j + k] > max_thermistor_voltage) {
               max_thermistor_voltage = gpio_voltages[i][j + k];
               max_thermistor_location[0] = i;
               max_thermistor_location[1] = j + k;
             }
-            if (j + k <= 3 && gpio_voltages[i][j + k] < min_thermistor_voltage) {
+            if (gpio_voltages[i][j + k] < min_thermistor_voltage) {
               min_thermistor_voltage = gpio_voltages[i][j + k];
               min_thermistor_location[0] = i;
               min_thermistor_location[1] = j + k;
@@ -383,20 +384,20 @@ void parse_CAN_CCU_status() {
 
 //CAN message write handler
 void write_CAN_messages() {
-    // set voltage message values
+  // set voltage message values
   bms_voltages.set_low(min_voltage);
   bms_voltages.set_high(max_voltage);
   bms_voltages.set_average(total_voltage / 84);
   bms_voltages.set_total(total_voltage / 100);
   // set temperature message values
-  bms_temperatures.set_low_temperature(gpio_temps[min_temp_location[0]][min_temp_location[1]] * 100);
-  bms_temperatures.set_high_temperature(gpio_temps[max_temp_location[0]][max_temp_location[1]] * 100);
-  bms_temperatures.set_average_temperature(total_cell_temps * 100 / 4);
+  bms_temperatures.set_low_temperature(gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
+  bms_temperatures.set_high_temperature(gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
+  bms_temperatures.set_average_temperature(total_thermistor_temps / 32);
   // set onboard temperature message values
-  bms_onboard_temperatures.set_low_temperature(gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
-  bms_onboard_temperatures.set_high_temperature(gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
-  bms_onboard_temperatures.set_average_temperature(total_thermistor_temps / 32);
-  
+  bms_onboard_temperatures.set_low_temperature(gpio_temps[min_board_temp_location[0]][min_board_temp_location[1]] * 100);
+  bms_onboard_temperatures.set_high_temperature(gpio_temps[max_board_temp_location[0]][max_board_temp_location[1]] * 100);
+  bms_onboard_temperatures.set_average_temperature(total_board_temps * 100 / 4);
+
   //Write BMS_status message
   msg.id = ID_BMS_STATUS;
   msg.len = sizeof(bms_status);
@@ -516,6 +517,13 @@ void print_gpios() {
   if (max_thermistor_voltage > MAX_THERMISTOR_VOLTAGE) {
     Serial.print("OVERTEMP FAULT: "); Serial.print("\tConsecutive fault #: "); Serial.println(overtemp_fault_counter);
   }
+  Serial.print("Max Board Temp: "); Serial.print(gpio_temps[max_board_temp_location[0]][max_board_temp_location[1]], 3); Serial.print("C \t ");
+  Serial.print("Min Board Temp: "); Serial.print(gpio_temps[min_board_temp_location[0]][min_board_temp_location[1]], 3); Serial.print("C \t");
+  Serial.print("Avg Board Temp: "); Serial.print(total_board_temps / 4, 3); Serial.println("C \t");
+  Serial.print("Max Thermistor Temp: "); Serial.print(gpio_temps[max_thermistor_location[0]][max_thermistor_location[1]], 3); Serial.print("C \t"); 
+  Serial.print("Min Thermistor Temp: "); Serial.print(gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]], 3); Serial.print("C \t");
+  Serial.print("Avg Thermistor Temp: "); Serial.print(total_thermistor_temps / 32, 3); Serial.println("C \t");
+  Serial.print("Max Humidity: "); Serial.print(gpio_temps[max_humidity_location[0]][max_humidity_location[1]], 3); Serial.println("% \t ");
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
   Serial.println("Raw Segment Temperatures");
   Serial.println("                  \tT0\tT1\tT2\tT3");
@@ -532,8 +540,5 @@ void print_gpios() {
     Serial.print("\t");
     Serial.println();
   }
-  Serial.print("Max Board Temp: "); Serial.print(gpio_temps[max_temp_location[0]][max_temp_location[1]], 3); Serial.print("C \t ");
-  Serial.print("Max Thermistor Temp: "); Serial.print(gpio_temps[max_thermistor_location[0]][max_thermistor_location[1]], 3); Serial.print("C \t ");
-  Serial.print("Max Humidity: "); Serial.print(gpio_temps[max_humidity_location[0]][max_humidity_location[1]], 3); Serial.println("% \t ");
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
 }
