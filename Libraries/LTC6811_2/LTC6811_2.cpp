@@ -67,7 +67,6 @@ void LTC6811_2::spi_cmd(uint8_t *cmd, uint8_t* cmd_pec) {
     digitalWrite(SS, HIGH);
     delayMicroseconds(1);
     SPI.endTransaction();
-    adc_delay();
 }
 
 // returns the address of the specific LTC6811-2 chip to send command to
@@ -310,66 +309,70 @@ Reg_Group_COMM LTC6811_2::rdcomm() {
 }
 
 // General non-register command handler
-void LTC6811_2::non_register_cmd(uint16_t cmd_code) {
+void LTC6811_2::non_register_cmd(uint16_t cmd_code, bool delay_enable) {
     uint8_t cmd[2] = {(uint8_t) (get_cmd_address() | cmd_code >> 8), (uint8_t) cmd_code};
     uint8_t cmd_pec[2];
     // generate PEC from command bytes
     generate_pec(cmd, cmd_pec, 2);
     // write out via SPI
     spi_cmd(cmd, cmd_pec);
+    if(delay_enable)
+    {
+      adc_delay();
+    }
 }
 
 // Start -action- commands
 // Start S Control Pulsing and Poll Status
 void LTC6811_2::stsctrl() {
-    non_register_cmd(0x19);
+    non_register_cmd(0x19, false);
 }
 // Start Cell Voltage ADC Conversion and Poll Status
-void LTC6811_2::adcv(CELL_SELECT cell_select) {
+void LTC6811_2::adcv(CELL_SELECT cell_select, bool delay) {
     uint16_t adc_cmd = 0x260 | (adc_mode << 7) | (discharge_permitted << 4) | static_cast<uint8_t>(cell_select);
-    non_register_cmd(adc_cmd);
+    non_register_cmd(adc_cmd, delay);
 }
 // Start GPIOs ADC Conversion and Poll Status
-void LTC6811_2::adax(GPIO_SELECT gpio_select) {
+void LTC6811_2::adax(GPIO_SELECT gpio_select, bool delay) {
     uint16_t adc_cmd = 0x460 | (adc_mode << 7) | static_cast<uint8_t>(gpio_select);
-    non_register_cmd(adc_cmd);
+    non_register_cmd(adc_cmd, delay);
 }
 // Start Combined Cell Voltage and GPIO1, GPIO2 Conversion and Poll Status
-void LTC6811_2::adcvax() {
+void LTC6811_2::adcvax(bool delay) {
     uint16_t adc_cmd = 0x46F | (adc_mode << 7) | (discharge_permitted << 4);
-    non_register_cmd(adc_cmd);
+    non_register_cmd(adc_cmd, delay);
 }
 // Start Combined Cell Voltage and SC Conversion and Poll Status
-void LTC6811_2::adcvsc() {
+void LTC6811_2::adcvsc(bool delay) {
     uint16_t adc_cmd = 0x467 | (adc_mode << 7) | (discharge_permitted << 4);
-    non_register_cmd(adc_cmd);
+    non_register_cmd(adc_cmd, delay);
 }
 
 // Clear register commands
 // Clear Cell Voltage Register Groups
 void LTC6811_2::clrsctrl() {
-    non_register_cmd(0x18);
+    non_register_cmd(0x18, false);
 }
 // Clear Auxiliary Register Group
 void LTC6811_2::clraux() {
-    non_register_cmd(0x712);
+    non_register_cmd(0x712, false);
 }
 // Clear Status Register Groups
 void LTC6811_2::clrstat() {
-    non_register_cmd(0x713);
+    non_register_cmd(0x713, false);
 }
 // Poll ADC Conversion Status
 void LTC6811_2::pladc() {
     // NOTE: in parallel isoSPI mode, this command is not necessarily needed; see datasheet page 55
-    non_register_cmd(0x714);
+    non_register_cmd(0x714, false);
 }
 // Diagnose MUX and Poll Status: sets MUXFAIL bit to 1 in Status Register Group B if any channel decoder fails; see datasheet pg. 32
 void LTC6811_2::diagn() {
-    non_register_cmd(0x715);
+    non_register_cmd(0x715, false);
 }
 // Start I2C/SPI Communication to a slave device when the LTC6811-2 acts as the master
 void LTC6811_2::stcomm() {
-    non_register_cmd(0x723);
+    non_register_cmd(0x723, false);
 }
 
 /* Wakeup functions
