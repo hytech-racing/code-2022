@@ -66,6 +66,12 @@ int can_voltage_ic = 0; //counter for the current IC data to send for detailed v
 int can_voltage_group = 0; // counter for current group data to send for detailed voltage CAN message
 int can_gpio_ic = 0; //counter for the current IC data to send for detailed voltage CAN message
 int can_gpio_group = 0; // counter for current group data to send for detailed voltage CAN message
+elapsedMillis can_bms_status_timer = 0;
+elapsedMillis can_bms_detailed_voltages_timer = 5;
+elapsedMillis can_bms_detailed_temps_timer = 10;
+elapsedMillis can_bms_voltages_timer = 15;
+elapsedMillis can_bms_temps_timer = 20;
+elapsedMillis can_bms_onboard_temps_timer = 25;
 
 // CONSECUTIVE FAULT COUNTERS: counts successive faults; resets to zero if normal reading breaks fault chain
 unsigned long uv_fault_counter = 0;             // undervoltage fault counter
@@ -392,41 +398,53 @@ void write_CAN_messages() {
   // set temperature message values
   bms_temperatures.set_low_temperature(gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
   bms_temperatures.set_high_temperature(gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
-  bms_temperatures.set_average_temperature(total_thermistor_temps / 32);
+  bms_temperatures.set_average_temperature(total_thermistor_temps * 100 / 32);
   // set onboard temperature message values
   bms_onboard_temperatures.set_low_temperature(gpio_temps[min_board_temp_location[0]][min_board_temp_location[1]] * 100);
   bms_onboard_temperatures.set_high_temperature(gpio_temps[max_board_temp_location[0]][max_board_temp_location[1]] * 100);
   bms_onboard_temperatures.set_average_temperature(total_board_temps * 100 / 4);
 
   //Write BMS_status message
-  msg.id = ID_BMS_STATUS;
-  msg.len = sizeof(bms_status);
-  bms_status.write(msg.buf);
-  CAN.write(msg);
-  delay(10);
+  if(can_bms_status_timer > 500){
+    msg.id = ID_BMS_STATUS;
+    msg.len = sizeof(bms_status);
+    bms_status.write(msg.buf);
+    CAN.write(msg);
+    can_bms_status_timer = 0;
+  }
   // Write BMS_voltages message
-  msg.id = ID_BMS_VOLTAGES;
-  msg.len = sizeof(bms_voltages);
-  bms_voltages.write(msg.buf);
-  CAN.write(msg);
-  delay(10);
+  if(can_bms_voltages_timer > 1000){
+    msg.id = ID_BMS_VOLTAGES;
+    msg.len = sizeof(bms_voltages);
+    bms_voltages.write(msg.buf);
+    CAN.write(msg);
+    can_bms_voltages_timer = 0;
+  }
   // Write BMS_temperatures message
-  msg.id = ID_BMS_TEMPERATURES;
-  msg.len = sizeof(bms_temperatures);
-  bms_temperatures.write(msg.buf);
-  CAN.write(msg);
-  delay(10);
+  if(can_bms_temps_timer > 1000){
+    msg.id = ID_BMS_TEMPERATURES;
+    msg.len = sizeof(bms_temperatures);
+    bms_temperatures.write(msg.buf);
+    CAN.write(msg);
+    can_bms_temps_timer = 0;
+  }
   // Write BMS_onboard_temperatures message
-  msg.id = ID_BMS_ONBOARD_TEMPERATURES;
-  msg.len = sizeof(bms_onboard_temperatures);
-  bms_onboard_temperatures.write(msg.buf);
-  CAN.write(msg);
-  delay(10);
+  if(can_bms_onboard_temps_timer > 1000){
+    msg.id = ID_BMS_ONBOARD_TEMPERATURES;
+    msg.len = sizeof(bms_onboard_temperatures);
+    bms_onboard_temperatures.write(msg.buf);
+    CAN.write(msg);
+    can_bms_onboard_temps_timer = 0;
+  }
   // write detailed voltages for one IC group
-  write_CAN_detailed_voltages();
-  delay(10);
-  write_CAN_detailed_temps();
-  delay(10);
+  if(can_bms_detailed_voltages_timer > 50){
+    write_CAN_detailed_voltages();
+    can_bms_detailed_voltages_timer = 0;
+  }
+  if(can_bms_detailed_temps_timer > 1000){
+    write_CAN_detailed_temps();
+    can_bms_detailed_temps_timer = 0;
+  }
 }
 
 //detailed voltages CAN message handler; writes the CAN message for one ic group at a time
@@ -498,6 +516,10 @@ void print_voltages() {
   } else if (bms_status.get_state() == BMS_STATE_CHARGING) {
     Serial.println("Charging");
   }
+  Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
+  Serial.print("Max Voltage: "); Serial.print(cell_voltages[max_voltage_location[0]][max_voltage_location[1]] / 10000.0, 4); Serial.print("V \t ");
+  Serial.print("Min Voltage: "); Serial.print(cell_voltages[min_voltage_location[0]][min_voltage_location[1]]/ 10000.0, 4); Serial.print("V \t");
+  Serial.print("Avg Voltage: "); Serial.print(total_voltage / 840000.0, 4); Serial.println("V \t");
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
   Serial.println("Raw Cell Voltages\t\t\t\t\t\t\tCell Status (Ignoring or Balancing)");
   Serial.println("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\tC9\tC10\tC11");
