@@ -611,8 +611,8 @@ def parse_ID_BMS_VOLTAGES(raw_message):
 
 def parse_ID_BMS_DETAILED_VOLTAGES(raw_message):
     message = "BMS_detailed_voltages"
-    ic_id = raw_message[2]
-    group_id = int(raw_message[3])
+    ic_id = raw_message[3]
+    group_id = int(raw_message[2])
     labels = ""
     if group_id == 0:
         labels = ["IC_" + ic_id + "_CELL_0", "IC_" + ic_id + "_CELL_1", "IC_" + ic_id + "_CELL_2"]
@@ -646,8 +646,8 @@ def parse_ID_BMS_TEMPERATURES(raw_message):
 
 def parse_ID_BMS_DETAILED_TEMPERATURES(raw_message):
     message = "BMS_detailed_temperatures"
-    ic_id = raw_message[2]
-    group_id = int(raw_message[3])
+    ic_id = raw_message[3]
+    group_id = int(raw_message[2])
 
     # Different parsing if IC_ID is even or old
     # If IC_ID is even, GPIO 5 is humidity; if IC_ID is odd, GPIO 5 is temperature
@@ -661,7 +661,7 @@ def parse_ID_BMS_DETAILED_TEMPERATURES(raw_message):
         elif group_id == 1:
             labels = ["IC_" + ic_id + "_therm_3", "IC_" + ic_id + "_humidity", "IC_" + ic_id + "_Vref"]
         else:
-            if DEBUG: print("UNFATAL ERROR: BMS detailed voltage group " + str(group_id) + " is invalid.")
+            if DEBUG: print("UNFATAL ERROR: BMS detailed temperature group " + str(group_id) + " is invalid.")
             return "UNPARSEABLE"
     else:
         if group_id == 0:
@@ -669,7 +669,7 @@ def parse_ID_BMS_DETAILED_TEMPERATURES(raw_message):
         elif group_id == 1:
             labels = ["IC_" + ic_id + "_therm_3", "IC_" + ic_id + "_temperature", "IC_" + ic_id + "_Vref"]
         else:
-            if DEBUG: print("UNFATAL ERROR: BMS detailed voltage group " + str(group_id) + " is invalid.")
+            if DEBUG: print("UNFATAL ERROR: BMS detailed temperature group " + str(group_id) + " is invalid.")
             return "UNPARSEABLE"
 
     values = [
