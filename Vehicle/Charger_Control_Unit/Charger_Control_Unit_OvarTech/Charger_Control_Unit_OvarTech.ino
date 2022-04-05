@@ -27,6 +27,7 @@
 #define WATCHDOG_OUT 7
 #define TEENSY_OK 6
 #define STATUS 5
+#define AC_CURRENT 13
 
 #define LED A8
 
@@ -212,7 +213,7 @@ int set_charge_current() {
   uint16_t output_voltage = charger_data.get_output_dc_voltage_high() << 8 | charger_data.get_output_dc_voltage_low();
   uint16_t max_current;
   if (output_voltage > 255) {
-     max_current = (120 * 18) * 100 / output_voltage;
+     max_current = (120 * AC_CURRENT) * 100 / output_voltage;
   } else {
     max_current = 10;
   }
