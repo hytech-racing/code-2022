@@ -287,14 +287,13 @@ void read_gpio() {
           gpio_voltages[i][j + k] = buf[2 * k + 1] << 8 | buf[2 * k];
           if ((i % 2) && j + k == 4) {
             gpio_temps[i][j + k] = -66.875 + 218.75 * (gpio_voltages[i][j + k] / 50000.0); // caculation for SHT31 temperature in C
-            Serial.print("Board Temp: "); Serial.println(gpio_temps[i][j + k], 3);
             total_board_temps += gpio_temps[i][j + k];
             if (gpio_voltages[i][4] > max_board_temp_voltage) {
               max_board_temp_voltage = gpio_voltages[i][j + k];
               max_board_temp_location[0] = i;
               max_board_temp_location[1] = j + k;
             }
-            if (gpio_voltages[i][4] > min_board_temp_voltage) {
+            if (gpio_voltages[i][4] < min_board_temp_voltage) {
               min_board_temp_voltage = gpio_voltages[i][j + k];
               min_board_temp_location[0] = i;
               min_board_temp_location[1] = j + k;
