@@ -54,7 +54,7 @@ static CAN_message_t tx_msg;
 FlexCAN CAN(500000);
 
 Metro update_ls = Metro(1000);
-Metro update_CAN = Metro(100);
+Metro update_CAN = Metro(500);
 Metro update_watchdog = Metro(3);
 
 void print_cells();
