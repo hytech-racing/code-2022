@@ -298,7 +298,7 @@ void read_gpio() {
               min_board_temp_location[0] = i;
               min_board_temp_location[1] = j + k;
             }
-          } else if (j + k < 4)  {
+          } else {
             gpio_temps[i][j + k] = -12.5 + 125 * (gpio_voltages[i][j + k]) / 50000.0;
             float thermistor_resistance = (2740 / (gpio_voltages[i][j + k] / 50000.0)) - 2740;
             gpio_temps[i][j + k] = 1 / ((1 / 298.15) + (1 / 3984.0) * log(thermistor_resistance / 10000.0)) - 273.15; //calculation for thermistor temperature in C
