@@ -323,9 +323,10 @@ void read_gpio() {
         }
       }
     }
-  }
+  
   temp_fault_check();
   adc_state = 0;
+  }
 }
 
 
