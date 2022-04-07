@@ -2,7 +2,7 @@
  * @brief: Receives raw live data from the ESP32 transmitter and passes serially to the connected laptop.
  * 
  * @author: Bo Han Zhu
- * @date: 3/31/2022
+ * @date: 03/31/2022
  */
  
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -25,8 +25,8 @@ static QueueHandle_t msg_queue;
 #include <WiFi.h>
 
 typedef struct transmit_msg_t {
-  String can_id;
-  String raw_data;
+  uint16_t can_id;
+  uint64_t raw_data;
 } transmit_msg_t;
 
 static transmit_msg_t incoming_msg;
@@ -57,7 +57,7 @@ void print_to_serial(void * no_params) {
   transmit_msg_t msg;
 
   while (true) {
-    // If message exists in the queue, path to serial "can_id,raw_data"
+    // If message exists in the queue, pass to serial "can_id,raw_data"
     if (xQueueReceive(msg_queue, (void *)&msg, 0) == pdTRUE) {
       Serial.print(msg.can_id + "," + msg.raw_data);
     }
@@ -74,9 +74,13 @@ void blink_led(void * no_params) {
   while (true) {
     if (uxQueueMessagesWaiting(msg_queue) > 0)
     {
-      digitalWrite(led_pin, !digitalRead(led_pin));
-      vTaskDelay(100 / portTICK_PERIOD_MS);
+      digitalWrite(led_pin, HIGH);
     }
+    else
+    {
+      digitalWrite(led_pin, LOW);
+    }
+    vTaskDelay(100 / portTICK_PERIOD_MS);
   }
 }
 
@@ -92,7 +96,7 @@ void setup() {
   xTaskCreatePinnedToCore(
     add_incoming_msg,
     "Add Incoming Message",
-    1024,
+    2048,
     NULL,
     3,// Highest Priority Task
     NULL,
