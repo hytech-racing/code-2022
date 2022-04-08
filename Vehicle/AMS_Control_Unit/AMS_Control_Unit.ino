@@ -35,7 +35,6 @@ uint16_t vuv = 1874; // 3V           // Minimum voltage value following datashee
 uint16_t vov = 2625; // 4.2V         // Maximum voltage value following datasheet formula: Comparison Voltage = VOV • 16 • 100μV
 uint16_t cell_voltages[TOTAL_IC][12]; // 2D Array to hold cell voltages being read in; voltages are read in with the base unit as 100μV
 uint32_t total_voltage;             // the total voltage of the pack
-uint16_t balance_voltage = 65535;   // the voltage to balance toward with the base unit as 100μV; equal to the lowest voltage in the battery pack. Iniitalized to max 16 bit value in order to prevent balancing without having read in valid voltages first
 int min_voltage_location[2]; // [0]: IC#; [1]: Cell#
 int max_voltage_location[2]; // [0]: IC#; [1]: Cell#
 uint16_t min_voltage = 65535;
@@ -200,7 +199,7 @@ void read_voltages() {
         }
       }
     }
-    balance_voltage = min_voltage;
+    min_voltage = min_voltage;
     voltage_fault_check();
     adc_state = 2;
   }
@@ -324,7 +323,6 @@ void read_gpio() {
         }
       }
     }
-
     temp_fault_check();
     adc_state = 0;
   }
@@ -352,22 +350,21 @@ void balance_cells() {
   uint16_t cell_balance_setting = 0x0;
   if (balance_timer.check()) {
     balance_timer.reset();
-    if (balance_voltage < 30000 || balance_voltage > 42000) {
-      Serial.print("BALANCE HALT: BALANCE VOLTAGE SET AS "); Serial.print(balance_voltage / 10000.0, 4); Serial.println(", OUTSIDE OF SAFE BOUNDS.");
+    if (min_voltage < 30000 || min_voltage > 42000) {
+      Serial.print("BALANCE HALT: BALANCE VOLTAGE SET AS "); Serial.print(min_voltage / 10000.0, 4); Serial.println(", OUTSIDE OF SAFE BOUNDS.");
       return;
     }
     if (overtemp_fault_state || uv_fault_state || ov_fault_state || pack_ov_fault_state) {
       Serial.print("BALANCE HALT: CHECK PACK FAULTS");
     }
-    Serial.print("Balancing voltage: "); Serial.println(balance_voltage / 10000.0, 4);
+    Serial.print("Balancing voltage: "); Serial.println(min_voltage / 10000.0, 4);
     for (uint16_t i = 0; i < 8; i++) {
       // determine which cells of the IC need balancing
       for (uint16_t cell = 0; cell < 12; cell++) {
-        if (cell_voltages[i][cell] - balance_voltage > 100) { // balance if the cell voltage differential from the minimum voltage is 0.01V or greater
-          cell_balance_setting = (0x1 << cell) | cell_balance_setting;
+        if (cell_voltages[i][cell] - min_voltage > 100) { // balance if the cell voltage differential from the minimum voltage is 0.01V or greater
+          cell_balance_setting = (0b1 << cell) | cell_balance_setting;
         }
       }
-      Serial.print("Balance configuration: "); Serial.println(cell_balance_setting, BIN);
       Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) cell_balance_setting, (uint8_t) 0x0); // base configuration for the configuration register group
       ic[i].wakeup();
       ic[i].wrcfga(configuration);
