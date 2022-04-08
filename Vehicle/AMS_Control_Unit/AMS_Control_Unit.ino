@@ -300,7 +300,12 @@ void read_gpio() {
             }
           } else if (j + k == 4) {
             gpio_temps[i][j + k] = -12.5 + 125 * (gpio_voltages[i][j + k]) / 50000.0; // humidity calculation
-          } else {
+            if (gpio_temps[i][j + k] > max_humidity) {
+              max_humidity = gpio_temps[i][j + k];
+              max_humidity_location[0] = i;
+              max_humidity_location[1] = j + k;
+            }
+          } else if(j + k < 4){
             float thermistor_resistance = (2740 / (gpio_voltages[i][j + k] / 50000.0)) - 2740;
             gpio_temps[i][j + k] = 1 / ((1 / 298.15) + (1 / 3984.0) * log(thermistor_resistance / 10000.0)) - 273.15; //calculation for thermistor temperature in C
             total_thermistor_temps += gpio_temps[i][j + k];
@@ -314,18 +319,14 @@ void read_gpio() {
               min_thermistor_location[0] = i;
               min_thermistor_location[1] = j + k;
             }
-            if (j + k == 4 && gpio_temps[i][j + k] > max_humidity) {
-              max_humidity = gpio_temps[i][j + k];
-              max_humidity_location[0] = i;
-              max_humidity_location[1] = j + k;
-            }
+            
           }
         }
       }
     }
-  
-  temp_fault_check();
-  adc_state = 0;
+
+    temp_fault_check();
+    adc_state = 0;
   }
 }
 
