@@ -25,8 +25,8 @@ static QueueHandle_t msg_queue;
 #include <WiFi.h>
 
 typedef struct transmit_msg_t {
-  uint16_t can_id;
-  uint64_t raw_data;
+  uint16_t  can_id;
+  uint8_t   raw_data[8];
 } transmit_msg_t;
 
 static transmit_msg_t incoming_msg;
@@ -59,7 +59,8 @@ void print_to_serial(void * no_params) {
   while (true) {
     // If message exists in the queue, pass to serial "can_id,raw_data"
     if (xQueueReceive(msg_queue, (void *)&msg, 0) == pdTRUE) {
-      Serial.print(msg.can_id + "," + msg.raw_data);
+      Serial.print(msg.can_id + "," + msg.raw_data[0] + msg.raw_data[1] + msg.raw_data[2] + msg.raw_data[3]
+                                    + msg.raw_data[4] + msg.raw_data[5] + msg.raw_data[6] + msg.raw_data[7]);
     }
   }
 }
@@ -139,5 +140,5 @@ void loop() {
  */
 void data_receive(const uint8_t * mac, const uint8_t *incomingData, int len) {
   memcpy(&incoming_msg, incomingData, sizeof(transmit_msg_t));  // Copy in data
-  xQueueSend(msg_queue, (void *) &incoming_msg, 100);           // Add to queue, fail if timeout after 100 ms
+  xQueueSend(msg_queue, (void *) &incoming_msg, portMAX_DELAY);
 }
