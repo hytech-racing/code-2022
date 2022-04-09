@@ -9,6 +9,8 @@ Files:
 - ESP32_get_mac_address: Run once on each ESP32 to get their MAC addresses, needed to be set in ESP32_transmitter
 - ESP32_transmitter: RTOS-based code to collect data from four analog sensors, read from the CAN bus, establish direct comms, and send msgs up
 - ESP32_receiver: RTOS-based code to receive raw messages, call the Python C-API and the python parser to parse them, and print to serial
+- ESP32_test_transmitter: Example code to send random messages to a receiver, source: https://microcontrollerslab.com/esp32-esp-now-tutorial-arduino-ide/
+- ESP32_test_receiver: Example code to receive ESP-Now messages, source: https://microcontrollerslab.com/esp32-esp-now-tutorial-arduino-ide/
 ## Setup
 To upload and setup Arduino IDE for ESP32, follow instructions from the link here: https://randomnerdtutorials.com/installing-the-esp32-board-in-arduino-ide-windows-instructions/
 ## Running List of ESP32 MAC Addresses
