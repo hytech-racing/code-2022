@@ -59,8 +59,8 @@ void print_to_serial(void * no_params) {
   while (true) {
     // If message exists in the queue, pass to serial "can_id,raw_data"
     if (xQueueReceive(msg_queue, (void *)&msg, 0) == pdTRUE) {
-      Serial.print(msg.can_id + "," + msg.raw_data[0] + msg.raw_data[1] + msg.raw_data[2] + msg.raw_data[3]
-                                    + msg.raw_data[4] + msg.raw_data[5] + msg.raw_data[6] + msg.raw_data[7]);
+      Serial.println(msg.can_id + "," + msg.raw_data[0] + msg.raw_data[1] + msg.raw_data[2] + msg.raw_data[3]
+                                      + msg.raw_data[4] + msg.raw_data[5] + msg.raw_data[6] + msg.raw_data[7]);
     }
   }
 }

@@ -9,7 +9,10 @@
 // Global Variables and Imports
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// FreeRTOS
+/**
+ * @brief: FreeRTOS
+ */
+
 #if CONFIG_FREERTOS_UNICORE
   static const BaseType_t app_cpu = 0;
 #else
@@ -19,9 +22,13 @@
 #define QUEUE_LEN 255
 #define msg_queue_led_pin LED_BUILTIN // TODO: Replace with pin to control external LED
 static QueueHandle_t msg_queue;
-static SemaphoreHandle_t mutex; // The serial monitor is a shared resource, need a mutex to lock between task-sharing
+static SemaphoreHandle_t serial_mutex; // The serial monitor is a shared resource, need a mutex to lock between task-sharing
+static SemaphoreHandle_t can_mutex; // SAB rear and CAN tasks both need to block CAN bus sharing
 
-// ESP-Now
+/**
+ * @brief: ESP-Now
+ */
+
 #include <esp_now.h>
 #include <WiFi.h>
 
@@ -37,12 +44,57 @@ transmit_msg_t msg;
 
 void data_sent(const uint8_t *mac_addr, esp_now_send_status_t status);
 
-// CAN bus
+/**
+ * @brief: CAN bus
+ */
+
 // Reference: https://docs.espressif.com/projects/esp-idf/en/release-v3.3/api-reference/peripherals/can.html
+// Using built-in ESP32 CAN library
 #include "driver/gpio.h"
 #include "driver/can.h"
+// TODO: verify pins
 #define CAN_TX GPIO_NUM_17
 #define CAN_RX GPIO_NUM_16
+can_message_t can_message_rx;
+
+/**
+ * @brief: SAB rear
+ */
+
+/*
+ * Sensor Acquisition Board Rear Ports:               Adafruit Huzzah32 Pin Number:
+ * 0: Ambient Air Humidity                            N/A
+ * 1: Ambient Air Temperature                         N/A
+ * 2: Back-Left Suspension Linear Potentiometer       N/A
+ * 3: Back-Right Suspension Linear Potentiometer      N/A
+ */
+#include "SAB_readings_rear.h"
+#include "CAN_ID.h"
+#include "Metro.h"
+Metro timer_rear_update = Metro(200);
+can_message_t can_message_tx;
+SAB_readings_rear sab_readings_rear;
+
+// Initialize LEDs
+// TODO: verify pins
+#define CAN_LED 5
+#define SENSOR_1_CHANNEL GPIO_NUM_12
+#define SENSOR_2_CHANNEL GPIO_NUM_27
+#define SENSOR_3_CHANNEL GPIO_NUM_33
+#define SENSOR_4_CHANNEL GPIO_NUM_15
+#define ALPHA 0.75  // Adjust Filtering Strength (Higher = More Filtering)
+// #define INPUT_TO_5000mV 5.9082, expression: 3.3V/(30/11)V * 3.3V/1024counts * 5V/3.3V * 1000mV/1V = 5.9082, used just for reference
+// Functions scale value up by 1000, will get scaled down 1000 later in parser
+inline float get_sensor1_value() {return 0.0;}   // Needs to be implemented for cooling loop fluid temp
+inline float get_sensor2_value() {return (analogRead(SENSOR_2_CHANNEL) * -0.43003 + 190.95588) * 1000;} // DO NOT CHANGE THIS W/O SPECIAL REASON
+inline float get_sensor3_value() {return (analogRead(SENSOR_3_CHANNEL) * 0.059312 + 3.0) * 1000;}       // DO NOT CHANGE THIS W/O SPECIAL REASON
+inline float get_sensor4_value() {return (analogRead(SENSOR_4_CHANNEL) * 0.059312 + 3.0) * 1000;}       // DO NOT CHANGE THIS W/O SPECIAL REASON
+
+// Variables to store filtered values
+float filtered_sensor1_reading{};
+float filtered_sensor2_reading{};
+float filtered_sensor3_reading{};
+float filtered_sensor4_reading{};
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 // Task Functions
@@ -54,9 +106,9 @@ void transmit_message(void * no_params) {
   WiFi.mode(WIFI_STA);
   
   if (esp_now_init() != ESP_OK) {
-    xSemaphoreTake(mutex, portMAX_DELAY);
+    xSemaphoreTake(serial_mutex, portMAX_DELAY);
     Serial.println("Error initializing ESP-NOW");
-    xSemaphoreGive(mutex);
+    xSemaphoreGive(serial_mutex);
     return;
   }
 
@@ -67,9 +119,9 @@ void transmit_message(void * no_params) {
   peerInfo.channel = 0;  
   peerInfo.encrypt = false;     
   if (esp_now_add_peer(&peerInfo) != ESP_OK){
-    xSemaphoreTake(mutex, portMAX_DELAY);
+    xSemaphoreTake(serial_mutex, portMAX_DELAY);
     Serial.println("Failed to add peer");
-    xSemaphoreGive(mutex);
+    xSemaphoreGive(serial_mutex);
     return;
   }
 
@@ -78,10 +130,10 @@ void transmit_message(void * no_params) {
       // Determines outcome of transaction
       esp_err_t outcome = esp_now_send(broadcastAddress, (uint8_t *) &msg, sizeof(msg));
       
-      xSemaphoreTake(mutex, portMAX_DELAY);
+      xSemaphoreTake(serial_mutex, portMAX_DELAY);
       if (outcome == ESP_OK) Serial.println("Mesage sent successfully!");
       else Serial.println("Error sending the message");
-      xSemaphoreGive(mutex);
+      xSemaphoreGive(serial_mutex);
     }
   }
 }
@@ -102,63 +154,107 @@ void blink_msg_queue_led(void * no_params) {
     {
       digitalWrite(msg_queue_led_pin, LOW);
     }
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(100));
   }
 }
 
 /**
  * @brief: Spies on the CAN bus and adds incoming messages to the message queue
+ *         Transmits SAB rear readings to the CAN bus
  */
-void receive_can_messages(void * no_params) {
+void handle_can_messages(void * no_params) {
+  pinMode(CAN_LED, OUTPUT);
+
   //Initialize configuration structures using macro initializers
   can_general_config_t g_config = CAN_GENERAL_CONFIG_DEFAULT(CAN_TX, CAN_RX, CAN_MODE_NORMAL);
   can_timing_config_t t_config = CAN_TIMING_CONFIG_500KBITS();
   can_filter_config_t f_config = CAN_FILTER_CONFIG_ACCEPT_ALL();
 
   //Install CAN driver
-  xSemaphoreTake(mutex, portMAX_DELAY);
+  xSemaphoreTake(serial_mutex, portMAX_DELAY);
   if (can_driver_install(&g_config, &t_config, &f_config) == ESP_OK) {
       printf("Driver installed\n");
   } else {
       printf("Failed to install driver\n");
       return;
   }
-  xSemaphoreGive(mutex);
+  xSemaphoreGive(serial_mutex);
 
   //Start CAN driver
-  xSemaphoreTake(mutex, portMAX_DELAY);
+  xSemaphoreTake(serial_mutex, portMAX_DELAY);
   if (can_start() == ESP_OK) {
     Serial.println("Driver started");
+    digitalWrite(CAN_LED, HIGH);
   } else {
     Serial.println("Failed to start driver");
+    digitalWrite(CAN_LED, LOW);
     return;
   }
-  xSemaphoreGive(mutex);
+  xSemaphoreGive(serial_mutex);
 
   while (true) {
-    can_message_t can_message;
-    
-    if (can_receive(&can_message, portMAX_DELAY) == ESP_OK) {
+    // Transmit rear SAB readings
+    if (timer_rear_update.check()) {
+      xSemaphoreTake(can_mutex, portMAX_DELAY);
+      can_message_tx.identifier = ID_SAB_READINGS_REAR;
+      can_message_tx.flags = CAN_MSG_FLAG_NONE;
+      can_message_tx.data_length_code = sizeof(sab_readings_rear);
+      // Data has already been set in the rear sab functionality task
+      can_transmit(&can_message_tx, portMAX_DELAY);
+      xSemaphoreGive(can_mutex);
+    }
+
+    // Add CAN receive messages to queue
+    if (can_receive(&can_message_rx, portMAX_DELAY) == ESP_OK) {
       // Print out incoming can message to console
-      xSemaphoreTake(mutex, portMAX_DELAY);
-      Serial.print("ID is " + String(can_message.identifier) + ", Data: ");
-      for (int i = 0; i < can_message.data_length_code; i++) {
-        Serial.print(String(can_message.data[i]));
+      xSemaphoreTake(serial_mutex, portMAX_DELAY);
+      Serial.print("ID is " + String(can_message_rx.identifier) + ", Data: ");
+      for (int i = 0; i < can_message_rx.data_length_code; i++) {
+        Serial.print(String(can_message_rx.data[i]));
       }
       Serial.println();
-      xSemaphoreGive(mutex);
+      xSemaphoreGive(serial_mutex);
 
       // Process received message
       transmit_msg_t incoming_can_message;
-      incoming_can_message.can_id = can_message.identifier;
+      incoming_can_message.can_id = can_message_rx.identifier;
       for (int i = 0; i < 8; i++) {
-        incoming_can_message.raw_data[i] = (i < can_message.data_length_code) ? can_message.data[i] : 0u;
+        incoming_can_message.raw_data[i] = (i < can_message_rx.data_length_code) ? can_message_rx.data[i] : 0u;
       }
 
       // Add to queue
       xQueueSend(msg_queue, (void *) &incoming_can_message, portMAX_DELAY);
     }
   } // end while
+}
+
+void rear_sab_functionality(void * no_params) {
+  //Get initial readings
+  filtered_sensor1_reading = get_sensor1_value();
+  filtered_sensor2_reading = get_sensor2_value();
+  filtered_sensor3_reading = get_sensor3_value();
+  filtered_sensor4_reading = get_sensor4_value();
+
+  while (true) {
+    // Set SAB readings rear
+    sab_readings_rear.set_sensor_1(filtered_sensor1_reading);
+    sab_readings_rear.set_sensor_2(filtered_sensor2_reading);
+    sab_readings_rear.set_sensor_3(filtered_sensor3_reading);
+    sab_readings_rear.set_sensor_4(filtered_sensor4_reading);
+
+    xSemaphoreTake(can_mutex, portMAX_DELAY);
+    sab_readings_rear.write(can_message_tx.data);
+    xSemaphoreGive(can_mutex);
+
+    // Update sensor readings
+    filtered_sensor1_reading = ALPHA * filtered_sensor1_reading + (1 - ALPHA) * get_sensor1_value();
+    filtered_sensor2_reading = ALPHA * filtered_sensor2_reading + (1 - ALPHA) * get_sensor2_value();
+    filtered_sensor3_reading = ALPHA * filtered_sensor3_reading + (1 - ALPHA) * get_sensor3_value();
+    filtered_sensor4_reading = ALPHA * filtered_sensor4_reading + (1 - ALPHA) * get_sensor4_value();
+
+    // Delay task 100 ms
+    vTaskDelay(pdMS_TO_TICKS(100));
+  }
 }
 
 /**
@@ -168,7 +264,8 @@ void setup() {
   // Initialize resources
   Serial.begin(115200);
   msg_queue = xQueueCreate(QUEUE_LEN, sizeof(transmit_msg_t));
-  mutex = xSemaphoreCreateMutex();
+  serial_mutex = xSemaphoreCreateMutex();
+  can_mutex = xSemaphoreCreateMutex();
 
   // Create tasks
   xTaskCreatePinnedToCore(
@@ -181,11 +278,20 @@ void setup() {
     app_cpu);
   
   xTaskCreatePinnedToCore(
-    receive_can_messages,
-    "Receive CAN Messages",
+    handle_can_messages,
+    "Handle CAN Messages",
     2048,
     NULL,
     4,
+    NULL,
+    app_cpu);
+  
+  xTaskCreatePinnedToCore(
+    rear_sab_functionality,
+    "Rear SAB Functionality",
+    2048,
+    NULL,
+    3,
     NULL,
     app_cpu);
   
@@ -215,8 +321,8 @@ void loop() {
  * @param[in]: status - whether the ESP-Now message successfully transmitted or not
  */
 void data_sent(const uint8_t *mac_addr, esp_now_send_status_t status) {
-  xSemaphoreTake(mutex, portMAX_DELAY);
+  xSemaphoreTake(serial_mutex, portMAX_DELAY);
   Serial.print("\r\nStatus of Last Message Sent:\t");
   Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
-  xSemaphoreGive(mutex);
+  xSemaphoreGive(serial_mutex);
 }
