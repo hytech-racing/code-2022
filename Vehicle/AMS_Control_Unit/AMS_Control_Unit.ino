@@ -67,11 +67,11 @@ int can_voltage_group = 0; // counter for current group data to send for detaile
 int can_gpio_ic = 0; //counter for the current IC data to send for detailed voltage CAN message
 int can_gpio_group = 0; // counter for current group data to send for detailed voltage CAN message
 elapsedMillis can_bms_status_timer = 0;
-elapsedMillis can_bms_detailed_voltages_timer = 5;
-elapsedMillis can_bms_detailed_temps_timer = 10;
-elapsedMillis can_bms_voltages_timer = 15;
-elapsedMillis can_bms_temps_timer = 20;
-elapsedMillis can_bms_onboard_temps_timer = 25;
+elapsedMillis can_bms_detailed_voltages_timer = 2;
+elapsedMillis can_bms_detailed_temps_timer = 4;
+elapsedMillis can_bms_voltages_timer = 6;
+elapsedMillis can_bms_temps_timer = 8;
+elapsedMillis can_bms_onboard_temps_timer = 10;
 
 // CONSECUTIVE FAULT COUNTERS: counts successive faults; resets to zero if normal reading breaks fault chain
 unsigned long uv_fault_counter = 0;             // undervoltage fault counter
@@ -403,7 +403,7 @@ void write_CAN_messages() {
   bms_onboard_temperatures.set_average_temperature(total_board_temps * 100 / 4);
 
   //Write BMS_status message
-  if (can_bms_status_timer > 500) {
+  if (can_bms_status_timer > 100) {
     msg.id = ID_BMS_STATUS;
     msg.len = sizeof(bms_status);
     bms_status.write(msg.buf);
@@ -411,7 +411,7 @@ void write_CAN_messages() {
     can_bms_status_timer = 0;
   }
   // Write BMS_voltages message
-  if (can_bms_voltages_timer > 1000) {
+  if (can_bms_voltages_timer > 5) {
     msg.id = ID_BMS_VOLTAGES;
     msg.len = sizeof(bms_voltages);
     bms_voltages.write(msg.buf);
@@ -419,7 +419,7 @@ void write_CAN_messages() {
     can_bms_voltages_timer = 0;
   }
   // Write BMS_temperatures message
-  if (can_bms_temps_timer > 1000) {
+  if (can_bms_temps_timer > 25) {
     msg.id = ID_BMS_TEMPERATURES;
     msg.len = sizeof(bms_temperatures);
     bms_temperatures.write(msg.buf);
@@ -427,7 +427,7 @@ void write_CAN_messages() {
     can_bms_temps_timer = 0;
   }
   // Write BMS_onboard_temperatures message
-  if (can_bms_onboard_temps_timer > 1000) {
+  if (can_bms_onboard_temps_timer > 50) {
     msg.id = ID_BMS_ONBOARD_TEMPERATURES;
     msg.len = sizeof(bms_onboard_temperatures);
     bms_onboard_temperatures.write(msg.buf);
@@ -435,11 +435,11 @@ void write_CAN_messages() {
     can_bms_onboard_temps_timer = 0;
   }
   // write detailed voltages for one IC group
-  if (can_bms_detailed_voltages_timer > 50) {
+  if (can_bms_detailed_voltages_timer > 10) {
     write_CAN_detailed_voltages();
     can_bms_detailed_voltages_timer = 0;
   }
-  if (can_bms_detailed_temps_timer > 1000) {
+  if (can_bms_detailed_temps_timer > 40) {
     write_CAN_detailed_temps();
     can_bms_detailed_temps_timer = 0;
   }
