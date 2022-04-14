@@ -18,13 +18,13 @@ uint8_t buf[8] = {0};
 //mcu_status 8 bytes
 
 // Test each can error code (including inertia read)
-#define ERROR_TEST 1
+#define ERROR_TEST 0
 int error = 0;
 // Test inertia switch CAN message flag
 #define INERTIA_TEST 0
 int status = 0;
 // Test non error codes
-#define NON_ERROR_TEST 0
+#define NON_ERROR_TEST 1
 // Test buzzer control from CAN
 #define BUZZER_TEST 0
 // Test button inputs
@@ -52,7 +52,7 @@ void loop() {
   if (ERROR_TEST) {
     switch(error) {
       // Mc err send
-      case 0: 
+      case 0:
           mc_fault_codes.set_post_fault_lo(0x1);
           mc_fault_test();
           Serial.println(dashboard_status.get_mc_error_led());
@@ -66,9 +66,9 @@ void loop() {
         mcu_status_test();
         Serial.println(dashboard_status.get_ams_led());
         error++;
-        Serial.println("AMS");
-        mcu_status.load(buf); 
-        
+        //Serial.println("Here");
+        mcu_status.load(buf);
+
         break;
       // IMD err send
       case 2:
@@ -220,7 +220,7 @@ inline void read_msg() {
   // Can return message availability check
   while(!CAN.available()) {
     delay(5);
-  }  
+  }
   // Read in return message and print to console
   CAN.read(msg);
   msg_print(false);
