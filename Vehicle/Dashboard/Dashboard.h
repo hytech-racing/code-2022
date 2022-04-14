@@ -28,8 +28,18 @@
 #define SHUTDOWN_H_READ A7
 #define INERTIA_READ A1
 
+// 7-segment Fault Codes
+#define AMS_SEG 1
+#define IMD_SEG 2
+#define MC_GATE_SEG 3
+#define MC_UNDER_VOLTAGE_SEG 4
+#define MC_OVER_SPEED_SEG 5
+#define MC_OVER_TEMP_SEG 6
+#define MC_GENERAL_SEG 7
+#define INERTIA_SEG 8
+
 // IO Expander Number Encodings
-// 1 = Inertia, 2 = MC Err, 3 = Inertia, 4 = IMD, ..., 10 = default off state
+// 1 = AMS, 2 = IMD, 3 = MC Run Gate Fault, 4 = MC Run Undervoltage, 5 = MC Run Overspeed, 6 = MC Run Overtemp, 7 = MC General, 8 = Inertia ..., 10 = default off state
 uint8_t number_encodings[11] = {0b01000000, 0b01111001, 0b00100100, 0b00110000, 0b00011001, 0b00010010, 0b00000010, 0b01111000, 0b10000000, 0b00011000, 0b11111111};
 uint8_t display_list[11] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
 

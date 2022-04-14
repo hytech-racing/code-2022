@@ -194,7 +194,7 @@ inline void mcu_status_received(){
     if (!mcu_status.get_bms_ok_high()){
         led_ams.setMode(BLINK_MODES::ON);
         dashboard_status.set_ams_led(static_cast<uint8_t>(BLINK_MODES::ON));
-        display_list[4] = 1;
+        display_list[AMS_SEG] = 1;
         timer_led_ams.reset();
     }
     // else if (init_ams){
@@ -205,14 +205,14 @@ inline void mcu_status_received(){
     else if (led_ams.getMode() != BLINK_MODES::OFF && timer_led_ams.check()){
         led_ams.setMode(BLINK_MODES::SLOW);
         dashboard_status.set_ams_led(static_cast<uint8_t>(BLINK_MODES::SLOW));
-        display_list[4] = 0;
+        display_list[AMS_SEG] = 0;
     }
 
     //IMD LED
     if (!mcu_status.get_imd_ok_high()){
         led_imd.setMode(BLINK_MODES::ON);
         dashboard_status.set_imd_led(static_cast<uint8_t>(BLINK_MODES::ON));
-        display_list[3] = 1;
+        display_list[IMD_SEG] = 1;
         timer_led_imd.reset();
     }
     // else if (init_imd){
@@ -223,7 +223,7 @@ inline void mcu_status_received(){
     else if (led_imd.getMode() != BLINK_MODES::OFF && timer_led_imd.check()){
         led_imd.setMode(BLINK_MODES::SLOW);
         dashboard_status.set_imd_led(static_cast<uint8_t>(BLINK_MODES::SLOW));
-        display_list[3] = 0;
+        display_list[IMD_SEG] = 0;
     }
 
     //Start LED
@@ -288,13 +288,16 @@ inline void mc_fault_codes_received(){
     if (is_mc_err){
         led_mc_err.setMode(BLINK_MODES::ON);
         dashboard_status.set_mc_error_led(static_cast<uint8_t>(BLINK_MODES::ON));
-        display_list[2] = 1;
+        set_MC_segment();
         timer_led_mc_err.reset();   
     // display fault for 1 second and then it clears
     } else if (led_mc_err.getMode() != BLINK_MODES::OFF && timer_led_mc_err.check()){
         led_mc_err.setMode(BLINK_MODES::OFF);
         dashboard_status.set_mc_error_led(static_cast<uint8_t>(BLINK_MODES::OFF));
-        display_list[2] = 0;
+        // disable all MC Err 7-seg errors
+        for (int i = 3; i < 8; i++) {
+            display_list[i] = 0;
+        }
     }
 
     /*if (is_mc_err){
@@ -308,14 +311,28 @@ inline void mc_fault_codes_received(){
     }*/
 }
 
+inline void set_MC_segment() {
+    if (mc_fault_codes.get_run_lo_hardware_gatedesaturation_fault()) {
+        display_list[MC_GATE_SEG] = 1; 
+    } else if (mc_fault_codes.get_run_lo_undervoltage_fault()) {
+        display_list[MC_UNDER_VOLTAGE_SEG] = 1;
+    } else if (mc_fault_codes.get_run_lo_motor_overspeed_fault()) {
+        display_list[MC_OVER_SPEED_SEG] = 1;
+    } else if (mc_fault_codes.get_run_lo_motor_overtemperature_fault()) {
+        display_list[MC_OVER_TEMP_SEG] = 1;
+    } else {
+        display_list[MC_GENERAL_SEG] = 1;
+    }
+}
+
 inline void inertia_status() {
     if (INERTIA_READ && !SHUTDOWN_H_READ) {
         led_inertia.setMode(BLINK_MODES::ON);
         dashboard_status.set_inertia_led(static_cast<uint8_t>(BLINK_MODES::ON));
-        display_list[1] = 1;
+        display_list[INERTIA_SEG] = 1;
     } else {
         led_inertia.setMode(BLINK_MODES::OFF);
         dashboard_status.set_inertia_led(static_cast<uint8_t>(BLINK_MODES::ON));
-        display_list[1] = 0;
+        display_list[INERTIA_SEG] = 0;
     }
 }
