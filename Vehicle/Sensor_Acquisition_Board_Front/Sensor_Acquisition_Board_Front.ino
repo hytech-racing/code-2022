@@ -45,7 +45,7 @@ float filtered_sensor2_reading{};
 
 // Timers
 Metro timer_SAB_front = Metro(200);
-Metro timer_IMU = Metro(50);
+Metro timer_IMU = Metro(1);
 // Metro timer_adafruit_gps = Metro(200);
 
 void swap_bytes(uint8_t *low_byte, uint8_t high_byte);
