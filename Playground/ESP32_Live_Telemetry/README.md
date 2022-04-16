@@ -8,7 +8,7 @@ ESP-Now is limited to about 200-500 meters outdoors, however, if there is Wi-Fi 
 Files:
 - ESP32_get_mac_address: Run once on each ESP32 to get their MAC addresses, needed to be set in ESP32_transmitter
 - ESP32_transmitter: RTOS-based code to collect data from four analog sensors, read from the CAN bus, establish direct comms, and send msgs up
-- ESP32_receiver: RTOS-based code to receive raw messages, call the Python C-API and the python parser to parse them, and print to serial
+- ESP32_receiver: RTOS-based code to receive raw messages vis ESP-NOW and send them over to a laptop via serial comms
 - ESP32_test_transmitter: Example code to send random messages to a receiver, source: https://microcontrollerslab.com/esp32-esp-now-tutorial-arduino-ide/
 - ESP32_test_receiver: Example code to receive ESP-Now messages, source: https://microcontrollerslab.com/esp32-esp-now-tutorial-arduino-ide/
 - ESP32_test_rear_sab_functionality: ESP32 as the rear SAB Teensy 3.2. No additional features, just analog processing and CAN functionality.
