@@ -63,10 +63,10 @@ can_message_t can_message_rx;
 
 /*
  * Sensor Acquisition Board Rear Ports:               Adafruit Huzzah32 Pin Number:
- * 0: Ambient Air Humidity                            N/A
- * 1: Ambient Air Temperature                         N/A
- * 2: Back-Left Suspension Linear Potentiometer       N/A
- * 3: Back-Right Suspension Linear Potentiometer      N/A
+ * 0: Cooling Loop Fluid Temperature                  A7 (GPIO_NUM_32)
+ * 1: Ambient Air Temperature                         A4 (GPIO_NUM_36)
+ * 2: Back-Left Suspension Linear Potentiometer       A3 (GPIO_NUM_39)
+ * 3: Back-Right Suspension Linear Potentiometer      A2 (GPIO_NUM_34)
  */
 #include "SAB_readings_rear.h"
 #include "CAN_ID.h"
@@ -75,7 +75,7 @@ Metro timer_rear_update = Metro(200);
 can_message_t can_message_tx;
 SAB_readings_rear sab_readings_rear;
 
-// Initialize LEDs
+// Pin definitions
 #define CAN_LED          GPIO_NUM_13
 #define SENSOR_1_CHANNEL GPIO_NUM_32
 #define SENSOR_2_CHANNEL GPIO_NUM_36

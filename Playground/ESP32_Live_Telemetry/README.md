@@ -11,8 +11,10 @@ Files:
 - ESP32_receiver: RTOS-based code to receive raw messages, call the Python C-API and the python parser to parse them, and print to serial
 - ESP32_test_transmitter: Example code to send random messages to a receiver, source: https://microcontrollerslab.com/esp32-esp-now-tutorial-arduino-ide/
 - ESP32_test_receiver: Example code to receive ESP-Now messages, source: https://microcontrollerslab.com/esp32-esp-now-tutorial-arduino-ide/
+- ESP32_test_rear_sab_functionality: ESP32 as the rear SAB Teensy 3.2. No additional features, just analog processing and CAN functionality.
 ## Setup
-To upload and setup Arduino IDE for ESP32, follow instructions from the link here: https://randomnerdtutorials.com/installing-the-esp32-board-in-arduino-ide-windows-instructions/
+- To upload and setup Arduino IDE for ESP32, follow instructions from the link here: https://randomnerdtutorials.com/installing-the-esp32-board-in-arduino-ide-windows-instructions/
+- Ignore driver/can.h deprecation warning when verifying/uploading; the driver/twai.h library is not very mature yet. For more info: https://github.com/espressif/esp-idf/issues/5580
 ## Running List of ESP32 MAC Addresses
 Because ESP-Now requires MAC addresses to be directly called in the code for direct communications, here's a list to keep track:
 - Transmitter MAC(s):
