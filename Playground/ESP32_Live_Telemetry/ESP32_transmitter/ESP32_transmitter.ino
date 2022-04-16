@@ -19,8 +19,10 @@
   static const BaseType_t app_cpu = 1;
 #endif
 
+#include "driver/gpio.h"
+
 #define QUEUE_LEN 255
-#define msg_queue_led_pin LED_BUILTIN // TODO: Replace with pin to control external LED
+#define QUEUE_LED GPIO_NUM_11
 static QueueHandle_t msg_queue;
 static SemaphoreHandle_t serial_mutex; // The serial monitor is a shared resource, need a mutex to lock between task-sharing
 static SemaphoreHandle_t can_mutex; // SAB rear and CAN tasks both need to block CAN bus sharing
@@ -50,9 +52,7 @@ void data_sent(const uint8_t *mac_addr, esp_now_send_status_t status);
 
 // Reference: https://docs.espressif.com/projects/esp-idf/en/release-v3.3/api-reference/peripherals/can.html
 // Using built-in ESP32 CAN library
-#include "driver/gpio.h"
 #include "driver/can.h"
-// TODO: verify pins
 #define CAN_TX GPIO_NUM_17
 #define CAN_RX GPIO_NUM_16
 can_message_t can_message_rx;
@@ -76,19 +76,19 @@ can_message_t can_message_tx;
 SAB_readings_rear sab_readings_rear;
 
 // Initialize LEDs
-// TODO: verify pins
-#define CAN_LED 5
-#define SENSOR_1_CHANNEL GPIO_NUM_12
-#define SENSOR_2_CHANNEL GPIO_NUM_27
-#define SENSOR_3_CHANNEL GPIO_NUM_33
-#define SENSOR_4_CHANNEL GPIO_NUM_15
+#define CAN_LED          GPIO_NUM_13
+#define SENSOR_1_CHANNEL GPIO_NUM_32
+#define SENSOR_2_CHANNEL GPIO_NUM_36
+#define SENSOR_3_CHANNEL GPIO_NUM_39
+#define SENSOR_4_CHANNEL GPIO_NUM_34
 #define ALPHA 0.75  // Adjust Filtering Strength (Higher = More Filtering)
 // #define INPUT_TO_5000mV 5.9082, expression: 3.3V/(30/11)V * 3.3V/1024counts * 5V/3.3V * 1000mV/1V = 5.9082, used just for reference
 // Functions scale value up by 1000, will get scaled down 1000 later in parser
+#define TICKS_4096_TO_1024 (4096 / 1024)         // ESP32 ADC translates to 4096 ticks per 3.3V instead of Teensy's 1024 ticks per 3.3V
 inline float get_sensor1_value() {return 0.0;}   // Needs to be implemented for cooling loop fluid temp
-inline float get_sensor2_value() {return (analogRead(SENSOR_2_CHANNEL) * -0.43003 + 190.95588) * 1000;} // DO NOT CHANGE THIS W/O SPECIAL REASON
-inline float get_sensor3_value() {return (analogRead(SENSOR_3_CHANNEL) * 0.059312 + 3.0) * 1000;}       // DO NOT CHANGE THIS W/O SPECIAL REASON
-inline float get_sensor4_value() {return (analogRead(SENSOR_4_CHANNEL) * 0.059312 + 3.0) * 1000;}       // DO NOT CHANGE THIS W/O SPECIAL REASON
+inline float get_sensor2_value() {return (analogRead(SENSOR_2_CHANNEL) / TICKS_4096_TO_1024 * -0.43003 + 190.95588) * 1000;} // DO NOT CHANGE THIS W/O SPECIAL REASON
+inline float get_sensor3_value() {return (analogRead(SENSOR_3_CHANNEL) / TICKS_4096_TO_1024 * 0.059312 + 3.0) * 1000;}       // DO NOT CHANGE THIS W/O SPECIAL REASON
+inline float get_sensor4_value() {return (analogRead(SENSOR_4_CHANNEL) / TICKS_4096_TO_1024 * 0.059312 + 3.0) * 1000;}       // DO NOT CHANGE THIS W/O SPECIAL REASON
 
 // Variables to store filtered values
 float filtered_sensor1_reading{};
@@ -143,16 +143,16 @@ void transmit_message(void * no_params) {
  *         Waits 100 ms before checking again if LED is toggled
  */
 void blink_msg_queue_led(void * no_params) {
-  pinMode(msg_queue_led_pin, OUTPUT);
+  pinMode(QUEUE_LED, OUTPUT);
 
   while (true) {
     if (uxQueueMessagesWaiting(msg_queue) > 0)
     {
-      digitalWrite(msg_queue_led_pin, HIGH);
+      digitalWrite(QUEUE_LED, HIGH);
     }
     else
     {
-      digitalWrite(msg_queue_led_pin, LOW);
+      digitalWrite(QUEUE_LED, LOW);
     }
     vTaskDelay(pdMS_TO_TICKS(100));
   }
