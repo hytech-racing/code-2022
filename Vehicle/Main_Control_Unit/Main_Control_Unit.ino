@@ -21,9 +21,9 @@
 // constants to define for different operation
 
 #define DRIVER DAVID
-#define TORQUE_1 75
-#define TORQUE_2 85
-#define TORQUE_3 90
+#define TORQUE_1 100
+#define TORQUE_2 130
+#define TORQUE_3 160
 
 // set to true or false for debugging
 #define DEBUG true
