@@ -396,7 +396,7 @@ void write_CAN_messages() {
   bms_voltages.set_total(total_voltage / 100);
   // set temperature message values
   bms_temperatures.set_low_temperature(gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
-  bms_temperatures.set_high_temperature(gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
+  bms_temperatures.set_high_temperature(gpio_temps[max_thermistor_location[0]][max_thermistor_location[1]] * 100);
   bms_temperatures.set_average_temperature(total_thermistor_temps * 100 / 32);
   // set onboard temperature message values
   bms_onboard_temperatures.set_low_temperature(gpio_temps[min_board_temp_location[0]][min_board_temp_location[1]] * 100);
