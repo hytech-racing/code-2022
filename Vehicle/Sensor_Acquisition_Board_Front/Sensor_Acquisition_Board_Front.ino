@@ -45,7 +45,7 @@ float filtered_sensor2_reading{};
 
 // Timers
 Metro timer_SAB_front = Metro(200);
-Metro timer_IMU = Metro(1);
+Metro timer_IMU = Metro(5);
 // Metro timer_adafruit_gps = Metro(200);
 
 void swap_bytes(uint8_t *low_byte, uint8_t high_byte);
@@ -92,8 +92,8 @@ void setup() {
   filtered_sensor2_reading = get_sensor2_value();
 
   //Set permanent outgoing IMU CAN msg ids
-  imu_accel_msg.id = 0x9F;
-  imu_gyro_msg.id = ID_IMU_GYROSCOPE;
+  imu_accel_msg.id = 0x9E;
+  imu_gyro_msg.id = 0x9F;
 }
 
 void loop() {
@@ -177,7 +177,7 @@ void loop() {
 
     // Write both CAN messages
     CAN_Vehicle.write(imu_accel_msg);
-    //CAN_Vehicle.write(imu_gyro_msg);
+    CAN_Vehicle.write(imu_gyro_msg);
   }
 
   // Software analog filtering
