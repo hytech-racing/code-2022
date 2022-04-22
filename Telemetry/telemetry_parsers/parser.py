@@ -998,8 +998,8 @@ def parse_message(raw_id, raw_message):
 
     if raw_id == "100": return parse_ID_EM_MEASUREMENT(raw_message)
     if raw_id == "400": return parse_ID_EM_STATUS(raw_message)
-    if raw_id == "9F": return parse_ID_IMU_ACCELEROMETER(raw_message)
-    if raw_id == "471": return parse_ID_IMU_GYROSCOPE(raw_message)
+    if raw_id == "9E": return parse_ID_IMU_ACCELEROMETER(raw_message)
+    if raw_id == "9F": return parse_ID_IMU_GYROSCOPE(raw_message)
 
     # Should not come to here if CAN ID was valid
     if DEBUG: print("UNFATAL ERROR: Invalid CAN ID: 0x" + raw_message)
