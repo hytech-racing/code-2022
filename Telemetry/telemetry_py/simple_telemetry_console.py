@@ -1,80 +1,117 @@
+'''
+@Author: Sophia Smith, Bo Han Zhu
+@Date: 4/23/2022
+@Description: HyTech custom python parser functions.
+@TODO: Extend UI to current live console display messages
+@TODO: Create new thread for incoming live messages instead of reading from CSV
+'''
+
+
 import PySimpleGUI as sg, sys
-import os
-import json
+import threading
+import time
 from os import path
+
 __file__ = sys.path[0]
+sys.path.insert(1, "../telemetry_parsers")
+from parser_functions import parse_message
 
-DATA_FILE = os.path.join(__file__, 'data.json')
-DATA_KEYS_TO_ELEMENT_KEYS = {'MODULE_A_TEMPERATURE': '-MODULE A TEMPERATURE-', 'MODULE_B_TEMPERATURE': '-MODULE B TEMPERATURE-','MODULE_C_TEMPERATURE': '-MODULE C TEMPERATURE-'}
+DICT = {
+    "RMS_INVERTER" : {
+        "MODULE_A_TEMPERATURE": "N/A",
+        "MODULE_B_TEMPERATURE": "N/A",
+        "MODULE_C_TEMPERATURE": "N/A"
+    },
+    "BATTERY_MANAGEMENT_SYSTEM": {
+        "BMS_AVERAGE_TEMPERATURE": "N/A",
+        "BMS_LOW_TEMPERATURE": "N/A",
+        "BMS_HIGH_TEMPERATURE": "N/A"
+    }
+}
 
+'''
+@brief: Helper function to search for keys in a nested dictionary
+@reference: https://stackoverflow.com/questions/49662970/how-can-i-search-for-specific-keys-in-this-nested-dictionary-in-python
+@param[in]: k - the key to search
+@param[in]: d - the (nested) dictionary
+@param[out]: true if found, false if not
+'''
+def recursive_lookup(k, d):
+    if k in d: return d[k]
+    for v in d.values():
+        if isinstance(v, dict):
+            a = recursive_lookup(k, v)
+            if a is not None: return a
+    return None
+
+'''
+@brief: Thread to read raw CSV line, parse it, and send event followed by pausing for 100 ms to GUI if match 
+        Sends event to close GUI upon CSV read completion
+        Requires a raw data CSV in the current directory with the name raw_data.csv
+@param[in]: window - the PySimpleGUI window obect
+'''
+def read_from_csv_thread(window):
+    infile = open("raw_data.csv", "r")
+    line_count =  1 # bypass first header line
+    raw_data_lines = infile.readlines()
+
+    while line_count < len(raw_data_lines):
+        raw_id = raw_data_lines[line_count].split(",")[1]
+        length = raw_data_lines[line_count].split(",")[2]
+        raw_message = raw_data_lines[line_count].split(",")[3]
+        raw_message = raw_message[:(int(length) * 2)] # Strip trailing end of line/file characters that may cause bad parsing
+        raw_message = raw_message.zfill(16) # Sometimes messages come truncated if 0s on the left. Append 0s so field-width is 16.
+        table = parse_message(raw_id, raw_message)
+        
+        if table != "INVALID_ID" and table != "UNPARSEABLE":
+            for i in range(len(table[1])):
+                name = table[1][i].upper()
+                data = str(table[2][i])
+                units = table[3][i]
+                if recursive_lookup(name, DICT):
+                    window.write_event_value("-Update Data-", [name, name + ":" + data + " " + units])
+                    time.sleep(0.1)
+
+        line_count += 1
+
+    window.write_event_value("-Read CSV Done-", "No data for you left")
+
+'''
+@brief: The main function to spawn the PySimpleGUI and handle events
+'''
 def main():
-    window, data = None, load_data(DATA_FILE)
+    sg.change_look_and_feel("Dark")
+    rms = [[sg.Text("RMS INVERTER", font="Any 15")]]
+    battery = [[sg.Text("BATTERY MANAGEMENT SYSTEM", font="Any 15")]]
+    
+    for label, value in DICT["RMS_INVERTER"].items():
+        rms.append([sg.Text(label+": " + value, justification="left", size=(35,1), key=label)])
+    for label, value in DICT["BATTERY_MANAGEMENT_SYSTEM"].items():
+        battery.append([sg.Text(label+": " + value, justification="left", size=(35,1), key=label)])
 
-    while True:             # Event Loop
-        if window is None:
-            window = create_main_window(data)
+    layout = [[sg.Column(rms), sg.Column(battery)]]
 
-        event, values = window.read()
+    window = sg.Window("Live Telemetry Console",size=(800, 400), resizable=True).Layout(layout)
 
-        if event in (sg.WIN_CLOSED, 'Exit'):
+    thread = threading.Thread(target=read_from_csv_thread, args=[window], daemon=True)
+    thread.start()
+
+    # Event Loop
+    while True:
+        event, values = window.read(timeout=100)
+
+        if event in (sg.WIN_CLOSED, "Exit"):
             break
-        if event in ('Update Data', 'Data'):
-            event, values = create_main_window(data).read(close=True)
-            if event == 'Save':
-                window.close()
-                window = None
-                save_settings(DATA_FILE, data, values)
+        elif event == "-Read CSV Done-":
+            thread.join(timeout=0)
+            break
+        elif event == "-Update Data-":
+            window[values["-Update Data-"][0]].update(values["-Update Data-"][1])
+            window.refresh()
+
     window.close()
 
-def load_data(data_files):
-    try:
-        with open(data_files, 'r') as f:
-            data1 = json.load(f)
-    except Exception as e:
-        print('Failed to load data...')
-    return data1
-
-def get_keys(dl, keys=None):
-    keys = keys or []
-    if isinstance(dl, dict):
-        keys += dl.keys()
-        _ = [get_keys(x, keys) for x in dl.values()]
-    elif isinstance(dl, list):
-        _ = [get_keys(x, keys) for x in dl]
-    return list(set(keys))
-
-def create_main_window(data):
-    sg.change_look_and_feel('Dark')
-    form = sg.FlexForm("Live Telemetry Console")
-
-    def TextLabel(text): return sg.Text(text+':',justification='left', size=(50,1))
-    def TextLabel1(text,value): return sg.Text(text+': ' + value, justification='left', size=(35,1))
-    def DataLabel(text,value): return [TextLabel1(text,value)]
-
-    rms_kv, battery_kv = {}, {}
-    rms= [[sg.Text('RMS INVERTER', font='Any 15')]]
-    battery = [[sg.Text('BATTERY_MANAGEMENT_SYSTEM', font='Any 15')]]
-
-    for key, value in data['RMS_INVERTER'].items():
-        rms_kv[key] = value
-        rms.append(DataLabel(key,str(value)))
-
-
-    for key, value in data['BATTERY_MANAGEMENT_SYSTEM'].items():
-        battery_kv[key] = value
-        battery.append(DataLabel(key,str(value)))
-
-    print(rms)
-
-    column1 = sg.Column(rms)
-    column2 = sg.Column(battery)
-    layout = [[column1, column2]]
-
-    window = sg.Window('Live Telemetry Console',size=(800, 400), resizable=True).Layout(layout)
-    window.Read()
-
-    return window
-
-
-
+############################
+# Entry point to application
+############################
 main()

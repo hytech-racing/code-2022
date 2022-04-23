@@ -8,7 +8,7 @@
 """
 @Author: Bo Han Zhu
 @Date: 1/15/2022
-@Description: HyTech custom python parser. Reads CSVs from Raw_Data, parses them, and writes to Parsed_Data. Uses multiplier.py for multipliers.
+@Description: HyTech custom python parser functions.
 @TODO: Dashboard_status is not correct. Need more data to validate bit ordering.
 
 parse_folder --> parse_file --> parse_time
@@ -1297,23 +1297,3 @@ def create_mat():
         print('Saved struct in output.mat file.')
     except:
         print('FATAL ERROR: Failed to create .mat file')
-
-
-########################################################################
-########################################################################
-# Entry Point to Framework
-########################################################################
-########################################################################
-print("Welcome to HyTech 2022 Parsing Framework")
-print("The process will be of two parts: CSV to CSV parsing, and then CSV to MAT parsing.")
-print("The entire process will take about 5 mins for a test session's worth of data.")
-print("----------------------------------------------------------------------------------")
-print("Beginning CSV to CSV parsing...")
-parse_folder()
-print("Finished CSV to CSV parsing.")
-print("----------------------------------------------------------------------------------")
-print("Beginning CSV to MAT parsing...")
-create_mat()
-print("Finished CSV to MAT parsing.")
-print("----------------------------------------------------------------------------------")
-print("SUCCESS: Parsing Complete.")
