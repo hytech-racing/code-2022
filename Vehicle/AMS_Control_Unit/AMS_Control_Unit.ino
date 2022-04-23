@@ -4,7 +4,7 @@
    See LTC6811_2.cpp and LTC6811-2 Datasheet provided by Analog Devices for more details.
    Author: Zekun Li, Liwei Sun
    Version: 1.02
-   Since: 04/15/2022
+   Since: 04/23/2022
 */
 
 #include <Arduino.h>
