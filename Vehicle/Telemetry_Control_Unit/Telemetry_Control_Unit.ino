@@ -299,7 +299,7 @@ void parse_can_message() {
             case ID_EM_MEASUREMENT:                     em_measurement.load(msg_rx.buf);                    break;
             case ID_IMU_ACCELEROMETER:                  imu_accelerometer.load(msg_rx.buf);                 break;
             case ID_IMU_GYROSCOPE:                      imu_gyroscope.load(msg_rx.buf);                     break;
-            case 0x9F:                                  sab_readings_front.load(msg_rx.buf);                break;
+            case ID_SAB_READINGS_FRONT:                 sab_readings_front.load(msg_rx.buf);                break;
             case ID_SAB_READINGS_REAR:                  sab_readings_rear.load(msg_rx.buf);                 break;
             case ID_SAB_READINGS_GPS:                   sab_readings_gps.load(msg_rx.buf);                  break;
         }

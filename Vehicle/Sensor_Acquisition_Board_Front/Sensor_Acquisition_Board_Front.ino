@@ -92,17 +92,17 @@ void setup() {
   filtered_sensor2_reading = get_sensor2_value();
 
   //Set permanent outgoing IMU CAN msg ids
-  imu_accel_msg.id = 0x9E;
-  imu_gyro_msg.id = 0x9F;
+  imu_accel_msg.id = ID_IMU_ACCELEROMETER;
+  imu_gyro_msg.id = ID_IMU_GYROSCOPE;
 }
 
 void loop() {
   // Check if IMU CAN line sends message and save it accordingly if it does
   if (CAN_IMU.read(imu_msg)) {
-    if (imu_msg.id == ID_IMU_ACCELEROMETER) {
+    if (imu_msg.id == 0x470) {
       imu_accel_msg.len = imu_msg.len;
       memcpy(&imu_accel_msg.buf, &imu_msg.buf, sizeof(imu_msg.buf));
-    } else if (imu_msg.id == ID_IMU_GYROSCOPE) {
+    } else if (imu_msg.id == 0x471) {
       imu_gyro_msg.len = imu_msg.len;
       memcpy(&imu_gyro_msg.buf, &imu_msg.buf, sizeof(imu_msg.buf));
     }
