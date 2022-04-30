@@ -26,8 +26,9 @@
 #define TORQUE_3 160
 
 #define LAUNCH_CONTROL_START_MULTIPLIER 0.65
-#define LAUNCH_CONTROL_START_RPM 0
+#define LAUNCH_CONTROL_START_RPM 70
 #define LAUNCH_CONTROL_END_RPM 1000
+#define LAUNCH_CONTROL_BASE_TORQUE 110
 
 // set to true or false for debugging
 #define DEBUG true
@@ -144,12 +145,17 @@ static CAN_message_t tx_msg;
 uint32_t total_discharge;
 unsigned long previous_data_time;
 
+uint8_t lc_torque_table[600];
+
 void setup() {
   // no torque can be provided on startup
   mcu_status.set_max_torque(0);
   mcu_status.set_torque_mode(0);
   mcu_status.set_software_is_ok(true);
 
+  generate_lc_torque_lookup_table();
+
+  
   pinMode(BRAKE_LIGHT_CTRL, OUTPUT);
 
   // change to input if comparator is PUSH PULL
@@ -297,6 +303,14 @@ void loop() {
 #endif
 }
 
+inline void generate_lc_torque_lookup_table() {
+  for (int i = 0; i < 7; i++) {
+    lc_torque_table[i] = 110;
+  }
+  for (int i = 7; i < 600; i++) {
+    lc_torque_table[i] = (uint8_t)(0.00017057 * i * i - 0.00019551 * i + 123.281);
+  }
+}
 inline void setup_total_discharge() {
   total_discharge = 0;
   previous_data_time = millis();
@@ -710,6 +724,10 @@ float calculate_launch_control_torque_multiplier() {
   } else {
     return (LAUNCH_CONTROL_START_MULTIPLIER + (mc_rpm - LAUNCH_CONTROL_START_RPM) * slope);
   }
+
+
+  //1.7057e^-6 x^2 - 1.9551e^-5 x + 123.281
+  //110 below 70 rpm
 }
 
 
@@ -784,26 +802,41 @@ void set_state(MCU_STATE new_state) {
   }
 }
 
+//1.7057e^-6 x^2 - 1.9551e^-5 x + 123.281
+//110 below 70 rpm
 int calculate_torque() {
   int calculated_torque = 0;
+  int16_t mc_rpm = abs(mc_motor_position_information.get_motor_speed());
+  int max_torque = mcu_status.get_max_torque() * 10;
+  int launch_control_torque_limit = (int)(lc_torque_table[mc_rpm / 10]) * 10;
+  //  if (launch_control_torque_limit > max_torque) {
+  //    mcu_status.set_launch_ctrl_active(false);
+  //  }
+  int torque1 = map(round(filtered_accel1_reading), START_ACCELERATOR_PEDAL_1, END_ACCELERATOR_PEDAL_1, 0,  max_torque);
+  int torque2 = map(round(filtered_accel2_reading), START_ACCELERATOR_PEDAL_2, END_ACCELERATOR_PEDAL_2, 0,  max_torque);
 
-  const int max_torque = mcu_status.get_max_torque() * 10;
-  if (calculate_launch_control_torque_multiplier() + 0.01 >= 1.0) {
-    mcu_status.set_launch_ctrl_active(false);
+
+
+  //float launch_control_torque_limit = max_torque * calculate_launch_control_torque_multiplier();
+
+  //  if (mcu_status.get_launch_ctrl_active()) {
+  //    if (mc_rpm < LAUNCH_CONTROL_START_RPM) {
+  //      max_torque = LAUNCH_CONTROL_BASE_TORQUE * 10;
+  //    } else {
+  //      if (torque1 > launch_control_torque_limit) {
+  //        torque1 = (int)launch_control_torque_limit;
+  //      }
+  //      if (torque2 > launch_control_torque_limit) {
+  //        torque2 = (int)launch_control_torque_limit;
+  //      }
+  //    }
+  //  }
+  if (torque1 > launch_control_torque_limit) {
+    torque1 =  launch_control_torque_limit;
   }
-  int torque1 = map(round(filtered_accel1_reading), START_ACCELERATOR_PEDAL_1, END_ACCELERATOR_PEDAL_1, 0,  max_torque );
-  int torque2 = map(round(filtered_accel2_reading), START_ACCELERATOR_PEDAL_2, END_ACCELERATOR_PEDAL_2, 0,  max_torque );
-
-  float launch_control_torque_limit = max_torque * calculate_launch_control_torque_multiplier()
-  if (mcu_status.get_launch_ctrl_btn_active()) {
-    if (torque1 > launch_control_torque_limit) {
-      torque1 = (int)launch_control_torque_limit;
-    }
-    if (torque2 > launch_control_torque_limit) {
-      torque2 = (int)launch_control_torque_limit;
-    }
+  if (torque2 > launch_control_torque_limit) {
+    torque2 = launch_control_torque_limit;
   }
-
 
 #if DEBUG
   Serial.print("max torque: ");
