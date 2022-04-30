@@ -11,10 +11,22 @@ import PySimpleGUI as sg, sys
 import threading
 import time
 from os import path
+from enum import Enum
 
 __file__ = sys.path[0]
 sys.path.insert(1, "../telemetry_parsers")
 from parser_functions import parse_message
+
+# Connection type definitions
+class ConnectionType(Enum):
+    SERVER = 0
+    ESP32 = 1
+    TEST_CSV = 2
+    UNKNOWN = 3
+
+# Set this to whatever the script is running
+# @TODO: Make a screen at the beginning to let the user choose the type
+CONNECTION = ConnectionType.TEST_CSV.value
 
 DICT = {
     "RMS_INVERTER" : {
@@ -155,6 +167,7 @@ def read_from_csv_thread(window):
     infile = open("raw_data.csv", "r")
     line_count =  1 # bypass first header line
     raw_data_lines = infile.readlines()
+    window.write_event_value("-Connection Success-", "good job!")
 
     while line_count < len(raw_data_lines):
         raw_id = raw_data_lines[line_count].split(",")[1]
@@ -180,7 +193,7 @@ def read_from_csv_thread(window):
 @brief: The main function to spawn the PySimpleGUI and handle events
 '''
 def main():
-    sg.change_look_and_feel("Dark")
+    sg.change_look_and_feel("Black")
     title_font = ("Courier New", 12)
     text_font = ("Courier New", 8)
 
@@ -214,7 +227,7 @@ def main():
     for label, value in DICT["ENERGY_METER"].items():
         em.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
 
-    connection_text = sg.Text("CONSOLE STATUS: NOT CONNECTED", justification="left", pad=(5,10), text_color='red', font=title_font, key="-Connection-")
+    connection_text = sg.Text("CONSOLE STATUS: NOT CONNECTED", justification="left", pad=(5,10), text_color='red', font=title_font, key="-Connection Text-")
     column1 = sg.Column(rms, vertical_alignment='t')
     column2 = sg.Column(bms + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + main_ecu + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + glv_current_readings, vertical_alignment='t')
     column3 = sg.Column(dashboard + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + wheel_speed_sensors + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + sab + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + imu + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + em, vertical_alignment='t')
@@ -224,18 +237,29 @@ def main():
     window = sg.Window("HyTech Racing Live Telemetry Console", resizable=True).Layout(layout).Finalize()
     window.Maximize()
 
-    thread = threading.Thread(target=read_from_csv_thread, args=[window], daemon=True)
+    # Choose messaging thread based on connection type
+    if CONNECTION == ConnectionType.SERVER.value:
+        thread = None
+    elif CONNECTION == ConnectionType.ESP32.value:
+        sys.exit("ESP32 connection type currently not implemented. Terminating script")
+    elif CONNECTION == ConnectionType.TEST_CSV.value:
+        thread = threading.Thread(target=read_from_csv_thread, args=[window], daemon=True)
+    else:
+        sys.exit("Invalid connection source selection. Terminating script")
+
     thread.start()
 
     # Event Loop
     while True:
-        event, values = window.read(timeout=100)
+        event, values = window.read()
 
         if event in (sg.WIN_CLOSED, "Quit"):
             break
         elif event == "-Read CSV Done-":
             thread.join(timeout=0)
             break
+        elif event == "-Connection Success-":
+            window["-Connection Text-"].update("CONSOLE STATUS: CONNECTED", text_color="green")
         elif event == "-Update Data-":
             window[values["-Update Data-"][0]].update(values["-Update Data-"][1])
             window.refresh()
