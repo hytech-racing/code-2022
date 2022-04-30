@@ -311,6 +311,8 @@ inline void mc_fault_codes_received(){
     }*/
 }
 
+// Determine which MC error to display on 7-segment
+// Priority is preserved with if/else statements
 inline void set_MC_segment() {
     if (mc_fault_codes.get_run_lo_hardware_gatedesaturation_fault()) {
         display_list[MC_GATE_SEG] = 1; 
@@ -325,6 +327,7 @@ inline void set_MC_segment() {
     }
 }
 
+// Set status of inertia LED and 7-segment display based off shutdown read signals
 inline void inertia_status() {
     if (INERTIA_READ && !SHUTDOWN_H_READ) {
         led_inertia.setMode(BLINK_MODES::ON);
