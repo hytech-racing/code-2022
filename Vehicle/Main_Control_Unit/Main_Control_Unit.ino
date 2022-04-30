@@ -25,10 +25,9 @@
 #define TORQUE_2 130
 #define TORQUE_3 160
 
-#define LAUNCH_CONTROL_START_MULTIPLIER 0.65
-#define LAUNCH_CONTROL_START_RPM 70
+
 #define LAUNCH_CONTROL_END_RPM 1000
-#define LAUNCH_CONTROL_BASE_TORQUE 110
+
 
 // set to true or false for debugging
 #define DEBUG true
@@ -810,9 +809,9 @@ int calculate_torque() {
   int16_t mc_rpm = abs(mc_motor_position_information.get_motor_speed());
   int max_torque = mcu_status.get_max_torque() * 10;  
   int launch_control_torque_limit = (int)(lc_torque_table[mc_rpm / 10]) * 10;
-  //  if (launch_control_torque_limit > max_torque) {
-  //    mcu_status.set_launch_ctrl_active(false);
-  //  }
+  if (launch_control_torque_limit > max_torque) {
+    mcu_status.set_launch_ctrl_active(false);
+  }
   int torque1 = map(round(filtered_accel1_reading), START_ACCELERATOR_PEDAL_1, END_ACCELERATOR_PEDAL_1, 0,  max_torque);
   int torque2 = map(round(filtered_accel2_reading), START_ACCELERATOR_PEDAL_2, END_ACCELERATOR_PEDAL_2, 0,  max_torque);
 
@@ -820,24 +819,15 @@ int calculate_torque() {
 
   //float launch_control_torque_limit = max_torque * calculate_launch_control_torque_multiplier();
 
-  //  if (mcu_status.get_launch_ctrl_active()) {
-  //    if (mc_rpm < LAUNCH_CONTROL_START_RPM) {
-  //      max_torque = LAUNCH_CONTROL_BASE_TORQUE * 10;
-  //    } else {
-  //      if (torque1 > launch_control_torque_limit) {
-  //        torque1 = (int)launch_control_torque_limit;
-  //      }
-  //      if (torque2 > launch_control_torque_limit) {
-  //        torque2 = (int)launch_control_torque_limit;
-  //      }
-  //    }
-  //  }
-  if (torque1 > launch_control_torque_limit) {
-    torque1 =  launch_control_torque_limit;
+  if (mcu_status.get_launch_ctrl_active()) {
+    if (torque1 > launch_control_torque_limit) {
+      torque1 =  launch_control_torque_limit;
+     }
+    if (torque2 > launch_control_torque_limit) {
+      torque2 = launch_control_torque_limit;
+     }
   }
-  if (torque2 > launch_control_torque_limit) {
-    torque2 = launch_control_torque_limit;
-  }
+  
   
 #if DEBUG
   Serial.print("max torque: ");
@@ -863,7 +853,7 @@ int calculate_torque() {
   }
   int power_output = mc_rpm * 0.10472 * calculated_torque;
   if(power_output > 80000){
-    calculated torque = 80000 / (0.10472 * mc_rpm);
+    calculated_torque = 80000 / (0.10472 * mc_rpm);
   }
   if (calculated_torque < 0) {
     calculated_torque = 0;
