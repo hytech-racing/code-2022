@@ -27,7 +27,7 @@
 #define WATCHDOG_OUT 7
 #define TEENSY_OK 6
 #define STATUS 5
-#define AC_CURRENT 13
+#define AC_CURRENT 18
 
 #define LED A8
 
@@ -50,9 +50,6 @@ int watchdog_state = 0;
 bool charge_enable = false;
 
 static CAN_message_t rx_msg;
-static CAN_message_t tx_msg;
-FlexCAN CAN(500000);
-
 Metro update_ls = Metro(1000);
 Metro update_CAN = Metro(500);
 Metro update_watchdog = Metro(3);
