@@ -18,15 +18,116 @@ from parser_functions import parse_message
 
 DICT = {
     "RMS_INVERTER" : {
-        "MODULE_A_TEMPERATURE": "N/A",
-        "MODULE_B_TEMPERATURE": "N/A",
-        "MODULE_C_TEMPERATURE": "N/A"
+        "MODULE_A_TEMPERATURE": " ",
+        "MODULE_B_TEMPERATURE": " ",
+        "MODULE_C_TEMPERATURE": " ",
+        "GATE_DRIVER_BOARD_TEMPERATURE": " ",
+        "RTD_4_TEMPERATURE": " ",
+        "RTD_5_TEMPERATURE": " ",
+        "MOTOR_TEMPERATURE": " ",
+        "TORQUE_SHUDDER": " ",
+        "MOTOR_ANGLE": " ",
+        "MOTOR_SPEED": " ",
+        "ELEC_OUTPUT_FREQ": " ",
+        "DELTA_RESOLVER_FILTERED": " ",
+        "PHASE_A_CURRENT": " ",
+        "PHASE_B_CURRENT": " ",
+        "PHASE_C_CURRENT": " ",
+        "DC_BUS_CURRENT": " ",
+        "DC_BUS_VOLTAGE": " ",
+        "OUTPUT_VOLTAGE": " ",
+        "PHASE_AB_VOLTAGE": " ",
+        "PHASE_BC_VOLTAGE": " ",
+        "VSM_STATE": " ",
+        "INVERTER_STATE": " ",
+        "INVERTER_RUN_MODE": " ",
+        "INVERTER_ACTIVE_DISCHARGE_STATE": " ",
+        "INVERTER_COMMAND_MODE": " ",
+        "INVERTER_ENABLE_STATE": " ",
+        "INVERTER_ENABLE_LOCKOUT": " ",
+        "DIRECTION_COMMAND": " ",
+        "POST_FAULT_LO": " ",
+        "POST_FAULT_HI": " ",
+        "RUN_FAULT_LO": " ",
+        "RUN_FAULT_HI": " ",
+        "COMMANDED_TORQUE": " ",
+        "TORQUE_FEEDBACK": " ",
+        "RMS_UPTIME": " "
     },
     "BATTERY_MANAGEMENT_SYSTEM": {
-        "BMS_AVERAGE_TEMPERATURE": "N/A",
-        "BMS_LOW_TEMPERATURE": "N/A",
-        "BMS_HIGH_TEMPERATURE": "N/A"
-    }
+        "BMS_AVERAGE_TEMPERATURE": " ",
+        "BMS_LOW_TEMPERATURE": " ",
+        "BMS_HIGH_TEMPERATURE": " ",
+        "BMS_STATE": " ",
+        "BMS_ERROR_FLAGS": " ",
+        "BMS_CURRENT": " ",
+        "BMS_VOLTAGE_AVERAGE": " ",
+        "BMS_VOLTAGE_LOW": " ",
+        "BMS_VOLTAGE_HIGH": " ",
+        "BMS_VOLTAGE_TOTAL": " ",
+        "BMS_TOTAL_CHARGE": " ",
+        "BMS_TOTAL_DISCHARGE": " "
+    },
+    "MAIN_ECU": {
+        "IMD_OK_HIGH": " ",
+        "BMS_OK_HIGH": " ",
+        "BSPD_OK_HIGH": " ",
+        "SOFTWARE_OK_HIGH": " ",
+        "SHUTDOWN_D_ABOVE_THRESHOLD": " ",
+        "SHUTDOWN_E_ABOVE_THRESHOLD": " ",
+        "INVERTER_POWERED": " ",
+        "ACCELERATOR_PEDAL_1": " ",
+        "ACCELERATOR_PEDAL_2": " ",
+        "BRAKE_TRANSDUCER_1": " ",
+        "BRAKE_TRANSDUCER_2": " ",
+        "BRAKE_PEDAL_ACTIVE": " ",
+        "NO_ACCEL_IMPLAUSIBILITY": " ",
+        "NO_BRAKE_IMPLAUSIBILITY": " ",
+        "TORQUE_MODE": " ",
+        "MAX_TORQUE": " ",
+        "REQUESTED_TORQUE": " "
+    },
+    "GLV_CURRENT_READINGS": {
+        "ECU_CURRENT": " ",
+        "COOLING_CURRENT": " ",
+        "TEMPERATURE": " ",
+        "GLV_BATTERY_VOLTAGE": " "
+    },
+    "WHEEL_SPEED_SENSORS": {
+        "RPM_BACK_LEFT": " ",
+        "RPM_BACK_RIGHT": " ",
+        "RPM_FRONT_LEFT": " ",
+        "RPM_FRONT_RIGHT": " "
+    },
+    "SENSOR_ACQUISITION_BOARD": {
+        "FL_SUSP_LIN_POT": " ",
+        "FR_SUSP_LIN_POT": " ",
+        "BL_SUSP_LIN_POT": " ",
+        "BR_SUSP_LIN_POT": " ",
+        "COOLING_LOOP_FLUID_TEMP": " ",
+        "AMB_AIR_TEMP": " "
+    },
+    "RACEGRADE_IMU": {
+        "LAT_ACCEL": " ",
+        "LONG_ACCEL": " ",
+        "VERT_ACCEL": " ",
+        "YAW": " ",
+        "PITCH": " ",
+        "ROLL": " "
+    },
+    "ENERGY_METER": {
+        "CURRENT": " ",
+        "VOLTAGE": " ",
+        "CURRENT_GAIN": " ",
+        "VOLTAGE_GAIN": " ",
+        "OVERVOLTAGE": " ",
+        "OVERPOWER": " ",
+        "LOGGING": " "
+    },
+    "DASHBOARD": {
+        "SSOK_ABOVE_THRESHOLD": " ",
+        "SHUTDOWN_H_ABOVE_THRESHOLD": " "
+    },
 }
 
 '''
@@ -69,8 +170,7 @@ def read_from_csv_thread(window):
                 data = str(table[2][i])
                 units = table[3][i]
                 if recursive_lookup(name, DICT):
-                    window.write_event_value("-Update Data-", [name, name + ":" + data + " " + units])
-                    time.sleep(0.1)
+                    window.write_event_value("-Update Data-", [name, name.replace("_", " ") + ": " + data + " " + units])
 
         line_count += 1
 
@@ -81,17 +181,48 @@ def read_from_csv_thread(window):
 '''
 def main():
     sg.change_look_and_feel("Dark")
-    rms = [[sg.Text("RMS INVERTER", font="Any 15")]]
-    battery = [[sg.Text("BATTERY MANAGEMENT SYSTEM", font="Any 15")]]
+    title_font = ("Courier New", 12)
+    text_font = ("Courier New", 8)
+
+    rms = [[sg.Text("RMS INVERTER", pad=(0,2), font=title_font)]]
+    dashboard = [[sg.Text("DASHBOARD", pad=(0,2), font=title_font)]]
+    bms = [[sg.Text("BATTERY MANAGEMENT SYSTEM", pad=(0,2), font=title_font)]]
+    main_ecu = [[sg.Text("MAIN ECU", pad=(0,2), font=title_font)]]
+    glv_current_readings = [[sg.Text("GLV CURRENT READINGS", pad=(0,2), font=title_font)]]
+    wheel_speed_sensors = [[sg.Text("WHEEL SPEED SENSORS", pad=(0,2), font=title_font)]]
+    sab = [[sg.Text("SENSOR ACQUISITION BOARD", pad=(0,2), font=title_font)]]
+    imu = [[sg.Text("RACEGRADE IMU", pad=(0,2), font=title_font)]]
+    em = [[sg.Text("ENERGY METER", pad=(0,2), font=title_font)]]
+    
     
     for label, value in DICT["RMS_INVERTER"].items():
-        rms.append([sg.Text(label+": " + value, justification="left", size=(35,1), key=label)])
+        rms.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
     for label, value in DICT["BATTERY_MANAGEMENT_SYSTEM"].items():
-        battery.append([sg.Text(label+": " + value, justification="left", size=(35,1), key=label)])
+        bms.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+    for label, value in DICT["MAIN_ECU"].items():
+        main_ecu.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+    for label, value in DICT["DASHBOARD"].items():
+        dashboard.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+    for label, value in DICT["GLV_CURRENT_READINGS"].items():
+        glv_current_readings.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+    for label, value in DICT["WHEEL_SPEED_SENSORS"].items():
+        wheel_speed_sensors.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+    for label, value in DICT["SENSOR_ACQUISITION_BOARD"].items():
+        sab.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+    for label, value in DICT["RACEGRADE_IMU"].items():
+        imu.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+    for label, value in DICT["ENERGY_METER"].items():
+        em.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
 
-    layout = [[sg.Column(rms), sg.Column(battery)]]
+    connection_text = sg.Text("CONSOLE STATUS: NOT CONNECTED", justification="left", pad=(5,10), text_color='red', font=title_font, key="-Connection-")
+    column1 = sg.Column(rms, vertical_alignment='t')
+    column2 = sg.Column(bms + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + main_ecu + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + glv_current_readings, vertical_alignment='t')
+    column3 = sg.Column(dashboard + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + wheel_speed_sensors + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + sab + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + imu + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + em, vertical_alignment='t')
 
-    window = sg.Window("Live Telemetry Console",size=(800, 400), resizable=True).Layout(layout)
+    layout = [[connection_text], [column1, column2, column3]]
+
+    window = sg.Window("HyTech Racing Live Telemetry Console", resizable=True).Layout(layout).Finalize()
+    window.Maximize()
 
     thread = threading.Thread(target=read_from_csv_thread, args=[window], daemon=True)
     thread.start()
@@ -100,7 +231,7 @@ def main():
     while True:
         event, values = window.read(timeout=100)
 
-        if event in (sg.WIN_CLOSED, "Exit"):
+        if event in (sg.WIN_CLOSED, "Quit"):
             break
         elif event == "-Read CSV Done-":
             thread.join(timeout=0)
