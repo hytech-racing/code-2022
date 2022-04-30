@@ -303,11 +303,11 @@ void loop() {
 }
 
 inline void generate_lc_torque_lookup_table() {
-  for (int i = 0; i < 7; i++) {
-    lc_torque_table[i] = 110;
-  }
-  for (int i = 7; i < 600; i++) {
-    lc_torque_table[i] = (uint8_t)(0.00017057 * i * i - 0.00019551 * i + 123.281);
+ // for (int i = 0; i < 7; i++) {
+  //  lc_torque_table[i] = 110;
+ // }
+  for (int i = 0; i < 600; i++) {
+    lc_torque_table[i] = (uint8_t)(0.00017057 * i * i) - (0.00019551 * i) + (123.281);
   }
 }
 inline void setup_total_discharge() {
@@ -819,14 +819,14 @@ int calculate_torque() {
 
   //float launch_control_torque_limit = max_torque * calculate_launch_control_torque_multiplier();
 
-  if (mcu_status.get_launch_ctrl_active()) {
+  //if (mcu_status.get_launch_ctrl_active()) {
     if (torque1 > launch_control_torque_limit) {
       torque1 =  launch_control_torque_limit;
      }
     if (torque2 > launch_control_torque_limit) {
       torque2 = launch_control_torque_limit;
      }
-  }
+  //}
   
   
 #if DEBUG
@@ -851,10 +851,10 @@ int calculate_torque() {
   if (calculated_torque > max_torque) {
     calculated_torque = max_torque;
   }
-  int power_output = mc_rpm * 0.10472 * calculated_torque;
-  if(power_output > 80000){
-    calculated_torque = 80000 / (0.10472 * mc_rpm);
-  }
+//  int power_output = mc_rpm * 0.10472 * calculated_torque/10;
+//  if(power_output > 80000){
+//    calculated_torque = 80000 / (0.10472 * mc_rpm) *10 ;
+//  }
   if (calculated_torque < 0) {
     calculated_torque = 0;
   }
