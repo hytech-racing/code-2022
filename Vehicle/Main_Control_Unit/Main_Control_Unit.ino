@@ -309,6 +309,9 @@ inline void generate_lc_torque_lookup_table() {
   for (int i = 0; i < 600; i++) {
     lc_torque_table[i] = (uint8_t)(0.00017057 * i * i) - (0.00019551 * i) + (123.281);
   }
+ for (int i = 464; i < 600; i++) {
+    lc_torque_table[i] = 160;
+  }
 }
 inline void setup_total_discharge() {
   total_discharge = 0;
@@ -809,9 +812,6 @@ int calculate_torque() {
   int16_t mc_rpm = abs(mc_motor_position_information.get_motor_speed());
   int max_torque = mcu_status.get_max_torque() * 10;  
   int launch_control_torque_limit = (int)(lc_torque_table[mc_rpm / 10]) * 10;
-  if (launch_control_torque_limit > max_torque) {
-    mcu_status.set_launch_ctrl_active(false);
-  }
   int torque1 = map(round(filtered_accel1_reading), START_ACCELERATOR_PEDAL_1, END_ACCELERATOR_PEDAL_1, 0,  max_torque);
   int torque2 = map(round(filtered_accel2_reading), START_ACCELERATOR_PEDAL_2, END_ACCELERATOR_PEDAL_2, 0,  max_torque);
 
@@ -839,18 +839,10 @@ int calculate_torque() {
 #endif
 
   // torque values are greater than the max possible value, set them to max
-  if (torque1 > max_torque) {
-    torque1 = max_torque;
-  }
-  if (torque2 > max_torque) {
-    torque2 = max_torque;
-  }
+
   // compare torques to check for accelerator implausibility
   calculated_torque = (torque1 + torque2) / 2;
 
-  if (calculated_torque > max_torque) {
-    calculated_torque = max_torque;
-  }
 //  int power_output = mc_rpm * 0.10472 * calculated_torque/10;
 //  if(power_output > 80000){
 //    calculated_torque = 80000 / (0.10472 * mc_rpm) *10 ;
