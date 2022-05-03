@@ -992,14 +992,14 @@ def parse_message(raw_id, raw_message):
     if raw_id == "E7": return parse_ID_MCU_GPS_READINGS(raw_message)
     if raw_id == "EA": return parse_ID_MCU_WHEEL_SPEED(raw_message)
     if raw_id == "EB": return parse_ID_DASHBOARD_STATUS(raw_message)
-    if raw_id == "EC": return parse_ID_SAB_READINGS_FRONT(raw_message)
-    if raw_id == "ED": return parse_ID_SAB_READINGS_REAR(raw_message)
+    if raw_id == "92": return parse_ID_SAB_READINGS_FRONT(raw_message)
+    if raw_id == "93": return parse_ID_SAB_READINGS_REAR(raw_message)
     if raw_id == "EE": return parse_ID_SAB_READINGS_GPS(raw_message)
 
     if raw_id == "100": return parse_ID_EM_MEASUREMENT(raw_message)
     if raw_id == "400": return parse_ID_EM_STATUS(raw_message)
-    if raw_id == "470": return parse_ID_IMU_ACCELEROMETER(raw_message)
-    if raw_id == "471": return parse_ID_IMU_GYROSCOPE(raw_message)
+    if raw_id == "90": return parse_ID_IMU_ACCELEROMETER(raw_message)
+    if raw_id == "91": return parse_ID_IMU_GYROSCOPE(raw_message)
 
     # Should not come to here if CAN ID was valid
     if DEBUG: print("UNFATAL ERROR: Invalid CAN ID: 0x" + raw_message)
