@@ -1,9 +1,8 @@
 '''
 @Author: Sophia Smith, Bo Han Zhu
 @Date: 4/23/2022
-@Description: HyTech custom python parser functions.
+@Description: HyTech live telemetry console
 @TODO: Extend UI to current live console display messages
-@TODO: Create new thread for incoming live messages instead of reading from CSV
 '''
 
 
