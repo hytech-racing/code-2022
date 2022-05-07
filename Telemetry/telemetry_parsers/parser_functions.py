@@ -922,9 +922,9 @@ def parse_ID_IMU_ACCELEROMETER(raw_message):
     message = "IMU_accelerometer"
     labels = ["lat_accel", "long_accel", "vert_accel"]
     values = [
-        round(hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.IMU_ACCELEROMETER_ALL.value, 4),
         round(hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.IMU_ACCELEROMETER_ALL.value, 4),
-        round(hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.IMU_ACCELEROMETER_ALL.value, 4)
+        round(hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.IMU_ACCELEROMETER_ALL.value, 4),
+        round(hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.IMU_ACCELEROMETER_ALL.value, 4)
     ]
     units = ["m/s/s", "m/s/s", "m/s/s"]
     return [message, labels, values, units]
@@ -933,9 +933,9 @@ def parse_ID_IMU_GYROSCOPE(raw_message):
     message = "IMU_gyroscope"
     labels = ["yaw", "pitch", "roll"]
     values = [
-        round(hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.IMU_GYROSCOPE_ALL.value, 4),
         round(hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.IMU_GYROSCOPE_ALL.value, 4),
-        round(hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.IMU_GYROSCOPE_ALL.value, 4)
+        round(hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.IMU_GYROSCOPE_ALL.value, 4),
+        round(hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.IMU_GYROSCOPE_ALL.value, 4)
     ]
     units = ["deg/s", "deg/s", "deg/s"]
     return [message, labels, values, units]

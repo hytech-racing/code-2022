@@ -221,7 +221,8 @@ def mqtt_connection_thread(window):
 
         if data != -1:
             id = format(data[0], 'x').upper()
-            raw = format(struct.unpack(">1Q", data[5:13])[0], 'x').zfill(16)
+            size = data[4]
+            raw = format(struct.unpack(">1Q", data[5:13])[0], 'x')[:size*2].zfill(16)
 
             table = parse_message(id, raw)
             if table != "INVALID_ID" and table != "UNPARSEABLE":
