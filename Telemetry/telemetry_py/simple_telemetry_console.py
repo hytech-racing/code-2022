@@ -7,15 +7,20 @@
 '''
 
 
-import PySimpleGUI as sg, sys
+import PySimpleGUI as sg
 import threading
-import time
 from os import path
 from enum import Enum
+import paho.mqtt.client as mqtt
+import binascii
+import struct
+import sys
 
 __file__ = sys.path[0]
 sys.path.insert(1, "../telemetry_parsers")
 from parser_functions import parse_message
+sys.path.insert(1, '../telemetry_aws')
+from db import unpack
 
 # Connection type definitions
 class ConnectionType(Enum):
@@ -24,9 +29,14 @@ class ConnectionType(Enum):
     TEST_CSV = 2
     UNKNOWN = 3
 
+# AWS/MQTT Connection Definitions
+MQTT_SERVER = "ec2-3-134-2-166.us-east-2.compute.amazonaws.com"
+MQTT_PORT   = 1883
+MQTT_TOPIC  = 'hytech_car/telemetry'
+
 # Set this to whatever the script is running
 # @TODO: Make a screen at the beginning to let the user choose the type
-CONNECTION = ConnectionType.TEST_CSV.value
+CONNECTION = ConnectionType.SERVER.value
 
 DICT = {
     "RMS_INVERTER" : {
@@ -158,16 +168,16 @@ def recursive_lookup(k, d):
     return None
 
 '''
-@brief: Thread to read raw CSV line, parse it, and send event followed by pausing for 100 ms to GUI if match 
+@brief: Thread to read raw CSV line, parse it, and send event to GUI if match 
         Sends event to close GUI upon CSV read completion
         Requires a raw data CSV in the current directory with the name raw_data.csv
-@param[in]: window - the PySimpleGUI window obect
+@param[in]: window - the PySimpleGUI window object
 '''
 def read_from_csv_thread(window):
     infile = open("raw_data.csv", "r")
     line_count =  1 # bypass first header line
     raw_data_lines = infile.readlines()
-    window.write_event_value("-Connection Success-", "good job!")
+    window.write_event_value("-Test Connection Success-", "good job!")
 
     while line_count < len(raw_data_lines):
         raw_id = raw_data_lines[line_count].split(",")[1]
@@ -188,6 +198,60 @@ def read_from_csv_thread(window):
         line_count += 1
 
     window.write_event_value("-Read CSV Done-", "No data for you left")
+
+'''
+@brief: Thread to connect to MQTT broker on AWS EC2 instance.
+        Parses incoming messages and packages them as an event to the GUI if match.
+@param[in]: window - the PySimpleGUI window object
+'''
+def mqtt_connection_thread(window):
+    ##############################
+    # Paho MQTT Callback Functions
+    ##############################
+
+    '''
+    @brief: Callback function to handle MQTT messages. Runs them through the parser if valid and sends update event to GUI.
+    @param[in]: client - unused
+    @param[in]: userdata - unused
+    @param[in]: msg - the raw hexlified MQTT message
+    '''
+    def mqtt_message(client, userdata, msg):
+        frame = msg.payload[msg.payload.find(b',') + 1:-1]
+        frame = binascii.hexlify(frame)
+        data = unpack("".join(chr(c) for c in frame))
+
+        if data != -1:
+            id = format(data[0], 'x').upper()
+            raw = format(struct.unpack(">1Q", data[5:13])[0], 'x').zfill(16)
+
+            table = parse_message(id, raw)
+            if table != "INVALID_ID" and table != "UNPARSEABLE":
+                for i in range(len(table[1])):
+                    name = table[1][i].upper()
+                    data = str(table[2][i])
+                    units = table[3][i]
+                    if recursive_lookup(name, DICT):
+                        window.write_event_value("-Update Data-", [name, name.replace("_", " ") + ": " + data + " " + units])
+
+    '''
+    @brief: Callback function for MQTT connection success. Sends an connection succes event to the GUI.
+    @param[in]: client - the MQTT client object
+    @param[in]: userdata - unused
+    @param[in]: flags - unused
+    @param[in]: rc - unused
+    '''
+    def mqtt_connect(client, userdata, flags, rc):
+        window.write_event_value("-Connection Success-", "good job!")
+        client.subscribe(MQTT_TOPIC)
+
+    ################################
+    # Paho MQTT Setup and Connection
+    ################################
+    client = mqtt.Client()
+    client.on_connect = mqtt_connect
+    client.on_message = mqtt_message
+    client.connect(MQTT_SERVER, MQTT_PORT, 60)
+    client.loop_forever()
 
 '''
 @brief: The main function to spawn the PySimpleGUI and handle events
@@ -239,7 +303,7 @@ def main():
 
     # Choose messaging thread based on connection type
     if CONNECTION == ConnectionType.SERVER.value:
-        thread = None
+        thread = threading.Thread(target=mqtt_connection_thread, args=[window], daemon=True)
     elif CONNECTION == ConnectionType.ESP32.value:
         sys.exit("ESP32 connection type currently not implemented. Terminating script")
     elif CONNECTION == ConnectionType.TEST_CSV.value:
@@ -258,6 +322,8 @@ def main():
         elif event == "-Read CSV Done-":
             thread.join(timeout=0)
             break
+        elif event == "-Test Connection Success-":
+            window["-Connection Text-"].update("CONSOLE STATUS: TESTING", text_color="yellow")
         elif event == "-Connection Success-":
             window["-Connection Text-"].update("CONSOLE STATUS: CONNECTED", text_color="green")
         elif event == "-Update Data-":
