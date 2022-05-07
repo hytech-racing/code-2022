@@ -1,4 +1,4 @@
-/*
+4/*
  * @brief: Teensy code for the Front Sensor Acquisition Board.
  *         There are 2 suspension linear pots + the Adafruit GPS + the Racegrade IMU
  * 
@@ -47,7 +47,7 @@ float filtered_sensor2_reading{};
 
 // Timers
 Metro timer_SAB_front = Metro(200);
-Metro timer_IMU = Metro(200);
+Metro timer_IMU = Metro(5);
 // Metro timer_adafruit_gps = Metro(200);
 
 void swap_bytes(uint8_t *low_byte, uint8_t high_byte);
@@ -101,10 +101,10 @@ void setup() {
 void loop() {
   // Check if IMU CAN line sends message and save it accordingly if it does
   if (CAN_IMU.read(imu_msg)) {
-    if (imu_msg.id == ID_IMU_ACCELEROMETER) {
+    if (imu_msg.id == 0x470) {
       imu_accel_msg.len = sizeof(imu_accelerometer);
       memcpy(&imu_accel_msg.buf, &imu_msg.buf, sizeof(imu_msg.buf));
-    } else if (imu_msg.id == ID_IMU_GYROSCOPE) {
+    } else if (imu_msg.id == 0x471) {
       imu_gyro_msg.len = sizeof(imu_gyroscope);
       memcpy(&imu_gyro_msg.buf, &imu_msg.buf, sizeof(imu_msg.buf));
     }

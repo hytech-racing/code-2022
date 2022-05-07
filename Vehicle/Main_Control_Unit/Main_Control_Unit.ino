@@ -21,9 +21,9 @@
 // constants to define for different operation
 
 #define DRIVER DAVID
-#define TORQUE_1 60
-#define TORQUE_2 100
-#define TORQUE_3 120
+#define TORQUE_1 100
+#define TORQUE_2 130
+#define TORQUE_3 160
 
 // set to true or false for debugging
 #define DEBUG true
@@ -330,7 +330,7 @@ inline void state_machine() {
             inverter_heartbeat(0);
 
             // if start button has been pressed and brake pedal is held down, transition to the next state
-            if (dashboard_status.get_start_btn()) { // && mcu_status.get_brake_pedal_active()) {
+            if (dashboard_status.get_start_btn() && mcu_status.get_brake_pedal_active()) {
                 #if DEBUG
                 Serial.println("Setting state to Enabling Inverter");
                 #endif

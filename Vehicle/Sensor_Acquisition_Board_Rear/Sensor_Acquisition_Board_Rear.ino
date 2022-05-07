@@ -20,7 +20,7 @@
 
 // CAN Variables
 FlexCAN CAN(500000);
-Metro timer_rear_update = Metro(200);
+Metro timer_rear_update = Metro(5);
 CAN_message_t msg;
 
 // Initialize LEDs
