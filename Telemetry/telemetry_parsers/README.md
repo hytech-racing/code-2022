@@ -3,7 +3,8 @@
 ## Intro
 Welcome to the folder containing all the new updated parsers y'all ever need for HyTech parsing!
 Here's a description to each file located in this folder:
-- `parser.py`: "The main file"
+- `parser_functions.py`: Contains all the custom parsing functions we can update
+- `run_parser.py`: Runs the parser
     - Parses a folder named "Raw_Data" with raw CSVs from the SD card and outputs the parsed CSVs to a folder named "Parsed_Folder"
     - Will create a Parsed_Folder directory if it doesn't exist, but a Raw_Data folder is necessary
     - Then creates a .mat struct based on the Parsed_Folder for plotting and for our lovely MechEs
@@ -28,9 +29,9 @@ pip install python-dateutil
 ## User Guide
 1. Get the raw data CSVs from the SD card on the vehicle.
 2. Place them in a folder called Raw_Data.
-3. Copy `parser.py`, `multipliers.py`, and `dataPlots.m` into the directory containing the Raw_Data folder
-4. Run `parser.py` by either using the Python Interpreter or by going into the directory and issuing: `py parser.py`
+3. Copy `parser_functions.py`, `run_parser.py`, `multipliers.py`, and `dataPlots.m` into the directory containing the Raw_Data folder
+4. Run `run_parser.py` by either using the Python Interpreter or by going into the directory and issuing: `py run_parser.pyy`
     - If you are using the Python interpreter for the first time, you will need to run twice. The first time will build the __pycache__ folder
-5. Wait for a success message from `parser.py`
+5. Wait for a success message from `run_parser.py`
 6. Open `dataPlots.m` in MatLab
 7. In MatLab, first load `output.mat` by double clicking it on the sidebar. Then click run on `dataPlots.m`.
