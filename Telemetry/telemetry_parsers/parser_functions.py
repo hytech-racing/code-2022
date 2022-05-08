@@ -154,7 +154,7 @@ def parse_ID_MC_MOTOR_POSITION_INFORMATION(raw_message):
     values = [
         hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.MC_MOTOR_POSITION_INFORMATION_MOTOR_ANGLE.value,
         hex_to_decimal(raw_message[4:8], 16, True), 
-        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.MC_MOTOR_POSITION_INFORMATION_ELEC_OUTPUT_FREQ.value, 
+        hex_to_decimal(raw_message[8:12], 16, False) / Multipliers.MC_MOTOR_POSITION_INFORMATION_ELEC_OUTPUT_FREQ.value, 
         hex_to_decimal(raw_message[12:16], 16, True)
     ]
     units = ["deg", "RPM", "Hz", ""]
@@ -553,8 +553,8 @@ def parse_ID_MCU_PEDAL_READINGS(raw_message):
     message = "MCU_pedal_readings"
     labels = ["accelerator_pedal_1", "accelerator_pedal_2", "brake_transducer_1", "brake_transducer_2"]
 
-    accelerator_1 = round(hex_to_decimal(raw_message[0:4], 16, False) / Multipliers.MCU_PEDAL_READINGS_ACCELERATOR_PEDAL_1.value - 190.43809, 4)
-    accelerator_2 = round(hex_to_decimal(raw_message[4:8], 16, False) / Multipliers.MCU_PEDAL_READINGS_ACCELERATOR_PEDAL_2.value - 176.41256, 4)
+    accelerator_1 = round(hex_to_decimal(raw_message[0:4], 16, False) / Multipliers.MCU_PEDAL_READINGS_ACCELERATOR_PEDAL_1.value - 2080.0/11.0, 2)
+    accelerator_2 = round(hex_to_decimal(raw_message[4:8], 16, False) / Multipliers.MCU_PEDAL_READINGS_ACCELERATOR_PEDAL_2.value - 175.0, 2)
 
     # If the linear regression occasionally results in a negative value, set it to 0.0
     if accelerator_1 < 0.0:
@@ -565,8 +565,8 @@ def parse_ID_MCU_PEDAL_READINGS(raw_message):
     values = [
         accelerator_1, 
         accelerator_2, 
-        round(hex_to_decimal(raw_message[8:12], 16, False) / Multipliers.MCU_PEDAL_READINGS_BRAKE_TRANDUCER_1.value, 4), 
-        round(hex_to_decimal(raw_message[12:16], 16, False) / Multipliers.MCU_PEDAL_READINGS_BRAKE_TRANDUCER_2.value, 4)
+        round(hex_to_decimal(raw_message[8:12], 16, False) / Multipliers.MCU_PEDAL_READINGS_BRAKE_TRANDUCER_1.value, 2), 
+        round(hex_to_decimal(raw_message[12:16], 16, False) / Multipliers.MCU_PEDAL_READINGS_BRAKE_TRANDUCER_2.value, 2)
     ]
     units = ["%", "%", "psi", "psi"]
     return [message, labels, values, units]
@@ -867,8 +867,8 @@ def parse_ID_EM_MEASUREMENT(raw_message):
         return value
     bin_rep = bin(int(raw_message, 16))
     bin_rep = bin_rep[2:].zfill(64)
-    current = round(twos_comp(int(bin_rep[7:39], 2)) / Multipliers.EM_MEASUREMENTS_CURRENT.value, 4)
-    voltage = round(twos_comp(int(bin_rep[39:71], 2)) / Multipliers.EM_MEASUREMENTS_VOLTAGE.value, 4)
+    current = round(twos_comp(int(bin_rep[7:39], 2)) / Multipliers.EM_MEASUREMENTS_CURRENT.value, 2)
+    voltage = round(twos_comp(int(bin_rep[39:71], 2)) / Multipliers.EM_MEASUREMENTS_VOLTAGE.value, 2)
     values = [current, voltage]
 
     units = ["A", "V"]

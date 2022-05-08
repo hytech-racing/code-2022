@@ -73,7 +73,7 @@ DICT = {
         "PITCH": " ",
         "ROLL": " "
     },
-    "CM200DZ_INVERTER" : {
+    "RMS_INVERTER" : {
         "OUTPUT_POWER": " ",
         "RMS_UPTIME": " ",
         "INVERTER_ENABLE_STATE": " ",
@@ -146,6 +146,8 @@ DICT = {
 # Variables to keep track of inverter current and power for inverter power calculation
 inverter_voltage = 0.0
 inverter_current = 0.0
+inverter_power = 0.0
+ALPHA = 0.95 # for filtering
 
 '''
 @brief: Helper function to search for keys in a nested dictionary
@@ -177,7 +179,13 @@ def handle_inverter_power(name, data, window):
         else:
             global inverter_current
             inverter_current = data
-        window.write_event_value("-Update Data-", ["OUTPUT_POWER", "OUTPUT POWER: " + str(round(inverter_current * inverter_voltage, 4)) + " W"])
+        
+        # Power = voltage * current
+        # Apply filtering constant so changes are not so volatile
+        global inverter_power
+        inverter_power = round(ALPHA * inverter_power + (1.0 - ALPHA) * inverter_current * inverter_voltage, 2)
+
+        window.write_event_value("-Update Data-", ["OUTPUT_POWER", "OUTPUT POWER: " + str(inverter_power) + " W"])
 
 '''
 @brief: Thread to read raw CSV line, parse it, and send event to GUI if match 
@@ -280,7 +288,7 @@ def main():
     title_font = ("Courier New", 12)
     text_font = ("Courier New", 8)
 
-    inverter = [[sg.Text("CM200DZ INVERTER", pad=(0,2), font=title_font)]]
+    inverter = [[sg.Text("RMS INVERTER", pad=(0,2), font=title_font)]]
     dashboard = [[sg.Text("DASHBOARD", pad=(0,2), font=title_font)]]
     bms = [[sg.Text("BATTERY MANAGEMENT SYSTEM", pad=(0,2), font=title_font)]]
     main_ecu = [[sg.Text("MAIN ECU", pad=(0,2), font=title_font)]]
@@ -290,7 +298,7 @@ def main():
     em = [[sg.Text("ENERGY METER", pad=(0,2), font=title_font)]]
     
     
-    for label, value in DICT["CM200DZ_INVERTER"].items():
+    for label, value in DICT["RMS_INVERTER"].items():
         inverter.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
     for label, value in DICT["BATTERY_MANAGEMENT_SYSTEM"].items():
         bms.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])

@@ -46,8 +46,8 @@ class Multipliers(Enum):
 
     MCU_STATUS_DISTANCE_TRAVELLED = 100.0
 
-    MCU_PEDAL_READINGS_ACCELERATOR_PEDAL_1 = 1.0 / (5.0 / 4096.0 * 122.15314)   # 5 (5V ref) / 4096 (12-bit ADC), the 122.15314 and 190.43809 in parser_functions are from linear regression calc
-    MCU_PEDAL_READINGS_ACCELERATOR_PEDAL_2 = 1.0 / (5.0 / 4096.0 * 228.69955)   # 5 (5V ref) / 4096 (12-bit ADC), the 228.69955 and 176.41256 in parser_functions are from linear regression calc
+    MCU_PEDAL_READINGS_ACCELERATOR_PEDAL_1 = 1.0 / (5.0 / 4096.0 * 4000.0/33.0)   # 5 (5V ref) / 4096 (12-bit ADC), others from linear equation
+    MCU_PEDAL_READINGS_ACCELERATOR_PEDAL_2 = 1.0 / (5.0 / 4096.0 * 2500.0/11.0)   # 5 (5V ref) / 4096 (12-bit ADC), others from linear equation
     MCU_PEDAL_READINGS_BRAKE_TRANDUCER_1 = 1.0 / (5.0 / 4096.0 * 15000.0 / 5.0) # 5 (5V ref) / 4096 (12-bit ADC) * 15000 (psi) / 5 (supply V)
     MCU_PEDAL_READINGS_BRAKE_TRANDUCER_2 = 1.0 / (5.0 / 4096.0 * 15000.0 / 5.0) # 5 (5V ref) / 4096 (12-bit ADC) * 15000 (psi) / 5 (supply V)
 
