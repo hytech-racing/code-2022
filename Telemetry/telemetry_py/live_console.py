@@ -288,14 +288,14 @@ def main():
     title_font = ("Courier New", 12)
     text_font = ("Courier New", 8)
 
-    inverter = [[sg.Text("RMS INVERTER", pad=(0,2), font=title_font)]]
-    dashboard = [[sg.Text("DASHBOARD", pad=(0,2), font=title_font)]]
-    bms = [[sg.Text("BATTERY MANAGEMENT SYSTEM", pad=(0,2), font=title_font)]]
-    main_ecu = [[sg.Text("MAIN ECU", pad=(0,2), font=title_font)]]
-    wheel_speed_sensors = [[sg.Text("WHEEL SPEED SENSORS", pad=(0,2), font=title_font)]]
-    sab = [[sg.Text("SENSOR ACQUISITION BOARD", pad=(0,2), font=title_font)]]
-    imu = [[sg.Text("RACEGRADE IMU", pad=(0,2), font=title_font)]]
-    em = [[sg.Text("ENERGY METER", pad=(0,2), font=title_font)]]
+    inverter = [[sg.Text("RMS INVERTER", pad=(0,2), font=title_font, text_color="light blue")]]
+    dashboard = [[sg.Text("DASHBOARD", pad=(0,2), font=title_font, text_color="light blue")]]
+    bms = [[sg.Text("BATTERY MANAGEMENT SYSTEM", pad=(0,2), font=title_font, text_color="light blue")]]
+    main_ecu = [[sg.Text("MAIN ECU", pad=(0,2), font=title_font, text_color="light blue")]]
+    wheel_speed_sensors = [[sg.Text("WHEEL SPEED SENSORS", pad=(0,2), font=title_font, text_color="light blue")]]
+    sab = [[sg.Text("SENSOR ACQUISITION BOARD", pad=(0,2), font=title_font, text_color="light blue")]]
+    imu = [[sg.Text("RACEGRADE IMU", pad=(0,2), font=title_font, text_color="light blue")]]
+    em = [[sg.Text("ENERGY METER", pad=(0,2), font=title_font, text_color="light blue")]]
     
     
     for label, value in DICT["RMS_INVERTER"].items():
