@@ -10,6 +10,7 @@ import PySimpleGUI as sg
 import threading
 from os import path
 from enum import Enum
+from datetime import datetime
 import paho.mqtt.client as mqtt
 import binascii
 import struct
@@ -35,7 +36,7 @@ MQTT_TOPIC  = 'hytech_car/telemetry'
 
 # Set this to whatever the script is running
 # @TODO: Make a screen at the beginning to let the user choose the type
-CONNECTION = ConnectionType.TEST_CSV.value
+CONNECTION = ConnectionType.SERVER.value
 
 DICT = {
     "DASHBOARD": {
@@ -316,17 +317,22 @@ def main():
         em.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
 
     connection_text = [[sg.Text("CONSOLE STATUS: NOT CONNECTED", justification="left", pad=((5,0),12), text_color='red', font=title_font, key="-Connection Text-")]]
-    divider_text = [[sg.Text(" | ", pad=(5,12), font=title_font)]]
-    vehicle_status_text = [[sg.Text("VEHICLE STATUS: NOT RECEIVED", justification="left", pad=((0,5),12), font=title_font, key="-Vehicle Status Text-")]]
+    divider_text_1 = [[sg.Text(" | ", pad=(5,12), font=title_font)]]
+    vehicle_status_text = [[sg.Text("VEHICLE STATUS: NOT RECEIVED", justification="left", pad=((0,0),12), font=title_font, key="-Vehicle Status Text-")]]
+    divider_text_2 = [[sg.Text(" | ", pad=(5,12), font=title_font)]]
+    last_update_text = [[sg.Text("LAST UPDATE: NOT RECEIVED", justification="left", pad=((0,5),12), font=title_font, key="-Last Update Text-")]]
+
     status_header_column1 = sg.Column(connection_text, pad=(0,0), vertical_alignment='t')
-    status_header_column2 = sg.Column(divider_text, pad=(0,0), vertical_alignment='t')
+    status_header_column2 = sg.Column(divider_text_1, pad=(0,0), vertical_alignment='t')
     status_header_column3 = sg.Column(vehicle_status_text, pad=(0,0), vertical_alignment='t')
+    status_header_column4 = sg.Column(divider_text_2, pad=(0,0), vertical_alignment='t')
+    status_header_column5 = sg.Column(last_update_text, pad=(0,0), vertical_alignment='t')
 
     column1 = sg.Column(dashboard + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + bms + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + em + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + imu, vertical_alignment='t')
     column2 = sg.Column(main_ecu + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + sab + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + wheel_speed_sensors, vertical_alignment='t')
     column3 = sg.Column(inverter, vertical_alignment='t')
 
-    layout = [[status_header_column1, status_header_column2, status_header_column3], [column1, column2, column3]]
+    layout = [[status_header_column1, status_header_column2, status_header_column3, status_header_column4, status_header_column5], [column1, column2, column3]]
 
     window = sg.Window("HyTech Racing Live Telemetry Console", resizable=True).Layout(layout).Finalize()
     window.Maximize()
@@ -373,6 +379,7 @@ def main():
             window.refresh()
         elif event == "-Update Data-":
             window[values["-Update Data-"][0]].update(values["-Update Data-"][1])
+            window["-Last Update Text-"].update("LAST UPDATE: " + datetime.now().strftime('%H:%M:%S.%f')[:-5])
             window.refresh()
 
     window.close()
