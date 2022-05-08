@@ -108,7 +108,7 @@ def parse_ID_MC_TEMPERATURES3(raw_message):
         hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.MC_TEMPERATURES3_MOTOR_TEMPERATURE.value, 
         hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.MC_TEMPERATURES3_TORQUE_SHUDDER.value
     ]
-    units = ["C", "C", "C", "N-m"]
+    units = ["C", "C", "C", "Nm"]
     return [message, labels, values, units]
 
 def parse_ID_MC_ANALOG_INPUTS_VOLTAGES(raw_message):
@@ -157,7 +157,7 @@ def parse_ID_MC_MOTOR_POSITION_INFORMATION(raw_message):
         hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.MC_MOTOR_POSITION_INFORMATION_ELEC_OUTPUT_FREQ.value, 
         hex_to_decimal(raw_message[12:16], 16, True)
     ]
-    units = ["", "RPM", "", ""]
+    units = ["deg", "RPM", "Hz", ""]
     return [message, labels, values, units]
 
 def parse_ID_MC_CURRENT_INFORMATION(raw_message):
@@ -405,9 +405,9 @@ def parse_ID_MC_TORQUE_TIMER_INFORMATION(raw_message):
     values = [
         hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.MC_TORQUE_TIMER_INFORMATION_COMMANDED_TORQUE.value,
         hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.MC_TORQUE_TIMER_INFORMATION_TORQUE_FEEDBACK.value, 
-        hex_to_decimal(raw_message[8:16], 32, False)
+        hex_to_decimal(raw_message[8:16], 32, False) / Multipliers.MC_TORQUE_TIMER_INFORMATION_RMS_UPTIME.value
     ]
-    units = ["C", "C", "ms"]
+    units = ["Nm", "Nm", "s"]
     return [message, labels, values, units]
 
 def parse_ID_MC_FLUX_WEAKENING_OUTPUT(raw_message):
@@ -449,9 +449,7 @@ def parse_ID_MC_COMMAND_MESSAGE(raw_message):
         hex_to_decimal(raw_message[11], 4, False), 
         hex_to_decimal(raw_message[12:16], 16, True)
     ]
-    units = []
-    for i in range(len(labels)):
-        units.append("")
+    units = ["Nm", "", "", "", "", "Nm"]
     return [message, labels, values, units]
 
 def parse_ID_MC_READ_WRITE_PARAMETER_COMMAND(raw_message):
@@ -745,7 +743,7 @@ def parse_ID_BMS_COULOMB_COUNTS(raw_message):
         hex_to_decimal(raw_message[0:8], 32, False) / Multipliers.BMS_COULOMB_COUNTS_BMS_TOTAL_CHARGE.value,
         hex_to_decimal(raw_message[8:16], 32, False) / Multipliers.BMS_COULOMB_COUNTS_BMS_TOTAL_DISCHARGE.value
     ]
-    units = ["C", "C"]
+    units = ["Ah", "Ah"]
     return [message, labels, values, units]
 
 def parse_ID_MCU_GPS_READINGS(raw_message):
