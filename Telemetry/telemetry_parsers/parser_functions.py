@@ -554,13 +554,23 @@ def parse_ID_MCU_STATUS(raw_message):
 def parse_ID_MCU_PEDAL_READINGS(raw_message):
     message = "MCU_pedal_readings"
     labels = ["accelerator_pedal_1", "accelerator_pedal_2", "brake_transducer_1", "brake_transducer_2"]
+
+    accelerator_1 = round(hex_to_decimal(raw_message[0:4], 16, False) / Multipliers.MCU_PEDAL_READINGS_ACCELERATOR_PEDAL_1.value - 190.43809, 4)
+    accelerator_2 = round(hex_to_decimal(raw_message[4:8], 16, False) / Multipliers.MCU_PEDAL_READINGS_ACCELERATOR_PEDAL_2.value - 176.41256, 4)
+
+    # If the linear regression occasionally results in a negative value, set it to 0.0
+    if accelerator_1 < 0.0:
+        accelerator_1 = 0.0
+    if accelerator_2 < 0.0:
+        accelerator_2 = 0.0
+
     values = [
-        round(hex_to_decimal(raw_message[0:4], 16, False) / Multipliers.MCU_PEDAL_READINGS_ACCELERATOR_PEDAL_1.value, 4), 
-        round(hex_to_decimal(raw_message[4:8], 16, False) / Multipliers.MCU_PEDAL_READINGS_ACCELERATOR_PEDAL_2.value, 4), 
+        accelerator_1, 
+        accelerator_2, 
         round(hex_to_decimal(raw_message[8:12], 16, False) / Multipliers.MCU_PEDAL_READINGS_BRAKE_TRANDUCER_1.value, 4), 
         round(hex_to_decimal(raw_message[12:16], 16, False) / Multipliers.MCU_PEDAL_READINGS_BRAKE_TRANDUCER_2.value, 4)
     ]
-    units = ["deg", "deg", "psi", "psi"]
+    units = ["%", "%", "psi", "psi"]
     return [message, labels, values, units]
 
 def parse_ID_MCU_ANALOG_READINGS(raw_message):
