@@ -555,12 +555,12 @@ def parse_ID_MCU_PEDAL_READINGS(raw_message):
     message = "MCU_pedal_readings"
     labels = ["accelerator_pedal_1", "accelerator_pedal_2", "brake_transducer_1", "brake_transducer_2"]
     values = [
-        hex_to_decimal(raw_message[0:4], 16, False), 
-        hex_to_decimal(raw_message[4:8], 16, False), 
-        hex_to_decimal(raw_message[8:12], 16, False), 
-        hex_to_decimal(raw_message[12:16], 16, False)
+        round(hex_to_decimal(raw_message[0:4], 16, False) / Multipliers.MCU_PEDAL_READINGS_ACCELERATOR_PEDAL_1.value, 4), 
+        round(hex_to_decimal(raw_message[4:8], 16, False) / Multipliers.MCU_PEDAL_READINGS_ACCELERATOR_PEDAL_2.value, 4), 
+        round(hex_to_decimal(raw_message[8:12], 16, False) / Multipliers.MCU_PEDAL_READINGS_BRAKE_TRANDUCER_1.value, 4), 
+        round(hex_to_decimal(raw_message[12:16], 16, False) / Multipliers.MCU_PEDAL_READINGS_BRAKE_TRANDUCER_2.value, 4)
     ]
-    units = ["", "", "", ""]
+    units = ["deg", "deg", "psi", "psi"]
     return [message, labels, values, units]
 
 def parse_ID_MCU_ANALOG_READINGS(raw_message):

@@ -45,6 +45,11 @@ class Multipliers(Enum):
 
     MCU_STATUS_DISTANCE_TRAVELLED = 100.0
 
+    MCU_PEDAL_READINGS_ACCELERATOR_PEDAL_1 = 1.0 / (5.0 / 4096.0 * 180.0 / 5.0) # 5 (5V ref) / 4096 (12-bit ADC) * 180 (degrees) / 5 (supply V)
+    MCU_PEDAL_READINGS_ACCELERATOR_PEDAL_2 = 0.5 / (5.0 / 4096.0 * 180.0 / 5.0) # 5 (5V ref) / 4096 (12-bit ADC) * 180 (degrees) / 5 (supply V), 2 is because of half-ratio output
+    MCU_PEDAL_READINGS_BRAKE_TRANDUCER_1 = 1.0 / (5.0 / 4096.0 * 15000.0 / 5.0) # 5 (5V ref) / 4096 (12-bit ADC) * 15000 (psi) / 5 (supply V)
+    MCU_PEDAL_READINGS_BRAKE_TRANDUCER_2 = 1.0 / (5.0 / 4096.0 * 15000.0 / 5.0) # 5 (5V ref) / 4096 (12-bit ADC) * 15000 (psi) / 5 (supply V)
+
     MCU_ANALOG_READINGS_ECU_CURRENT = 5000.0
     MCU_ANALOG_READINGS_COOLING_CURRENT = 5000.0
     MCU_ANALOG_READINGS_TEMPERATURE = 100.0
