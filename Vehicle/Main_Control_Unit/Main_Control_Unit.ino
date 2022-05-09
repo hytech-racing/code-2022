@@ -21,13 +21,12 @@
 // constants to define for different operation
 
 #define DRIVER DAVID
-
-#define TORQUE_1 60
-#define TORQUE_2 100
-#define TORQUE_3 120
+#define TORQUE_1 100
+#define TORQUE_2 130
+#define TORQUE_3 160
 
 // set to true or false for debugging
-#define DEBUG false
+#define DEBUG true
 #define BMS_DEBUG_ENABLE false
 
 #define LINEAR 0
@@ -245,18 +244,18 @@ void loop() {
         tx_msg.len = sizeof(mcu_pedal_readings);
         CAN.write(tx_msg);
 
-        // write the rpm data
-        // scale factor for transmit
-        mcu_wheel_speed.set_rpm_front_left(rpm_front_left*10);
-        mcu_wheel_speed.set_rpm_front_right(rpm_front_left*10);
-        mcu_wheel_speed.set_rpm_back_left(rpm_back_left*10);
-        mcu_wheel_speed.set_rpm_back_right(rpm_back_right*10);
-
-        // Send Main Control Unit pedal reading message
-        mcu_wheel_speed.write(tx_msg.buf);
-        tx_msg.id = ID_MCU_WHEEL_SPEED;
-        tx_msg.len = sizeof(mcu_wheel_speed);
-        CAN.write(tx_msg);
+//        // write the rpm data
+//        // scale factor for transmit
+//        mcu_wheel_speed.set_rpm_front_left(rpm_front_left*10);
+//        mcu_wheel_speed.set_rpm_front_right(rpm_front_left*10);
+//        mcu_wheel_speed.set_rpm_back_left(rpm_back_left*10);
+//        mcu_wheel_speed.set_rpm_back_right(rpm_back_right*10);
+//
+//        // Send Main Control Unit pedal reading message
+//        mcu_wheel_speed.write(tx_msg.buf);
+//        tx_msg.id = ID_MCU_WHEEL_SPEED;
+//        tx_msg.len = sizeof(mcu_wheel_speed);
+//        CAN.write(tx_msg);
     }
 
     if (timer_coloumb_count_send.check()){
@@ -379,7 +378,7 @@ inline void state_machine() {
 
             //update_coulomb_count();
             if (timer_motor_controller_send.check()) {
-                MC_command_message mc_command_message(0, 0, 1, 1, 0, 0);
+                MC_command_message mc_command_message(0, 0, 0, 1, 0, 0);
 
                 // FSAE EV.5.5
                 // FSAE T.4.2.10
@@ -389,21 +388,20 @@ inline void state_machine() {
                     Serial.println("T.4.2.10 1");
                     #endif
                 }
-                else if (filtered_accel2_reading < MAX_ACCELERATOR_PEDAL_2 ||filtered_accel2_reading > MIN_ACCELERATOR_PEDAL_2) {
+                else if (filtered_accel2_reading > MAX_ACCELERATOR_PEDAL_2 ||filtered_accel2_reading < MIN_ACCELERATOR_PEDAL_2) {
                     mcu_status.set_no_accel_implausability(false);
                     #if DEBUG
                     Serial.println("T.4.2.10 2");
                     #endif
                 }
                 // check that the pedals are reading within 10% of each other
-                // sum of the two readings should be within 10% of the average travel
                 // T.4.2.4
-                else if ((filtered_accel1_reading - (4096 - filtered_accel2_reading)) >
-                         (END_ACCELERATOR_PEDAL_1 - START_ACCELERATOR_PEDAL_1 + START_ACCELERATOR_PEDAL_2 - END_ACCELERATOR_PEDAL_2)/20 ){
+                else if (fabs((filtered_accel1_reading - START_ACCELERATOR_PEDAL_1)/(END_ACCELERATOR_PEDAL_1 - START_ACCELERATOR_PEDAL_1) - 
+                        (filtered_accel2_reading - START_ACCELERATOR_PEDAL_2)/(END_ACCELERATOR_PEDAL_2 - START_ACCELERATOR_PEDAL_2)) > 0.1) {
                     #if DEBUG
                     Serial.println("T.4.2.4");
-                    Serial.printf("computed - %f\n", filtered_accel1_reading - (4096 - filtered_accel2_reading));
-                    Serial.printf("standard - %d\n", (END_ACCELERATOR_PEDAL_1 - START_ACCELERATOR_PEDAL_1 + START_ACCELERATOR_PEDAL_2 - END_ACCELERATOR_PEDAL_2)/20);
+                    Serial.printf("pedal 1 - %f\n", (filtered_accel1_reading - START_ACCELERATOR_PEDAL_1)/(END_ACCELERATOR_PEDAL_1 - START_ACCELERATOR_PEDAL_1));
+                    Serial.printf("pedal 2 - %f\n", (filtered_accel2_reading - START_ACCELERATOR_PEDAL_2)/(END_ACCELERATOR_PEDAL_2 - START_ACCELERATOR_PEDAL_2));
                     #endif
                     mcu_status.set_no_accel_implausability(false);
                 }
@@ -427,7 +425,7 @@ inline void state_machine() {
                         (
                             (filtered_accel1_reading > ((END_ACCELERATOR_PEDAL_1 - START_ACCELERATOR_PEDAL_1)/4 + START_ACCELERATOR_PEDAL_1))
                             ||
-                            (filtered_accel2_reading < ((END_ACCELERATOR_PEDAL_2 - START_ACCELERATOR_PEDAL_2)/4 + START_ACCELERATOR_PEDAL_2))
+                            (filtered_accel2_reading > ((END_ACCELERATOR_PEDAL_2 - START_ACCELERATOR_PEDAL_2)/4 + START_ACCELERATOR_PEDAL_2))
                         )
                         && mcu_status.get_brake_pedal_active()
                     )
@@ -438,14 +436,14 @@ inline void state_machine() {
                 (
                     (filtered_accel1_reading < ((END_ACCELERATOR_PEDAL_1 - START_ACCELERATOR_PEDAL_1)/20 + START_ACCELERATOR_PEDAL_1))
                     &&
-                    (filtered_accel2_reading > ((END_ACCELERATOR_PEDAL_2 - START_ACCELERATOR_PEDAL_2)/20 + START_ACCELERATOR_PEDAL_2))
+                    (filtered_accel2_reading < ((END_ACCELERATOR_PEDAL_2 - START_ACCELERATOR_PEDAL_2)/20 + START_ACCELERATOR_PEDAL_2))
                 )
                 {
                     mcu_status.set_no_accel_brake_implausability(true);
                 }
 
                 int calculated_torque = 0;
-
+                
                 if (
                     mcu_status.get_no_brake_implausability() &&
                     mcu_status.get_no_accel_implausability() &&
@@ -521,7 +519,7 @@ inline void check_inverter_disabled() {
 // Send a message to the Motor Controller over CAN when vehicle is not ready to drive
 inline void inverter_heartbeat(int enable) {
     if (timer_motor_controller_send.check()) {
-        MC_command_message mc_command_message(0, 0, 1, enable, 0, 0);
+        MC_command_message mc_command_message(0, 0, 0, enable, 0, 0);
 
         mc_command_message.write(tx_msg.buf);
         tx_msg.id = ID_MC_COMMAND_MESSAGE;
@@ -671,7 +669,7 @@ void parse_can_message() {
                 BMS_onboard_detailed_temperatures temp_onboard_det_temp = BMS_onboard_detailed_temperatures(rx_msg.buf);
                 bms_onboard_detailed_temperatures[temp_onboard_det_temp.get_ic_id()].load(rx_msg.buf);
                 break;
-            }
+            }s
             case ID_BMS_BALANCING_STATUS: {
                 BMS_balancing_status temp = BMS_balancing_status(rx_msg.buf);
                 bms_balancing_status[temp.get_group_id()].load(rx_msg.buf);
@@ -727,7 +725,7 @@ void set_state(MCU_STATE new_state) {
         case MCU_STATE::TRACTIVE_SYSTEM_NOT_ACTIVE: break;
         case MCU_STATE::TRACTIVE_SYSTEM_ACTIVE: break;
         case MCU_STATE::ENABLING_INVERTER: {
-            MC_command_message mc_command_message(0, 0, 1, 1, 0, 0);
+            MC_command_message mc_command_message(0, 0, 0, 1, 0, 0);
             tx_msg.id = 0xC0;
             tx_msg.len = 8;
             mc_command_message.write(tx_msg.buf); // many enable commands

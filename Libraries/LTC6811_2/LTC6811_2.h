@@ -63,18 +63,18 @@ public:
 
     // start -action- commands
     void stsctrl();
-    void adcv(CELL_SELECT cell_select);
+    void adcv(CELL_SELECT cell_select, bool delay);
     // void adow(ADC_MODE adc_mode, OPEN_WIRE_CURRENT_PUP pup, DISCHARGE discharge, CELL_SELECT cell_select)
     // void cvst(ADC_MODE adc_mode, SELF_TEST_MODE self_test);
     // void adol(ADC_MODE adc_mode, DISCHARGE discharge);
-    void adax(GPIO_SELECT gpio_select);
+    void adax(GPIO_SELECT gpio_select, bool delay);
     // void adaxd(ADC_MODE adc_mode, GPIO_SELECT gpio_select);
     // void axst(ADC_MODE adc_mode, SELF_TEST_MODE self_test);
     // void adstat(ADC_MODE adc_mode, STATUS_GROUP_SELECT status_group);
     // void adstatd(ADC_MODE adc_mode, STATUS_GROUP_SELECT status_group);
     // void statst(ADC_MODE adc_mode, SELF_TEST_MODE self_test);
-    void adcvax();
-    void adcvsc();
+    void adcvax(bool delay);
+    void adcvsc(bool delay);
 
 
     // clear commands
@@ -94,7 +94,7 @@ public:
     void spi_cmd(uint8_t *cmd, uint8_t* cmd_pec);
     void write_register_group(uint16_t cmd_code, const uint8_t *buffer);
     void read_register_group(uint16_t cmd_code, uint8_t *data);
-    void non_register_cmd(uint16_t cmd_code);
+    void non_register_cmd(uint16_t cmd_code, bool delay_enable);
     uint8_t get_cmd_address();
     static void init_PEC15_Table();
     void generate_pec(uint8_t *data, uint8_t *pec, int num_bytes);

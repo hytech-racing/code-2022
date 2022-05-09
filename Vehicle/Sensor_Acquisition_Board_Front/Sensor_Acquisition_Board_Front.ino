@@ -31,6 +31,8 @@ CAN_message_t imu_accel_msg; // For outgoing IMU Accel CAN message
 CAN_message_t imu_gyro_msg; // For outgoing IMU Gyro CAN message
 unsigned char len = 0;
 unsigned char buf[8];
+IMU_accelerometer imu_accelerometer;
+IMU_gyroscope imu_gyroscope;
 SAB_readings_front sab_readings_front;
 //SAB_readings_gps sab_readings_gps;
 
@@ -45,7 +47,7 @@ float filtered_sensor2_reading{};
 
 // Timers
 Metro timer_SAB_front = Metro(200);
-Metro timer_IMU = Metro(200);
+Metro timer_IMU = Metro(5);
 // Metro timer_adafruit_gps = Metro(200);
 
 void swap_bytes(uint8_t *low_byte, uint8_t high_byte);
@@ -99,11 +101,11 @@ void setup() {
 void loop() {
   // Check if IMU CAN line sends message and save it accordingly if it does
   if (CAN_IMU.read(imu_msg)) {
-    if (imu_msg.id == ID_IMU_ACCELEROMETER) {
-      imu_accel_msg.len = imu_msg.len;
+    if (imu_msg.id == 0x470) {
+      imu_accel_msg.len = sizeof(imu_accelerometer);
       memcpy(&imu_accel_msg.buf, &imu_msg.buf, sizeof(imu_msg.buf));
-    } else if (imu_msg.id == ID_IMU_GYROSCOPE) {
-      imu_gyro_msg.len = imu_msg.len;
+    } else if (imu_msg.id == 0x471) {
+      imu_gyro_msg.len = sizeof(imu_gyroscope);
       memcpy(&imu_gyro_msg.buf, &imu_msg.buf, sizeof(imu_msg.buf));
     }
   }
