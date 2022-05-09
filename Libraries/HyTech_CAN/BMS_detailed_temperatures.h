@@ -12,7 +12,8 @@ class BMS_detailed_temperatures {
 public:
     BMS_detailed_temperatures() = default;
     BMS_detailed_temperatures(uint8_t buf[]) { load(buf); }
-    BMS_detailed_temperatures(uint8_t ic_id, int16_t temperature_0, int16_t temperature_1, int16_t temperature_2) {
+    BMS_detailed_temperatures(uint8_t ic_id, uint8_t group_id, int16_t temperature_0, int16_t temperature_1, int16_t temperature_2) {
+        set_group_id(group_id);
         set_ic_id(ic_id);
         set_temperature_0(temperature_0);
         set_temperature_1(temperature_1);
@@ -22,7 +23,8 @@ public:
     inline void load(uint8_t buf[])         { memcpy(this, buf, sizeof(*this)); }
     inline void write(uint8_t buf[])  const { memcpy(buf, this, sizeof(*this)); }
 
-    inline uint8_t get_ic_id()         const  { return ic_id; }
+    inline uint8_t get_ic_id()         const  { return ic_id_group_id & 0xF; }
+    inline uint8_t get_group_id()      const  { return ic_id_group_id >> 4;}
     inline int16_t get_temperature_0() const  { return temperature_0; }
     inline int16_t get_temperature_1() const  { return temperature_1; }
     inline int16_t get_temperature_2() const  { return temperature_2; }
@@ -35,7 +37,8 @@ public:
         return 0;
     }
 
-    inline void set_ic_id(uint8_t ic_id)                 { this->ic_id         = ic_id;         }
+    inline void set_ic_id(uint8_t ic_id)                 { this->ic_id_group_id = (ic_id_group_id & 0xF0) | ic_id; }
+    inline void set_group_id(uint8_t group_id)           { this->ic_id_group_id = (group_id << 4) | (ic_id_group_id & 0xF); }
     inline void set_temperature_0(int16_t temperature_0) { this->temperature_0 = temperature_0; }
     inline void set_temperature_1(int16_t temperature_1) { this->temperature_1 = temperature_1; }
     inline void set_temperature_2(int16_t temperature_2) { this->temperature_2 = temperature_2; }
@@ -59,7 +62,7 @@ public:
 #endif
 
 private:
-    uint8_t ic_id;
+    uint8_t ic_id_group_id;
     int16_t temperature_0; // @Parse @Name(therm_0) @Scale(100) @Unit(C)
     int16_t temperature_1; // @Parse @Name(therm_1) @Scale(100) @Unit(C)
     int16_t temperature_2; // @Parse @Name(therm_2) @Scale(100) @Unit(C)

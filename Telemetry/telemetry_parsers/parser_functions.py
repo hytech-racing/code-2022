@@ -8,7 +8,7 @@
 """
 @Author: Bo Han Zhu
 @Date: 1/15/2022
-@Description: HyTech custom python parser. Reads CSVs from Raw_Data, parses them, and writes to Parsed_Data. Uses multiplier.py for multipliers.
+@Description: HyTech custom python parser functions.
 @TODO: Dashboard_status is not correct. Need more data to validate bit ordering.
 
 parse_folder --> parse_file --> parse_time
@@ -489,12 +489,12 @@ def parse_ID_MCU_STATUS(raw_message):
         "shutdown_d_above_threshold",
         "software_ok_high",
         "shutdown_e_above_threshold",
-        "no_accel_implausability",
-        "no_brake_implausability",
+        "no_accel_implausibility",
+        "no_brake_implausibility",
         "brake_pedal_active",
         "bspd_current_high",
         "bspd_brake_high",
-        "no_accel_brake_implausability",
+        "no_accel_brake_implausibility",
         "mcu_state",
         "inverter_powered",
         "energy_meter_present",
@@ -646,6 +646,47 @@ def parse_ID_BMS_TEMPERATURES(raw_message):
 
 def parse_ID_BMS_DETAILED_TEMPERATURES(raw_message):
     message = "BMS_detailed_temperatures"
+    ic_id = raw_message[1]
+    group_id = int(raw_message[0])
+
+    # Different parsing if IC_ID is even or old
+    # If IC_ID is even, GPIO 5 is humidity; if IC_ID is odd, GPIO 5 is temperature
+    isEven = False
+    if int(ic_id) % 2 == 0: isEven = True
+
+    labels = ""
+    if isEven:
+        if group_id == 0:
+            labels = ["IC_" + ic_id + "_therm_0", "IC_" + ic_id + "_therm_1", "IC_" + ic_id + "_therm_2"]
+        elif group_id == 1:
+            labels = ["IC_" + ic_id + "_therm_3", "IC_" + ic_id + "_humidity", "IC_" + ic_id + "_Vref"]
+        else:
+            if DEBUG: print("UNFATAL ERROR: BMS detailed voltage group " + str(group_id) + " is invalid.")
+            return "UNPARSEABLE"
+    else:
+        if group_id == 0:
+            labels = ["IC_" + ic_id + "_therm_0", "IC_" + ic_id + "_therm_1", "IC_" + ic_id + "_therm_2"]
+        elif group_id == 1:
+            labels = ["IC_" + ic_id + "_therm_3", "IC_" + ic_id + "_temperature", "IC_" + ic_id + "_Vref"]
+        else:
+            if DEBUG: print("UNFATAL ERROR: BMS detailed voltage group " + str(group_id) + " is invalid.")
+            return "UNPARSEABLE"
+
+    values = [
+        hex_to_decimal(raw_message[2:6], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_0.value,
+        hex_to_decimal(raw_message[6:10], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_1.value,
+        hex_to_decimal(raw_message[10:14], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_2.value
+    ]
+
+    units = []
+    if group_id == 0: units = ["C", "C", "C"]
+    else:
+        if isEven: units = ["C", "%", "V"]
+        else: units = ["C", "C", "V"]
+
+    return [message, labels, values, units]
+
+    '''
     ic_id = str(hex_to_decimal(raw_message[0:2], 8, False))
     labels = ["IC_" + ic_id + "_therm_0", "IC_" + ic_id + "_therm_1", "IC_" + ic_id + "_therm_2"]
     values = [
@@ -655,6 +696,7 @@ def parse_ID_BMS_DETAILED_TEMPERATURES(raw_message):
     ]
     units = ["C", "C", "C"]
     return [message, labels, values, units]
+    '''
     
 def parse_ID_BMS_STATUS(raw_message):
     message = "BMS_status"
@@ -859,8 +901,8 @@ def parse_ID_EM_MEASUREMENT(raw_message):
         return value
     bin_rep = bin(int(raw_message, 16))
     bin_rep = bin_rep[2:].zfill(64)
-    current = twos_comp(int(bin_rep[7:39], 2)) / Multipliers.EM_MEASUREMENTS_CURRENT.value
-    voltage = twos_comp(int(bin_rep[39:71], 2)) / Multipliers.EM_MEASUREMENTS_VOLTAGE.value
+    current = round(twos_comp(int(bin_rep[7:39], 2)) / Multipliers.EM_MEASUREMENTS_CURRENT.value, 4)
+    voltage = round(twos_comp(int(bin_rep[39:71], 2)) / Multipliers.EM_MEASUREMENTS_VOLTAGE.value, 4)
     values = [current, voltage]
 
     units = ["A", "V"]
@@ -915,16 +957,16 @@ def parse_ID_EM_STATUS(raw_message):
         bin_to_bool(bin_rep[10])
     ]
 
-    units = ["", "", "", "", ""]
+    units = ["gain", "gain", "", "", ""]
     return [message, labels, values, units]
 
 def parse_ID_IMU_ACCELEROMETER(raw_message):
     message = "IMU_accelerometer"
     labels = ["lat_accel", "long_accel", "vert_accel"]
     values = [
-        hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.IMU_ACCELEROMETER_ALL.value,
-        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.IMU_ACCELEROMETER_ALL.value,
-        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.IMU_ACCELEROMETER_ALL.value
+        round(hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.IMU_ACCELEROMETER_ALL.value, 4),
+        round(hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.IMU_ACCELEROMETER_ALL.value, 4),
+        round(hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.IMU_ACCELEROMETER_ALL.value, 4)
     ]
     units = ["m/s/s", "m/s/s", "m/s/s"]
     return [message, labels, values, units]
@@ -933,9 +975,9 @@ def parse_ID_IMU_GYROSCOPE(raw_message):
     message = "IMU_gyroscope"
     labels = ["yaw", "pitch", "roll"]
     values = [
-        hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.IMU_GYROSCOPE_ALL.value,
-        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.IMU_GYROSCOPE_ALL.value,
-        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.IMU_GYROSCOPE_ALL.value
+        round(hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.IMU_GYROSCOPE_ALL.value, 4),
+        round(hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.IMU_GYROSCOPE_ALL.value, 4),
+        round(hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.IMU_GYROSCOPE_ALL.value, 4)
     ]
     units = ["deg/s", "deg/s", "deg/s"]
     return [message, labels, values, units]
@@ -992,14 +1034,14 @@ def parse_message(raw_id, raw_message):
     if raw_id == "E7": return parse_ID_MCU_GPS_READINGS(raw_message)
     if raw_id == "EA": return parse_ID_MCU_WHEEL_SPEED(raw_message)
     if raw_id == "EB": return parse_ID_DASHBOARD_STATUS(raw_message)
-    if raw_id == "EC": return parse_ID_SAB_READINGS_FRONT(raw_message)
-    if raw_id == "ED": return parse_ID_SAB_READINGS_REAR(raw_message)
+    if raw_id == "92": return parse_ID_SAB_READINGS_FRONT(raw_message)
+    if raw_id == "93": return parse_ID_SAB_READINGS_REAR(raw_message)
     if raw_id == "EE": return parse_ID_SAB_READINGS_GPS(raw_message)
 
     if raw_id == "100": return parse_ID_EM_MEASUREMENT(raw_message)
     if raw_id == "400": return parse_ID_EM_STATUS(raw_message)
-    if raw_id == "470": return parse_ID_IMU_ACCELEROMETER(raw_message)
-    if raw_id == "471": return parse_ID_IMU_GYROSCOPE(raw_message)
+    if raw_id == "90": return parse_ID_IMU_ACCELEROMETER(raw_message)
+    if raw_id == "91": return parse_ID_IMU_GYROSCOPE(raw_message)
 
     # Should not come to here if CAN ID was valid
     if DEBUG: print("UNFATAL ERROR: Invalid CAN ID: 0x" + raw_message)
@@ -1297,23 +1339,3 @@ def create_mat():
         print('Saved struct in output.mat file.')
     except:
         print('FATAL ERROR: Failed to create .mat file')
-
-
-########################################################################
-########################################################################
-# Entry Point to Framework
-########################################################################
-########################################################################
-print("Welcome to HyTech 2022 Parsing Framework")
-print("The process will be of two parts: CSV to CSV parsing, and then CSV to MAT parsing.")
-print("The entire process will take about 5 mins for a test session's worth of data.")
-print("----------------------------------------------------------------------------------")
-print("Beginning CSV to CSV parsing...")
-parse_folder()
-print("Finished CSV to CSV parsing.")
-print("----------------------------------------------------------------------------------")
-print("Beginning CSV to MAT parsing...")
-create_mat()
-print("Finished CSV to MAT parsing.")
-print("----------------------------------------------------------------------------------")
-print("SUCCESS: Parsing Complete.")

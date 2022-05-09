@@ -20,8 +20,8 @@ public:
         set_voltage_2(voltage_2);        
     }
 
-    inline void load(uint8_t buf[])         { memcpy(this, buf, sizeof(*this)); }
-    inline void write(uint8_t buf[])  const { memcpy(buf, this, sizeof(*this)); }
+    inline void load(uint8_t buf[])   { memcpy(this, buf, sizeof(*this)); }
+    inline void write(uint8_t buf[])  { memcpy(buf, this, sizeof(*this)); }
 
     inline uint8_t get_ic_id()      const { return ic_id_group_id & 0xF; }
     inline uint8_t get_group_id()   const { return ic_id_group_id >> 4; }

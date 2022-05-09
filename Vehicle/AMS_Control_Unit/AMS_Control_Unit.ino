@@ -3,8 +3,8 @@
    It also handles CAN communications with the mainECU and energy meter, performs coulomb counting operations, and drives a watchdog timer on the ACU.
    See LTC6811_2.cpp and LTC6811-2 Datasheet provided by Analog Devices for more details.
    Author: Zekun Li, Liwei Sun
-   Version: 1.01
-   Since: 03/27/2022
+   Version: 1.02
+   Since: 04/23/2022
 */
 
 #include <Arduino.h>
@@ -24,6 +24,7 @@
 #define MAX_VOLTAGE 42000          // Maxiumum allowable single cell voltage in units of 100μV
 #define MAX_TOTAL_VOLTAGE 3550000  // Maximum allowable pack total voltage in units of 100μV
 #define MAX_THERMISTOR_VOLTAGE 26225   // Maximum allowable pack temperature corresponding to 60C in units 100μV
+#define BALANCE_ON false
 #define BALANCE_COOL 6000             // Sets balancing duty cycle as 33.3%
 #define BALANCE_STANDARD 4000         // Sets balancing duty cycle as 50%
 #define BALANCE_HOT 3000             // Sets balancing duty cycle as 66%
@@ -57,7 +58,7 @@ float total_thermistor_temps = 0;
 Metro charging_timer = Metro(5000); // Timer to check if charger is still talking to ACU
 Metro CAN_timer = Metro(2); // Timer that spaces apart writes for CAN messages so as to not saturate CAN bus
 Metro print_timer = Metro(500);
-Metro balance_timer(BALANCE_HOT);
+Metro balance_timer(BALANCE_STANDARD);
 elapsedMillis adc_timer; // timer that determines wait time for ADCs to finish their conversions
 uint8_t adc_state; // 0: wait to begin voltage conversions; 1: adcs converting voltage values; 2: wait to begin gpio conversions; 3: adcs converting GPIO values
 IntervalTimer pulse_timer;    //AMS ok pulse timer
@@ -141,7 +142,7 @@ void loop() {
     print_gpios();
     print_timer.reset();
   }
-  if (bms_status.get_state() == BMS_STATE_CHARGING) {
+  if (bms_status.get_state() == BMS_STATE_CHARGING && BALANCE_ON) {
     balance_cells();
   }
 }
@@ -395,7 +396,7 @@ void write_CAN_messages() {
   bms_voltages.set_total(total_voltage / 100);
   // set temperature message values
   bms_temperatures.set_low_temperature(gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
-  bms_temperatures.set_high_temperature(gpio_temps[min_thermistor_location[0]][min_thermistor_location[1]] * 100);
+  bms_temperatures.set_high_temperature(gpio_temps[max_thermistor_location[0]][max_thermistor_location[1]] * 100);
   bms_temperatures.set_average_temperature(total_thermistor_temps * 100 / 32);
   // set onboard temperature message values
   bms_onboard_temperatures.set_low_temperature(gpio_temps[min_board_temp_location[0]][min_board_temp_location[1]] * 100);

@@ -119,49 +119,65 @@ hold on
 plot(S.IC_0_therm_0(:,1),S.IC_0_therm_0(:,2),'.')
 plot(S.IC_0_therm_1(:,1),S.IC_0_therm_1(:,2),'.')
 plot(S.IC_0_therm_2(:,1),S.IC_0_therm_2(:,2),'.')
+plot(S.IC_0_therm_3(:,1),S.IC_0_therm_3(:,2),'.')
 plot(S.IC_1_therm_0(:,1),S.IC_1_therm_0(:,2),'.')
 plot(S.IC_1_therm_1(:,1),S.IC_1_therm_1(:,2),'.')
 plot(S.IC_1_therm_2(:,1),S.IC_1_therm_2(:,2),'.')
-ylabel('Temperature (C)')
+plot(S.IC_1_therm_3(:,1),S.IC_1_therm_3(:,2),'.')
+plot(S.IC_0_humidity(:,1),S.IC_0_humidity(:,2),'.')
+plot(S.IC_1_temperature(:,1),S.IC_1_temperature(:,2),'.')
+ylabel('Temperature (C) or Humidity (%)')
 xlabel('Time (ms)')
 title('Accumulator Cell Temperatures: Segment 1 Detailed View')
-legend({'Temp1','Temp2','Temp3','Temp4','Temp5','Temp6'},'Location','southeast')
+legend({'Temp1','Temp2','Temp3','Temp4','Temp5','Temp6','Temp7','Temp8', 'SHT Hum', 'SHT Temp'},'Location','southeast')
 subplot(2,2,2)
 hold on
 plot(S.IC_2_therm_0(:,1),S.IC_2_therm_0(:,2),'.')
 plot(S.IC_2_therm_1(:,1),S.IC_2_therm_1(:,2),'.')
 plot(S.IC_2_therm_2(:,1),S.IC_2_therm_2(:,2),'.')
+plot(S.IC_2_therm_3(:,1),S.IC_2_therm_3(:,2),'.')
 plot(S.IC_3_therm_0(:,1),S.IC_3_therm_0(:,2),'.')
 plot(S.IC_3_therm_1(:,1),S.IC_3_therm_1(:,2),'.')
 plot(S.IC_3_therm_2(:,1),S.IC_3_therm_2(:,2),'.')
-ylabel('Temperature (C)')
+plot(S.IC_3_therm_3(:,1),S.IC_3_therm_3(:,2),'.')
+plot(S.IC_2_humidity(:,1),S.IC_2_humidity(:,2),'.')
+plot(S.IC_3_temperature(:,1),S.IC_3_temperature(:,2),'.')
+ylabel('Temperature (C) or Humidity (%)')
 xlabel('Time (ms)')
 title('Accumulator Cell Temperatures: Segment 2 Detailed View')
-legend({'Temp1','Temp2','Temp3','Temp4','Temp5','Temp6'},'Location','southeast')
+legend({'Temp1','Temp2','Temp3','Temp4','Temp5','Temp6','Temp7','Temp8', 'SHT Hum', 'SHT Temp'},'Location','southeast')
 subplot(2,2,3)
 hold on
 plot(S.IC_4_therm_0(:,1),S.IC_4_therm_0(:,2),'.')
 plot(S.IC_4_therm_1(:,1),S.IC_4_therm_1(:,2),'.')
 plot(S.IC_4_therm_2(:,1),S.IC_4_therm_2(:,2),'.')
+plot(S.IC_4_therm_3(:,1),S.IC_4_therm_3(:,2),'.')
 plot(S.IC_5_therm_0(:,1),S.IC_5_therm_0(:,2),'.')
 plot(S.IC_5_therm_1(:,1),S.IC_5_therm_1(:,2),'.')
 plot(S.IC_5_therm_2(:,1),S.IC_5_therm_2(:,2),'.')
-ylabel('Temperature (C)')
+plot(S.IC_5_therm_3(:,1),S.IC_5_therm_3(:,2),'.')
+plot(S.IC_4_humidity(:,1),S.IC_4_humidity(:,2),'.')
+plot(S.IC_5_temperature(:,1),S.IC_5_temperature(:,2),'.')
+ylabel('Temperature (C) or Humidity (%)')
 xlabel('Time (ms)')
 title('Accumulator Cell Temperatures: Segment 3 Detailed View')
-legend({'Temp1','Temp2','Temp3','Temp4','Temp5','Temp6'},'Location','southeast')
+legend({'Temp1','Temp2','Temp3','Temp4','Temp5','Temp6','Temp7','Temp8', 'SHT Hum', 'SHT Temp'},'Location','southeast')
 subplot(2,2,4)
 hold on
 plot(S.IC_6_therm_0(:,1),S.IC_6_therm_0(:,2),'.')
 plot(S.IC_6_therm_1(:,1),S.IC_6_therm_1(:,2),'.')
 plot(S.IC_6_therm_2(:,1),S.IC_6_therm_2(:,2),'.')
+plot(S.IC_6_therm_3(:,1),S.IC_6_therm_3(:,2),'.')
 plot(S.IC_7_therm_0(:,1),S.IC_7_therm_0(:,2),'.')
 plot(S.IC_7_therm_1(:,1),S.IC_7_therm_1(:,2),'.')
 plot(S.IC_7_therm_2(:,1),S.IC_7_therm_2(:,2),'.')
-ylabel('Temperature (C)')
+plot(S.IC_7_therm_3(:,1),S.IC_7_therm_3(:,2),'.')
+plot(S.IC_6_humidity(:,1),S.IC_6_humidity(:,2),'.')
+plot(S.IC_7_temperature(:,1),S.IC_7_temperature(:,2),'.')
+ylabel('Temperature (C) or Humidity (%)')
 xlabel('Time (ms)')
 title('Accumulator Cell Temperatures: Segment 4 Detailed View')
-legend({'Temp1','Temp2','Temp3','Temp4','Temp5','Temp6'},'Location','southeast')
+legend({'Temp1','Temp2','Temp3','Temp4','Temp5','Temp6','Temp7','Temp8', 'SHT Hum', 'SHT Temp'},'Location','southeast')
 
 %% Accumulator Capacity Analysis
 current = S.dc_bus_current; %Amps
@@ -228,25 +244,36 @@ xlabel('Current')
 ylabel('Voltage')
 title('Accumulator Voltage Drop Analysis')
 
-%% IMU
+%% IMU Accelerometer
 figure
 
 lat_accel = S.lat_accel;
 long_accel = S.long_accel;
 vert_accel = S.vert_accel;
+hold on
+
+plot(lat_accel(:,1),lat_accel(:,2));
+plot(long_accel(:,1),long_accel(:,2));
+plot(vert_accel(:,1),vert_accel(:,2));
+xlabel('Time (ms)');
+ylabel('m/s^2');
+legend({'Lateral Acceleration','Longitudinal Acceleration','Vertical Acceleration'})
+title('IMU Accelerometer')
+
+figure
+
 yaw = S.yaw;
 pitch = S.pitch;
 roll = S.roll;
 hold on
-plot(lat_accel(:,1),lat_accel(:,2));
-plot(long_accel(:,1),long_accel(:,2));
-plot(vert_accel(:,1),vert_accel(:,2));
+
 plot(yaw(:,1),yaw(:,2));
 plot(pitch(:,1),pitch(:,2));
 plot(roll(:,1),roll(:,2));
-legend({'Lateral Acceleration (m/s^2)','Longitudinal Acceleration (m/s^2)','Vertical Acceleration (m/s^2)','Yaw (deg/s)','Pitch (deg/s)', 'Roll (deg/s)'})
 xlabel('Time (ms)')
-title('IMU Accelerometer and Gyroscope')
+ylabel('deg/s')
+legend({'Yaw','Pitch', 'Roll'})
+title('IMU Gyroscope')
 
 %% SAB
 figure
