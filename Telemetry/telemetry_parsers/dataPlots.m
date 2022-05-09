@@ -244,25 +244,36 @@ xlabel('Current')
 ylabel('Voltage')
 title('Accumulator Voltage Drop Analysis')
 
-%% IMU
+%% IMU Accelerometer
 figure
 
 lat_accel = S.lat_accel;
 long_accel = S.long_accel;
 vert_accel = S.vert_accel;
+hold on
+
+plot(lat_accel(:,1),lat_accel(:,2));
+plot(long_accel(:,1),long_accel(:,2));
+plot(vert_accel(:,1),vert_accel(:,2));
+xlabel('Time (ms)');
+ylabel('m/s^2');
+legend({'Lateral Acceleration','Longitudinal Acceleration','Vertical Acceleration'})
+title('IMU Accelerometer')
+
+figure
+
 yaw = S.yaw;
 pitch = S.pitch;
 roll = S.roll;
 hold on
-plot(lat_accel(:,1),lat_accel(:,2));
-plot(long_accel(:,1),long_accel(:,2));
-plot(vert_accel(:,1),vert_accel(:,2));
+
 plot(yaw(:,1),yaw(:,2));
 plot(pitch(:,1),pitch(:,2));
 plot(roll(:,1),roll(:,2));
-legend({'Lateral Acceleration (m/s^2)','Longitudinal Acceleration (m/s^2)','Vertical Acceleration (m/s^2)','Yaw (deg/s)','Pitch (deg/s)', 'Roll (deg/s)'})
 xlabel('Time (ms)')
-title('IMU Accelerometer and Gyroscope')
+ylabel('deg/s')
+legend({'Yaw','Pitch', 'Roll'})
+title('IMU Gyroscope')
 
 %% SAB
 figure
