@@ -21,6 +21,11 @@ public:
     uint16_t get_run_fault_lo() { return run_fault_lo; }
     uint16_t get_run_fault_hi() { return run_fault_hi; }
 
+    void set_post_fault_lo(uint16_t input) { post_fault_lo = input; }
+    void set_post_fault_hi(uint16_t input) { post_fault_hi = input; }
+    void set_run_fault_lo(uint16_t input) { run_fault_lo = input; }
+    void set_run_fault_hi(uint16_t input) { run_fault_hi = input; }
+
     inline bool get_post_lo_hw_gate_desaturation_fault()                const { return post_fault_lo & 0x0001; } // @Parseflag(post_fault_lo)
     inline bool get_post_lo_hw_overcurrent_fault()                      const { return post_fault_lo & 0x0002; } // @Parseflag(post_fault_lo)
     inline bool get_post_lo_accelerator_shorted()                       const { return post_fault_lo & 0x0004; } // @Parseflag(post_fault_lo)

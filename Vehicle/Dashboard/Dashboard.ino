@@ -2,6 +2,7 @@
 #include "DebouncedButton.h"
 #include "HyTech_CAN.h"
 #include "mcp_can.h"
+#include "MCP23S08.h"
 #include "Metro.h"
 #include "VariableLED.h"
 
@@ -13,6 +14,7 @@ VariableLED led_imd   (LED_IMD);
 VariableLED led_mc_err(LED_MC_ERR);
 VariableLED led_start (LED_START);
 VariableLED led_mode  (LED_MODE);
+VariableLED led_inertia (LED_INERTIA);
 
 Metro timer_led_ams   (LED_MIN_FAULT);
 Metro timer_led_imd   (LED_MIN_FAULT);
@@ -29,12 +31,15 @@ DebouncedButton btn_lc;
 
 // CAN Variables
 Metro timer_can_update = Metro(100);
-MCP_CAN CAN(SPI_CS);
+MCP_CAN CAN(CAN_CS);
 
 // CAN Messages
 Dashboard_status dashboard_status{};
 MC_fault_codes mc_fault_codes{};
 MCU_status mcu_status{};
+
+// IO Expander Variables
+MCP23S08 expander(IO_ADDR, IO_CS);
 
 Metro timer_mcu_heartbeat(0, 1);
 
@@ -43,8 +48,16 @@ inline void read_can();
 inline void btn_update();
 inline void mcu_status_received();
 inline void mc_fault_codes_received();
+inline void inertia_status();
 
 void setup() {
+    expander.begin();
+
+    for (int i = 0; i < 8; i++) {
+      expander.pinMode(i, OUTPUT);
+      expander.digitalWrite(i, HIGH);
+    }
+  
     btn_mark.begin(BTN_MARK, 100);
     btn_mode.begin(BTN_MODE, 100);
     btn_mc_cycle.begin(BTN_MC_CYCLE, 100);
@@ -57,8 +70,13 @@ void setup() {
     pinMode(LED_MODE,   OUTPUT);
     pinMode(LED_MC_ERR, OUTPUT);
     pinMode(LED_START,  OUTPUT);
+    pinMode(LED_INERTIA, OUTPUT);
 
-    //Initiallizes CAN
+    pinMode(SSOK_READ, INPUT);
+    pinMode(INERTIA_READ, INPUT);
+    pinMode(SHUTDOWN_H_READ, INPUT);
+
+    //Initializes CAN
     while (CAN_OK != CAN.begin(CAN_500KBPS))              // init can bus : baudrate = 250K
     {
         delay(200);
@@ -72,6 +90,7 @@ void setup() {
 
 void loop() {
     read_can();
+    inertia_status();
     led_update();
     btn_update();
 
@@ -92,8 +111,8 @@ void loop() {
     static bool prev_start_state;
 
 
-    //Send CAN message
-    //Timer to ensure dashboard isn't flooding data bus, also fires after a button is pressed
+    // Send CAN message
+    // Timer to ensure dashboard isn't flooding data bus, also fires after a button is pressed
     // How does the check for button press work
     // the xor against previous buttons removes the button flags that were sent previously
     // the and enforces that only buttons that are currently pressed are allowed to be sent
@@ -117,8 +136,17 @@ inline void led_update(){
     led_ams.update();
     led_imd.update();
     led_mc_err.update();
+    led_inertia.update();
     led_start.update();
     led_mode.update();
+    // checks display list for first available flag
+    // if no flags set, display turns off (writes 10th entry; sets all IO exp pins high)
+    for (int i = 0; i < 11; i++) {
+        if (display_list[i] == 1) {
+            expander.digitalWrite(number_encodings[i]);
+            break;
+        } 
+    }
 }
 
 inline void btn_update(){
@@ -166,6 +194,7 @@ inline void mcu_status_received(){
     if (!mcu_status.get_bms_ok_high()){
         led_ams.setMode(BLINK_MODES::ON);
         dashboard_status.set_ams_led(static_cast<uint8_t>(BLINK_MODES::ON));
+        display_list[4] = 1;
         timer_led_ams.reset();
     }
     // else if (init_ams){
@@ -176,12 +205,14 @@ inline void mcu_status_received(){
     else if (led_ams.getMode() != BLINK_MODES::OFF && timer_led_ams.check()){
         led_ams.setMode(BLINK_MODES::SLOW);
         dashboard_status.set_ams_led(static_cast<uint8_t>(BLINK_MODES::SLOW));
+        display_list[4] = 0;
     }
 
     //IMD LED
     if (!mcu_status.get_imd_ok_high()){
         led_imd.setMode(BLINK_MODES::ON);
         dashboard_status.set_imd_led(static_cast<uint8_t>(BLINK_MODES::ON));
+        display_list[3] = 1;
         timer_led_imd.reset();
     }
     // else if (init_imd){
@@ -192,6 +223,7 @@ inline void mcu_status_received(){
     else if (led_imd.getMode() != BLINK_MODES::OFF && timer_led_imd.check()){
         led_imd.setMode(BLINK_MODES::SLOW);
         dashboard_status.set_imd_led(static_cast<uint8_t>(BLINK_MODES::SLOW));
+        display_list[3] = 0;
     }
 
     //Start LED
@@ -256,11 +288,13 @@ inline void mc_fault_codes_received(){
     if (is_mc_err){
         led_mc_err.setMode(BLINK_MODES::ON);
         dashboard_status.set_mc_error_led(static_cast<uint8_t>(BLINK_MODES::ON));
-        timer_led_mc_err.reset();
+        display_list[2] = 1;
+        timer_led_mc_err.reset();   
     // display fault for 1 second and then it clears
     } else if (led_mc_err.getMode() != BLINK_MODES::OFF && timer_led_mc_err.check()){
         led_mc_err.setMode(BLINK_MODES::OFF);
         dashboard_status.set_mc_error_led(static_cast<uint8_t>(BLINK_MODES::OFF));
+        display_list[2] = 0;
     }
 
     /*if (is_mc_err){
@@ -272,4 +306,16 @@ inline void mc_fault_codes_received(){
         led_mc_err.setMode(BLINK_MODES::SLOW);
         dashboard_status.set_mc_error_led(static_cast<uint8_t>(BLINK_MODES::SLOW));
     }*/
+}
+
+inline void inertia_status() {
+    if (INERTIA_READ && !SHUTDOWN_H_READ) {
+        led_inertia.setMode(BLINK_MODES::ON);
+        dashboard_status.set_inertia_led(static_cast<uint8_t>(BLINK_MODES::ON));
+        display_list[1] = 1;
+    } else {
+        led_inertia.setMode(BLINK_MODES::OFF);
+        dashboard_status.set_inertia_led(static_cast<uint8_t>(BLINK_MODES::ON));
+        display_list[1] = 0;
+    }
 }

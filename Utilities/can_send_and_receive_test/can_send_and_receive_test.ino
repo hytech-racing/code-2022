@@ -43,7 +43,7 @@ void loop() {
         Serial.print(msg.id, HEX);
         Serial.print(": ");
         for (unsigned int i = 0; i < msg.len; i++) {
-            Serial.print(msg.buf[i]);
+            Serial.print(msg.buf[i], HEX);
             Serial.print(" ");
         }
         Serial.println();
