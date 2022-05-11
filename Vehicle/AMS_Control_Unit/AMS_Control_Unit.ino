@@ -472,7 +472,7 @@ void write_CAN_detailed_voltages() {
 
 // TODO: This CAN message is in the HT05 Style; it needs to be updated with group ID to conform to HT06 standards
 void write_CAN_detailed_temps() {
-  if (can_gpio_group > 6) {
+  if (can_gpio_group > 3) {
     can_gpio_ic++;
     can_gpio_group = 0;
   }
@@ -480,7 +480,7 @@ void write_CAN_detailed_temps() {
     can_gpio_ic = 0;
   }
   bms_detailed_temperatures.set_ic_id(can_gpio_ic);
-  bms_detailed_temperatures.set_group_id(can_gpio_group);
+  bms_detailed_temperatures.set_group_id(can_gpio_group / 3);
   bms_detailed_temperatures.set_temperature_0(gpio_temps[can_gpio_ic][can_gpio_group] * 100);
   bms_detailed_temperatures.set_temperature_1(gpio_temps[can_gpio_ic][can_gpio_group + 1] * 100);
   bms_detailed_temperatures.set_temperature_2(gpio_temps[can_gpio_ic][can_gpio_group + 2] * 100);
