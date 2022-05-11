@@ -306,7 +306,7 @@ void read_gpio() {
               max_humidity_location[0] = i;
               max_humidity_location[1] = j + k;
             }
-          } else if(j + k < 4){
+          } else if (j + k < 4) {
             float thermistor_resistance = (2740 / (gpio_voltages[i][j + k] / 50000.0)) - 2740;
             gpio_temps[i][j + k] = 1 / ((1 / 298.15) + (1 / 3984.0) * log(thermistor_resistance / 10000.0)) - 273.15; //calculation for thermistor temperature in C
             total_thermistor_temps += gpio_temps[i][j + k];
@@ -320,7 +320,7 @@ void read_gpio() {
               min_thermistor_location[0] = i;
               min_thermistor_location[1] = j + k;
             }
-            
+
           }
         }
       }
@@ -472,18 +472,23 @@ void write_CAN_detailed_voltages() {
 
 // TODO: This CAN message is in the HT05 Style; it needs to be updated with group ID to conform to HT06 standards
 void write_CAN_detailed_temps() {
+  if (can_gpio_group > 6) {
+    can_gpio_ic++;
+    can_gpio_group = 0;
+  }
   if (can_gpio_ic > 7) {
     can_gpio_ic = 0;
   }
   bms_detailed_temperatures.set_ic_id(can_gpio_ic);
-  bms_detailed_temperatures.set_temperature_0(gpio_temps[can_gpio_ic][0] * 100);
-  bms_detailed_temperatures.set_temperature_1(gpio_temps[can_gpio_ic][1] * 100);
-  bms_detailed_temperatures.set_temperature_2(gpio_temps[can_gpio_ic][2] * 100);
+  bms_detailed_temperatures.set_group_id(can_gpio_group);
+  bms_detailed_temperatures.set_temperature_0(gpio_temps[can_gpio_ic][can_gpio_group] * 100);
+  bms_detailed_temperatures.set_temperature_1(gpio_temps[can_gpio_ic][can_gpio_group + 1] * 100);
+  bms_detailed_temperatures.set_temperature_2(gpio_temps[can_gpio_ic][can_gpio_group + 2] * 100);
   msg.id = ID_BMS_DETAILED_TEMPERATURES;
   msg.len = sizeof(bms_detailed_temperatures);
   bms_detailed_temperatures.write(msg.buf);
   CAN.write(msg);
-  can_gpio_ic++;
+  can_gpio_group += 3;
 }
 
 // Pulses pin 5 to keep watchdog circuit active

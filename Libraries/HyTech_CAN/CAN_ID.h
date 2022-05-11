@@ -33,7 +33,7 @@
 #define ID_CCU_STATUS												0xDD
 #define ID_BMS_BALANCING_STATUS										0xDE // TODO rename to bms_balancing_cells when we're not in the middle of a development cycle
 
-							                0xE0 // TODO define this message
+#define ID_BMS_READ_WRITE_PARAMETER_COMMAND							0xE0 // TODO define this message
 #define ID_BMS_PARAMETER_RESPONSE									0xE1 // TODO define this message
 #define ID_BMS_COULOMB_COUNTS										0xE2
 #define ID_MCU_GPS_READINGS											0xE7
