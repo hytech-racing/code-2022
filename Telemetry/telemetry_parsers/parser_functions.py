@@ -619,8 +619,13 @@ def parse_ID_BMS_VOLTAGES(raw_message):
 
 def parse_ID_BMS_DETAILED_VOLTAGES(raw_message):
     message = "BMS_detailed_voltages"
-    ic_id = raw_message[3]
-    group_id = int(raw_message[2])
+    try:
+        ic_id = int(raw_message[3])
+        group_id = int(raw_message[2])
+        ic_id = str(ic_id)
+    except:
+        ic_id = 0xFF
+        group_id = 0xFF # causes message to be thrown out
     labels = ""
     if group_id == 0:
         labels = ["IC_" + ic_id + "_CELL_0", "IC_" + ic_id + "_CELL_1", "IC_" + ic_id + "_CELL_2"]
@@ -654,8 +659,13 @@ def parse_ID_BMS_TEMPERATURES(raw_message):
 
 def parse_ID_BMS_DETAILED_TEMPERATURES(raw_message):
     message = "BMS_detailed_temperatures"
-    ic_id = raw_message[3]
-    group_id = int(raw_message[2])
+    try:
+        ic_id = int(raw_message[3])
+        group_id = int(raw_message[2])
+        ic_id = str(ic_id)
+    except:
+        ic_id = 0xFF
+        group_id = 0xFF # causes message to be thrown out
 
     # Different parsing if IC_ID is even or old
     # If IC_ID is even, GPIO 5 is humidity; if IC_ID is odd, GPIO 5 is temperature
