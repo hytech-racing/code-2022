@@ -247,3 +247,4 @@ Telemetry/autoparse/log
 Telemetry/autoparse/webserver/uploads
 Telemetry/telemetry_py/*.txt
 *.csv
+*.mat
