@@ -29,6 +29,7 @@
 #define BALANCE_STANDARD 4000         // Sets balancing duty cycle as 50%
 #define BALANCE_HOT 3000             // Sets balancing duty cycle as 66%
 #define BALANCE_CONTINUOUS 2000     // Sets balancing duty cycle as 100%
+#define BALANCE_MODE 1            // Mode 0 is normal balance, mode 1 is progressive balance
 
 // VARIABLE DECLARATIONS
 uint16_t pec15Table[256];          // Array containing lookup table for PEC generator
@@ -362,8 +363,21 @@ void balance_cells() {
     Serial.print("Balancing voltage: "); Serial.println(min_voltage / 10000.0, 4);
     for (uint16_t i = 0; i < 8; i++) {
       // determine which cells of the IC need balancing
+      if (BALANCE_MODE) {
+        for (uint16_t cell = 0; cell < 12; cell++) {
+          if (max_voltage - cell_voltages[i][cell] < 200 && cell_voltages[i][cell] - min_voltage > 200) { // balance if the cell voltage differential from the max voltage is .02V or less and if the cell voltage differential from the minimum voltage is 0.02V or greater (progressive)
+            cell_balance_setting = (0b1 << cell) | cell_balance_setting;
+          }
+        }
+      } else {
+        for (uint16_t cell = 0; cell < 12; cell++) {
+          if (cell_voltages[i][cell] - min_voltage > 200) { // if the cell voltage differential from the minimum voltage is 0.02V or greater (normal)
+            cell_balance_setting = (0b1 << cell) | cell_balance_setting;
+          }
+        }
+      }
       for (uint16_t cell = 0; cell < 12; cell++) {
-        if (cell_voltages[i][cell] - min_voltage > 100) { // balance if the cell voltage differential from the minimum voltage is 0.01V or greater
+        if (max_voltage - cell_voltages[i][cell] < 200 && cell_voltages[i][cell] - min_voltage > 200) { // balance if the cell voltage differential from the max voltage is .02V or less and if the cell voltage differential from the minimum voltage is 0.02V or greater
           cell_balance_setting = (0b1 << cell) | cell_balance_setting;
         }
       }
