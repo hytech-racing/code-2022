@@ -1,10 +1,10 @@
 /* ACU CONTROL UNIT CODE
    The AMS Control Unit code is used to control and communicate with Analog Devices LTC6811-2 battery stack monitors, per the HyTech Racing HT06 Accumulator Design.
-   It also handles CAN communications with the mainECU and energy meter, performs coulomb counting operations, and drives a watchdog timer on the ACU.
+   It also handles CAN communications with the mainECU and energy meter and drives a watchdog timer on the ACU.
    See LTC6811_2.cpp and LTC6811-2 Datasheet provided by Analog Devices for more details.
    Author: Zekun Li, Liwei Sun
-   Version: 1.02
-   Since: 04/23/2022
+   Version: 1.03
+   Since: 05/12/2022
 */
 
 #include <Arduino.h>
