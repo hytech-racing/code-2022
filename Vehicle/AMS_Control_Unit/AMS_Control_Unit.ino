@@ -24,7 +24,7 @@
 #define MAX_VOLTAGE 42000          // Maxiumum allowable single cell voltage in units of 100μV
 #define MAX_TOTAL_VOLTAGE 3550000  // Maximum allowable pack total voltage in units of 100μV
 #define MAX_THERMISTOR_VOLTAGE 26225   // Maximum allowable pack temperature corresponding to 60C in units 100μV
-#define BALANCE_ON false
+#define BALANCE_ON true
 #define BALANCE_COOL 6000             // Sets balancing duty cycle as 33.3%
 #define BALANCE_STANDARD 4000         // Sets balancing duty cycle as 50%
 #define BALANCE_HOT 3000             // Sets balancing duty cycle as 66%
