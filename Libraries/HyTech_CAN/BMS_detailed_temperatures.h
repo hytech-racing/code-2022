@@ -39,9 +39,9 @@ public:
 
     inline void set_ic_id(uint8_t ic_id)                 { this->group_id_ic_id = (group_id_ic_id & 0xF0) | ic_id; }
     inline void set_group_id(uint8_t group_id)           { this->group_id_ic_id = (group_id << 4) | (group_id_ic_id & 0xF); }
-    inline void set_temperature_0(int16_t temperature_0) { this->temperature_0 = temperature_0; }
-    inline void set_temperature_1(int16_t temperature_1) { this->temperature_1 = temperature_1; }
-    inline void set_temperature_2(int16_t temperature_2) { this->temperature_2 = temperature_2; }
+    inline void set_temperature_0(uint16_t temperature_0) { this->temperature_0 = temperature_0; }
+    inline void set_temperature_1(uint16_t temperature_1) { this->temperature_1 = temperature_1; }
+    inline void set_temperature_2(uint16_t temperature_2) { this->temperature_2 = temperature_2; }
     void set_temperature(uint8_t temperature_id, int16_t temperature) {
         switch (temperature_id) {
             case 0: this->temperature_0 = temperature; return;

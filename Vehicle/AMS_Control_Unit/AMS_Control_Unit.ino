@@ -64,10 +64,10 @@ elapsedMillis adc_timer; // timer that determines wait time for ADCs to finish t
 uint8_t adc_state; // 0: wait to begin voltage conversions; 1: adcs converting voltage values; 2: wait to begin gpio conversions; 3: adcs converting GPIO values
 IntervalTimer pulse_timer;    //AMS ok pulse timer
 bool next_pulse = true; //AMS ok pulse
-int can_voltage_ic = 0; //counter for the current IC data to send for detailed voltage CAN message
-int can_voltage_group = 0; // counter for current group data to send for detailed voltage CAN message
-int can_gpio_ic = 0; //counter for the current IC data to send for detailed voltage CAN message
-int can_gpio_group = 0; // counter for current group data to send for detailed voltage CAN message
+uint8_t can_voltage_ic = 0; //counter for the current IC data to send for detailed voltage CAN message
+uint8_t can_voltage_group = 0; // counter for current group data to send for detailed voltage CAN message
+uint8_t can_gpio_ic = 0; //counter for the current IC data to send for detailed voltage CAN message
+uint8_t can_gpio_group = 0; // counter for current group data to send for detailed voltage CAN message
 elapsedMillis can_bms_status_timer = 0;
 elapsedMillis can_bms_detailed_voltages_timer = 2;
 elapsedMillis can_bms_detailed_temps_timer = 4;
@@ -495,9 +495,9 @@ void write_CAN_detailed_temps() {
   }
   bms_detailed_temperatures.set_ic_id(can_gpio_ic);
   bms_detailed_temperatures.set_group_id(can_gpio_group / 3);
-  bms_detailed_temperatures.set_temperature_0(gpio_temps[can_gpio_ic][can_gpio_group] * 100);
-  bms_detailed_temperatures.set_temperature_1(gpio_temps[can_gpio_ic][can_gpio_group + 1] * 100);
-  bms_detailed_temperatures.set_temperature_2(gpio_temps[can_gpio_ic][can_gpio_group + 2] * 100);
+  bms_detailed_temperatures.set_temperature_0((uint16_t) (gpio_temps[can_gpio_ic][can_gpio_group] * 100));
+  bms_detailed_temperatures.set_temperature_1((uint16_t) (gpio_temps[can_gpio_ic][can_gpio_group + 1] * 100));
+  bms_detailed_temperatures.set_temperature_2((uint16_t) (gpio_temps[can_gpio_ic][can_gpio_group + 2] * 100));
   msg.id = ID_BMS_DETAILED_TEMPERATURES;
   msg.len = sizeof(bms_detailed_temperatures);
   bms_detailed_temperatures.write(msg.buf);
