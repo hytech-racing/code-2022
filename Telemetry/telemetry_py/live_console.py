@@ -6,12 +6,14 @@
 '''
 
 
-import PySimpleGUI as sg
+import PySimpleGUI as sg, sys
+import time
 import threading
 from os import path
 from enum import Enum
 from datetime import datetime
 import paho.mqtt.client as mqtt
+import itertools
 import binascii
 import struct
 import sys
@@ -142,6 +144,12 @@ DICT = {
         "RPM_FRONT_LEFT": " ",
         "RPM_FRONT_RIGHT": " "
     },
+    "BATTERY_MANAGEMENT_SYSTEM_BALANCING_STATUS": {
+        "C0_IC0": " ",
+        "C0_IC1": " ",
+        "C0_IC2": " ",
+        "C0_IC3": " "
+    },
 }
 
 # Variables to keep track of inverter current and power for inverter power calculation
@@ -223,6 +231,7 @@ def read_from_csv_thread(window):
 
     window.write_event_value("-Read CSV Done-", "No data for you left")
 
+
 '''
 @brief: Thread to connect to MQTT broker on AWS EC2 instance.
         Parses incoming messages and packages them as an event to the GUI if match.
@@ -282,12 +291,32 @@ def mqtt_connection_thread(window):
     client.loop_forever()
 
 '''
+@brief: Helper function to get multi-columns rows for detailed messages
+@return: dictionary, an list of combined elements 
+'''
+def get_bms_detailed_messages():
+    ic_list = ['IC_' + str(x) for x in range(8)]
+    cell_list = ['CELL_' + str(x) for x in range(9)]
+    ic_cells = [ic + '_' + cell for ic in ic_list for cell in cell_list]
+    result = dict.fromkeys(ic_cells, ' ')
+    dictionary = {"BATTERY_MANAGEMENT_SYSTEM_DETAILED_VOLTAGES": result}
+    ic_list2 = ['IC_' + str(x) for x in range(8)]
+    temperature_list = ['THERM_' + str(x) for x in range(3)]
+    ic_temperature = [ic + '_' + therm for ic in ic_list2 for therm in temperature_list]
+    result2 = dict.fromkeys(ic_temperature, ' ')
+    dictionary2 = {"BATTERY_MANAGEMENT_SYSTEM_DETAILED_TEMPERATURES": result2}
+    return dictionary, dictionary2
+
+
+
+
+'''
 @brief: The main function to spawn the PySimpleGUI and handle events
 '''
 def main():
     sg.change_look_and_feel("Black")
-    title_font = ("Courier New", 12)
-    text_font = ("Courier New", 8)
+    title_font = ("Courier New", 16)
+    text_font = ("Courier New", 14)
 
     inverter = [[sg.Text("RMS INVERTER", pad=(0,2), font=title_font, text_color="light blue")]]
     dashboard = [[sg.Text("DASHBOARD", pad=(0,2), font=title_font, text_color="light blue")]]
@@ -297,7 +326,15 @@ def main():
     sab = [[sg.Text("SENSOR ACQUISITION BOARD", pad=(0,2), font=title_font, text_color="light blue")]]
     imu = [[sg.Text("RACEGRADE IMU", pad=(0,2), font=title_font, text_color="light blue")]]
     em = [[sg.Text("ENERGY METER", pad=(0,2), font=title_font, text_color="light blue")]]
+    bms_voltages = [[]]
+    bms_temperatures = [[]]
     
+    DICT1, DICT2 = get_bms_detailed_messages()
+    DICT.update(DICT1)
+    DICT.update(DICT2)
+    row_count_temperatures = 1
+    row_count_voltages = 1
+    table_arr = [[]]
     
     for label, value in DICT["RMS_INVERTER"].items():
         inverter.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
@@ -315,6 +352,22 @@ def main():
         imu.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
     for label, value in DICT["ENERGY_METER"].items():
         em.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+    for label, value in DICT["BATTERY_MANAGEMENT_SYSTEM_DETAILED_VOLTAGES"].items():
+        if row_count_voltages % 9 == 0:
+            bms_voltages.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(20,1), pad=((0,0),(0,10)), font=text_font, key=label)])
+        else:            
+            bms_voltages.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(20,1), pad=(0,0), font=text_font, key=label)])
+        row_count_voltages = row_count_voltages + 1
+    for label, value in DICT["BATTERY_MANAGEMENT_SYSTEM_DETAILED_TEMPERATURES"].items():
+        if row_count_temperatures % 3 == 0:
+            bms_temperatures.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(23,1), pad=((0,0),(0,10)), font=text_font, key=label)])
+        else:
+            bms_temperatures.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(23,1), pad=(0, 0),font=text_font, key=label)])
+        row_count_temperatures = row_count_temperatures + 1
+    for label, value in DICT["BATTERY_MANAGEMENT_SYSTEM_BALANCING_STATUS"].items():
+        table_arr.append([value])
+
+
 
     connection_text = [[sg.Text("CONSOLE STATUS: NOT CONNECTED", justification="left", pad=((5,0),12), text_color='red', font=title_font, key="-Connection Text-")]]
     divider_text_1 = [[sg.Text(" | ", pad=(5,12), font=title_font)]]
@@ -332,7 +385,37 @@ def main():
     column2 = sg.Column(main_ecu + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + sab + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + wheel_speed_sensors, vertical_alignment='t')
     column3 = sg.Column(inverter, vertical_alignment='t')
 
-    layout = [[status_header_column1, status_header_column2, status_header_column3, status_header_column4, status_header_column5], [column1, column2, column3]]
+
+
+    first_half_voltages = bms_voltages[:37]
+    second_half_voltages = bms_voltages[37:]
+    
+    first_half_temperatures = bms_temperatures[:13]
+    second_half_temperatures = bms_temperatures[13:]
+
+    voltages = [[sg.Column(first_half_voltages), sg.Column(second_half_voltages)]]
+    temperatures = [[sg.Column(first_half_temperatures), sg.Column(second_half_temperatures)]]
+  
+    frame0 = [[sg.Text("BMS - DETAILED VOLTAGES", pad=(10,0), font=title_font, text_color="light blue")], [sg.Frame("", layout=voltages, border_width=0)]]
+    column_voltages = sg.Column(frame0, vertical_alignment='t')
+
+
+    headings = ['C0','C1','C2','C3','C4','C5','C6','C7','C8']
+    table = [[sg.Table(values=table_arr, headings=headings, expand_x=True, expand_y=False,max_col_width = 2,display_row_numbers =True,
+            hide_vertical_scroll=True,key='-BMS - BALANCING STATUS-',enable_click_events = False,
+            num_rows=8,justification='center')]]
+    
+    frame1 = [[sg.Text("BMS - DETAILED TEMPERATURES", pad=(10,0), font=title_font, text_color="light blue")], [sg.Frame("", layout=temperatures, border_width=0)]]
+    column_temperatures = sg.Column(frame1 + table, vertical_alignment='t')
+
+    all_columns = [[status_header_column1, status_header_column2, status_header_column3, status_header_column4, status_header_column5], [column1, column2, column3, column_voltages, column_temperatures]]
+
+    # [[connection_text], [column1, column2, column3, column_voltages, column_temperatures]]
+    frame2 = [[sg.Frame("", layout=all_columns, border_width=0)]]
+       
+    layout = [[sg.Column(frame2, scrollable=True, vertical_scroll_only=True)]]
+
+    #layout = [[status_header_column1, status_header_column2, status_header_column3, status_header_column4, status_header_column5], [column1, column2, column3]]
 
     window = sg.Window("HyTech Racing Live Telemetry Console", resizable=True).Layout(layout).Finalize()
     window.Maximize()
