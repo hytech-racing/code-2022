@@ -857,8 +857,8 @@ def parse_ID_SAB_READINGS_FRONT(raw_message):
     message = "SAB_readings_front"
     labels = ["fl_susp_lin_pot", "fr_susp_lin_pot"]
     values = [
-        hex_to_decimal(raw_message[0:4], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value,
-        hex_to_decimal(raw_message[4:8], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value
+        hex_to_decimal(raw_message[8:12], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value,
+        hex_to_decimal(raw_message[12:16], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value
     ]
     units = ["mm", "mm"]
     return [message, labels, values, units]
