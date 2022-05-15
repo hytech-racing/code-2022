@@ -6,7 +6,7 @@
 #include <WiFi.h>
 
 // REPLACE WITH YOUR RECEIVER MAC Address
-uint8_t broadcastAddress[] = {0x7C, 0x9E, 0xBD, 0x37, 0xCA, 0x84};
+uint8_t broadcastAddress[] = {0x7C, 0x9E, 0xBD, 0x47, 0x5A, 0x14};
 
 typedef struct struct_message {
   char character[100];
@@ -34,7 +34,7 @@ void setup() {
 
   esp_now_register_send_cb(data_sent);
   
-  esp_now_peer_info_t peerInfo;
+  esp_now_peer_info_t peerInfo = {};
   memcpy(peerInfo.peer_addr, broadcastAddress, 6);
   peerInfo.channel = 0;  
   peerInfo.encrypt = false;     
