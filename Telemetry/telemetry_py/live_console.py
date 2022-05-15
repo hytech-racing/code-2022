@@ -6,11 +6,14 @@
 '''
 
 
-import PySimpleGUI as sg
+import PySimpleGUI as sg, sys
+import time
 import threading
 from os import path
 from enum import Enum
+from datetime import datetime
 import paho.mqtt.client as mqtt
+import itertools
 import binascii
 import struct
 import sys
@@ -38,95 +41,32 @@ MQTT_TOPIC  = 'hytech_car/telemetry'
 CONNECTION = ConnectionType.SERVER.value
 
 DICT = {
-    "RMS_INVERTER" : {
-        "MODULE_A_TEMPERATURE": " ",
-        "MODULE_B_TEMPERATURE": " ",
-        "MODULE_C_TEMPERATURE": " ",
-        "GATE_DRIVER_BOARD_TEMPERATURE": " ",
-        "RTD_4_TEMPERATURE": " ",
-        "RTD_5_TEMPERATURE": " ",
-        "MOTOR_TEMPERATURE": " ",
-        "TORQUE_SHUDDER": " ",
-        "MOTOR_ANGLE": " ",
-        "MOTOR_SPEED": " ",
-        "ELEC_OUTPUT_FREQ": " ",
-        "DELTA_RESOLVER_FILTERED": " ",
-        "PHASE_A_CURRENT": " ",
-        "PHASE_B_CURRENT": " ",
-        "PHASE_C_CURRENT": " ",
-        "DC_BUS_CURRENT": " ",
-        "DC_BUS_VOLTAGE": " ",
-        "OUTPUT_VOLTAGE": " ",
-        "PHASE_AB_VOLTAGE": " ",
-        "PHASE_BC_VOLTAGE": " ",
-        "VSM_STATE": " ",
-        "INVERTER_STATE": " ",
-        "INVERTER_RUN_MODE": " ",
-        "INVERTER_ACTIVE_DISCHARGE_STATE": " ",
-        "INVERTER_COMMAND_MODE": " ",
-        "INVERTER_ENABLE_STATE": " ",
-        "INVERTER_ENABLE_LOCKOUT": " ",
-        "DIRECTION_COMMAND": " ",
-        "POST_FAULT_LO": " ",
-        "POST_FAULT_HI": " ",
-        "RUN_FAULT_LO": " ",
-        "RUN_FAULT_HI": " ",
-        "COMMANDED_TORQUE": " ",
-        "TORQUE_FEEDBACK": " ",
-        "RMS_UPTIME": " "
+    "DASHBOARD": {
+        "SSOK_ABOVE_THRESHOLD": " ",
+        "SHUTDOWN_H_ABOVE_THRESHOLD": " "
     },
     "BATTERY_MANAGEMENT_SYSTEM": {
-        "BMS_AVERAGE_TEMPERATURE": " ",
-        "BMS_LOW_TEMPERATURE": " ",
-        "BMS_HIGH_TEMPERATURE": " ",
-        "BMS_STATE": " ",
-        "BMS_ERROR_FLAGS": " ",
-        "BMS_CURRENT": " ",
         "BMS_VOLTAGE_AVERAGE": " ",
         "BMS_VOLTAGE_LOW": " ",
         "BMS_VOLTAGE_HIGH": " ",
         "BMS_VOLTAGE_TOTAL": " ",
+        "BMS_AVERAGE_TEMPERATURE": " ",
+        "BMS_LOW_TEMPERATURE": " ",
+        "BMS_HIGH_TEMPERATURE": " ",
+        "BMS_CURRENT": " ",
         "BMS_TOTAL_CHARGE": " ",
-        "BMS_TOTAL_DISCHARGE": " "
+        "BMS_TOTAL_DISCHARGE": " ",
+        "BMS_STATE": " ",
+        "BMS_ERROR_FLAGS": " ",
     },
-    "MAIN_ECU": {
-        "IMD_OK_HIGH": " ",
-        "BMS_OK_HIGH": " ",
-        "BSPD_OK_HIGH": " ",
-        "SOFTWARE_OK_HIGH": " ",
-        "SHUTDOWN_D_ABOVE_THRESHOLD": " ",
-        "SHUTDOWN_E_ABOVE_THRESHOLD": " ",
-        "INVERTER_POWERED": " ",
-        "ACCELERATOR_PEDAL_1": " ",
-        "ACCELERATOR_PEDAL_2": " ",
-        "BRAKE_TRANSDUCER_1": " ",
-        "BRAKE_TRANSDUCER_2": " ",
-        "BRAKE_PEDAL_ACTIVE": " ",
-        "NO_ACCEL_IMPLAUSIBILITY": " ",
-        "NO_BRAKE_IMPLAUSIBILITY": " ",
-        "TORQUE_MODE": " ",
-        "MAX_TORQUE": " ",
-        "REQUESTED_TORQUE": " "
-    },
-    "GLV_CURRENT_READINGS": {
-        "ECU_CURRENT": " ",
-        "COOLING_CURRENT": " ",
-        "TEMPERATURE": " ",
-        "GLV_BATTERY_VOLTAGE": " "
-    },
-    "WHEEL_SPEED_SENSORS": {
-        "RPM_BACK_LEFT": " ",
-        "RPM_BACK_RIGHT": " ",
-        "RPM_FRONT_LEFT": " ",
-        "RPM_FRONT_RIGHT": " "
-    },
-    "SENSOR_ACQUISITION_BOARD": {
-        "FL_SUSP_LIN_POT": " ",
-        "FR_SUSP_LIN_POT": " ",
-        "BL_SUSP_LIN_POT": " ",
-        "BR_SUSP_LIN_POT": " ",
-        "COOLING_LOOP_FLUID_TEMP": " ",
-        "AMB_AIR_TEMP": " "
+    "ENERGY_METER": {
+        "VOLTAGE": " ",
+        "CURRENT": " ",
+        "OVERPOWER": " ",
+        "OVERVOLTAGE": " ",
+        "LOGGING": " ",
+        "VOLTAGE_GAIN": " ",
+        "CURRENT_GAIN": " ",
     },
     "RACEGRADE_IMU": {
         "LAT_ACCEL": " ",
@@ -136,20 +76,81 @@ DICT = {
         "PITCH": " ",
         "ROLL": " "
     },
-    "ENERGY_METER": {
-        "CURRENT": " ",
-        "VOLTAGE": " ",
-        "CURRENT_GAIN": " ",
-        "VOLTAGE_GAIN": " ",
-        "OVERVOLTAGE": " ",
-        "OVERPOWER": " ",
-        "LOGGING": " "
+    "RMS_INVERTER" : {
+        "OUTPUT_POWER": " ",
+        "RMS_UPTIME": " ",
+        "INVERTER_ENABLE_STATE": " ",
+        "MOTOR_SPEED": " ",
+        "MOTOR_ANGLE": " ",
+        "ELEC_OUTPUT_FREQ": " ",
+        "COMMANDED_TORQUE": " ",
+        "TORQUE_FEEDBACK": " ",
+        "DC_BUS_VOLTAGE": " ",
+        "OUTPUT_VOLTAGE": " ",
+        "PHASE_AB_VOLTAGE": " ",
+        "PHASE_BC_VOLTAGE": " ",
+        "DC_BUS_CURRENT": " ",
+        "PHASE_A_CURRENT": " ",
+        "PHASE_B_CURRENT": " ",
+        "PHASE_C_CURRENT": " ",
+        "MOTOR_TEMPERATURE": " ",
+        "GATE_DRIVER_BOARD_TEMPERATURE": " ",
+        "MODULE_A_TEMPERATURE": " ",
+        "MODULE_B_TEMPERATURE": " ",
+        "MODULE_C_TEMPERATURE": " ",
+        "TORQUE_SHUDDER": " ",
+        "INVERTER_STATE": " ",
+        "VSM_STATE": " ",
+        "INVERTER_ACTIVE_DISCHARGE_STATE": " ",
+        "INVERTER_COMMAND_MODE": " ",
+        "DIRECTION_COMMAND": " ",
+        "POST_FAULT_LO": " ",
+        "POST_FAULT_HI": " ",
+        "RUN_FAULT_LO": " ",
+        "RUN_FAULT_HI": " ",
     },
-    "DASHBOARD": {
-        "SSOK_ABOVE_THRESHOLD": " ",
-        "SHUTDOWN_H_ABOVE_THRESHOLD": " "
+    "MAIN_ECU": {
+        "GLV_BATTERY_VOLTAGE": " ",
+        "ECU_CURRENT": " ",
+        "COOLING_CURRENT": " ",
+        "TEMPERATURE": " ",
+        "IMD_OK_HIGH": " ",
+        "BMS_OK_HIGH": " ",
+        "BSPD_OK_HIGH": " ",
+        "SOFTWARE_OK_HIGH": " ",
+        "INVERTER_POWERED": " ",
+        "TORQUE_MODE": " ",
+        "MAX_TORQUE": " ",
+        "REQUESTED_TORQUE": " ",
+        "ACCELERATOR_PEDAL_1": " ",
+        "ACCELERATOR_PEDAL_2": " ",
+        "NO_ACCEL_IMPLAUSIBILITY": " ",
+        "BRAKE_TRANSDUCER_1": " ",
+        "BRAKE_TRANSDUCER_2": " ",
+        "BRAKE_PEDAL_ACTIVE": " ",
+        "NO_BRAKE_IMPLAUSIBILITY": " ",
+    },
+    "SENSOR_ACQUISITION_BOARD": {
+        "COOLING_LOOP_FLUID_TEMP": " ",
+        "AMB_AIR_TEMP": " ",
+        "FL_SUSP_LIN_POT": " ",
+        "FR_SUSP_LIN_POT": " ",
+        "BL_SUSP_LIN_POT": " ",
+        "BR_SUSP_LIN_POT": " ",
+    },
+    "WHEEL_SPEED_SENSORS": {
+        "RPM_BACK_LEFT": " ",
+        "RPM_BACK_RIGHT": " ",
+        "RPM_FRONT_LEFT": " ",
+        "RPM_FRONT_RIGHT": " "
     },
 }
+
+# Variables to keep track of inverter current and power for inverter power calculation
+inverter_voltage = 0.0
+inverter_current = 0.0
+inverter_power = 0.0
+ALPHA = 0.95 # for filtering
 
 '''
 @brief: Helper function to search for keys in a nested dictionary
@@ -165,6 +166,29 @@ def recursive_lookup(k, d):
             a = recursive_lookup(k, v)
             if a is not None: return a
     return None
+
+'''
+@brief: Helper function to calculate inverter power if inverter voltage or current is updated
+@param[in]: name - name of the parsed label
+@param[in]: data - the parsed data; if used, it will be a floating-type value
+@param[in]: window - the PySimpleGUI window object
+'''
+def handle_inverter_power(name, data, window):
+    # Specially handle Inverter output power since it is not a CAN label and needs calculation
+    if name == "DC_BUS_CURRENT" or name == "DC_BUS_VOLTAGE":
+        if name == "DC_BUS_VOLTAGE":
+            global inverter_voltage
+            inverter_voltage = data
+        else:
+            global inverter_current
+            inverter_current = data
+        
+        # Power = voltage * current
+        # Apply filtering constant so changes are not so volatile
+        global inverter_power
+        inverter_power = round(ALPHA * inverter_power + (1.0 - ALPHA) * inverter_current * inverter_voltage, 2)
+
+        window.write_event_value("-Update Data-", ["OUTPUT_POWER", "OUTPUT POWER: " + str(inverter_power) + " W"])
 
 '''
 @brief: Thread to read raw CSV line, parse it, and send event to GUI if match 
@@ -189,14 +213,18 @@ def read_from_csv_thread(window):
         if table != "INVALID_ID" and table != "UNPARSEABLE":
             for i in range(len(table[1])):
                 name = table[1][i].upper()
-                data = str(table[2][i])
+                data = table[2][i]
                 units = table[3][i]
-                if recursive_lookup(name, DICT):
-                    window.write_event_value("-Update Data-", [name, name.replace("_", " ") + ": " + data + " " + units])
+                if name == "MCU_STATE":
+                    window.write_event_value("-MCU State Change-", [data.replace("_", " ")])
+                elif recursive_lookup(name, DICT):
+                    window.write_event_value("-Update Data-", [name, name.replace("_", " ") + ": " + str(data) + " " + units])
+                    handle_inverter_power(name, data, window)
 
         line_count += 1
 
     window.write_event_value("-Read CSV Done-", "No data for you left")
+
 
 '''
 @brief: Thread to connect to MQTT broker on AWS EC2 instance.
@@ -222,16 +250,25 @@ def mqtt_connection_thread(window):
         if data != -1:
             id = format(data[0], 'x').upper()
             size = data[4]
-            raw = format(struct.unpack(">1Q", data[5:13])[0], 'x')[:size*2].zfill(16)
+            # Catch when leadings zeros got stripped by struct.unpack and account for that
+            subtracts = 0
+            if data[5] == 0x0: # data[5] is first index of message payload
+                subtracts += 2
+            elif data[5] <= 0xF:
+                subtracts += 1   
+            raw = format(struct.unpack(">1Q", data[5:13])[0], 'x')[:size*2 - subtracts].zfill(16)   
 
             table = parse_message(id, raw)
             if table != "INVALID_ID" and table != "UNPARSEABLE":
                 for i in range(len(table[1])):
                     name = table[1][i].upper()
-                    data = str(table[2][i])
+                    data = table[2][i]
                     units = table[3][i]
-                    if recursive_lookup(name, DICT):
-                        window.write_event_value("-Update Data-", [name, name.replace("_", " ") + ": " + data + " " + units])
+                    if name == "MCU_STATE":
+                        window.write_event_value("-MCU State Change-", [data.replace("_", " ")])
+                    elif recursive_lookup(name, DICT):
+                        window.write_event_value("-Update Data-", [name, name.replace("_", " ") + ": " + str(data) + " " + units])
+                        handle_inverter_power(name, data, window)
 
     '''
     @brief: Callback function for MQTT connection success. Sends an connection succes event to the GUI.
@@ -254,6 +291,40 @@ def mqtt_connection_thread(window):
     client.loop_forever()
 
 '''
+@brief: Helper function to get multi-columns rows for detailed messages
+@return: dictionary, an list of combined elements 
+'''
+def get_bms_detailed_messages():
+    ic_list = ['IC_' + str(x) for x in range(8)]
+    cell_list_odd = ['CELL_' + str(x) for x in range(9)]
+    cell_list_even = ['CELL_' + str(x) for x in range(12)]
+    ic_cells = []
+    
+    for i in range(8):
+        # Even ICs have 12 cells
+        if i % 2 == 0:
+            ic_cells += [ic_list[i] + '_' + cell for cell in cell_list_even]
+        # Odd ICs have 9 cells
+        else:
+            ic_cells += [ic_list[i] + '_' + cell for cell in cell_list_odd]
+    
+    result = dict.fromkeys(ic_cells, ' ')
+    dictionary = {"BATTERY_MANAGEMENT_SYSTEM_DETAILED_VOLTAGES": result}
+
+
+    ic_list2 = ['IC_' + str(x) for x in range(8)]
+    temperature_list = ['THERM_' + str(x) for x in range(4)]
+    ic_temperature = [ic + '_' + therm for ic in ic_list2 for therm in temperature_list]
+    ic_temperature = ic_temperature + ["IC_0_HUMIDITY", "IC_2_HUMIDITY", "IC_4_HUMIDITY", "IC_6_HUMIDITY"]
+    ic_temperature = ic_temperature + ["IC_1_TEMPERATURE", "IC_3_TEMPERATURE", "IC_5_TEMPERATURE", "IC_7_TEMPERATURE"]
+    result2 = dict.fromkeys(ic_temperature, ' ')
+    dictionary2 = {"BATTERY_MANAGEMENT_SYSTEM_DETAILED_TEMPERATURES": result2}
+    return dictionary, dictionary2
+
+
+
+
+'''
 @brief: The main function to spawn the PySimpleGUI and handle events
 '''
 def main():
@@ -261,42 +332,104 @@ def main():
     title_font = ("Courier New", 12)
     text_font = ("Courier New", 8)
 
-    rms = [[sg.Text("RMS INVERTER", pad=(0,2), font=title_font)]]
-    dashboard = [[sg.Text("DASHBOARD", pad=(0,2), font=title_font)]]
-    bms = [[sg.Text("BATTERY MANAGEMENT SYSTEM", pad=(0,2), font=title_font)]]
-    main_ecu = [[sg.Text("MAIN ECU", pad=(0,2), font=title_font)]]
-    glv_current_readings = [[sg.Text("GLV CURRENT READINGS", pad=(0,2), font=title_font)]]
-    wheel_speed_sensors = [[sg.Text("WHEEL SPEED SENSORS", pad=(0,2), font=title_font)]]
-    sab = [[sg.Text("SENSOR ACQUISITION BOARD", pad=(0,2), font=title_font)]]
-    imu = [[sg.Text("RACEGRADE IMU", pad=(0,2), font=title_font)]]
-    em = [[sg.Text("ENERGY METER", pad=(0,2), font=title_font)]]
+    # Subtitle text declarations
+    inverter = [[sg.Text("RMS INVERTER", pad=(0,2), font=title_font, text_color="light blue")]]
+    dashboard = [[sg.Text("DASHBOARD", pad=(0,2), font=title_font, text_color="light blue")]]
+    bms = [[sg.Text("BMS OVERVIEW", pad=(0,2), font=title_font, text_color="light blue")]]
+    main_ecu = [[sg.Text("MAIN ECU", pad=(0,2), font=title_font, text_color="light blue")]]
+    wheel_speed_sensors = [[sg.Text("WHEEL SPEED SENSORS", pad=(0,2), font=title_font, text_color="light blue")]]
+    sab = [[sg.Text("SENSOR ACQUISITION BOARD", pad=(0,2), font=title_font, text_color="light blue")]]
+    imu = [[sg.Text("RACEGRADE IMU", pad=(0,2), font=title_font, text_color="light blue")]]
+    em = [[sg.Text("ENERGY METER", pad=(0,2), font=title_font, text_color="light blue")]]
+    bms_detailed_voltages = [[sg.Text("BMS DETAILED VOLTAGES", size=(33,1), pad=(0,2), font=title_font, text_color="light blue")]]
+    bms_detailed_temps = [[sg.Text("BMS DETAILED TEMPERATURES", pad=(0,2), font=title_font, text_color="light blue")]]
+
+    bms_voltages = [[]]
+    bms_temperatures = [[]]
     
+    DICT1, DICT2 = get_bms_detailed_messages()
+    DICT.update(DICT1)
+    DICT.update(DICT2)
+    row_count_temperatures = 0
+    row_count_voltages = 0
     
+    # Data text arrangements and manipulations
     for label, value in DICT["RMS_INVERTER"].items():
-        rms.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+        inverter.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
     for label, value in DICT["BATTERY_MANAGEMENT_SYSTEM"].items():
-        bms.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+        bms.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(35,1), pad=(0,0), font=text_font, key=label)])
     for label, value in DICT["MAIN_ECU"].items():
-        main_ecu.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+        main_ecu.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(35,1), pad=(0,0), font=text_font, key=label)])
     for label, value in DICT["DASHBOARD"].items():
-        dashboard.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
-    for label, value in DICT["GLV_CURRENT_READINGS"].items():
-        glv_current_readings.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+        dashboard.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(35,1), pad=(0,0), font=text_font, key=label)])
     for label, value in DICT["WHEEL_SPEED_SENSORS"].items():
-        wheel_speed_sensors.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+        wheel_speed_sensors.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(35,1), pad=(0,0), font=text_font, key=label)])
     for label, value in DICT["SENSOR_ACQUISITION_BOARD"].items():
-        sab.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+        sab.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(35,1), pad=(0,0), font=text_font, key=label)])
     for label, value in DICT["RACEGRADE_IMU"].items():
-        imu.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+        imu.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(35,1), pad=(0,0), font=text_font, key=label)])
     for label, value in DICT["ENERGY_METER"].items():
-        em.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+        em.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(35,1), pad=(0,0), font=text_font, key=label)])
+    for label, value in DICT["BATTERY_MANAGEMENT_SYSTEM_DETAILED_VOLTAGES"].items():
+        if row_count_voltages % 9 == 8 and int(label[3]) == 3 or int(label[3]) == 7:
+            # No padding for ICs 3 and 7 last cells since text will take care of it in the next column over
+            bms_voltages.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(23,1), pad=(0,0), font=text_font, key=label)])
+            row_count_voltages = 0
+        elif row_count_voltages % 9 == 8 and int(label[3]) % 2 == 1:
+            bms_voltages.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(23,1), pad=((0,0),(0,10)), font=text_font, key=label)])
+            row_count_voltages = 0
+        elif row_count_voltages % 12 == 11 and int(label[3]) % 2 == 0:
+            bms_voltages.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(23,1), pad=((0,0),(0,10)), font=text_font, key=label)])
+            row_count_voltages = 0
+        else:            
+            bms_voltages.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(23,1), pad=(0,0), font=text_font, key=label)])
+            row_count_voltages = row_count_voltages + 1
+    for label, value in DICT["BATTERY_MANAGEMENT_SYSTEM_DETAILED_TEMPERATURES"].items():
+        if row_count_temperatures >= 36:
+            bms_temperatures.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(25,1), pad=(0,0), font=text_font, key=label)])
+        elif row_count_temperatures % 4 == 3:
+            bms_temperatures.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(23,1), pad=((0,0),(0,10)), font=text_font, key=label)])
+        else:
+            bms_temperatures.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(23,1), pad=(0, 0),font=text_font, key=label)])
+        row_count_temperatures = row_count_temperatures + 1
 
-    connection_text = sg.Text("CONSOLE STATUS: NOT CONNECTED", justification="left", pad=(5,10), text_color='red', font=title_font, key="-Connection Text-")
-    column1 = sg.Column(rms, vertical_alignment='t')
-    column2 = sg.Column(bms + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + main_ecu + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + glv_current_readings, vertical_alignment='t')
-    column3 = sg.Column(dashboard + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + wheel_speed_sensors + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + sab + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + imu + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + em, vertical_alignment='t')
+    # We ran out of room so ICs 3 and 7 will be on column with BMS detailed temps
+    left_voltages_first_column = bms_voltages[:34]
+    right_voltages_first_column = bms_voltages[43:76]
+    left_voltages_second_column = bms_voltages[34:43]
+    right_voltages_second_column = bms_voltages[76:]
+    
+    first_half_therm = bms_temperatures[:17]
+    second_half_therm = bms_temperatures[17:33]
+    therm_humidities = bms_temperatures[33:37]
+    therm_temperatures = bms_temperatures[37:]
 
-    layout = [[connection_text], [column1, column2, column3]]
+    voltages = [[sg.Column(left_voltages_first_column, pad=(0,0), vertical_alignment='t'), sg.Column(right_voltages_first_column, pad=(0,0), vertical_alignment='t')]]
+    voltages_second_column = [[sg.Column(left_voltages_second_column, pad=(0,0), vertical_alignment='t'), sg.Column(right_voltages_second_column, pad=(0,0), vertical_alignment='t')]]
+    temperatures = [[sg.Column(first_half_therm + therm_humidities, pad=(0,0), vertical_alignment='t'), sg.Column(second_half_therm + therm_temperatures, pad=(0,0), vertical_alignment='t')]]
+
+    # Header texts and columns
+    connection_text = [[sg.Text("CONSOLE STATUS: NOT CONNECTED", justification="left", pad=((5,0),12), text_color='red', font=title_font, key="-Connection Text-")]]
+    divider_text_1 = [[sg.Text(" | ", pad=(5,12), font=title_font)]]
+    vehicle_status_text = [[sg.Text("VEHICLE STATUS: NOT RECEIVED", justification="left", pad=((0,0),12), font=title_font, key="-Vehicle Status Text-")]]
+    divider_text_2 = [[sg.Text(" | ", pad=(5,12), font=title_font)]]
+    last_update_text = [[sg.Text("LAST UPDATE: NOT RECEIVED", justification="left", pad=((0,5),12), font=title_font, key="-Last Update Text-")]]
+
+    status_header_column1 = sg.Column(connection_text, pad=(0,0), vertical_alignment='t')
+    status_header_column2 = sg.Column(divider_text_1, pad=(0,0), vertical_alignment='t')
+    status_header_column3 = sg.Column(vehicle_status_text, pad=(0,0), vertical_alignment='t')
+    status_header_column4 = sg.Column(divider_text_2, pad=(0,0), vertical_alignment='t')
+    status_header_column5 = sg.Column(last_update_text, pad=(0,0), vertical_alignment='t')
+
+    # Data colummns
+    column1 = sg.Column(dashboard + [[sg.Text(" ", size=(35,1), pad=(0,0), font=text_font)]] + bms + [[sg.Text(" ", size=(35,1), pad=(0,0), font=text_font)]] + em + [[sg.Text(" ", size=(35,1), pad=(0,0), font=text_font)]] + imu, vertical_alignment='t')
+    column2 = sg.Column(main_ecu + [[sg.Text(" ", size=(35,1), pad=(0,0), font=text_font)]] + sab + [[sg.Text(" ", size=(35,1), pad=(0,0), font=text_font)]] + wheel_speed_sensors, vertical_alignment='t')
+    column3 = sg.Column(inverter, vertical_alignment='t')
+    column4 = sg.Column(bms_detailed_voltages + voltages, vertical_alignment='t')
+    column5 = sg.Column(voltages_second_column + [[sg.Text(" ", size=(35,1), pad=(0,0), font=text_font)]] + bms_detailed_temps + temperatures, vertical_alignment='t')
+
+    # Finalize layout
+    layout = [[status_header_column1, status_header_column2, status_header_column3, status_header_column4, status_header_column5], [column1, column2, column3, column4, column5]]
 
     window = sg.Window("HyTech Racing Live Telemetry Console", resizable=True).Layout(layout).Finalize()
     window.Maximize()
@@ -326,8 +459,24 @@ def main():
             window["-Connection Text-"].update("CONSOLE STATUS: TESTING", text_color="yellow")
         elif event == "-Connection Success-":
             window["-Connection Text-"].update("CONSOLE STATUS: CONNECTED", text_color="green")
+        elif event == "-MCU State Change-":
+            received_status = values["-MCU State Change-"][0]
+            status_color = ""
+
+            if received_status == "STARTUP": status_color = "cyan"
+            elif received_status == "TRACTIVE SYSTEM NOT ACTIVE": status_color = "light grey"
+            elif received_status == "TRACTIVE SYSTEM ACTIVE": status_color = "orange"
+            elif received_status == "ENABLING INVERTER": status_color = "yellow"
+            elif received_status == "WAITING READY TO DRIVE SOUND": status_color = "green yellow"
+            elif received_status == "READY TO DRIVE": status_color = "green"
+            elif received_status == "UNRECOGNIZED STATE": status_color = "red"
+            else: status_color = "red" # Should not get here since parser will output UNRECOGNIZED STATE if invalid; here just as a failsafe
+
+            window["-Vehicle Status Text-"].update("VEHICLE STATUS: " + received_status, text_color=status_color)
+            window.refresh()
         elif event == "-Update Data-":
             window[values["-Update Data-"][0]].update(values["-Update Data-"][1])
+            window["-Last Update Text-"].update("LAST UPDATE: " + datetime.now().strftime('%H:%M:%S.%f')[:-5])
             window.refresh()
 
     window.close()
