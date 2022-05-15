@@ -620,7 +620,7 @@ def parse_ID_BMS_VOLTAGES(raw_message):
 def parse_ID_BMS_DETAILED_VOLTAGES(raw_message):
     message = "BMS_detailed_voltages"
     ic_id = raw_message[3]
-    group_id = int(raw_message[2])
+    group_id = int(raw_message[2], 16)
     labels = ""
     if group_id == 0:
         labels = ["IC_" + ic_id + "_CELL_0", "IC_" + ic_id + "_CELL_1", "IC_" + ic_id + "_CELL_2"]
@@ -628,7 +628,7 @@ def parse_ID_BMS_DETAILED_VOLTAGES(raw_message):
         labels = ["IC_" + ic_id + "_CELL_3", "IC_" + ic_id + "_CELL_4", "IC_" + ic_id + "_CELL_5"]
     elif group_id == 2:
         labels = ["IC_" + ic_id + "_CELL_6", "IC_" + ic_id + "_CELL_7", "IC_" + ic_id + "_CELL_8"]
-    elif group_id == 3 and int(ic_id) % 2 == 0:
+    elif group_id == 3 and int(ic_id, 16) % 2 == 0:
         labels = ["IC_" + ic_id + "_CELL_9", "IC_" + ic_id + "_CELL_10", "IC_" + ic_id + "_CELL_11"]
     else:
         if DEBUG: print("UNFATAL ERROR: BMS detailed voltage group " + str(group_id) + " is invalid.")
@@ -655,12 +655,12 @@ def parse_ID_BMS_TEMPERATURES(raw_message):
 def parse_ID_BMS_DETAILED_TEMPERATURES(raw_message):
     message = "BMS_detailed_temperatures"
     ic_id = raw_message[3]
-    group_id = int(raw_message[2])
+    group_id = int(raw_message[2], 16)
 
     # Different parsing if IC_ID is even or old
     # If IC_ID is even, GPIO 5 is humidity; if IC_ID is odd, GPIO 5 is temperature
     isEven = False
-    if int(ic_id) % 2 == 0: isEven = True
+    if int(ic_id, 16) % 2 == 0: isEven = True
 
     labels = ""
     if isEven:
@@ -1040,7 +1040,7 @@ def parse_message(raw_id, raw_message):
     if raw_id == "91": return parse_ID_IMU_GYROSCOPE(raw_message)
 
     # Should not come to here if CAN ID was valid
-    if DEBUG: print("UNFATAL ERROR: Invalid CAN ID: 0x" + raw_message)
+    if DEBUG: print("UNFATAL ERROR: Invalid CAN ID: 0x" + raw_id)
     return "INVALID_ID"
 
 def parse_time(raw_time):
