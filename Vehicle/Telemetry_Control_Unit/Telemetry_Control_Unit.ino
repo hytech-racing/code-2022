@@ -566,10 +566,8 @@ void send_xbee() {
         XB.println(bms_voltages.get_total() / (double) 100, 2);*/
     }
     if (timer_debug_bms_detailed_voltages.check()) {
-        for (uint8_t ic = 0; ic < 8; ic++) {
-            for (uint8_t group = 0; group < ((ic % 2 == 0) ? 4 : 3); group++) {
-                bms_detailed_voltages[group][ic].set_ic_id(ic);
-                bms_detailed_voltages[group][ic].set_group_id(group);
+        for (int ic = 0; ic < 8; ic++) {
+            for (int group = 0; group < ((ic % 2 == 0) ? 4 : 3); group++) {
                 bms_detailed_voltages[group][ic].write(xb_msg.buf);
                 xb_msg.len = sizeof(BMS_detailed_voltages);
                 xb_msg.id = ID_BMS_DETAILED_VOLTAGES;
@@ -590,10 +588,8 @@ void send_xbee() {
         XB.println(bms_temperatures.get_high_temperature() / (double) 100, 2);*/
     }
     if (timer_debug_bms_detailed_temperatures.check()) {
-        for (uint8_t ic = 0; ic < 8; ic++) {
-            for (uint8_t group = 0; group < 2; group++) {
-                bms_detailed_temperatures[group][ic].set_ic_id(ic);
-                bms_detailed_temperatures[group][ic].set_group_id(group);
+        for (int ic = 0; ic < 8; ic++) {
+            for (int group = 0; group < 2; group++) {
                 bms_detailed_temperatures[group][ic].write(xb_msg.buf);
                 xb_msg.len = sizeof(BMS_detailed_temperatures);
                 xb_msg.id = ID_BMS_DETAILED_TEMPERATURES;
