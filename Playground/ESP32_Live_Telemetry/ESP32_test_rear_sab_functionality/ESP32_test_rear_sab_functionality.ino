@@ -38,7 +38,8 @@ SAB_readings_rear sab_readings_rear;
 // Functions scale value up by 1000, will get scaled down 1000 later in parser
 #define TICKS_4096_TO_1024 (4096 / 1024)         // ESP32 ADC translates to 4096 ticks per 3.3V instead of Teensy's 1024 ticks per 3.3V
 inline float get_sensor1_value() {return 0.0;}   // Needs to be implemented for cooling loop fluid temp
-inline float get_sensor2_value() {return (analogRead(SENSOR_2_CHANNEL) / TICKS_4096_TO_1024 * -0.43003 + 190.95588) * 1000;} // DO NOT CHANGE THIS W/O SPECIAL REASON
+inline float get_sensor2_value() {return 0.0;}   // Ambient Air Temperature sensor was lost :(
+// inline float get_sensor2_value() {return (analogRead(SENSOR_2_CHANNEL) * -0.43003 + 190.95588) * 1000;} // DO NOT CHANGE THIS W/O SPECIAL REASON
 inline float get_sensor3_value() {return (analogRead(SENSOR_3_CHANNEL) / TICKS_4096_TO_1024 * 0.059312 + 3.0) * 1000;}       // DO NOT CHANGE THIS W/O SPECIAL REASON
 inline float get_sensor4_value() {return (analogRead(SENSOR_4_CHANNEL) / TICKS_4096_TO_1024 * 0.059312 + 3.0) * 1000;}       // DO NOT CHANGE THIS W/O SPECIAL REASON
 
