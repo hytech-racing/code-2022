@@ -108,7 +108,7 @@ def parse_ID_MC_TEMPERATURES3(raw_message):
         hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.MC_TEMPERATURES3_MOTOR_TEMPERATURE.value, 
         hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.MC_TEMPERATURES3_TORQUE_SHUDDER.value
     ]
-    units = ["C", "C", "C", "N-m"]
+    units = ["C", "C", "C", "Nm"]
     return [message, labels, values, units]
 
 def parse_ID_MC_ANALOG_INPUTS_VOLTAGES(raw_message):
@@ -154,10 +154,10 @@ def parse_ID_MC_MOTOR_POSITION_INFORMATION(raw_message):
     values = [
         hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.MC_MOTOR_POSITION_INFORMATION_MOTOR_ANGLE.value,
         hex_to_decimal(raw_message[4:8], 16, True), 
-        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.MC_MOTOR_POSITION_INFORMATION_ELEC_OUTPUT_FREQ.value, 
+        hex_to_decimal(raw_message[8:12], 16, False) / Multipliers.MC_MOTOR_POSITION_INFORMATION_ELEC_OUTPUT_FREQ.value, 
         hex_to_decimal(raw_message[12:16], 16, True)
     ]
-    units = ["", "RPM", "", ""]
+    units = ["deg", "RPM", "Hz", ""]
     return [message, labels, values, units]
 
 def parse_ID_MC_CURRENT_INFORMATION(raw_message):
@@ -405,9 +405,9 @@ def parse_ID_MC_TORQUE_TIMER_INFORMATION(raw_message):
     values = [
         hex_to_decimal(raw_message[0:4], 16, True) / Multipliers.MC_TORQUE_TIMER_INFORMATION_COMMANDED_TORQUE.value,
         hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.MC_TORQUE_TIMER_INFORMATION_TORQUE_FEEDBACK.value, 
-        hex_to_decimal(raw_message[8:16], 32, False)
+        hex_to_decimal(raw_message[8:16], 32, False) / Multipliers.MC_TORQUE_TIMER_INFORMATION_RMS_UPTIME.value
     ]
-    units = ["C", "C", "ms"]
+    units = ["Nm", "Nm", "s"]
     return [message, labels, values, units]
 
 def parse_ID_MC_FLUX_WEAKENING_OUTPUT(raw_message):
@@ -449,9 +449,7 @@ def parse_ID_MC_COMMAND_MESSAGE(raw_message):
         hex_to_decimal(raw_message[11], 4, False), 
         hex_to_decimal(raw_message[12:16], 16, True)
     ]
-    units = []
-    for i in range(len(labels)):
-        units.append("")
+    units = ["Nm", "", "", "", "", "Nm"]
     return [message, labels, values, units]
 
 def parse_ID_MC_READ_WRITE_PARAMETER_COMMAND(raw_message):
@@ -554,13 +552,23 @@ def parse_ID_MCU_STATUS(raw_message):
 def parse_ID_MCU_PEDAL_READINGS(raw_message):
     message = "MCU_pedal_readings"
     labels = ["accelerator_pedal_1", "accelerator_pedal_2", "brake_transducer_1", "brake_transducer_2"]
+
+    accelerator_1 = round(hex_to_decimal(raw_message[0:4], 16, False) / Multipliers.MCU_PEDAL_READINGS_ACCELERATOR_PEDAL_1.value - 2080.0/11.0, 2)
+    accelerator_2 = round(hex_to_decimal(raw_message[4:8], 16, False) / Multipliers.MCU_PEDAL_READINGS_ACCELERATOR_PEDAL_2.value - 175.0, 2)
+
+    # If the linear regression occasionally results in a negative value, set it to 0.0
+    if accelerator_1 < 0.0:
+        accelerator_1 = 0.0
+    if accelerator_2 < 0.0:
+        accelerator_2 = 0.0
+
     values = [
-        hex_to_decimal(raw_message[0:4], 16, False), 
-        hex_to_decimal(raw_message[4:8], 16, False), 
-        hex_to_decimal(raw_message[8:12], 16, False), 
-        hex_to_decimal(raw_message[12:16], 16, False)
+        accelerator_1, 
+        accelerator_2, 
+        round(hex_to_decimal(raw_message[8:12], 16, False) / Multipliers.MCU_PEDAL_READINGS_BRAKE_TRANDUCER_1.value, 2), 
+        round(hex_to_decimal(raw_message[12:16], 16, False) / Multipliers.MCU_PEDAL_READINGS_BRAKE_TRANDUCER_2.value, 2)
     ]
-    units = ["", "", "", ""]
+    units = ["%", "%", "psi", "psi"]
     return [message, labels, values, units]
 
 def parse_ID_MCU_ANALOG_READINGS(raw_message):
@@ -611,8 +619,8 @@ def parse_ID_BMS_VOLTAGES(raw_message):
 
 def parse_ID_BMS_DETAILED_VOLTAGES(raw_message):
     message = "BMS_detailed_voltages"
-    ic_id = raw_message[1]
-    group_id = int(raw_message[0])
+    ic_id = raw_message[3]
+    group_id = int(raw_message[2], 16)
     labels = ""
     if group_id == 0:
         labels = ["IC_" + ic_id + "_CELL_0", "IC_" + ic_id + "_CELL_1", "IC_" + ic_id + "_CELL_2"]
@@ -620,15 +628,15 @@ def parse_ID_BMS_DETAILED_VOLTAGES(raw_message):
         labels = ["IC_" + ic_id + "_CELL_3", "IC_" + ic_id + "_CELL_4", "IC_" + ic_id + "_CELL_5"]
     elif group_id == 2:
         labels = ["IC_" + ic_id + "_CELL_6", "IC_" + ic_id + "_CELL_7", "IC_" + ic_id + "_CELL_8"]
-    elif group_id == 3 and int(ic_id) % 2 == 0:
+    elif group_id == 3 and int(ic_id, 16) % 2 == 0:
         labels = ["IC_" + ic_id + "_CELL_9", "IC_" + ic_id + "_CELL_10", "IC_" + ic_id + "_CELL_11"]
     else:
         if DEBUG: print("UNFATAL ERROR: BMS detailed voltage group " + str(group_id) + " is invalid.")
         return "UNPARSEABLE"
     values = [
-        hex_to_decimal(raw_message[2:6], 16, False) / Multipliers.BMS_DETAILED_VOLTAGES_VOLTAGE_0.value,
-        hex_to_decimal(raw_message[6:10], 16, False) / Multipliers.BMS_DETAILED_VOLTAGES_VOLTAGE_1.value,
-        hex_to_decimal(raw_message[10:14], 16, False) / Multipliers.BMS_DETAILED_VOLTAGES_VOLTAGE_2.value
+        hex_to_decimal(raw_message[4:8], 16, False) / Multipliers.BMS_DETAILED_VOLTAGES_VOLTAGE_0.value,
+        hex_to_decimal(raw_message[8:12], 16, False) / Multipliers.BMS_DETAILED_VOLTAGES_VOLTAGE_1.value,
+        hex_to_decimal(raw_message[12:16], 16, False) / Multipliers.BMS_DETAILED_VOLTAGES_VOLTAGE_2.value
     ]
     units = ["V", "V", "V"]
     return [message, labels, values, units]
@@ -646,14 +654,44 @@ def parse_ID_BMS_TEMPERATURES(raw_message):
 
 def parse_ID_BMS_DETAILED_TEMPERATURES(raw_message):
     message = "BMS_detailed_temperatures"
-    ic_id = str(hex_to_decimal(raw_message[0:2], 8, False))
-    labels = ["IC_" + ic_id + "_therm_0", "IC_" + ic_id + "_therm_1", "IC_" + ic_id + "_therm_2"]
+    ic_id = raw_message[3]
+    group_id = int(raw_message[2], 16)
+
+    # Different parsing if IC_ID is even or old
+    # If IC_ID is even, GPIO 5 is humidity; if IC_ID is odd, GPIO 5 is temperature
+    isEven = False
+    if int(ic_id, 16) % 2 == 0: isEven = True
+
+    labels = ""
+    if isEven:
+        if group_id == 0:
+            labels = ["IC_" + ic_id + "_therm_0", "IC_" + ic_id + "_therm_1", "IC_" + ic_id + "_therm_2"]
+        elif group_id == 1:
+            labels = ["IC_" + ic_id + "_therm_3", "IC_" + ic_id + "_humidity", "IC_" + ic_id + "_Vref"]
+        else:
+            if DEBUG: print("UNFATAL ERROR: BMS detailed temperature group " + str(group_id) + " is invalid.")
+            return "UNPARSEABLE"
+    else:
+        if group_id == 0:
+            labels = ["IC_" + ic_id + "_therm_0", "IC_" + ic_id + "_therm_1", "IC_" + ic_id + "_therm_2"]
+        elif group_id == 1:
+            labels = ["IC_" + ic_id + "_therm_3", "IC_" + ic_id + "_temperature", "IC_" + ic_id + "_Vref"]
+        else:
+            if DEBUG: print("UNFATAL ERROR: BMS detailed temperature group " + str(group_id) + " is invalid.")
+            return "UNPARSEABLE"
+
     values = [
-        hex_to_decimal(raw_message[2:6], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_0.value,
-        hex_to_decimal(raw_message[6:10], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_1.value,
-        hex_to_decimal(raw_message[10:14], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_2.value
+        hex_to_decimal(raw_message[4:8], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_0.value,
+        hex_to_decimal(raw_message[8:12], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_1.value,
+        hex_to_decimal(raw_message[12:16], 16, True) / Multipliers.BMS_DETAILED_TEMPERATURES_THERM_2.value
     ]
-    units = ["C", "C", "C"]
+
+    units = []
+    if group_id == 0: units = ["C", "C", "C"]
+    else:
+        if isEven: units = ["C", "%", "V"]
+        else: units = ["C", "C", "V"]
+
     return [message, labels, values, units]
     
 def parse_ID_BMS_STATUS(raw_message):
@@ -735,7 +773,7 @@ def parse_ID_BMS_COULOMB_COUNTS(raw_message):
         hex_to_decimal(raw_message[0:8], 32, False) / Multipliers.BMS_COULOMB_COUNTS_BMS_TOTAL_CHARGE.value,
         hex_to_decimal(raw_message[8:16], 32, False) / Multipliers.BMS_COULOMB_COUNTS_BMS_TOTAL_DISCHARGE.value
     ]
-    units = ["C", "C"]
+    units = ["Ah", "Ah"]
     return [message, labels, values, units]
 
 def parse_ID_MCU_GPS_READINGS(raw_message):
@@ -819,8 +857,8 @@ def parse_ID_SAB_READINGS_FRONT(raw_message):
     message = "SAB_readings_front"
     labels = ["fl_susp_lin_pot", "fr_susp_lin_pot"]
     values = [
-        hex_to_decimal(raw_message[0:4], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value,
-        hex_to_decimal(raw_message[4:8], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value
+        hex_to_decimal(raw_message[8:12], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value,
+        hex_to_decimal(raw_message[12:16], 16, False) / Multipliers.SAB_READINGS_NON_GPS.value
     ]
     units = ["mm", "mm"]
     return [message, labels, values, units]
@@ -859,8 +897,8 @@ def parse_ID_EM_MEASUREMENT(raw_message):
         return value
     bin_rep = bin(int(raw_message, 16))
     bin_rep = bin_rep[2:].zfill(64)
-    current = round(twos_comp(int(bin_rep[7:39], 2)) / Multipliers.EM_MEASUREMENTS_CURRENT.value, 4)
-    voltage = round(twos_comp(int(bin_rep[39:71], 2)) / Multipliers.EM_MEASUREMENTS_VOLTAGE.value, 4)
+    current = round(twos_comp(int(bin_rep[7:39], 2)) / Multipliers.EM_MEASUREMENTS_CURRENT.value, 2)
+    voltage = round(twos_comp(int(bin_rep[39:71], 2)) / Multipliers.EM_MEASUREMENTS_VOLTAGE.value, 2)
     values = [current, voltage]
 
     units = ["A", "V"]
@@ -1002,7 +1040,7 @@ def parse_message(raw_id, raw_message):
     if raw_id == "91": return parse_ID_IMU_GYROSCOPE(raw_message)
 
     # Should not come to here if CAN ID was valid
-    if DEBUG: print("UNFATAL ERROR: Invalid CAN ID: 0x" + raw_message)
+    if DEBUG: print("UNFATAL ERROR: Invalid CAN ID: 0x" + raw_id)
     return "INVALID_ID"
 
 def parse_time(raw_time):

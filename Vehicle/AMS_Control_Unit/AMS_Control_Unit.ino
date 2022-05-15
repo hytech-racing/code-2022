@@ -1,10 +1,10 @@
 /* ACU CONTROL UNIT CODE
    The AMS Control Unit code is used to control and communicate with Analog Devices LTC6811-2 battery stack monitors, per the HyTech Racing HT06 Accumulator Design.
-   It also handles CAN communications with the mainECU and energy meter, performs coulomb counting operations, and drives a watchdog timer on the ACU.
+   It also handles CAN communications with the mainECU and energy meter and drives a watchdog timer on the ACU.
    See LTC6811_2.cpp and LTC6811-2 Datasheet provided by Analog Devices for more details.
    Author: Zekun Li, Liwei Sun
-   Version: 1.02
-   Since: 04/23/2022
+   Version: 1.03
+   Since: 05/12/2022
 */
 
 #include <Arduino.h>
@@ -24,7 +24,7 @@
 #define MAX_VOLTAGE 42000          // Maxiumum allowable single cell voltage in units of 100μV
 #define MAX_TOTAL_VOLTAGE 3550000  // Maximum allowable pack total voltage in units of 100μV
 #define MAX_THERMISTOR_VOLTAGE 26225   // Maximum allowable pack temperature corresponding to 60C in units 100μV
-#define BALANCE_ON false
+#define BALANCE_ON true
 #define BALANCE_COOL 6000             // Sets balancing duty cycle as 33.3%
 #define BALANCE_STANDARD 4000         // Sets balancing duty cycle as 50%
 #define BALANCE_HOT 3000             // Sets balancing duty cycle as 66%
@@ -306,7 +306,7 @@ void read_gpio() {
               max_humidity_location[0] = i;
               max_humidity_location[1] = j + k;
             }
-          } else if(j + k < 4){
+          } else if (j + k < 4) {
             float thermistor_resistance = (2740 / (gpio_voltages[i][j + k] / 50000.0)) - 2740;
             gpio_temps[i][j + k] = 1 / ((1 / 298.15) + (1 / 3984.0) * log(thermistor_resistance / 10000.0)) - 273.15; //calculation for thermistor temperature in C
             total_thermistor_temps += gpio_temps[i][j + k];
@@ -320,7 +320,7 @@ void read_gpio() {
               min_thermistor_location[0] = i;
               min_thermistor_location[1] = j + k;
             }
-            
+
           }
         }
       }
@@ -472,18 +472,23 @@ void write_CAN_detailed_voltages() {
 
 // TODO: This CAN message is in the HT05 Style; it needs to be updated with group ID to conform to HT06 standards
 void write_CAN_detailed_temps() {
+  if (can_gpio_group > 3) {
+    can_gpio_ic++;
+    can_gpio_group = 0;
+  }
   if (can_gpio_ic > 7) {
     can_gpio_ic = 0;
   }
   bms_detailed_temperatures.set_ic_id(can_gpio_ic);
-  bms_detailed_temperatures.set_temperature_0(gpio_temps[can_gpio_ic][0] * 100);
-  bms_detailed_temperatures.set_temperature_1(gpio_temps[can_gpio_ic][1] * 100);
-  bms_detailed_temperatures.set_temperature_2(gpio_temps[can_gpio_ic][2] * 100);
+  bms_detailed_temperatures.set_group_id(can_gpio_group / 3);
+  bms_detailed_temperatures.set_temperature_0(gpio_temps[can_gpio_ic][can_gpio_group] * 100);
+  bms_detailed_temperatures.set_temperature_1(gpio_temps[can_gpio_ic][can_gpio_group + 1] * 100);
+  bms_detailed_temperatures.set_temperature_2(gpio_temps[can_gpio_ic][can_gpio_group + 2] * 100);
   msg.id = ID_BMS_DETAILED_TEMPERATURES;
   msg.len = sizeof(bms_detailed_temperatures);
   bms_detailed_temperatures.write(msg.buf);
   CAN.write(msg);
-  can_gpio_ic++;
+  can_gpio_group += 3;
 }
 
 // Pulses pin 5 to keep watchdog circuit active

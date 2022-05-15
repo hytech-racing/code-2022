@@ -19,13 +19,16 @@
 #define SHUTDOWN_B 8
 #define SHUTDOWN_C 9
 #define SHUTDOWN_D 10
-#define WATCHDOG_OUT 13
+#define WATCHDOG_OUT 7
+#define SW_SHUTDOWN 6
 #define TEENSY_OK 12
 #define VOLTAGE_READ 16
 #define IMON_B 20
 
 #define LED A8
 
+IntervalTimer pulse_timer;
+bool next_pulse = true;
 
 CCU_status ccu_status;
 
@@ -65,11 +68,15 @@ void setup() {
     pinMode(SHUTDOWN_B, INPUT);
     pinMode(SHUTDOWN_C, INPUT);
     pinMode(SHUTDOWN_D, INPUT);
+    pinMode(SW_SHUTDOWN, OUTPUT);
+    digitalWrite(SW_SHUTDOWN, HIGH);
     
     pinMode(CHARGE_ENABLE, OUTPUT);
     digitalWrite(CHARGE_ENABLE, HIGH);
 
     pinMode(WATCHDOG_OUT, OUTPUT);
+    pulse_timer.begin(watchdog_ok_pulse,50000);
+    
     pinMode(TEENSY_OK, OUTPUT);
     digitalWrite(TEENSY_OK, HIGH);
 
@@ -243,6 +250,11 @@ void parse_can_message() {
             bms_balancing_status[temp.get_group_id()].load(rx_msg.buf);
         }
     }
+}
+
+void watchdog_ok_pulse(){
+next_pulse = !next_pulse;
+  digitalWrite(WATCHDOG_OUT,(next_pulse?HIGH:LOW));
 }
 
 void check_shutdown_signals() {
