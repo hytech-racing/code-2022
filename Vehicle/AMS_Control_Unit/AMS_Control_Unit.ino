@@ -484,7 +484,6 @@ void write_CAN_detailed_voltages() {
   can_voltage_group += 3;
 }
 
-// TODO: This CAN message is in the HT05 Style; it needs to be updated with group ID to conform to HT06 standards
 void write_CAN_detailed_temps() {
   if (can_gpio_group > 3) {
     can_gpio_ic++;
