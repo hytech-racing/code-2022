@@ -250,7 +250,13 @@ def mqtt_connection_thread(window):
         if data != -1:
             id = format(data[0], 'x').upper()
             size = data[4]
-            raw = format(struct.unpack(">1Q", data[5:13])[0], 'x')[:size*2].zfill(16)
+            # Catch when leadings zeros got stripped by struct.unpack and account for that
+            subtracts = 0
+            if data[5] == 0x0: # data[5] is first index of message payload
+                subtracts += 2
+            elif data[5] <= 0xF:
+                subtracts += 1   
+            raw = format(struct.unpack(">1Q", data[5:13])[0], 'x')[:size*2 - subtracts].zfill(16)   
 
             table = parse_message(id, raw)
             if table != "INVALID_ID" and table != "UNPARSEABLE":
