@@ -41,8 +41,12 @@
 #define ID_DASHBOARD_STATUS                                         0xEB
 #define ID_SAB_READINGS_GPS                                         0xEE
 
-#define ID_EM_MEASUREMENT                                           0x100
-#define ID_EM_STATUS                                                0x400
+//#define ID_CHARGER_CONTROL
+#define ID_CHARGER_CONTROL                                          0x1806E0F4
+#define ID_CHARGER_DATA                                             0x18FF50E0
+
+#define ID_EM_STATUS                                                0x100
+#define ID_EM_MEASUREMENT                                           0x400
 
 #define ID_IMU_ACCELEROMETER                                        0x90
 #define ID_IMU_GYROSCOPE                                            0x91

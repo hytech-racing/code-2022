@@ -96,9 +96,9 @@ MCU_analog_readings mcu_analog_readings;
 MCU_GPS_readings mcu_gps_readings;
 MCU_wheel_speed mcu_wheel_speed;
 BMS_voltages bms_voltages;
-BMS_detailed_voltages bms_detailed_voltages[8][3];
+BMS_detailed_voltages bms_detailed_voltages[4][8];
 BMS_temperatures bms_temperatures;
-BMS_detailed_temperatures bms_detailed_temperatures[8];
+BMS_detailed_temperatures bms_detailed_temperatures[2][8];
 BMS_onboard_temperatures bms_onboard_temperatures;
 BMS_onboard_detailed_temperatures bms_onboard_detailed_temperatures[8];
 BMS_status bms_status;
@@ -139,11 +139,11 @@ void process_current();
 #if GPS_EN
 void process_gps();
 static bool pending_gps_data;
+#endif
 void process_glv_voltage();
 void setup_total_discharge();
 void process_total_discharge();
 void write_total_discharge();
-#endif
 int write_xbee_data();
 void send_xbee();
 void sd_date_time(uint16_t* date, uint16_t* time);
@@ -188,7 +188,7 @@ void setup() {
         filename[6] = i / 10  % 10 + '0';
         filename[7] = i       % 10 + '0';
         if (!SD.exists(filename)) {
-            logger = SD.open(filename, O_WRITE | O_CREAT); // Open file for writing
+            logger = SD.open(filename, (uint8_t) O_WRITE | (uint8_t) O_CREAT); // Open file for writing
             break;
         }
         if (i == 9999) { // If all possible filenames are in use, print error
@@ -250,11 +250,11 @@ void parse_can_message() {
         */
         if (msg_rx.id == ID_BMS_DETAILED_VOLTAGES) {
             BMS_detailed_voltages temp = BMS_detailed_voltages(msg_rx.buf);
-            bms_detailed_voltages[temp.get_ic_id()][temp.get_group_id()].load(msg_rx.buf);
+            bms_detailed_voltages[temp.get_group_id()][temp.get_ic_id()].load(msg_rx.buf);
         }
         else if (msg_rx.id == ID_BMS_DETAILED_TEMPERATURES) {
             BMS_detailed_temperatures temp = BMS_detailed_temperatures(msg_rx.buf);
-            bms_detailed_temperatures[temp.get_ic_id()].load(msg_rx.buf);
+            bms_detailed_temperatures[temp.get_group_id()][temp.get_ic_id()].load(msg_rx.buf);
         }
         else if (msg_rx.id == ID_BMS_ONBOARD_DETAILED_TEMPERATURES) {
             BMS_onboard_detailed_temperatures temp = BMS_onboard_detailed_temperatures(msg_rx.buf);
@@ -567,8 +567,8 @@ void send_xbee() {
     }
     if (timer_debug_bms_detailed_voltages.check()) {
         for (int ic = 0; ic < 8; ic++) {
-            for (int group = 0; group < 3; group++) {
-                bms_detailed_voltages[ic][group].write(xb_msg.buf);
+            for (int group = 0; group < ((ic % 2 == 0) ? 4 : 3); group++) {
+                bms_detailed_voltages[group][ic].write(xb_msg.buf);
                 xb_msg.len = sizeof(BMS_detailed_voltages);
                 xb_msg.id = ID_BMS_DETAILED_VOLTAGES;
                 write_xbee_data();
@@ -589,10 +589,12 @@ void send_xbee() {
     }
     if (timer_debug_bms_detailed_temperatures.check()) {
         for (int ic = 0; ic < 8; ic++) {
-            bms_detailed_temperatures[ic].write(xb_msg.buf);
-            xb_msg.len = sizeof(BMS_detailed_temperatures);
-            xb_msg.id = ID_BMS_DETAILED_TEMPERATURES;
-            write_xbee_data();
+            for (int group = 0; group < 2; group++) {
+                bms_detailed_temperatures[group][ic].write(xb_msg.buf);
+                xb_msg.len = sizeof(BMS_detailed_temperatures);
+                xb_msg.id = ID_BMS_DETAILED_TEMPERATURES;
+                write_xbee_data();
+            }
         }
     }
     if (timer_debug_bms_status.check()) {
