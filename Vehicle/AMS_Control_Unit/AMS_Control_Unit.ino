@@ -59,7 +59,7 @@ float total_thermistor_temps = 0;
 Metro charging_timer = Metro(5000); // Timer to check if charger is still talking to ACU
 Metro CAN_timer = Metro(2); // Timer that spaces apart writes for CAN messages so as to not saturate CAN bus
 Metro print_timer = Metro(500);
-Metro balance_timer(BALANCE_STANDARD);
+Metro balance_timer(BALANCE_COOL);
 elapsedMillis adc_timer; // timer that determines wait time for ADCs to finish their conversions
 uint8_t adc_state; // 0: wait to begin voltage conversions; 1: adcs converting voltage values; 2: wait to begin gpio conversions; 3: adcs converting GPIO values
 IntervalTimer pulse_timer;    //AMS ok pulse timer
@@ -143,7 +143,7 @@ void loop() {
     print_gpios();
     print_timer.reset();
   }
-  if (bms_status.get_state() == BMS_STATE_CHARGING && BALANCE_ON) {
+  if (bms_status.get_state() == BMS_STATE_CHARGING && BALANCE_ON && !overtemp_fault_state && !uv_fault_state && !ov_fault_state  && !pack_ov_fault_state && gpio_temps[max_board_temp_location[0]][max_board_temp_location[1]] <= 80) {
     balance_cells();
   }
 }
