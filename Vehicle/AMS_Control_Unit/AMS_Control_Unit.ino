@@ -376,11 +376,6 @@ void balance_cells() {
           }
         }
       }
-      for (uint16_t cell = 0; cell < 12; cell++) {
-        if (max_voltage - cell_voltages[i][cell] < 200 && cell_voltages[i][cell] - min_voltage > 200) { // balance if the cell voltage differential from the max voltage is .02V or less and if the cell voltage differential from the minimum voltage is 0.02V or greater
-          cell_balance_setting = (0b1 << cell) | cell_balance_setting;
-        }
-      }
       Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) cell_balance_setting, (uint8_t) 0x0); // base configuration for the configuration register group
       ic[i].wakeup();
       ic[i].wrcfga(configuration);
