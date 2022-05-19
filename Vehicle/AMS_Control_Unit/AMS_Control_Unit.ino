@@ -59,7 +59,7 @@ float total_thermistor_temps = 0;
 Metro charging_timer = Metro(5000); // Timer to check if charger is still talking to ACU
 Metro CAN_timer = Metro(2); // Timer that spaces apart writes for CAN messages so as to not saturate CAN bus
 Metro print_timer = Metro(500);
-Metro balance_timer(BALANCE_COOL);
+Metro balance_timer(BALANCE_HOT);
 elapsedMillis adc_timer; // timer that determines wait time for ADCs to finish their conversions
 uint8_t adc_state; // 0: wait to begin voltage conversions; 1: adcs converting voltage values; 2: wait to begin gpio conversions; 3: adcs converting GPIO values
 IntervalTimer pulse_timer;    //AMS ok pulse timer
@@ -143,7 +143,7 @@ void loop() {
     print_gpios();
     print_timer.reset();
   }
-  if (bms_status.get_state() == BMS_STATE_CHARGING && BALANCE_ON && !overtemp_fault_state && !uv_fault_state && !ov_fault_state  && !pack_ov_fault_state && gpio_temps[max_board_temp_location[0]][max_board_temp_location[1]] <= 80) {
+  if (bms_status.get_state() == BMS_STATE_CHARGING && BALANCE_ON && gpio_temps[max_board_temp_location[0]][max_board_temp_location[1]] <= 80) {
     balance_cells();
   }
 }
@@ -202,7 +202,6 @@ void read_voltages() {
         }
       }
     }
-    min_voltage = min_voltage;
     voltage_fault_check();
     adc_state = 2;
   }
@@ -359,18 +358,25 @@ void balance_cells() {
     }
     if (overtemp_fault_state || uv_fault_state || ov_fault_state || pack_ov_fault_state) {
       Serial.print("BALANCE HALT: CHECK PACK FAULTS");
+      return;
     }
     Serial.print("Balancing voltage: "); Serial.println(min_voltage / 10000.0, 4);
     for (uint16_t i = 0; i < 8; i++) {
       // determine which cells of the IC need balancing
+      uint8_t cell_count;
+      if (i % 2) {
+        cell_count = 9;
+      } else {
+        cell_count = 12;
+      }
       if (BALANCE_MODE) {
-        for (uint16_t cell = 0; cell < 12; cell++) {
+        for (uint16_t cell = 0; cell < cell_count; cell++) {
           if (max_voltage - cell_voltages[i][cell] < 200 && cell_voltages[i][cell] - min_voltage > 200) { // balance if the cell voltage differential from the max voltage is .02V or less and if the cell voltage differential from the minimum voltage is 0.02V or greater (progressive)
             cell_balance_setting = (0b1 << cell) | cell_balance_setting;
           }
         }
       } else {
-        for (uint16_t cell = 0; cell < 12; cell++) {
+        for (uint16_t cell = 0; cell < cell_count; cell++) {
           if (cell_voltages[i][cell] - min_voltage > 200) { // if the cell voltage differential from the minimum voltage is 0.02V or greater (normal)
             cell_balance_setting = (0b1 << cell) | cell_balance_setting;
           }
