@@ -154,7 +154,7 @@ void setup() {
 
   generate_lc_torque_lookup_table();
 
-  
+
   pinMode(BRAKE_LIGHT_CTRL, OUTPUT);
 
   // change to input if comparator is PUSH PULL
@@ -303,15 +303,26 @@ void loop() {
 }
 
 inline void generate_lc_torque_lookup_table() {
- // for (int i = 0; i < 7; i++) {
-  //  lc_torque_table[i] = 110;
- // }
+//  for (int i = 0; i < 600; i++) {
+//    lc_torque_table[i] = (uint8_t)(0.00017057 * i * i) - (0.00019551 * i) + (130);
+//  }
+//  for (int i = 0; i < 99; i++) {
+//    lc_torque_table[i] = (uint8_t)(-0.003 * i * i ) +0.75 * i + 90;
+//  }
+//  for (int i = 464; i < 600; i++) {
+//    lc_torque_table[i] = 160;
+//  }
+
+
   for (int i = 0; i < 600; i++) {
-    lc_torque_table[i] = (uint8_t)(0.00017057 * i * i) - (0.00019551 * i) + (123.281);
+    lc_torque_table[i] = (uint8_t)(0.00000857143 * i * i * i) - (0.00528571 * i * i) + (0.942857 * i) + 120;
   }
- for (int i = 464; i < 600; i++) {
+  for (int i = 60; i < 600; i++) {
     lc_torque_table[i] = 160;
   }
+  lc_torque_table[0] = 60;
+  lc_torque_table[1] = 90;
+
 }
 inline void setup_total_discharge() {
   total_discharge = 0;
@@ -807,64 +818,49 @@ void set_state(MCU_STATE new_state) {
 //1.7057e^-6 x^2 - 1.9551e^-5 x + 123.281
 //110 below 70 rpm
 int calculate_torque() {
-  
   int calculated_torque = 0;
-  int16_t mc_rpm = abs(mc_motor_position_information.get_motor_speed());
-  int max_torque = mcu_status.get_max_torque() * 10;  
-  int launch_control_torque_limit = (int)(lc_torque_table[mc_rpm / 10]) * 10;
-  int torque1 = map(round(filtered_accel1_reading), START_ACCELERATOR_PEDAL_1, END_ACCELERATOR_PEDAL_1, 0,  max_torque);
-  int torque2 = map(round(filtered_accel2_reading), START_ACCELERATOR_PEDAL_2, END_ACCELERATOR_PEDAL_2, 0,  max_torque);
+  if (mcu_status.get_launch_ctrl_active()) {
+    
+    int16_t mc_rpm = abs(mc_motor_position_information.get_motor_speed());
+    int launch_control_torque_limit = (int)(lc_torque_table[mc_rpm / 10]) * 10;
+    int torque1 = map(round(filtered_accel1_reading), START_ACCELERATOR_PEDAL_1, END_ACCELERATOR_PEDAL_1, 0,  100);
+    int torque2 = map(round(filtered_accel2_reading), START_ACCELERATOR_PEDAL_2, END_ACCELERATOR_PEDAL_2, 0,  100);
 
+    if (torque1 > 80 && torque2 > 80) {
+      calculated_torque = launch_control_torque_limit;
+    } else {
+      calculated_torque = 0;
+    }
+  } else {
+    const int max_torque = mcu_status.get_max_torque() * 10;
+    int torque1 = map(round(filtered_accel1_reading), START_ACCELERATOR_PEDAL_1, END_ACCELERATOR_PEDAL_1, 0, max_torque);
+    int torque2 = map(round(filtered_accel2_reading), START_ACCELERATOR_PEDAL_2, END_ACCELERATOR_PEDAL_2, 0, max_torque);
 
+    // torque values are greater than the max possible value, set them to max
+    if (torque1 > max_torque) {
+      torque1 = max_torque;
+    }
+    if (torque2 > max_torque) {
+      torque2 = max_torque;
+    }
+    // compare torques to check for accelerator implausibility
+    calculated_torque = (torque1 + torque2) / 2;
 
-  //float launch_control_torque_limit = max_torque * calculate_launch_control_torque_multiplier();
+    if (calculated_torque > max_torque) {
+      calculated_torque = max_torque;
+    }
+  }
 
-  //if (mcu_status.get_launch_ctrl_active()) {
-    if (torque1 > launch_control_torque_limit) {
-      torque1 =  launch_control_torque_limit;
-     }
-    if (torque2 > launch_control_torque_limit) {
-      torque2 = launch_control_torque_limit;
-     }
-  //}
-  
-  
-#if DEBUG
-  Serial.print("max torque: ");
-  Serial.println(max_torque);
-  Serial.print("torque1: ");
-  Serial.println(torque1);
-  Serial.print("torque2: ");
-  Serial.println(torque2);
-#endif
-
-  // torque values are greater than the max possible value, set them to max
-
-  // compare torques to check for accelerator implausibility
-  calculated_torque = (torque1 + torque2) / 2;
-
-//  int power_output = mc_rpm * 0.10472 * calculated_torque/10;
-//  if(power_output > 80000){
-//    calculated_torque = 80000 / (0.10472 * mc_rpm) *10 ;
-//  }
   if (calculated_torque < 0) {
     calculated_torque = 0;
   }
 
-
-#if DEBUG
-  if (timer_debug_raw_torque.check()) {
-    Serial.print("TORQUE REQUEST DELTA PERCENT: "); // Print the % difference between the 2 accelerator sensor requests
-    Serial.println(abs(torque1 - torque2) / (double) max_torque * 100);
-    Serial.print("MCU RAW TORQUE: ");
-    Serial.println(calculated_torque);
-    Serial.print("TORQUE 1: ");
-    Serial.println(torque1);
-    Serial.print("TORQUE 2: ");
-    Serial.print(torque2);
-  }
-#endif
-
+  
+  //power limit to 80kW
+  //  int power_output = mc_rpm * 0.10472 * calculated_torque/10;
+  //  if(power_output > 80000){
+  //    calculated_torque = 80000 / (0.10472 * mc_rpm) *10 ;
+  //  }
   return calculated_torque;
 }
 
