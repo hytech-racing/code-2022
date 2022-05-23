@@ -37,6 +37,7 @@ uint16_t* LTC6811_2::pec15Table_pointer = pec15Table;   // Pointer to the PEC lo
 uint16_t vuv = 1874; // 3V           // Minimum voltage value following datasheet formula: Comparison Voltage = (VUV + 1) • 16 • 100μV
 uint16_t vov = 2625; // 4.2V         // Maximum voltage value following datasheet formula: Comparison Voltage = VOV • 16 • 100μV
 uint16_t cell_voltages[TOTAL_IC][12]; // 2D Array to hold cell voltages being read in; voltages are read in with the base unit as 100μV
+bool cell_balance_status[TOTAL_IC][12]; // 2D array where true indicates cell is balancing
 uint32_t total_voltage;             // the total voltage of the pack
 int min_voltage_location[2]; // [0]: IC#; [1]: Cell#
 int max_voltage_location[2]; // [0]: IC#; [1]: Cell#
@@ -121,10 +122,6 @@ void setup() {
   for (int i = 0; i < 8; i++) {
     ic[i] = LTC6811_2(i);
   }
-  /* Initialize ACU state machine
-      The state machine has two states, dependent on whether or not the charger controller is talking to the ACU.
-      The state machine initializes to the DISCHARGING state
-  */
   bms_status.set_state(BMS_STATE_DISCHARGING);
   parse_CAN_CCU_status();
 
@@ -373,12 +370,18 @@ void balance_cells() {
         for (uint16_t cell = 0; cell < cell_count; cell++) {
           if (max_voltage - cell_voltages[i][cell] < 200 && cell_voltages[i][cell] - min_voltage > 200) { // balance if the cell voltage differential from the max voltage is .02V or less and if the cell voltage differential from the minimum voltage is 0.02V or greater (progressive)
             cell_balance_setting = (0b1 << cell) | cell_balance_setting;
+            cell_balance_status[i][cell] = true;
+          } else {
+            cell_balance_status[i][cell] = false;
           }
         }
       } else {
         for (uint16_t cell = 0; cell < cell_count; cell++) {
           if (cell_voltages[i][cell] - min_voltage > 200) { // if the cell voltage differential from the minimum voltage is 0.02V or greater (normal)
             cell_balance_setting = (0b1 << cell) | cell_balance_setting;
+            cell_balance_status[i][cell] = true;
+          } else {
+            cell_balance_status[i][cell] = false;
           }
         }
       }
@@ -539,14 +542,17 @@ void print_voltages() {
   Serial.print("Min Voltage: "); Serial.print(cell_voltages[min_voltage_location[0]][min_voltage_location[1]] / 10000.0, 4); Serial.print("V \t");
   Serial.print("Avg Voltage: "); Serial.print(total_voltage / 840000.0, 4); Serial.println("V \t");
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
-  Serial.println("Raw Cell Voltages\t\t\t\t\t\t\tCell Status (Ignoring or Balancing)");
-  Serial.println("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\tC9\tC10\tC11");
+  Serial.println("Raw Cell Voltages\t\t\t\t\t\t\t\t\t\t\t\t\tBalancing Status");
+  Serial.print("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\tC9\tC10\tC11\t\t"); Serial.println("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\tC9\tC10\tC11");
   for (int ic = 0; ic < TOTAL_IC; ic++) {
     Serial.print("IC"); Serial.print(ic); Serial.print("\t");
     for (int cell = 0; cell < EVEN_IC_CELLS; cell++) {
       Serial.print(cell_voltages[ic][cell] / 10000.0, 4); Serial.print("V\t");
     }
-    Serial.print("\t");
+    Serial.print("\t\t");
+    for (int cell = 0; cell < EVEN_IC_CELLS; cell++) {
+      Serial.print(cell_balance_status[ic][cell]); Serial.print("\t");
+    }
     Serial.println();
   }
 }
