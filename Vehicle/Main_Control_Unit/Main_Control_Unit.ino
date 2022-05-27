@@ -815,8 +815,7 @@ void set_state(MCU_STATE new_state) {
   }
 }
 
-//1.7057e^-6 x^2 - 1.9551e^-5 x + 123.281
-//110 below 70 rpm
+
 int calculate_torque() {
   int calculated_torque = 0;
   if (mcu_status.get_launch_ctrl_active()) {
@@ -827,7 +826,8 @@ int calculate_torque() {
     int torque2 = map(round(filtered_accel2_reading), START_ACCELERATOR_PEDAL_2, END_ACCELERATOR_PEDAL_2, 0,  100);
 
     if (torque1 > 80 && torque2 > 80) {
-      calculated_torque = launch_control_torque_limit;
+      //calculated_torque = launch_control_torque_limit;
+      calculated_torque = ((launch_control_torque_limit*torque1)+(launch_control_torque_limit*torque2))/200
     } else {
       calculated_torque = 0;
     }
