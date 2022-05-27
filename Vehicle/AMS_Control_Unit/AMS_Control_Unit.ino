@@ -100,6 +100,7 @@ BMS_temperatures bms_temperatures; //Message class containing general temperatur
 BMS_onboard_temperatures bms_onboard_temperatures; //Message class containing general AMS temperature information
 BMS_detailed_voltages bms_detailed_voltages; //Message class containing detailed voltage information
 BMS_detailed_temperatures bms_detailed_temperatures; // message class containing detailed temperature information
+CCU_status ccu_status;
 
 
 void setup() {
@@ -140,7 +141,7 @@ void loop() {
     print_gpios();
     print_timer.reset();
   }
-  if (bms_status.get_state() == BMS_STATE_CHARGING && BALANCE_ON && gpio_temps[max_board_temp_location[0]][max_board_temp_location[1]] <= 80) {
+  if (bms_status.get_state() == BMS_STATE_CHARGING && BALANCE_ON && gpio_temps[max_board_temp_location[0]][max_board_temp_location[1]] <= 80 && ccu_status.get_charger_enabled()) { 
     balance_cells();
   }
 }
@@ -397,6 +398,7 @@ void balance_cells() {
 void parse_CAN_CCU_status() {
   while (CAN.read(msg)) {
     if (msg.id == ID_CCU_STATUS) {
+      ccu_status.load(msg.buf);
       charging_timer.reset();
       if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
         bms_status.set_state(BMS_STATE_CHARGING);
