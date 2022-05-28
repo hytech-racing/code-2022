@@ -1,6 +1,6 @@
 import sys
 sys.path.insert(1, "../telemetry_parsers")
-from parser_functions import *
+from parser_api import *
 
 ########################################################################
 # Entry Point to Framework

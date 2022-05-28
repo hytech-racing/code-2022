@@ -3,7 +3,7 @@
 ## Intro
 Welcome to the folder containing all the new updated parsers y'all ever need for HyTech parsing!
 Here's a description to each file located in this folder:
-- `parser_functions.py`: Contains all the custom parsing functions we can update
+- `parser_api.py`: Contains all the custom parsing functions we can update
 - `run_parser.py`: Runs the parser
     - Parses a folder named "Raw_Data" with raw CSVs from the SD card and outputs the parsed CSVs to a folder named "Parsed_Folder"
     - Will create a Parsed_Folder directory if it doesn't exist, but a Raw_Data folder is necessary
@@ -29,7 +29,7 @@ pip install python-dateutil
 ## User Guide
 1. Get the raw data CSVs from the SD card on the vehicle.
 2. Place them in a folder called Raw_Data.
-3. Copy `parser_functions.py`, `run_parser.py`, `multipliers.py`, and `dataPlots.m` into the directory containing the Raw_Data folder
+3. Copy `parser_api.py`, `run_parser.py`, `multipliers.py`, and `dataPlots.m` into the directory containing the Raw_Data folder
 4. Run `run_parser.py` by either using the Python Interpreter or by going into the directory and issuing: `py run_parser.pyy`
     - If you are using the Python interpreter for the first time, you will need to run twice. The first time will build the __pycache__ folder
 5. Wait for a success message from `run_parser.py`

@@ -19,7 +19,7 @@ import sys
 
 __file__ = sys.path[0]
 sys.path.insert(1, "../telemetry_parsers")
-from parser_functions import parse_message
+from parser_api import parse_message
 sys.path.insert(1, '../telemetry_aws')
 from db import unpack
 
