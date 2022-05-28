@@ -818,16 +818,17 @@ void set_state(MCU_STATE new_state) {
 
 int calculate_torque() {
   int calculated_torque = 0;
+  int16_t mc_rpm = abs(mc_motor_position_information.get_motor_speed());
   if (mcu_status.get_launch_ctrl_active()) {
     
-    int16_t mc_rpm = abs(mc_motor_position_information.get_motor_speed());
+    
     int launch_control_torque_limit = (int)(lc_torque_table[mc_rpm / 10]) * 10;
     int torque1 = map(round(filtered_accel1_reading), START_ACCELERATOR_PEDAL_1, END_ACCELERATOR_PEDAL_1, 0,  100);
     int torque2 = map(round(filtered_accel2_reading), START_ACCELERATOR_PEDAL_2, END_ACCELERATOR_PEDAL_2, 0,  100);
 
     if (torque1 > 80 && torque2 > 80) {
       //calculated_torque = launch_control_torque_limit;
-      calculated_torque = ((launch_control_torque_limit*torque1)+(launch_control_torque_limit*torque2))/200
+      calculated_torque = ((launch_control_torque_limit*torque1)+(launch_control_torque_limit*torque2))/200;
     } else {
       calculated_torque = 0;
     }
@@ -857,10 +858,10 @@ int calculate_torque() {
 
   
   //power limit to 80kW
-  //  int power_output = mc_rpm * 0.10472 * calculated_torque/10;
-  //  if(power_output > 80000){
-  //    calculated_torque = 80000 / (0.10472 * mc_rpm) *10 ;
-  //  }
+    int power_output = mc_rpm * 0.10472 * calculated_torque/10;
+    if(power_output > 80000){
+      calculated_torque = 80000 / (0.10472 * mc_rpm) *10 ;
+    }
   return calculated_torque;
 }
 
