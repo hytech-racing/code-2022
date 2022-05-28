@@ -1,0 +1,13 @@
+# telemetry_parsers Requirements
+DateTime
+numpy
+scipy
+pandas
+python-dateutil
+
+# telemetry_exe Requirements
+PySimpleGUI
+paho-mqtt
+PySerial
+influxdb
+cobs
