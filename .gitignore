@@ -248,3 +248,9 @@ Telemetry/autoparse/webserver/uploads
 Telemetry/telemetry_py/*.txt
 *.csv
 *.mat
+
+# Other data aq outputs
+*.pyc
+*.o
+*.log
+__pycache__/
