@@ -2,7 +2,6 @@
 @Author: Sophia Smith, Bo Han Zhu
 @Date: 4/23/2022
 @Description: HyTech live telemetry console
-@TODO: Extend UI to current live console display messages
 '''
 
 
