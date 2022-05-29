@@ -2,23 +2,24 @@
 @Author: Sophia Smith, Bo Han Zhu
 @Date: 4/23/2022
 @Description: HyTech live telemetry console
-@TODO: Extend UI to current live console display messages
 '''
 
 
-import PySimpleGUI as sg
+import PySimpleGUI as sg, sys
+import time
 import threading
 from os import path
 from enum import Enum
 from datetime import datetime
 import paho.mqtt.client as mqtt
+import itertools
 import binascii
 import struct
 import sys
 
 __file__ = sys.path[0]
 sys.path.insert(1, "../telemetry_parsers")
-from parser_functions import parse_message
+from parser_api import parse_message
 sys.path.insert(1, '../telemetry_aws')
 from db import unpack
 
@@ -223,6 +224,7 @@ def read_from_csv_thread(window):
 
     window.write_event_value("-Read CSV Done-", "No data for you left")
 
+
 '''
 @brief: Thread to connect to MQTT broker on AWS EC2 instance.
         Parses incoming messages and packages them as an event to the GUI if match.
@@ -247,7 +249,13 @@ def mqtt_connection_thread(window):
         if data != -1:
             id = format(data[0], 'x').upper()
             size = data[4]
-            raw = format(struct.unpack(">1Q", data[5:13])[0], 'x')[:size*2].zfill(16)
+            # Catch when leadings zeros got stripped by struct.unpack and account for that
+            subtracts = 0
+            if data[5] == 0x0: # data[5] is first index of message payload
+                subtracts += 2
+            elif data[5] <= 0xF:
+                subtracts += 1   
+            raw = format(struct.unpack(">1Q", data[5:13])[0], 'x')[:size*2 - subtracts].zfill(16)   
 
             table = parse_message(id, raw)
             if table != "INVALID_ID" and table != "UNPARSEABLE":
@@ -282,6 +290,40 @@ def mqtt_connection_thread(window):
     client.loop_forever()
 
 '''
+@brief: Helper function to get multi-columns rows for detailed messages
+@return: dictionary, an list of combined elements 
+'''
+def get_bms_detailed_messages():
+    ic_list = ['IC_' + str(x) for x in range(8)]
+    cell_list_odd = ['CELL_' + str(x) for x in range(9)]
+    cell_list_even = ['CELL_' + str(x) for x in range(12)]
+    ic_cells = []
+    
+    for i in range(8):
+        # Even ICs have 12 cells
+        if i % 2 == 0:
+            ic_cells += [ic_list[i] + '_' + cell for cell in cell_list_even]
+        # Odd ICs have 9 cells
+        else:
+            ic_cells += [ic_list[i] + '_' + cell for cell in cell_list_odd]
+    
+    result = dict.fromkeys(ic_cells, ' ')
+    dictionary = {"BATTERY_MANAGEMENT_SYSTEM_DETAILED_VOLTAGES": result}
+
+
+    ic_list2 = ['IC_' + str(x) for x in range(8)]
+    temperature_list = ['THERM_' + str(x) for x in range(4)]
+    ic_temperature = [ic + '_' + therm for ic in ic_list2 for therm in temperature_list]
+    ic_temperature = ic_temperature + ["IC_0_HUMIDITY", "IC_2_HUMIDITY", "IC_4_HUMIDITY", "IC_6_HUMIDITY"]
+    ic_temperature = ic_temperature + ["IC_1_TEMPERATURE", "IC_3_TEMPERATURE", "IC_5_TEMPERATURE", "IC_7_TEMPERATURE"]
+    result2 = dict.fromkeys(ic_temperature, ' ')
+    dictionary2 = {"BATTERY_MANAGEMENT_SYSTEM_DETAILED_TEMPERATURES": result2}
+    return dictionary, dictionary2
+
+
+
+
+'''
 @brief: The main function to spawn the PySimpleGUI and handle events
 '''
 def main():
@@ -289,33 +331,83 @@ def main():
     title_font = ("Courier New", 12)
     text_font = ("Courier New", 8)
 
+    # Subtitle text declarations
     inverter = [[sg.Text("RMS INVERTER", pad=(0,2), font=title_font, text_color="light blue")]]
     dashboard = [[sg.Text("DASHBOARD", pad=(0,2), font=title_font, text_color="light blue")]]
-    bms = [[sg.Text("BATTERY MANAGEMENT SYSTEM", pad=(0,2), font=title_font, text_color="light blue")]]
+    bms = [[sg.Text("BMS OVERVIEW", pad=(0,2), font=title_font, text_color="light blue")]]
     main_ecu = [[sg.Text("MAIN ECU", pad=(0,2), font=title_font, text_color="light blue")]]
     wheel_speed_sensors = [[sg.Text("WHEEL SPEED SENSORS", pad=(0,2), font=title_font, text_color="light blue")]]
     sab = [[sg.Text("SENSOR ACQUISITION BOARD", pad=(0,2), font=title_font, text_color="light blue")]]
     imu = [[sg.Text("RACEGRADE IMU", pad=(0,2), font=title_font, text_color="light blue")]]
     em = [[sg.Text("ENERGY METER", pad=(0,2), font=title_font, text_color="light blue")]]
+    bms_detailed_voltages = [[sg.Text("BMS DETAILED VOLTAGES", size=(33,1), pad=(0,2), font=title_font, text_color="light blue")]]
+    bms_detailed_temps = [[sg.Text("BMS DETAILED TEMPERATURES", pad=(0,2), font=title_font, text_color="light blue")]]
+
+    bms_voltages = [[]]
+    bms_temperatures = [[]]
     
+    DICT1, DICT2 = get_bms_detailed_messages()
+    DICT.update(DICT1)
+    DICT.update(DICT2)
+    row_count_temperatures = 0
+    row_count_voltages = 0
     
+    # Data text arrangements and manipulations
     for label, value in DICT["RMS_INVERTER"].items():
         inverter.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
     for label, value in DICT["BATTERY_MANAGEMENT_SYSTEM"].items():
-        bms.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+        bms.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(35,1), pad=(0,0), font=text_font, key=label)])
     for label, value in DICT["MAIN_ECU"].items():
-        main_ecu.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+        main_ecu.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(35,1), pad=(0,0), font=text_font, key=label)])
     for label, value in DICT["DASHBOARD"].items():
-        dashboard.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+        dashboard.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(35,1), pad=(0,0), font=text_font, key=label)])
     for label, value in DICT["WHEEL_SPEED_SENSORS"].items():
-        wheel_speed_sensors.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+        wheel_speed_sensors.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(35,1), pad=(0,0), font=text_font, key=label)])
     for label, value in DICT["SENSOR_ACQUISITION_BOARD"].items():
-        sab.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+        sab.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(35,1), pad=(0,0), font=text_font, key=label)])
     for label, value in DICT["RACEGRADE_IMU"].items():
-        imu.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+        imu.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(35,1), pad=(0,0), font=text_font, key=label)])
     for label, value in DICT["ENERGY_METER"].items():
-        em.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(40,1), pad=(0,0), font=text_font, key=label)])
+        em.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(35,1), pad=(0,0), font=text_font, key=label)])
+    for label, value in DICT["BATTERY_MANAGEMENT_SYSTEM_DETAILED_VOLTAGES"].items():
+        if row_count_voltages % 9 == 8 and int(label[3]) == 3 or int(label[3]) == 7:
+            # No padding for ICs 3 and 7 last cells since text will take care of it in the next column over
+            bms_voltages.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(23,1), pad=(0,0), font=text_font, key=label)])
+            row_count_voltages = 0
+        elif row_count_voltages % 9 == 8 and int(label[3]) % 2 == 1:
+            bms_voltages.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(23,1), pad=((0,0),(0,10)), font=text_font, key=label)])
+            row_count_voltages = 0
+        elif row_count_voltages % 12 == 11 and int(label[3]) % 2 == 0:
+            bms_voltages.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(23,1), pad=((0,0),(0,10)), font=text_font, key=label)])
+            row_count_voltages = 0
+        else:            
+            bms_voltages.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(23,1), pad=(0,0), font=text_font, key=label)])
+            row_count_voltages = row_count_voltages + 1
+    for label, value in DICT["BATTERY_MANAGEMENT_SYSTEM_DETAILED_TEMPERATURES"].items():
+        if row_count_temperatures >= 36:
+            bms_temperatures.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(25,1), pad=(0,0), font=text_font, key=label)])
+        elif row_count_temperatures % 4 == 3:
+            bms_temperatures.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(23,1), pad=((0,0),(0,10)), font=text_font, key=label)])
+        else:
+            bms_temperatures.append([sg.Text(label.replace("_", " ") + ": " + value, justification="left", size=(23,1), pad=(0, 0),font=text_font, key=label)])
+        row_count_temperatures = row_count_temperatures + 1
 
+    # We ran out of room so ICs 3 and 7 will be on column with BMS detailed temps
+    left_voltages_first_column = bms_voltages[:34]
+    right_voltages_first_column = bms_voltages[43:76]
+    left_voltages_second_column = bms_voltages[34:43]
+    right_voltages_second_column = bms_voltages[76:]
+    
+    first_half_therm = bms_temperatures[:17]
+    second_half_therm = bms_temperatures[17:33]
+    therm_humidities = bms_temperatures[33:37]
+    therm_temperatures = bms_temperatures[37:]
+
+    voltages = [[sg.Column(left_voltages_first_column, pad=(0,0), vertical_alignment='t'), sg.Column(right_voltages_first_column, pad=(0,0), vertical_alignment='t')]]
+    voltages_second_column = [[sg.Column(left_voltages_second_column, pad=(0,0), vertical_alignment='t'), sg.Column(right_voltages_second_column, pad=(0,0), vertical_alignment='t')]]
+    temperatures = [[sg.Column(first_half_therm + therm_humidities, pad=(0,0), vertical_alignment='t'), sg.Column(second_half_therm + therm_temperatures, pad=(0,0), vertical_alignment='t')]]
+
+    # Header texts and columns
     connection_text = [[sg.Text("CONSOLE STATUS: NOT CONNECTED", justification="left", pad=((5,0),12), text_color='red', font=title_font, key="-Connection Text-")]]
     divider_text_1 = [[sg.Text(" | ", pad=(5,12), font=title_font)]]
     vehicle_status_text = [[sg.Text("VEHICLE STATUS: NOT RECEIVED", justification="left", pad=((0,0),12), font=title_font, key="-Vehicle Status Text-")]]
@@ -328,11 +420,15 @@ def main():
     status_header_column4 = sg.Column(divider_text_2, pad=(0,0), vertical_alignment='t')
     status_header_column5 = sg.Column(last_update_text, pad=(0,0), vertical_alignment='t')
 
-    column1 = sg.Column(dashboard + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + bms + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + em + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + imu, vertical_alignment='t')
-    column2 = sg.Column(main_ecu + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + sab + [[sg.Text(" ", size=(40,1), pad=(0,0), font=text_font)]] + wheel_speed_sensors, vertical_alignment='t')
+    # Data colummns
+    column1 = sg.Column(dashboard + [[sg.Text(" ", size=(35,1), pad=(0,0), font=text_font)]] + bms + [[sg.Text(" ", size=(35,1), pad=(0,0), font=text_font)]] + em + [[sg.Text(" ", size=(35,1), pad=(0,0), font=text_font)]] + imu, vertical_alignment='t')
+    column2 = sg.Column(main_ecu + [[sg.Text(" ", size=(35,1), pad=(0,0), font=text_font)]] + sab + [[sg.Text(" ", size=(35,1), pad=(0,0), font=text_font)]] + wheel_speed_sensors, vertical_alignment='t')
     column3 = sg.Column(inverter, vertical_alignment='t')
+    column4 = sg.Column(bms_detailed_voltages + voltages, vertical_alignment='t')
+    column5 = sg.Column(voltages_second_column + [[sg.Text(" ", size=(35,1), pad=(0,0), font=text_font)]] + bms_detailed_temps + temperatures, vertical_alignment='t')
 
-    layout = [[status_header_column1, status_header_column2, status_header_column3, status_header_column4, status_header_column5], [column1, column2, column3]]
+    # Finalize layout
+    layout = [[status_header_column1, status_header_column2, status_header_column3, status_header_column4, status_header_column5], [column1, column2, column3, column4, column5]]
 
     window = sg.Window("HyTech Racing Live Telemetry Console", resizable=True).Layout(layout).Finalize()
     window.Maximize()
