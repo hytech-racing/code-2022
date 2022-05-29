@@ -17,12 +17,12 @@
 #define PCB_THERM_PER_IC 2              // Number of PCB thermistors per IC
 
 
-#define SHUTDOWN_A A0
-#define SHUTDOWN_B A1
-#define SHUTDOWN_C A2
-#define SHUTDOWN_D A3
-#define SHUTDOWN_E A4
-#define SHUTDOWN_F A5
+#define SHUTDOWN_A 14
+#define SHUTDOWN_B 15
+#define SHUTDOWN_C 16
+#define SHUTDOWN_D 17
+#define SHUTDOWN_E 18
+#define SHUTDOWN_F 19
 #define VIN_READ A6
 #define WATCHDOG_OUT 7
 #define TEENSY_OK 6
@@ -50,6 +50,8 @@ int watchdog_state = 0;
 bool charge_enable = false;
 
 static CAN_message_t rx_msg;
+static CAN_message_t tx_msg;
+FlexCAN CAN(500000);
 Metro update_ls = Metro(1000);
 Metro update_CAN = Metro(500);
 Metro update_watchdog = Metro(3);
@@ -67,11 +69,12 @@ void print_charger_data();
 void setup() {
   pinMode(LED, OUTPUT);
   digitalWrite(LED, HIGH);
-
+  pinMode(SHUTDOWN_A, INPUT);
   pinMode(SHUTDOWN_B, INPUT);
   pinMode(SHUTDOWN_C, INPUT);
   pinMode(SHUTDOWN_D, INPUT);
-
+  pinMode(SHUTDOWN_E, INPUT);
+  pinMode(SHUTDOWN_F, INPUT);
   pinMode(WATCHDOG_OUT, OUTPUT);
   pinMode(TEENSY_OK, OUTPUT);
   digitalWrite(TEENSY_OK, HIGH);
@@ -92,7 +95,7 @@ void setup() {
 
   Serial.println("CAN system and serial communication initialized");
 
-  ccu_status.set_charger_enabled(true);
+  ccu_status.set_charger_enabled(false);
 
 }
 
@@ -163,7 +166,7 @@ void parse_can_message() {
 
     if (rx_msg.id == ID_BMS_STATUS) {
       bms_status = BMS_status(rx_msg.buf);
-      ccu_status.set_charger_enabled(bms_status.get_state() == BMS_STATE_CHARGING || bms_status.get_state() == BMS_STATE_BALANCING);
+      ccu_status.set_charger_enabled((bms_status.get_state() == BMS_STATE_CHARGING || bms_status.get_state() == BMS_STATE_BALANCING) && digitalRead(SHUTDOWN_F) == HIGH);
       charge_enable = ccu_status.get_charger_enabled();
     }
 
@@ -186,12 +189,7 @@ void check_shutdown_signals() {
   int shutdown_d = digitalRead(SHUTDOWN_D);
   int shutdown_e = digitalRead(SHUTDOWN_E);
   int shutdown_f = digitalRead(SHUTDOWN_F);
-
-  //if (shutdown_b == 0 || shutdown_c == 0 || shutdown_d == 0 || shutdown_e == 0) {
-  //   ccu_status.set_charger_enabled(false);
-  //
 }
-
 void configure_charging() {
   if (charge_enable) {
     charger_configure.set_max_charging_voltage_high(35);
@@ -210,7 +208,7 @@ int set_charge_current() {
   uint16_t output_voltage = charger_data.get_output_dc_voltage_high() << 8 | charger_data.get_output_dc_voltage_low();
   uint16_t max_current;
   if (output_voltage > 255) {
-     max_current = (120 * AC_CURRENT) * 100 / output_voltage;
+    max_current = (120 * AC_CURRENT) * 100 / output_voltage;
   } else {
     max_current = 10;
   }
