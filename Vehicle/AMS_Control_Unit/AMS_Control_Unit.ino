@@ -29,6 +29,7 @@
 #define BALANCE_STANDARD 4000         // Sets balancing duty cycle as 50%
 #define BALANCE_HOT 3000             // Sets balancing duty cycle as 66%
 #define BALANCE_CONTINUOUS 2000     // Sets balancing duty cycle as 100%
+#define BALANCE_MODE 1            // Mode 0 is normal balance, mode 1 is progressive balance
 
 // VARIABLE DECLARATIONS
 uint16_t pec15Table[256];          // Array containing lookup table for PEC generator
@@ -36,6 +37,7 @@ uint16_t* LTC6811_2::pec15Table_pointer = pec15Table;   // Pointer to the PEC lo
 uint16_t vuv = 1874; // 3V           // Minimum voltage value following datasheet formula: Comparison Voltage = (VUV + 1) • 16 • 100μV
 uint16_t vov = 2625; // 4.2V         // Maximum voltage value following datasheet formula: Comparison Voltage = VOV • 16 • 100μV
 uint16_t cell_voltages[TOTAL_IC][12]; // 2D Array to hold cell voltages being read in; voltages are read in with the base unit as 100μV
+bool cell_balance_status[TOTAL_IC][12]; // 2D array where true indicates cell is balancing
 uint32_t total_voltage;             // the total voltage of the pack
 int min_voltage_location[2]; // [0]: IC#; [1]: Cell#
 int max_voltage_location[2]; // [0]: IC#; [1]: Cell#
@@ -58,15 +60,15 @@ float total_thermistor_temps = 0;
 Metro charging_timer = Metro(5000); // Timer to check if charger is still talking to ACU
 Metro CAN_timer = Metro(2); // Timer that spaces apart writes for CAN messages so as to not saturate CAN bus
 Metro print_timer = Metro(500);
-Metro balance_timer(BALANCE_STANDARD);
+Metro balance_timer(BALANCE_HOT);
 elapsedMillis adc_timer; // timer that determines wait time for ADCs to finish their conversions
 uint8_t adc_state; // 0: wait to begin voltage conversions; 1: adcs converting voltage values; 2: wait to begin gpio conversions; 3: adcs converting GPIO values
 IntervalTimer pulse_timer;    //AMS ok pulse timer
 bool next_pulse = true; //AMS ok pulse
-int can_voltage_ic = 0; //counter for the current IC data to send for detailed voltage CAN message
-int can_voltage_group = 0; // counter for current group data to send for detailed voltage CAN message
-int can_gpio_ic = 0; //counter for the current IC data to send for detailed voltage CAN message
-int can_gpio_group = 0; // counter for current group data to send for detailed voltage CAN message
+uint8_t can_voltage_ic = 0; //counter for the current IC data to send for detailed voltage CAN message
+uint8_t can_voltage_group = 0; // counter for current group data to send for detailed voltage CAN message
+uint8_t can_gpio_ic = 0; //counter for the current IC data to send for detailed voltage CAN message
+uint8_t can_gpio_group = 0; // counter for current group data to send for detailed voltage CAN message
 elapsedMillis can_bms_status_timer = 0;
 elapsedMillis can_bms_detailed_voltages_timer = 2;
 elapsedMillis can_bms_detailed_temps_timer = 4;
@@ -120,10 +122,6 @@ void setup() {
   for (int i = 0; i < 8; i++) {
     ic[i] = LTC6811_2(i);
   }
-  /* Initialize ACU state machine
-      The state machine has two states, dependent on whether or not the charger controller is talking to the ACU.
-      The state machine initializes to the DISCHARGING state
-  */
   bms_status.set_state(BMS_STATE_DISCHARGING);
   parse_CAN_CCU_status();
 
@@ -142,7 +140,7 @@ void loop() {
     print_gpios();
     print_timer.reset();
   }
-  if (bms_status.get_state() == BMS_STATE_CHARGING && BALANCE_ON) {
+  if (bms_status.get_state() == BMS_STATE_CHARGING && BALANCE_ON && gpio_temps[max_board_temp_location[0]][max_board_temp_location[1]] <= 80) {
     balance_cells();
   }
 }
@@ -201,7 +199,6 @@ void read_voltages() {
         }
       }
     }
-    min_voltage = min_voltage;
     voltage_fault_check();
     adc_state = 2;
   }
@@ -358,13 +355,34 @@ void balance_cells() {
     }
     if (overtemp_fault_state || uv_fault_state || ov_fault_state || pack_ov_fault_state) {
       Serial.print("BALANCE HALT: CHECK PACK FAULTS");
+      return;
     }
     Serial.print("Balancing voltage: "); Serial.println(min_voltage / 10000.0, 4);
     for (uint16_t i = 0; i < 8; i++) {
       // determine which cells of the IC need balancing
-      for (uint16_t cell = 0; cell < 12; cell++) {
-        if (cell_voltages[i][cell] - min_voltage > 100) { // balance if the cell voltage differential from the minimum voltage is 0.01V or greater
-          cell_balance_setting = (0b1 << cell) | cell_balance_setting;
+      uint8_t cell_count;
+      if (i % 2) {
+        cell_count = 9;
+      } else {
+        cell_count = 12;
+      }
+      if (BALANCE_MODE) {
+        for (uint16_t cell = 0; cell < cell_count; cell++) {
+          if (max_voltage - cell_voltages[i][cell] < 200 && cell_voltages[i][cell] - min_voltage > 200) { // balance if the cell voltage differential from the max voltage is .02V or less and if the cell voltage differential from the minimum voltage is 0.02V or greater (progressive)
+            cell_balance_setting = (0b1 << cell) | cell_balance_setting;
+            cell_balance_status[i][cell] = true;
+          } else {
+            cell_balance_status[i][cell] = false;
+          }
+        }
+      } else {
+        for (uint16_t cell = 0; cell < cell_count; cell++) {
+          if (cell_voltages[i][cell] - min_voltage > 200) { // if the cell voltage differential from the minimum voltage is 0.02V or greater (normal)
+            cell_balance_setting = (0b1 << cell) | cell_balance_setting;
+            cell_balance_status[i][cell] = true;
+          } else {
+            cell_balance_status[i][cell] = false;
+          }
         }
       }
       Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) cell_balance_setting, (uint8_t) 0x0); // base configuration for the configuration register group
@@ -470,7 +488,6 @@ void write_CAN_detailed_voltages() {
   can_voltage_group += 3;
 }
 
-// TODO: This CAN message is in the HT05 Style; it needs to be updated with group ID to conform to HT06 standards
 void write_CAN_detailed_temps() {
   if (can_gpio_group > 3) {
     can_gpio_ic++;
@@ -481,9 +498,9 @@ void write_CAN_detailed_temps() {
   }
   bms_detailed_temperatures.set_ic_id(can_gpio_ic);
   bms_detailed_temperatures.set_group_id(can_gpio_group / 3);
-  bms_detailed_temperatures.set_temperature_0(gpio_temps[can_gpio_ic][can_gpio_group] * 100);
-  bms_detailed_temperatures.set_temperature_1(gpio_temps[can_gpio_ic][can_gpio_group + 1] * 100);
-  bms_detailed_temperatures.set_temperature_2(gpio_temps[can_gpio_ic][can_gpio_group + 2] * 100);
+  bms_detailed_temperatures.set_temperature_0((uint16_t) (gpio_temps[can_gpio_ic][can_gpio_group] * 100));
+  bms_detailed_temperatures.set_temperature_1((uint16_t) (gpio_temps[can_gpio_ic][can_gpio_group + 1] * 100));
+  bms_detailed_temperatures.set_temperature_2((uint16_t) (gpio_temps[can_gpio_ic][can_gpio_group + 2] * 100));
   msg.id = ID_BMS_DETAILED_TEMPERATURES;
   msg.len = sizeof(bms_detailed_temperatures);
   bms_detailed_temperatures.write(msg.buf);
@@ -525,14 +542,17 @@ void print_voltages() {
   Serial.print("Min Voltage: "); Serial.print(cell_voltages[min_voltage_location[0]][min_voltage_location[1]] / 10000.0, 4); Serial.print("V \t");
   Serial.print("Avg Voltage: "); Serial.print(total_voltage / 840000.0, 4); Serial.println("V \t");
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
-  Serial.println("Raw Cell Voltages\t\t\t\t\t\t\tCell Status (Ignoring or Balancing)");
-  Serial.println("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\tC9\tC10\tC11");
+  Serial.println("Raw Cell Voltages\t\t\t\t\t\t\t\t\t\t\t\t\tBalancing Status");
+  Serial.print("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\tC9\tC10\tC11\t\t"); Serial.println("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\tC9\tC10\tC11");
   for (int ic = 0; ic < TOTAL_IC; ic++) {
     Serial.print("IC"); Serial.print(ic); Serial.print("\t");
     for (int cell = 0; cell < EVEN_IC_CELLS; cell++) {
       Serial.print(cell_voltages[ic][cell] / 10000.0, 4); Serial.print("V\t");
     }
-    Serial.print("\t");
+    Serial.print("\t\t");
+    for (int cell = 0; cell < EVEN_IC_CELLS; cell++) {
+      Serial.print(cell_balance_status[ic][cell]); Serial.print("\t");
+    }
     Serial.println();
   }
 }
