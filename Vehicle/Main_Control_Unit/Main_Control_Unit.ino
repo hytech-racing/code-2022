@@ -827,7 +827,7 @@ int calculate_torque() {
     int torque2 = map(round(filtered_accel2_reading), START_ACCELERATOR_PEDAL_2, END_ACCELERATOR_PEDAL_2, 0,  100);
 
     if (torque1 > 80 && torque2 > 80) {
-      //calculated_torque = launch_control_torque_limit;
+      calculated_torque = launch_control_torque_limit;
     } else {
       calculated_torque = 0;
     }
