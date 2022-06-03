@@ -63,7 +63,7 @@ float filtered_sensor4_reading{};
 #include <WiFi.h>
 
 // TODO: REPLACE WITH YOUR RECEIVER MAC Address
-uint8_t broadcastAddress[] = {0x7C, 0x9E, 0xBD, 0x37, 0xCA, 0x84};
+uint8_t broadcastAddress[] = {0x7C, 0x9E, 0xBD, 0x47, 0x5A, 0x14};
 
 #define QUEUE_LED GPIO_NUM_11
 
