@@ -95,10 +95,10 @@ void setup() {
 
   //Start CAN driver
   if (can_start() == ESP_OK) {
-    Serial.println("Driver started");
+    printf("Driver started\n");
     digitalWrite(CAN_LED, HIGH);
   } else {
-    Serial.println("Failed to start driver");
+    printf("Failed to start driver\n");
     digitalWrite(CAN_LED, LOW);
     return;
   }
@@ -107,7 +107,7 @@ void setup() {
   WiFi.mode(WIFI_STA);
   
   if (esp_now_init() != ESP_OK) {
-    Serial.println("Error initializing ESP-NOW");
+    printf("Error initializing ESP-NOW\n");
     return;
   }
 
@@ -118,7 +118,7 @@ void setup() {
   peerInfo.channel = 0;  
   peerInfo.encrypt = false;     
   if (esp_now_add_peer(&peerInfo) != ESP_OK){
-    Serial.println("Failed to add peer");
+    printf("Failed to add peer\n");
     return;
   }
 
@@ -146,16 +146,15 @@ void loop() {
     can_transmit(&can_message_tx, portMAX_DELAY);
 
     #if DEBUG      
-    Serial.println("-----------------------------");
-    Serial.print("Sensor 1:\t");
-    Serial.println(filtered_sensor1_reading / 1000.0);
-    Serial.print("Sensor 2:\t");
-    Serial.println(filtered_sensor2_reading / 1000.0);
-    Serial.print("Sensor 3:\t");
-    Serial.println(filtered_sensor3_reading / 1000.0);
-    Serial.print("Sensor 4:\t");
-    Serial.println(filtered_sensor4_reading / 1000.0);
-    Serial.println();
+    printf("-----------------------------\n");
+    printf("Sensor 1:\t");
+    printf("%f\n", filtered_sensor1_reading / 1000.0);
+    printf("Sensor 2:\t");
+    printf("%f\n", filtered_sensor2_reading / 1000.0);
+    printf("Sensor 3:\t");
+    printf("%f\n", filtered_sensor3_reading / 1000.0);
+    printf("Sensor 4:\t");
+    printf("%f\n\n", filtered_sensor4_reading / 1000.0);
     #endif   
   }
 
@@ -167,24 +166,15 @@ void loop() {
 
   // Handle incoming CAN messages
   if (can_receive(&can_message_rx, portMAX_DELAY) == ESP_OK) {
-    // Print out incoming can message to console
-    Serial.print("ID is " + String(can_message_rx.identifier) + ", Data: ");
-    for (int i = 0; i < can_message_rx.data_length_code; i++) {
-      Serial.print(String(can_message_rx.data[i]));
-    }
-    Serial.println();
-
     // Process received message
     transmit_msg_t incoming_can_message;
     incoming_can_message.can_id = can_message_rx.identifier;
-    for (int i = 0; i < 8; i++) {
-      incoming_can_message.raw_data[i] = (i < can_message_rx.data_length_code) ? can_message_rx.data[i] : 0u;
-    }
+    memcpy(&incoming_can_message.raw_data, can_message_rx.data, sizeof(can_message_rx.data));
 
     esp_err_t outcome = esp_now_send(broadcastAddress, (uint8_t *) &msg, sizeof(msg));
     
-    if (outcome == ESP_OK) Serial.println("Mesage sent successfully!");
-    else Serial.println("Error sending the message");
+    if (outcome == ESP_OK) printf("Mesage sent successfully!\n");
+    else printf("Error sending the message\n");
   }
 }
 
@@ -195,6 +185,6 @@ void loop() {
  * @param[in]: status - whether the ESP-Now message successfully transmitted or not
  */
 void data_sent(const uint8_t *mac_addr, esp_now_send_status_t status) {
-  Serial.print("\r\nStatus of Last Message Sent:\t");
-  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+  printf("\r\nStatus of Last Message Sent:\t");
+  printf(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail\n");
 }
