@@ -47,5 +47,5 @@ void loop() {
  */
 void data_receive(const uint8_t * mac, const uint8_t *incomingData, int len) {
   memcpy(&msg, incomingData, sizeof(msg));
-  printf("Message ID: %u, Message Data %u\n", msg.can_id, msg.raw_data);
+  printf("%u,%u", msg.can_id, msg.raw_data);
 }
