@@ -114,7 +114,7 @@ void transmit_message(void * no_params) {
 
   esp_now_register_send_cb(data_sent);
   
-  esp_now_peer_info_t peerInfo;
+  esp_now_peer_info_t peerInfo = {};
   memcpy(peerInfo.peer_addr, broadcastAddress, 6);
   peerInfo.channel = 0;  
   peerInfo.encrypt = false;     
