@@ -24,7 +24,7 @@ void setup() {
   WiFi.mode(WIFI_STA); // Set ESP32 to stationary mode
 
   if (esp_now_init() != ESP_OK) {
-    Serial.println("Error initializing ESP-NOW");
+    printf("Error initializing ESP-NOW\n");
     exit(0); // Terminate program if cannot establish ESP-Now comms and wait for reset
   }
   

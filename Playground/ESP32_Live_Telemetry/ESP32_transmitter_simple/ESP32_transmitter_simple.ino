@@ -65,7 +65,6 @@ float filtered_sensor4_reading{};
 // TODO: REPLACE WITH YOUR RECEIVER MAC Address
 uint8_t broadcastAddress[] = {0x7C, 0x9E, 0xBD, 0x47, 0x5A, 0x14};
 
-#define QUEUE_LED GPIO_NUM_11
 
 typedef struct transmit_msg_t {
   uint16_t  can_id;
@@ -79,7 +78,6 @@ void data_sent(const uint8_t *mac_addr, esp_now_send_status_t status);
 
 void setup() {
   pinMode(CAN_LED, OUTPUT);
-  pinMode(QUEUE_LED, OUTPUT);
 
   //Initialize configuration structures using macro initializers
   can_general_config_t g_config = CAN_GENERAL_CONFIG_DEFAULT(CAN_TX, CAN_RX, CAN_MODE_NORMAL);
@@ -185,5 +183,5 @@ void loop() {
 void data_sent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   printf("\r\nStatus of Last Message Sent:\t");
   printf(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail\n");
-  digitalWrite(QUEUE_LED, HIGH);
+
 }
