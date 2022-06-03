@@ -4,11 +4,6 @@
  * @author: Bo Han Zhu
  * @date: 03/31/2022
  */
- 
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-// Global Variables and Imports
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-#define led_pin 1
 
 // ESP-Now
 #include <esp_now.h>
@@ -23,9 +18,7 @@ static transmit_msg_t msg;
 void data_receive(const uint8_t * mac, const uint8_t *incomingData, int len);
 
 void setup() {
-  //Initialize resources
   Serial.begin(115200); // Must match baudrate of Python script that expects serial data
-  pinMode(led_pin, OUTPUT);
   
   //ESP-Now connecion
   WiFi.mode(WIFI_STA); // Set ESP32 to stationary mode
@@ -54,7 +47,5 @@ void loop() {
  */
 void data_receive(const uint8_t * mac, const uint8_t *incomingData, int len) {
   memcpy(&msg, incomingData, sizeof(msg));
-  Serial.println(msg.can_id + "," + msg.raw_data[0] + msg.raw_data[1] + msg.raw_data[2] + msg.raw_data[3]
-                                      + msg.raw_data[4] + msg.raw_data[5] + msg.raw_data[6] + msg.raw_data[7]);
-  digitalWrite(led_pin, HIGH);
+  printf("Message ID: %u, Message Data - 0:%u 1:%u 2:%u 3:%u 4:%u 5:%u 6:%u 7:%u \n", msg.can_id, msg.raw_data[0], msg.raw_data[1], msg.raw_data[2], msg.raw_data[3], msg.raw_data[4], msg.raw_data[5], msg.raw_data[6], msg.raw_data[7]);
 }

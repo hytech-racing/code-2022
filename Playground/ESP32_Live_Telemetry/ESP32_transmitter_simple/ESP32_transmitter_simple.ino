@@ -79,6 +79,7 @@ void data_sent(const uint8_t *mac_addr, esp_now_send_status_t status);
 
 void setup() {
   pinMode(CAN_LED, OUTPUT);
+  pinMode(QUEUE_LED, OUTPUT);
 
   //Initialize configuration structures using macro initializers
   can_general_config_t g_config = CAN_GENERAL_CONFIG_DEFAULT(CAN_TX, CAN_RX, CAN_MODE_NORMAL);
@@ -172,9 +173,6 @@ void loop() {
     memcpy(&incoming_can_message.raw_data, can_message_rx.data, sizeof(can_message_rx.data));
 
     esp_err_t outcome = esp_now_send(broadcastAddress, (uint8_t *) &msg, sizeof(msg));
-    
-    if (outcome == ESP_OK) printf("Mesage sent successfully!\n");
-    else printf("Error sending the message\n");
   }
 }
 
@@ -187,4 +185,5 @@ void loop() {
 void data_sent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   printf("\r\nStatus of Last Message Sent:\t");
   printf(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail\n");
+  digitalWrite(QUEUE_LED, HIGH);
 }
