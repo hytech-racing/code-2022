@@ -68,7 +68,7 @@ uint8_t broadcastAddress[] = {0x7C, 0x9E, 0xBD, 0x47, 0x5A, 0x14};
 
 typedef struct transmit_msg_t {
   uint16_t  can_id;
-  uint8_t   raw_data[8];
+  uint64_t  raw_data;
 } transmit_msg_t;
 
 transmit_msg_t msg;
@@ -166,9 +166,13 @@ void loop() {
   // Handle incoming CAN messages
   if (can_receive(&can_message_rx, pdMS_TO_TICKS(20)) == ESP_OK) {
     // Process received message
-    transmit_msg_t incoming_can_message;
-    incoming_can_message.can_id = can_message_rx.identifier;
-    memcpy(&incoming_can_message.raw_data, can_message_rx.data, sizeof(can_message_rx.data));
+    transmit_msg_t msg;
+    msg.can_id = can_message_rx.identifier;
+    memcpy(&msg.raw_data, can_message_rx.data, sizeof(uint64_t));
+
+    #if DEBUG
+    printf("Message ID: %u, Message Data %u\n", msg.can_id, msg.raw_data);
+    #endif
 
     esp_err_t outcome = esp_now_send(broadcastAddress, (uint8_t *) &msg, sizeof(msg));
   }
