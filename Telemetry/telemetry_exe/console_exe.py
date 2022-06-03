@@ -472,7 +472,7 @@ def main():
     if CONNECTION == ConnectionType.SERVER.value:
         thread = threading.Thread(target=mqtt_connection_thread, args=[window], daemon=True)
     elif CONNECTION == ConnectionType.ESP32.value:
-        sys.exit("ESP32 connection type currently not implemented. Terminating script")
+        thread = threading.Thread(target=handle_esp32_thread, args=[window], daemon=True)
     elif CONNECTION == ConnectionType.TEST_CSV.value:
         thread = threading.Thread(target=read_from_csv_thread, args=[window], daemon=True)
     else:
