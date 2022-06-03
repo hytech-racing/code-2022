@@ -165,7 +165,7 @@ void loop() {
   filtered_sensor4_reading = ALPHA * filtered_sensor4_reading + (1 - ALPHA) * get_sensor4_value();
 
   // Handle incoming CAN messages
-  if (can_receive(&can_message_rx, portMAX_DELAY) == ESP_OK) {
+  if (can_receive(&can_message_rx, pdMS_TO_TICKS(20)) == ESP_OK) {
     // Process received message
     transmit_msg_t incoming_can_message;
     incoming_can_message.can_id = can_message_rx.identifier;
