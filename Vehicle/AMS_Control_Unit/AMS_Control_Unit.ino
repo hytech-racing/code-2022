@@ -3,8 +3,8 @@
    It also handles CAN communications with the mainECU and energy meter and drives a watchdog timer on the ACU.
    See LTC6811_2.cpp and LTC6811-2 Datasheet provided by Analog Devices for more details.
    Author: Zekun Li, Liwei Sun
-   Version: 1.03
-   Since: 05/12/2022
+   Version: 1.05
+   Since: 05/29/2022
 */
 
 #include <Arduino.h>
@@ -101,6 +101,7 @@ BMS_onboard_temperatures bms_onboard_temperatures; //Message class containing ge
 BMS_detailed_voltages bms_detailed_voltages; //Message class containing detailed voltage information
 BMS_detailed_temperatures bms_detailed_temperatures; // message class containing detailed temperature information
 
+CCU_status ccu_status;
 
 void setup() {
   // put your setup code here, to run once:
@@ -140,7 +141,7 @@ void loop() {
     print_gpios();
     print_timer.reset();
   }
-  if (bms_status.get_state() == BMS_STATE_CHARGING && BALANCE_ON && gpio_temps[max_board_temp_location[0]][max_board_temp_location[1]] <= 80) {
+  if (bms_status.get_state() == BMS_STATE_CHARGING && BALANCE_ON && ccu_status.get_charger_enabled()  == true && gpio_temps[max_board_temp_location[0]][max_board_temp_location[1]] <= 80) {
     balance_cells();
   }
 }
@@ -397,6 +398,7 @@ void balance_cells() {
 void parse_CAN_CCU_status() {
   while (CAN.read(msg)) {
     if (msg.id == ID_CCU_STATUS) {
+      ccu_status.load(msg.buf);
       charging_timer.reset();
       if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
         bms_status.set_state(BMS_STATE_CHARGING);
