@@ -106,6 +106,7 @@ CCU_status ccu_status;
 int firstVoltageRead = 0;
 uint16_t initial_cell_voltages[TOTAL_IC][12];
 int16_t cell_voltages_deltas[TOTAL_IC][12];
+int curr_balancing_ic = 0;
 
 void setup() {
   // put your setup code here, to run once:
@@ -379,38 +380,39 @@ void balance_cells() {
       return;
     }
     Serial.print("Balancing voltage: "); Serial.println(min_voltage / 10000.0, 4);
-    for (uint16_t i = 0; i < 8; i++) {
+    if(curr_balancing_ic == 8) curr_balancing_ic = 0;
       // determine which cells of the IC need balancing
       uint8_t cell_count;
-      if (i % 2) {
+      if (curr_balancing_ic % 2) {
         cell_count = 9;
       } else {
         cell_count = 12;
       }
       if (BALANCE_MODE) {
         for (uint16_t cell = 0; cell < cell_count; cell++) {
-          if (max_voltage - cell_voltages[i][cell] < 200 && cell_voltages[i][cell] - min_voltage > 200) { // balance if the cell voltage differential from the max voltage is .02V or less and if the cell voltage differential from the minimum voltage is 0.02V or greater (progressive)
+          if (max_voltage - cell_voltages[curr_balancing_ic][cell] < 200 && cell_voltages[curr_balancing_ic][cell] - min_voltage > 200) { // balance if the cell voltage differential from the max voltage is .02V or less and if the cell voltage differential from the minimum voltage is 0.02V or greater (progressive)
             cell_balance_setting = (0b1 << cell) | cell_balance_setting;
-            cell_balance_status[i][cell] = true;
+            cell_balance_status[curr_balancing_ic][cell] = true;
           } else {
-            cell_balance_status[i][cell] = false;
+            cell_balance_status[curr_balancing_ic][cell] = false;
           }
         }
       } else {
         for (uint16_t cell = 0; cell < cell_count; cell++) {
-          if (cell_voltages[i][cell] - min_voltage > 200) { // if the cell voltage differential from the minimum voltage is 0.02V or greater (normal)
+          if (cell_voltages[curr_balancing_ic][cell] - min_voltage > 200) { // if the cell voltage differential from the minimum voltage is 0.02V or greater (normal)
             cell_balance_setting = (0b1 << cell) | cell_balance_setting;
-            cell_balance_status[i][cell] = true;
+            cell_balance_status[curr_balancing_ic][cell] = true;
           } else {
-            cell_balance_status[i][cell] = false;
+            cell_balance_status[curr_balancing_ic][cell] = false;
           }
         }
       }
       Reg_Group_Config configuration = Reg_Group_Config((uint8_t) 0x1F, false, false, vuv, vov, (uint16_t) cell_balance_setting, (uint8_t) 0x0); // base configuration for the configuration register group
-      ic[i].wakeup();
-      ic[i].wrcfga(configuration);
-    }
+      ic[curr_balancing_ic].wakeup();
+      ic[curr_balancing_ic].wrcfga(configuration);
+    
     delay(2000);
+    curr_balancing_ic++;
   }
 }
 
