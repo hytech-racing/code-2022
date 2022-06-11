@@ -367,7 +367,7 @@ void temp_fault_check() {
 
 // Cell Balancing function. NOTE: Must call read_voltages() in order to obtain balancing voltage;
 void balance_cells() {
-  uint16_t cell_balance_setting = 0x0;
+  
   if (balance_timer.check()) {
     balance_timer.reset();
     if (min_voltage < 30000 || min_voltage > 42000) {
@@ -380,6 +380,7 @@ void balance_cells() {
     }
     Serial.print("Balancing voltage: "); Serial.println(min_voltage / 10000.0, 4);
     for (uint16_t i = 0; i < 8; i++) {
+      uint16_t cell_balance_setting = 0x0;
       // determine which cells of the IC need balancing
       uint8_t cell_count;
       if (i % 2) {
