@@ -103,9 +103,9 @@ BMS_detailed_temperatures bms_detailed_temperatures; // message class containing
 
 CCU_status ccu_status;
 
-bool firstVoltageRead = true;
+int firstVoltageRead = 0;
 uint16_t initial_cell_voltages[TOTAL_IC][12];
-uint16_t cell_voltages_deltas[TOTAL_IC][12];
+int16_t cell_voltages_deltas[TOTAL_IC][12];
 
 void setup() {
   // put your setup code here, to run once:
@@ -138,19 +138,6 @@ void loop() {
     bms_status.set_state(BMS_STATE_DISCHARGING);
   }
   read_voltages();
-  if(firstVoltageRead){
-    for(int i=0; i<TOTAL_IC;i++){
-    for(int j = 0; j< 12;j++){
-      initial_cell_voltages[i][j] = cell_voltages[i][j];
-    }
-  }
-    firstVoltageRead = false;
-  }
-  for(int i=0; i<TOTAL_IC;i++){
-    for(int j = 0; j< 12;j++){
-      cell_voltages_deltas[i][j] = initial_cell_voltages[i][j] - cell_voltages[i][j];
-    }
-  }
   read_gpio();
   write_CAN_messages();
   if (print_timer.check()) {
@@ -217,6 +204,22 @@ void read_voltages() {
         }
       }
     }
+    if (firstVoltageRead == 1) {
+    for (int i = 0; i < TOTAL_IC; i++) {
+      for (int j = 0; j < 12; j++) {
+        initial_cell_voltages[i][j] = cell_voltages[i][j];
+        cell_voltages_deltas[i][j] = 0;
+      }
+    }
+    firstVoltageRead++;
+  } else if (firstVoltageRead < 1) {
+    firstVoltageRead++;
+  }
+  for (int i = 0; i < TOTAL_IC; i++) {
+    for (int j = 0; j < 12; j++) {
+      cell_voltages_deltas[i][j] = (int16_t) initial_cell_voltages[i][j] - (int16_t) cell_voltages[i][j];
+    }
+  }
     voltage_fault_check();
     adc_state = 2;
   }
@@ -575,12 +578,21 @@ void print_voltages() {
     Serial.println();
   }
   Serial.println();
+  Serial.println("Initial Voltages");
+  Serial.print("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\tC9\tC10\tC11\t\t"); Serial.println("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\tC9\tC10\tC11");
+  for (int ic = 0; ic < TOTAL_IC; ic++) {
+    Serial.print("IC"); Serial.print(ic); Serial.print("\t");
+    for (int cell = 0; cell < EVEN_IC_CELLS; cell++) {
+      Serial.print(initial_cell_voltages[ic][cell] / 10000.0, 4); Serial.print("V\t");
+    }
+    Serial.println();
+  }
   Serial.println("DELTAS: INITIAL MINUS CURRENT VOLTAGE");
   Serial.print("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\tC9\tC10\tC11\t\t"); Serial.println("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\tC9\tC10\tC11");
   for (int ic = 0; ic < TOTAL_IC; ic++) {
     Serial.print("IC"); Serial.print(ic); Serial.print("\t");
     for (int cell = 0; cell < EVEN_IC_CELLS; cell++) {
-      Serial.print(cell_voltages_deltas[ic][cell] / 10000.0, 4); Serial.print("V\t");
+      Serial.print(cell_voltages_deltas[ic][cell] / 10000.0, 3); Serial.print("V\t");
     }
     Serial.println();
   }
