@@ -142,7 +142,7 @@ void loop() {
     print_gpios();
     print_timer.reset();
   }
-  if (bms_status.get_state() == BMS_STATE_CHARGING && BALANCE_ON && ccu_status.get_charger_enabled()  == true && gpio_temps[max_board_temp_location[0]][max_board_temp_location[1]] <= 80) {
+  if (bms_status.get_state() == BMS_STATE_CHARGING && BALANCE_ON && ccu_status.get_charger_enabled()  == true && gpio_temps[max_board_temp_location[0]][max_board_temp_location[1]] <= 60) {
     balance_cells();
     currently_balancing = true;
   }
