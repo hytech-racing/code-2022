@@ -128,6 +128,7 @@ DICT = {
         "BRAKE_TRANSDUCER_2": " ",
         "BRAKE_PEDAL_ACTIVE": " ",
         "NO_BRAKE_IMPLAUSIBILITY": " ",
+        "LAUNCH_CTRL_ACTIVE": " ",
     },
     "SENSOR_ACQUISITION_BOARD": {
         "COOLING_LOOP_FLUID_TEMP": " ",
@@ -328,8 +329,9 @@ def get_bms_detailed_messages():
 '''
 def main():
     sg.change_look_and_feel("Black")
-    title_font = ("Courier New", 12)
-    text_font = ("Courier New", 8)
+    title_font = ("Consolas", 12)
+    text_font = ("Consolas", 10)
+    
 
     # Subtitle text declarations
     inverter = [[sg.Text("RMS INVERTER", pad=(0,2), font=title_font, text_color="light blue")]]
