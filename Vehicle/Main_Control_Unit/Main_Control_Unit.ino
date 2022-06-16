@@ -1,4 +1,4 @@
-/*
+desm/*
    Teensy 3.2 Main Control Unit code
    Written by Ethan Weinstock with assistance from Shaan Dhawan
 
@@ -315,9 +315,10 @@ inline void generate_lc_torque_lookup_table() {
 
 
   for (int i = 0; i < 600; i++) {
-    lc_torque_table[i] = (uint8_t)(0.00000857143 * i * i * i) - (0.00528571 * i * i) + (0.942857 * i) + 120;
+    //lc_torque_table[i] = (uint8_t)(0.00000857143 * i * i * i) - (0.00528571 * i * i) + (0.942857 * i) + 120;
+    lc_torque_table[i] = (uint8_t)(0.65*i + 110);
   }
-  for (int i = 60; i < 600; i++) {
+  for (int i = /*60*/ 77; i < 600; i++) {
     lc_torque_table[i] = 160;
   }
   lc_torque_table[0] = 60;
