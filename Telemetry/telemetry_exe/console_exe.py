@@ -17,12 +17,22 @@ import itertools
 import binascii
 import struct
 import sys
+import argparse
 
 __file__ = sys.path[0]
 sys.path.insert(1, "../telemetry_parsers")
 from parser_api import parse_message
 sys.path.insert(1, '../telemetry_aws')
 from db import unpack
+
+parser = argparse.ArgumentParser(description="Telemetry console")
+parser.add_argument('--mode', '-m', action='store', default='0', required=False, help="Mode for parser to run in")
+parser.add_argument('--font', '-f', action='store', default='Courier New', required=False, help="Font to use")
+parser.add_argument('--title_size', '-ts', action='store', default='12', required=False, help="Title font")
+parser.add_argument('--body_size', '-bs', action='store', default='8', required=False, help='Body font size')
+
+args = parser.parse_args()
+
 
 # Connection type definitions
 class ConnectionType(Enum):
@@ -42,7 +52,11 @@ BAUD_RATE = 115200
 
 # Set this to whatever the script is running
 # @TODO: Make a screen at the beginning to let the user choose the type
-CONNECTION = ConnectionType.SERVER.value
+
+CONNECTION = {'0': ConnectionType.SERVER.value,
+              '1': ConnectionType.ESP32.value,
+              '2': ConnectionType.TEST_CSV.value,
+              '3': ConnectionType.UNKNOWN.value}[args.mode]
 
 DICT = {
     "DASHBOARD": {
@@ -133,6 +147,7 @@ DICT = {
         "BRAKE_TRANSDUCER_2": " ",
         "BRAKE_PEDAL_ACTIVE": " ",
         "NO_BRAKE_IMPLAUSIBILITY": " ",
+        "LAUNCH_CTRL_ACTIVE": " ",
     },
     "SENSOR_ACQUISITION_BOARD": {
         "COOLING_LOOP_FLUID_TEMP": " ",
@@ -363,8 +378,9 @@ def get_bms_detailed_messages():
 '''
 def main():
     sg.change_look_and_feel("Black")
-    title_font = ("Courier New", 12)
-    text_font = ("Courier New", 8)
+    title_font = (args.font, int(args.title_size))
+    text_font = (args.font, int(args.body_size))
+    
 
     # Subtitle text declarations
     inverter = [[sg.Text("RMS INVERTER", pad=(0,2), font=title_font, text_color="light blue")]]

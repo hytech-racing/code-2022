@@ -11,3 +11,4 @@ paho-mqtt
 PySerial
 influxdb
 cobs
+argparse

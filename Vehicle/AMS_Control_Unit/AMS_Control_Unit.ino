@@ -3,8 +3,8 @@
    It also handles CAN communications with the mainECU and energy meter and drives a watchdog timer on the ACU.
    See LTC6811_2.cpp and LTC6811-2 Datasheet provided by Analog Devices for more details.
    Author: Zekun Li, Liwei Sun
-   Version: 1.03
-   Since: 05/12/2022
+   Version: 1.05
+   Since: 05/29/2022
 */
 
 #include <Arduino.h>
@@ -38,6 +38,7 @@ uint16_t vuv = 1874; // 3V           // Minimum voltage value following datashee
 uint16_t vov = 2625; // 4.2V         // Maximum voltage value following datasheet formula: Comparison Voltage = VOV • 16 • 100μV
 uint16_t cell_voltages[TOTAL_IC][12]; // 2D Array to hold cell voltages being read in; voltages are read in with the base unit as 100μV
 bool cell_balance_status[TOTAL_IC][12]; // 2D array where true indicates cell is balancing
+bool currently_balancing = false;
 uint32_t total_voltage;             // the total voltage of the pack
 int min_voltage_location[2]; // [0]: IC#; [1]: Cell#
 int max_voltage_location[2]; // [0]: IC#; [1]: Cell#
@@ -101,6 +102,7 @@ BMS_onboard_temperatures bms_onboard_temperatures; //Message class containing ge
 BMS_detailed_voltages bms_detailed_voltages; //Message class containing detailed voltage information
 BMS_detailed_temperatures bms_detailed_temperatures; // message class containing detailed temperature information
 
+CCU_status ccu_status;
 
 void setup() {
   // put your setup code here, to run once:
@@ -140,8 +142,12 @@ void loop() {
     print_gpios();
     print_timer.reset();
   }
-  if (bms_status.get_state() == BMS_STATE_CHARGING && BALANCE_ON && gpio_temps[max_board_temp_location[0]][max_board_temp_location[1]] <= 80) {
+  if (bms_status.get_state() == BMS_STATE_CHARGING && BALANCE_ON && ccu_status.get_charger_enabled()  == true && gpio_temps[max_board_temp_location[0]][max_board_temp_location[1]] <= 80) {
     balance_cells();
+    currently_balancing = true;
+  }
+  else {
+    currently_balancing = false;
   }
 }
 
@@ -346,7 +352,6 @@ void temp_fault_check() {
 
 // Cell Balancing function. NOTE: Must call read_voltages() in order to obtain balancing voltage;
 void balance_cells() {
-  uint16_t cell_balance_setting = 0x0;
   if (balance_timer.check()) {
     balance_timer.reset();
     if (min_voltage < 30000 || min_voltage > 42000) {
@@ -359,6 +364,7 @@ void balance_cells() {
     }
     Serial.print("Balancing voltage: "); Serial.println(min_voltage / 10000.0, 4);
     for (uint16_t i = 0; i < 8; i++) {
+      uint16_t cell_balance_setting = 0x0;
       // determine which cells of the IC need balancing
       uint8_t cell_count;
       if (i % 2) {
@@ -397,6 +403,7 @@ void balance_cells() {
 void parse_CAN_CCU_status() {
   while (CAN.read(msg)) {
     if (msg.id == ID_CCU_STATUS) {
+      ccu_status.load(msg.buf);
       charging_timer.reset();
       if (bms_status.get_state() == BMS_STATE_DISCHARGING) {
         bms_status.set_state(BMS_STATE_CHARGING);
@@ -543,18 +550,20 @@ void print_voltages() {
   Serial.print("Avg Voltage: "); Serial.print(total_voltage / 840000.0, 4); Serial.println("V \t");
   Serial.println("------------------------------------------------------------------------------------------------------------------------------------------------------------");
   Serial.println("Raw Cell Voltages\t\t\t\t\t\t\t\t\t\t\t\t\tBalancing Status");
-  Serial.print("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\tC9\tC10\tC11\t\t"); Serial.println("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\tC9\tC10\tC11");
-  for (int ic = 0; ic < TOTAL_IC; ic++) {
-    Serial.print("IC"); Serial.print(ic); Serial.print("\t");
-    for (int cell = 0; cell < EVEN_IC_CELLS; cell++) {
-      Serial.print(cell_voltages[ic][cell] / 10000.0, 4); Serial.print("V\t");
+  Serial.print("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\tC9\tC10\tC11\t\t");  if (currently_balancing){Serial.println("\tC0\tC1\tC2\tC3\tC4\tC5\tC6\tC7\tC8\tC9\tC10\tC11");}
+    for (int ic = 0; ic < TOTAL_IC; ic++) {
+      Serial.print("IC"); Serial.print(ic); Serial.print("\t");
+      for (int cell = 0; cell < EVEN_IC_CELLS; cell++) {
+        Serial.print(cell_voltages[ic][cell] / 10000.0, 4); Serial.print("V\t");
+      }
+      if (currently_balancing) {
+        Serial.print("\t\t");
+        for (int cell = 0; cell < EVEN_IC_CELLS; cell++) {
+          Serial.print(cell_balance_status[ic][cell]); Serial.print("\t");
+        }
+      }
+      Serial.println();
     }
-    Serial.print("\t\t");
-    for (int cell = 0; cell < EVEN_IC_CELLS; cell++) {
-      Serial.print(cell_balance_status[ic][cell]); Serial.print("\t");
-    }
-    Serial.println();
-  }
 }
 
 // Print values of temperature and humidity sensors in GPIOs
