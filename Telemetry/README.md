@@ -42,4 +42,39 @@ _The next steps are optional - only if you want to plot the result_
     - This script will not execute fully if there is not enough data, and it will stop on the first plot it is missing data for
 
 ## Developer's Guide
-_Way too lazy to do right now, I'll get to it after comp hopefully_
+### Maintenance
+1. Every time you add a pip package to a Python script that is not inherent to Python's native download, add it to `requirements.txt` if it does not exist. You can reference the current document, or https://note.nkmk.me/en/python-pip-install-requirements/
+2. In addition to this repo, make sure the XBee and Live Console are connected to the same EC2 instance and that the EC2 instance is running. You can check the status of instances here: https://us-east-2.console.aws.amazon.com/ec2/v2/home?region=us-east-2#Instances:instanceState=running (login required)
+3. To allow the XBee to wirelessly transmit, make sure the HyTech AT&T LTE account is activated and running. Ask the Treasurer for more info.
+4. We are not really using the `telemetry_aws` folder other than the console importing a function from `db.py`. No need to modify anything in that folder.
+
+### Adding/Modifying a CAN message
+Various components of the Data Acquisition subsystem needs to be changed when a CAN message structure is modified or a new CAN message is added. These include:
+- Parser: mandatory changes. There is a DEBUG flag for optional debugging print statements as you add code.
+    - `multipliers.py`: may need changes accordingly if scaling is changed
+- Live Console: additionals may need to be made; if no CAN message is added, then no changes are necessary unless a CAN label from the message has its name changed
+- Plotter: may need change depending on the message
+
+What should not need changing:
+- `telemetry_aws` folder
+- The `Parsed_Data` and `Raw_Data` sub-folders within `telemetry_exe`
+- `parser_exe.py` (the parser launcher, does not include any actual parsing)
+
+#### Steps
+1. In `parser_api.py`:
+    - In the `parse_message(raw_id, raw_message)` function, add the corresponding CAN ID and parsing function you will create later to the big if-statements. For example, `if raw_id == "D5": return parse_ID_BMS_ONBOARD_TEMPERATURES(raw_message)`
+    - Create a new custom parsing function under the section denoted "Custom Parsing Functions Begin". The syntax is usually "parse_ID_CAN_MESSAGE_NAME" and takes in one parameter `raw_message`, e.g. `def parse_ID_MC_VOLTAGE_INFORMATION(raw_message):`
+    - The custom parsing function is expected to return a ragged-2D array. The data type placeholders looks something like this `[string, string arr[num_labels], double arr[num_labels], string arr[num_labels]]`. For example, a CAN message parsed into 4 labels will look like:
+    ["some_string",
+    ["some_string", "some_string", "some_string", "some_string"],
+    [some_double, some_double, some_double, some_double],
+    ["some_string", "some_string", "some_string", "some_string"]]
+    - The parser will later dimension-check the return array to make sure the last three sub-arrays are of the same size; else, it will discard the entire output.
+    - Inside the custom parsing function, you will need to extract the individual bytes from the `raw_message` input string and perform arithmic/bitwise operations as needed. There is no good one-method-fits-all as this step is highly message dependent. Likely, you will need to utilize the `hex_to_decimal` function in some manner as Python's endianness and our CAN system's are not the same. See existing messages for inspiration.
+    - If you just want to prototype but have no wish to implement the function parsing, you may simple return the string "UNPARSEABLE" for the custom parsing function.
+2. In `multiplers.py`: Add scaling constants for the message if needed. They will be needed in the custom parsing functon in `parser_api.py` when performing arithmetic operations.
+3. In `console_exe.py`:
+    - `DICT` is a nested dictionary containing console subsection headers followed by display labels. The display labels are the corresponding CAN labels, but in all UPPERCASE. If you add a message to an existing subsection, all you need to do for the message to show up properly in the console is add the label under the corresponding header.
+    - If you need to create a new header, you can do so in `DICT`. However, keep in mind you will need to allow PySimpleGUI to format and attach its updates to events. This is done in `def main()` and the complexity of which lies beyond the purpose of this README. You may reference PySimpleGUI resources on its official website: https://pysimplegui.readthedocs.io/en/latest/cookbook/
+    - No need to modify the callback threads, e.g. `mqtt_connection_thread`
+4. In `dataPlots.m`, you may need to make changes if a label name changes or if you want to create a new plot. Reference the current structure.
