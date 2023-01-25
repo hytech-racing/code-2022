@@ -50,8 +50,8 @@ const int     num_pulses       = 100;        // if pulsing is set to TRUE, then 
 int     pulse_int_discharge    = 30 * 1000; // milliseconds to wait for pulse discharge cycle // pulse interval will likely need to be greater than rolling average window
 int     pulse_int_rest         = 60 * 1000; // milliseconds to wait for pulse resting cycle // pulse interval will likely need to be greater than rolling average window
 double  pulsing_threshold      = 0.250;     // Volts/second threshold used to determine linear region; steep region is approx 0.1 V/s
-double  pulsing_frame_H        = 4.000;     // OCV to start pulsing (Linear IR characterization region)
-double  pulsing_frame_L        = 3.800;     // OCV to stop pulsing (Linear IR characterization region)
+double  pulsing_frame_H        = 4.0;     // OCV to start pulsing (Linear IR characterization region)
+double  pulsing_frame_L        = 3.8;     // OCV to stop pulsing (Linear IR characterization region)
 
 int     pulses_completed[channels]  = {0,0,0,0};                  // keeping track of pulses (rest periods)
 bool    pulsing[channels]           = {false,false,false,false};  // pulsing flag; pulsing is true when cell is in rest period
@@ -125,7 +125,7 @@ Metro timer[channels]  = Metro(timestep, 1); // return true based on timestep pe
 //////////Assign teensy pins
 const int CONTACTOR_PWR_SENSE = 20;
 const int SWITCH[channels] = {A1, A2, A3, A4}; //{15, 16, 17, 18};
-const int CONTACTOR_VLT_THRESHOLD = 474; // 7 V
+const int CONTACTOR_VLT_THRESHOLD = 400; // 7 V
 
 //////////Conversion factors for calculating voltage and current
 double voltage_conversion_factor      = 5.033333333333333333 / 4095;   // determined by testing
@@ -181,7 +181,8 @@ void CellDataLog(int i) {
       Serial.print(state[i]);               Serial.print(delimiter);
       Serial.print(v_avg[i],4);             Serial.print(delimiter);
       Serial.print(i_avg[i]);               Serial.print(delimiter);
-      Serial.println(pulses_completed[i]);//Serial.print(delimiter);
+      Serial.print(pulses_completed[i]);  Serial.print(delimiter);
+      Serial.println(contactor_voltage);    //Serial.print(delimiter);
 
   }
 }
@@ -197,7 +198,7 @@ double getBatteryCurrent(int channel) {
   // Method to read the cell current in Amps
   // Arguments: channel (Note: in the code, channels are numbered 0-3, when on the board they are 4-7 which are designated as current sense)
   double voltage_reading = ((double) adc.read_adc(channel + 4)) * voltage_conversion_factor;
-  double current_reading = (voltage_reading - (current_offset[channel]*voltage_conversion_factor)) * current_conversion_factor;
+  double current_reading = -1*(voltage_reading - (current_offset[channel]*voltage_conversion_factor)) * current_conversion_factor;
   return current_reading;
 }
 //////////Functions///////////////////////////////////////////////////////////////////////////
@@ -321,6 +322,7 @@ void loop() {
     else if (state[i] == DISCHARGE) {
 
       if (contactor_voltage < CONTACTOR_VLT_THRESHOLD) {
+        Serial.println(contactor_voltage);
         state[i] = WAIT;
       }
 
